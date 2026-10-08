@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Compila los tres servicios y corre las pruebas: unitarias, ArchUnit e integración con Testcontainers.
+      - name: Compilar y probar
+        run: mvn -B verify
+
+      - name: Construir imagen del catálogo
+        run: docker build -f servicios/catalogo/Dockerfile -t samarian-tour/catalogo:ci .
