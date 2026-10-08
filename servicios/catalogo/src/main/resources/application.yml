@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: catalogo
+  data:
+    mongodb:
+      # En Docker Compose se sobrescribe con SPRING_DATA_MONGODB_URI.
+      uri: mongodb://localhost:27017/catalogo_db
+  mvc:
+    # Errores en formato RFC 7807 (application/problem+json).
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8080
+  servlet:
+    # Nginx reenvía /api/catalogo/** sin reescribir la ruta; los controladores se mapean sin el prefijo.
+    context-path: /api/catalogo
