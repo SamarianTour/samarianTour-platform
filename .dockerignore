@@ -1,0 +1,12 @@
+# El contexto de construcción es la raíz del repositorio (necesita el pom padre).
+**/target/
+.git/
+.github/
+.idea/
+.vscode/
+docs/
+infra/
+libs/
+contratos/
+frontend/
+**/*.md
