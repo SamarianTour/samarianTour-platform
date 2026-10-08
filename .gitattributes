@@ -1,0 +1,8 @@
+# Finales de línea LF en el repositorio: los scripts y configuraciones se ejecutan en contenedores Linux.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.pdf binary
+*.docx binary
+*.png binary
+*.jar binary
