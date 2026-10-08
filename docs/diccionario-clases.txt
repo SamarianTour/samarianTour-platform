@@ -1,0 +1,528 @@
+DICCIONARIO DE CLASES - MODELO DE DOMINIO
+Plataforma Digital para la Gestión Integrada y Sostenible del Turismo en Santa Marta
+================================================================================
+
+Convenciones de tipos
+- UUID: identificador único universal (entidades del Núcleo, PostgreSQL).
+- String (en id): identificador del Catálogo (MongoDB).
+- Instant: momento exacto en el tiempo (marcas de tiempo).
+- LocalDate: fecha de calendario sin hora.
+- LocalTime: hora del día sin fecha.
+- BigDecimal: valores de dinero y porcentajes (evita errores de redondeo).
+- Integer: entero que puede quedar vacío (null). int: entero obligatorio.
+- List<X>: lista de valores de tipo X.
+
+
+================================================================================
+1. USUARIOS Y CUENTA
+================================================================================
+
+--------------------------------------------------------------------------------
+Usuario (clase abstracta)
+--------------------------------------------------------------------------------
+Datos comunes de cualquier persona que usa el sistema. Es abstracta: nunca existe
+un "usuario" a secas, siempre es uno de los cinco roles que heredan de ella.
+
+Atributos
+- id : UUID ............................ Identificador único del usuario.
+- nombre : String ...................... Nombre registrado (RF-01).
+- correo : String ...................... Correo de acceso; único en el sistema (RF-01, RF-02).
+- hashContrasena : String .............. Contraseña cifrada con hash adaptativo; nunca se guarda en texto plano (RF-01, RNF-06).
+- estado : EstadoCuenta ................ ACTIVA, DESACTIVADA o SUPRIMIDA (RF-13, RF-81).
+- intentosFallidos : int ............... Inicios de sesión fallidos consecutivos (RF-05).
+- bloqueadoHasta : Instant ............. Hasta cuándo está bloqueada la cuenta (15 min tras 5 fallos). Vacío si no hay bloqueo (RF-05).
+- fechaRegistro : Instant .............. Momento en que se creó la cuenta.
+
+Métodos
+- autenticar(contrasena : String) : boolean ........ Verifica la contraseña (RF-04).
+- registrarIntentoFallido() : void ................. Suma un fallo y bloquea al quinto (RF-05).
+- estaBloqueado(ahora : Instant) : boolean ......... Indica si el bloqueo sigue vigente (RF-05).
+- debeAceptarPolitica(vigente : PoliticaDatos) : boolean .. Indica si le falta aceptar la versión vigente de la política (RF-09, RF-10).
+
+Relaciones
+- Es padre de Turista, Prestador, OperadorDisponibilidad, Administrador y GestorDestino.
+- Compuesta por 0..* AceptacionPolitica, 0..* CodigoUnUso y 0..1 SolicitudSupresion.
+
+--------------------------------------------------------------------------------
+Turista (hereda de Usuario)
+--------------------------------------------------------------------------------
+Persona que consulta el catálogo y envía solicitudes.
+
+Atributos
+- whatsapp : String .................... Número de WhatsApp; único canal de notificación (RF-03, RF-44).
+- whatsappVerificado : boolean ......... Si confirmó el número con el código de un solo uso (RF-03).
+
+Métodos
+- puedeEnviarSolicitudes() : boolean ... Solo puede enviar solicitudes con el WhatsApp verificado (RF-30).
+
+Relaciones
+- Envía 0..* SolicitudDisponibilidad.
+- Escribe 0..* Opinion.
+
+--------------------------------------------------------------------------------
+Prestador (hereda de Usuario)
+--------------------------------------------------------------------------------
+Persona natural o jurídica con RNT que publica ofertas.
+
+Atributos
+- numeroRnt : String ................... Número del Registro Nacional de Turismo (RF-62).
+- razonSocial : String ................. Razón social o nombre; se autocompleta desde el RNT (RF-63).
+- municipio : String ................... Municipio registrado en el RNT (RF-63).
+- tipo : TipoPrestador ................. Alojamiento, restaurante, agencia operadora o guía independiente (RF-68).
+- numeroEmpleados : Integer ............ Empleados declarados; vacío si es guía independiente (RF-68).
+- estadoRnt : EstadoRnt ................ ACTIVO, INACTIVO, NO_ENCONTRADO o VERIFICACION_PENDIENTE (RF-76).
+- fechaUltimaSincronizacion : Instant .. Última verificación contra el RNT (RF-73).
+- whatsappContacto : String ............ WhatsApp por el que recibe las notificaciones; no es público (RF-71).
+- modalidadesGuianza : List<ModalidadRecorrido> .. Solo guías: modalidades que ofrece (RF-69).
+- idiomasAtencion : List<String> ....... Solo guías: idiomas en que atiende, como códigos ("es", "en", "fr") (RF-69).
+
+Métodos
+- categoria() : CategoriaPrestador ..... Calcula guía independiente, micro y pequeño, mediano o grande según tipo y empleados (RF-89).
+- puedePublicar() : boolean ............ Solo puede publicar con el RNT activo (RF-79).
+
+Relaciones
+- Compuesto por 0..1 PerfilPublico y 0..* CuentaCobro.
+- Publica 0..* Oferta.
+- Recibe 0..* SolicitudDisponibilidad.
+
+--------------------------------------------------------------------------------
+OperadorDisponibilidad (hereda de Usuario)
+--------------------------------------------------------------------------------
+Personal interno que toma solicitudes de la cola compartida y verifica el cupo
+con el prestador fuera de la plataforma. Sin atributos propios.
+
+Relaciones
+- Toma 0..* SolicitudDisponibilidad.
+
+--------------------------------------------------------------------------------
+Administrador (hereda de Usuario)
+--------------------------------------------------------------------------------
+Personal interno que modera, sincroniza el RNT, gestiona zonas, cuentas internas
+y la comisión. Sin atributos propios.
+
+Relaciones
+- Define 0..* ParametroComision.
+
+--------------------------------------------------------------------------------
+GestorDestino (hereda de Usuario)
+--------------------------------------------------------------------------------
+Perfil institucional de solo lectura que consulta indicadores agregados
+(RF-85 a RF-89). Sin atributos propios ni relaciones.
+
+--------------------------------------------------------------------------------
+PoliticaDatos
+--------------------------------------------------------------------------------
+Cada versión publicada de la política de tratamiento de datos. La vigente es la
+de fecha de publicación más reciente.
+
+Atributos
+- version : String ..................... Identificador de la versión, por ejemplo "v1.1" (RF-10).
+- fechaPublicacion : LocalDate ......... Fecha en que se publicó (RF-10).
+- urlTexto : String .................... Enlace al texto completo de esa versión.
+
+--------------------------------------------------------------------------------
+AceptacionPolitica
+--------------------------------------------------------------------------------
+Constancia de que un usuario aceptó una versión de la política.
+
+Atributos
+- fechaAceptacion : Instant ............ Momento de la aceptación (RF-10, RNF-09).
+
+Relaciones
+- Pertenece a 1 Usuario y referencia 1 PoliticaDatos.
+
+--------------------------------------------------------------------------------
+CodigoUnUso
+--------------------------------------------------------------------------------
+Código temporal de un solo uso para verificar el WhatsApp o para restablecer o
+establecer la contraseña.
+
+Atributos
+- id : UUID ............................ Identificador del código.
+- proposito : PropositoCodigo .......... Para qué sirve el código (RF-03, RF-07, RF-81).
+- hashCodigo : String .................. Código cifrado; no se guarda en texto plano.
+- emitidoEn : Instant .................. Momento en que se generó.
+- expiraEn : Instant ................... Vencimiento: 30 minutos después de emitido (RF-08).
+- usadoEn : Instant .................... Momento en que se usó; vacío si no se ha usado (RF-08).
+
+Métodos
+- esValido(ahora : Instant) : boolean .. Válido si no venció y no se ha usado (RF-08).
+
+--------------------------------------------------------------------------------
+SolicitudSupresion
+--------------------------------------------------------------------------------
+Petición del usuario de eliminar sus datos personales (Ley 1581).
+
+Atributos
+- id : UUID ............................ Identificador de la petición.
+- fechaSolicitud : Instant ............. Constancia de cuándo se pidió (RF-13).
+- estado : EstadoSupresion ............. SOLICITADA mientras espera, EJECUTADA cuando se cumplió (RF-13).
+- fechaEjecucion : Instant ............. Cuándo se ejecutó; vacío mientras está pendiente (RF-13).
+
+
+================================================================================
+2. PRESTADOR: PERFIL Y COBRO
+================================================================================
+
+--------------------------------------------------------------------------------
+PerfilPublico
+--------------------------------------------------------------------------------
+Lo que el turista ve del prestador. No incluye datos de contacto directo.
+
+Atributos
+- descripcion : String ................. Presentación del prestador (RF-64).
+- fotos : List<String> ................. URLs de las fotos (RF-64).
+- horariosAtencion : String ............ Horario general de atención del prestador (RF-64).
+- sitioWeb : String .................... Sitio web público (RF-64).
+- redesSociales : List<String> ......... Enlaces a redes sociales (RF-64).
+
+--------------------------------------------------------------------------------
+CuentaCobro
+--------------------------------------------------------------------------------
+Cuenta donde el prestador recibe la dispersión. Se conserva el historial: cada
+cambio crea una cuenta nueva y cierra la anterior.
+
+Atributos
+- id : UUID ............................ Identificador de la cuenta.
+- tipo : TipoCuenta .................... BANCARIA, NEQUI o DAVIPLATA (RF-74).
+- entidad : String ..................... Banco o billetera (RF-74).
+- numero : String ...................... Número de cuenta; se cifra en la base de datos (RF-74, RNF-08).
+- titular : String ..................... Nombre del titular de la cuenta.
+- vigenteDesde : Instant ............... Desde cuándo es la cuenta vigente (RF-74).
+- vigenteHasta : Instant ............... Hasta cuándo fue vigente; vacío si es la actual (RF-74).
+
+Métodos
+- esVigente() : boolean ................ Indica si es la cuenta que se usa hoy (RF-74).
+
+
+================================================================================
+3. CATÁLOGO
+================================================================================
+
+--------------------------------------------------------------------------------
+Coordenada
+--------------------------------------------------------------------------------
+Tipo de valor reutilizable para representar una ubicación.
+
+Atributos
+- latitud : double ..................... Latitud geográfica.
+- longitud : double .................... Longitud geográfica.
+
+--------------------------------------------------------------------------------
+Zona
+--------------------------------------------------------------------------------
+Lugar o atractivo turístico registrado por el Administrador.
+
+Atributos
+- id : String .......................... Identificador de la zona.
+- nombre : String ...................... Nombre de la zona (RF-84).
+- descripcion : String ................. Descripción (RF-84).
+- ubicacion : Coordenada ............... Ubicación de la zona (RF-84).
+- areaProtegida : boolean .............. Marca de área protegida o ecosistema sensible (RF-84, RF-25).
+- altaAfluencia : boolean .............. Marca de zona congestionada (RF-84, RF-29).
+- activa : boolean ..................... Si la zona está activa o fue inactivada (RF-84).
+- buenasPracticas : List<String> ....... Buenas prácticas ambientales (RF-25, RF-84).
+- condicionesVisita : String ........... Condiciones de visita (RF-25, RF-84).
+
+--------------------------------------------------------------------------------
+Oferta
+--------------------------------------------------------------------------------
+Identidad estable de un servicio publicado por un prestador. Solicitudes y
+opiniones apuntan aquí. Su contenido vive en sus versiones.
+
+Atributos
+- id : String .......................... Identificador fijo de la oferta.
+- tipo : TipoOferta .................... ACTIVIDAD, PAQUETE, ALOJAMIENTO o RESTAURANTE; no cambia después de creada.
+- retirada : boolean ................... Si el prestador la retiró del catálogo (RF-65).
+
+Métodos
+- estaVisible() : boolean .............. Visible si tiene versión publicada, no está retirada y el RNT del prestador está activo; un paquete además exige que todas sus actividades estén visibles (RF-22, RF-65, RF-77).
+
+Relaciones
+- Compuesta por 0..1 VersionOferta publicada y 0..1 VersionOferta pendiente (al menos una existe).
+
+--------------------------------------------------------------------------------
+VersionOferta (clase abstracta)
+--------------------------------------------------------------------------------
+Contenido de la oferta en un momento dado, sujeto a moderación. La versión
+publicada es la que ve el turista; la pendiente es la edición en revisión
+(RF-66). Es abstracta: toda versión es de un tipo concreto.
+
+Atributos
+- nombre : String ...................... Nombre de la oferta (RF-65).
+- descripcion : String ................. Descripción (RF-20, RF-65).
+- precioReferencia : BigDecimal ........ Precio informativo, no vinculante (RF-20, RF-65).
+- horarios : String .................... Texto informativo con días o franja de operación (RF-20, RF-65).
+- ubicacion : Coordenada ............... Ubicación de la oferta (RF-20).
+- comoLlegar : String .................. Indicaciones para llegar (RF-20).
+- capacidadMaxima : int ................ Máximo de personas por solicitud (RF-65).
+- estadoModeracion : EstadoModeracion .. EN_MODERACION, APROBADA o RECHAZADA (RF-66, RF-79).
+- motivoRechazo : String ............... Motivo si el Administrador la rechazó (RF-79).
+- enviadaEn : Instant .................. Cuándo se envió a moderación.
+- revisadaEn : Instant ................. Cuándo la revisó el Administrador; vacío si sigue en moderación.
+
+Métodos (abstractos: cada subclase los implementa)
+- unidadPrecio() : String .............. Unidad del precio de referencia: por persona, por noche y unidad o promedio por persona (RF-20).
+- esAccesibleSillaRuedas() : boolean ... Accesibilidad en silla de ruedas; actividad, alojamiento y restaurante la guardan, el paquete la calcula (RF-17).
+
+Relaciones
+- Ubicada en 1 Zona.
+- Es padre de VersionActividad, VersionPaquete, VersionAlojamiento y VersionRestaurante.
+
+--------------------------------------------------------------------------------
+VersionActividad (hereda de VersionOferta)
+--------------------------------------------------------------------------------
+Atributos
+- tipoActividad : TipoActividad ........ Categoría de la actividad (RF-14, RF-65).
+- nivelEsfuerzo : NivelEsfuerzo ........ BAJO, MODERADO o ALTA_EXIGENCIA (RF-17).
+- accesibleSillaRuedas : boolean ....... Si es accesible en silla de ruedas (RF-17).
+- horariosSalida : List<LocalTime> ..... Horas de salida que el turista puede elegir (RF-30).
+- puntoEncuentro : String .............. Punto de encuentro; aplica a guías (RF-67).
+- duracionMinutos : int ................ Duración estimada en minutos (RF-67).
+- modalidad : ModalidadRecorrido ....... Modalidad del recorrido (RF-67).
+- idiomasAtencion : List<String> ....... Idiomas de atención de la actividad (RF-67).
+
+--------------------------------------------------------------------------------
+VersionPaquete (hereda de VersionOferta)
+--------------------------------------------------------------------------------
+Atributos
+- duracionMinutos : int ................ Duración del paquete en minutos (RF-22).
+- horariosSalida : List<LocalTime> ..... Horas de salida que el turista puede elegir (RF-22, RF-30).
+
+Métodos
+- nivelEsfuerzo() : NivelEsfuerzo ...... El mayor nivel de esfuerzo de sus actividades (RF-17).
+
+Relaciones
+- Incluye 2..* Oferta de tipo actividad del mismo prestador (RF-22).
+
+--------------------------------------------------------------------------------
+VersionAlojamiento (hereda de VersionOferta)
+--------------------------------------------------------------------------------
+Atributos
+- tipoUnidad : String .................. Tipo de unidad: habitación, cabaña, apartamento.
+- accesibleSillaRuedas : boolean ....... Si es accesible en silla de ruedas (RF-17).
+
+--------------------------------------------------------------------------------
+VersionRestaurante (hereda de VersionOferta)
+--------------------------------------------------------------------------------
+Atributos
+- accesibleSillaRuedas : boolean ....... Si es accesible en silla de ruedas (RF-17).
+
+--------------------------------------------------------------------------------
+Opinion
+--------------------------------------------------------------------------------
+Opinión de un turista sobre una oferta, publicada tras moderación. Un turista
+tiene como máximo una opinión por oferta (RF-61).
+
+Atributos
+- id : String .......................... Identificador de la opinión.
+- calificacion : int ................... Calificación de 1 a 5 (RF-60).
+- comentario : String .................. Texto de la opinión (RF-60).
+- fecha : Instant ...................... Fecha de la opinión (RF-59).
+- estado : EstadoModeracion ............ EN_MODERACION, APROBADA o RECHAZADA (RF-61, RF-80).
+- motivoRechazo : String ............... Motivo si fue rechazada (RF-80).
+
+Relaciones
+- Escrita por 1 Turista; califica 1 Oferta.
+
+
+================================================================================
+4. SOLICITUD DE DISPONIBILIDAD
+================================================================================
+
+--------------------------------------------------------------------------------
+SolicitudDisponibilidad
+--------------------------------------------------------------------------------
+Petición del turista sobre una oferta, desde su creación hasta su cierre.
+
+Identificación
+- id : UUID ............................ Identificador interno.
+- codigo : String ...................... Código corto que ve el turista (RF-30).
+
+Datos que ingresa el turista
+- fechaCreacion : Instant .............. Momento de envío; desde aquí corren las 24 h (RF-41).
+- fechaInicio : LocalDate .............. Fecha del servicio; mínimo 2 días después del envío (RF-30).
+- numeroPersonas : int ................. Número de personas (RF-30).
+- comentario : String .................. Comentario opcional (RF-30).
+- horaSalida : LocalTime ............... Hora de salida elegida; solo actividad y paquete (RF-30).
+- horaReserva : LocalTime .............. Hora para la que se pide la mesa; solo restaurante (RF-30).
+- fechaSalida : LocalDate .............. Fecha de salida; solo alojamiento (RF-30).
+- numeroUnidades : Integer ............. Unidades pedidas; solo alojamiento (RF-30).
+
+Ciclo de vida
+- estado : EstadoSolicitud ............. Estado actual entre los 9 del ciclo de vida (RF-33).
+- tomadaEn : Instant ................... Cuándo la tomó un operador; vacío si está en la cola.
+- atendidaEn : Instant ................. Cuándo el operador la marcó Atendida.
+- ventanaVenceEn : Instant ............. Fin de la ventana de confirmación y pago: 3 h, o las 08:00 si fue de noche (RF-55).
+
+Datos que registra el operador
+- precioBase : BigDecimal .............. Precio total que se cobra (RF-37, RF-46).
+- condiciones : String ................. Condiciones transmitidas al turista (RF-39, RF-42).
+- politicaCancelacion : String ......... Política de cancelación del prestador (RF-39, RF-42).
+- aparteAcordado : boolean ............. Si el prestador aceptó guardar el cupo durante la ventana (RF-38, RF-39).
+
+Snapshot (copia de la oferta al crear la solicitud; no cambia)
+- nombreOferta : String ................ Nombre de la oferta en ese momento (RF-85).
+- tipoOferta : TipoOferta .............. Tipo de la oferta (RF-85).
+- zonaId : String ...................... Zona de la oferta (RF-85).
+- categoriaPrestador : CategoriaPrestador .. Categoría del prestador en ese momento (RF-89).
+
+Métodos
+- tomar(operador : OperadorDisponibilidad) : void .. Asigna la solicitud a un operador de la cola compartida.
+- liberar() : void ..................... Devuelve la solicitud a la cola.
+- atender(precio : BigDecimal, condiciones : String, politica : String, aparte : boolean) : void .. Pasa a ATENDIDA (RF-37 a RF-39).
+- marcarNoDisponible() : void .......... Pasa a NO_DISPONIBLE (RF-39, RF-77).
+- marcarSinRespuesta() : void .......... Pasa a SIN_RESPUESTA tras 24 h sin atender (RF-41).
+- confirmar() : void ................... El turista acepta las condiciones (RF-43).
+- declinar() : void .................... El turista rechaza las condiciones (RF-43).
+- registrarPagoAprobado() : void ....... Pasa a PAGADA (RF-50).
+- registrarPagoFallido() : void ........ Pasa a PAGO_FALLIDO (RF-58).
+- vencer() : void ...................... Pasa a VENCIDA (RF-55, RF-58, RF-77).
+- esTerminal() : boolean ............... Indica si está en un estado final.
+- calcularVentana(atendidaEn : Instant) : Instant .. Calcula el fin de la ventana de 3 h (RF-55).
+
+Restricciones
+- Máximo 5 solicitudes tomadas sin atender por operador.
+- Una solicitud tomada se libera sola a las 2 h sin atender.
+- El plazo de 24 h cuenta desde fechaCreacion.
+- No puede haber dos solicitudes no terminales del mismo turista, oferta, fecha y hora (RF-31).
+
+Relaciones
+- Enviada por 1 Turista; sobre 1 Oferta; dirigida a 1 Prestador.
+- Tomada por 0..1 OperadorDisponibilidad.
+- Compuesta por 1..* TransicionEstado y 0..3 IntentoPago.
+- Genera 0..1 Dispersion.
+
+--------------------------------------------------------------------------------
+TransicionEstado
+--------------------------------------------------------------------------------
+Registro de cada cambio de estado de una solicitud.
+
+Atributos
+- id : UUID ............................ Identificador del registro.
+- estadoOrigen : EstadoSolicitud ....... Estado anterior; vacío en la primera transición.
+- estadoDestino : EstadoSolicitud ...... Nuevo estado (RF-88).
+- fecha : Instant ...................... Momento del cambio (RNF-09).
+- motivo : String ...................... Razón del cambio cuando aplica.
+
+Relaciones
+- Realizada por 0..1 Usuario (vacío si fue automática).
+
+
+================================================================================
+5. PAGO Y DISPERSIÓN
+================================================================================
+
+--------------------------------------------------------------------------------
+IntentoPago
+--------------------------------------------------------------------------------
+Cada intento de cobro al turista. Máximo 3 por solicitud (RF-58).
+
+Atributos
+- id : UUID ............................ Identificador del intento.
+- numeroIntento : int .................. 1, 2 o 3 (RF-58).
+- referencia : String .................. Referencia única enviada a la pasarela para asociar el webhook (RF-46, RF-50, RF-52).
+- idTransaccion : String ............... Identificador de la transacción que asigna la pasarela (RF-52).
+- monto : BigDecimal ................... Monto cobrado; siempre el precio base (RF-46, RF-49).
+- estado : EstadoPago .................. PENDIENTE, APROBADO o RECHAZADO (RF-50, RF-58).
+- tardio : boolean ..................... Aprobado cuando la solicitud ya estaba vencida (RF-50).
+- creadoEn : Instant ................... Inicio del intento; sirve para saber si hay un pago en curso (RF-55).
+
+--------------------------------------------------------------------------------
+EventoWebhook
+--------------------------------------------------------------------------------
+Cada mensaje recibido de la pasarela de pago. Se registran todos, incluidos los
+duplicados y los de firma inválida (RF-50).
+
+Atributos
+- idEvento : String .................... Identificador del evento; permite descartar duplicados (RF-50).
+- firmaValida : boolean ................ Resultado de verificar la firma (RF-50).
+- payload : String ..................... Contenido completo del evento.
+- recibidoEn : Instant ................. Cuándo llegó.
+- procesadoEn : Instant ................ Cuándo se procesó; vacío si está pendiente (RT-07).
+
+Relaciones
+- Confirma 0..1 IntentoPago.
+
+--------------------------------------------------------------------------------
+Dispersion
+--------------------------------------------------------------------------------
+Transferencia al prestador del precio base menos la comisión y el costo de la
+pasarela.
+
+Atributos
+- id : UUID ............................ Identificador de la dispersión.
+- montoBase : BigDecimal ............... Precio base cobrado (RF-53).
+- porcentajeComision : BigDecimal ...... Porcentaje vigente al confirmarse el pago, copiado (RF-53, RF-83).
+- montoComision : BigDecimal ........... Valor de la comisión de la plataforma (RF-53).
+- costoTransaccional : BigDecimal ...... Costo cobrado por la pasarela (RF-53).
+- montoNeto : BigDecimal ............... Lo que recibe el prestador (RF-54).
+- estado : EstadoDispersion ............ PENDIENTE, EXITOSA, FALLIDA o REQUIERE_CUENTA (RF-54).
+- intentos : int ....................... Intentos de transferencia; máximo 3 antes de avisar al prestador (RF-54).
+- idDispersionPasarela : String ........ Identificador de la dispersión en la pasarela (RF-54).
+
+Métodos
+- calcularMontoNeto() : BigDecimal ..... montoBase - montoComision - costoTransaccional (RF-54).
+
+Relaciones
+- Usa 1 CuentaCobro (la vigente al ejecutarse).
+
+--------------------------------------------------------------------------------
+ParametroComision
+--------------------------------------------------------------------------------
+Historial de porcentajes de comisión definidos por el Administrador.
+
+Atributos
+- id : UUID ............................ Identificador del parámetro.
+- porcentaje : BigDecimal .............. Porcentaje de comisión (RF-82).
+- vigenteDesde : Instant ............... Desde cuándo aplica (RF-83).
+- vigenteHasta : Instant ............... Hasta cuándo aplicó; vacío si es el vigente (RF-83).
+
+Relaciones
+- Definido por 1 Administrador.
+
+
+================================================================================
+6. NOTIFICACIONES
+================================================================================
+
+--------------------------------------------------------------------------------
+Notificacion
+--------------------------------------------------------------------------------
+Cada aviso enviado a un usuario. Se registra y se envía de forma asíncrona.
+
+Atributos
+- id : UUID ............................ Identificador de la notificación.
+- canal : CanalNotificacion ............ WHATSAPP, PLATAFORMA o CORREO.
+- plantilla : String ................... Plantilla del mensaje.
+- estado : EstadoEnvio ................. PENDIENTE, ENVIADA o FALLIDA.
+- intentos : int ....................... Intentos de envío.
+- creadaEn : Instant ................... Cuándo se generó.
+- enviadaEn : Instant .................. Cuándo se envió; vacío si sigue pendiente.
+
+Relaciones
+- Dirigida a 1 Usuario; sobre 0..1 SolicitudDisponibilidad.
+- Origen: RF-34, RF-44, RF-45, RF-56, RF-57, RF-78, RF-80, RT-07.
+
+
+================================================================================
+7. ENUMERACIONES
+================================================================================
+
+EstadoSolicitud ...... PENDIENTE, ATENDIDA, NO_DISPONIBLE, SIN_RESPUESTA, CONFIRMADA, DECLINADA, PAGO_FALLIDO, VENCIDA, PAGADA (SRS 3.1.3)
+TipoOferta ........... ACTIVIDAD, PAQUETE, ALOJAMIENTO, RESTAURANTE (Glosario)
+TipoPrestador ........ ALOJAMIENTO, RESTAURANTE, AGENCIA_OPERADORA, GUIA_INDEPENDIENTE (RF-68)
+CategoriaPrestador ... GUIA_INDEPENDIENTE, MICRO_PEQUENO, MEDIANO, GRANDE (Decisión 5.5 #5)
+EstadoRnt ............ ACTIVO, INACTIVO, NO_ENCONTRADO, VERIFICACION_PENDIENTE (RF-76)
+EstadoModeracion ..... EN_MODERACION, APROBADA, RECHAZADA (RF-61, RF-66, RF-79)
+TipoActividad ........ SENDERISMO, BUCEO_SNORKEL, DEPORTES_ACUATICOS, NAUTICO, AVISTAMIENTO_FAUNA, CULTURAL_HISTORICO, ETNOTURISMO, GASTRONOMICO, CICLISMO, AVENTURA, PLAYA_RELAX, OTRO (RF-19; valores definidos por el equipo)
+ModalidadRecorrido ... CAMINATA, BICICLETA, KAYAK, OTRA (RF-67, RF-69)
+NivelEsfuerzo ........ BAJO, MODERADO, ALTA_EXIGENCIA (RF-17)
+EstadoPago ........... PENDIENTE, APROBADO, RECHAZADO (RF-50, RF-58)
+EstadoDispersion ..... PENDIENTE, EXITOSA, FALLIDA, REQUIERE_CUENTA (RF-54)
+EstadoCuenta ......... ACTIVA, DESACTIVADA, SUPRIMIDA (RF-13, RF-81)
+PropositoCodigo ...... VERIFICACION_WHATSAPP, RESTABLECER_CONTRASENA, ESTABLECER_CONTRASENA (RF-03, RF-07, RF-81)
+EstadoSupresion ...... SOLICITADA, EJECUTADA (RF-13)
+TipoCuenta ........... BANCARIA, NEQUI, DAVIPLATA (RF-74)
+CanalNotificacion .... WHATSAPP, PLATAFORMA, CORREO (RF-07, RF-34, RF-44)
+EstadoEnvio .......... PENDIENTE, ENVIADA, FALLIDA
