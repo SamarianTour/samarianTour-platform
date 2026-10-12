@@ -1,0 +1,337 @@
+package co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo;
+
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.OfertaNoEditableException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PrestadorNoAutorizadoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.TipoOfertaNoPermitidoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.AHORA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.DESPUES;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.OTRO_PRESTADOR;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_INACTIVA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividad;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.alojamiento;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.contenido;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.habilitado;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.inhabilitado;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaEnModeracion;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaPublicada;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaActiva;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaInactiva;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class OfertaTest {
+
+    @Nested
+    @DisplayName("Publicar")
+    class Publicar {
+
+        @Test
+        @DisplayName("una oferta nueva nace con su versión 1 en moderación, sin versión publicada y sin ser visible")
+        void naceEnModeracion() {
+            Oferta oferta = ofertaEnModeracion();
+
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.ACTIVIDAD);
+            assertThat(oferta.prestadorId()).isEqualTo(PRESTADOR);
+            assertThat(oferta.publicada()).isEmpty();
+            assertThat(oferta.pendiente()).hasValueSatisfying(version -> {
+                assertThat(version.numero()).isEqualTo(1);
+                assertThat(version.estadoModeracion()).isEqualTo(EstadoModeracion.EN_MODERACION);
+                assertThat(version.moderacion().enviadaEn()).isEqualTo(AHORA);
+            });
+            assertThat(oferta.estaVisible()).isFalse();
+        }
+
+        @Test
+        @DisplayName("con el RNT inactivo se rechaza con el código RNT_INACTIVO")
+        void rntInactivo() {
+            assertThatThrownBy(() -> Oferta.publicar("o", inhabilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    actividad(), zonaActiva(), AHORA))
+                    .isInstanceOfSatisfying(RntInactivoException.class,
+                            excepcion -> assertThat(excepcion.codigo()).isEqualTo("RNT_INACTIVO"));
+        }
+
+        @Test
+        @DisplayName("un prestador sin avisos del núcleo se trata como no habilitado")
+        void prestadorSinAvisos() {
+            assertThatThrownBy(() -> Oferta.publicar("o", PrestadorCatalogo.sinAvisos(PRESTADOR),
+                    TipoPrestador.AGENCIA_OPERADORA, actividad(), zonaActiva(), AHORA))
+                    .isInstanceOf(RntInactivoException.class);
+        }
+
+        @Test
+        @DisplayName("el tipo de prestador debe poder publicar ese tipo de oferta")
+        void tipoNoPermitido() {
+            assertThatThrownBy(() -> Oferta.publicar("o", habilitado(), TipoPrestador.ALOJAMIENTO,
+                    actividad(), zonaActiva(), AHORA))
+                    .isInstanceOf(TipoOfertaNoPermitidoException.class);
+        }
+
+        @Test
+        @DisplayName("la zona debe estar activa")
+        void zonaInactivaSeRechaza() {
+            VersionActividad enZonaInactiva = new VersionActividad(contenido("Tour", ZONA_INACTIVA),
+                    TipoActividad.CULTURAL_HISTORICO, NivelEsfuerzo.BAJO, false,
+                    actividad().horariosSalida(), null, null, null, null);
+
+            assertThatThrownBy(() -> Oferta.publicar("o", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    enZonaInactiva, zonaInactiva(), AHORA))
+                    .isInstanceOf(ZonaNoDisponibleException.class);
+        }
+
+        @Test
+        @DisplayName("un prestador de alojamiento publica un alojamiento")
+        void prestadorDeAlojamientoPublicaAlojamiento() {
+            Oferta oferta = Oferta.publicar("o", habilitado(), TipoPrestador.ALOJAMIENTO, alojamiento(),
+                    zonaActiva(), AHORA);
+
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.ALOJAMIENTO);
+        }
+    }
+
+    @Nested
+    @DisplayName("Editar")
+    class Editar {
+
+        @Test
+        @DisplayName("[Sustentación] editar una oferta publicada crea una versión en moderación; la publicada sigue "
+                + "visible hasta que se apruebe la nueva")
+        void editarPublicadaCreaVersionPendienteYSigueVisible() {
+            Oferta oferta = ofertaPublicada();
+
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad("Caminata editada"),
+                    zonaActiva(), DESPUES);
+
+            assertThat(oferta.pendiente()).hasValueSatisfying(pendiente -> {
+                assertThat(pendiente.numero()).isEqualTo(2);
+                assertThat(pendiente.estadoModeracion()).isEqualTo(EstadoModeracion.EN_MODERACION);
+            });
+            assertThat(oferta.publicada()).hasValueSatisfying(publicada -> {
+                assertThat(publicada.numero()).isEqualTo(1);
+                assertThat(publicada.contenido().nombre()).isEqualTo("Caminata a Cabo San Juan");
+            });
+            assertThat(oferta.estaVisible()).isTrue();
+
+            oferta.aprobar(2, true, DESPUES);
+
+            assertThat(oferta.pendiente()).isEmpty();
+            assertThat(oferta.publicada()).hasValueSatisfying(publicada ->
+                    assertThat(publicada.contenido().nombre()).isEqualTo("Caminata editada"));
+        }
+
+        @Test
+        @DisplayName("una edición reemplaza a la pendiente con un número nuevo, también si estaba rechazada")
+        void reemplazaPendienteConNumeroNuevo() {
+            Oferta oferta = ofertaEnModeracion();
+            oferta.rechazar(1, "Fotos poco claras", AHORA);
+
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad("Segundo intento"),
+                    zonaActiva(), DESPUES);
+
+            assertThat(oferta.pendiente()).hasValueSatisfying(pendiente -> {
+                assertThat(pendiente.numero()).isEqualTo(2);
+                assertThat(pendiente.estadoModeracion()).isEqualTo(EstadoModeracion.EN_MODERACION);
+                assertThat(pendiente.moderacion().motivoRechazo()).isNull();
+            });
+        }
+
+        @Test
+        @DisplayName("el número de versión nunca se reutiliza: el aviso de una versión reemplazada no aprueba la nueva")
+        void avisoDeVersionReemplazadaSeIgnora() {
+            Oferta oferta = ofertaEnModeracion();
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad("Versión 2"), zonaActiva(), DESPUES);
+
+            boolean aplicado = oferta.aprobar(1, true, DESPUES);
+
+            assertThat(aplicado).isFalse();
+            assertThat(oferta.publicada()).isEmpty();
+            assertThat(oferta.pendiente()).hasValueSatisfying(pendiente ->
+                    assertThat(pendiente.numero()).isEqualTo(2));
+        }
+
+        @Test
+        @DisplayName("solo el prestador dueño puede editar")
+        void soloElDueno() {
+            Oferta oferta = ofertaPublicada();
+
+            assertThatThrownBy(() -> oferta.editar(new PrestadorCatalogo(OTRO_PRESTADOR, true, 1),
+                    TipoPrestador.AGENCIA_OPERADORA, actividad(), zonaActiva(), DESPUES))
+                    .isInstanceOf(PrestadorNoAutorizadoException.class);
+        }
+
+        @Test
+        @DisplayName("una oferta retirada no se puede editar")
+        void retiradaNoEditable() {
+            Oferta oferta = ofertaPublicada();
+            oferta.retirar(PRESTADOR);
+
+            assertThatThrownBy(() -> oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad(),
+                    zonaActiva(), DESPUES))
+                    .isInstanceOf(OfertaNoEditableException.class);
+        }
+
+        @Test
+        @DisplayName("editar con el RNT inactivo se rechaza, porque crea una versión nueva para moderar")
+        void rntInactivo() {
+            Oferta oferta = ofertaPublicada();
+
+            assertThatThrownBy(() -> oferta.editar(inhabilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad(),
+                    zonaActiva(), DESPUES))
+                    .isInstanceOf(RntInactivoException.class);
+        }
+
+        @Test
+        @DisplayName("el tipo de la oferta no cambia después de creada")
+        void tipoNoCambia() {
+            Oferta oferta = ofertaPublicada();
+
+            assertThatThrownBy(() -> oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, alojamiento(),
+                    zonaActiva(), DESPUES))
+                    .isInstanceOf(DatoInvalidoException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Retirar")
+    class Retirar {
+
+        @Test
+        @DisplayName("retirar es un cambio de estado, no un borrado: conserva sus versiones y deja de ser visible")
+        void retirarConservaVersiones() {
+            Oferta oferta = ofertaPublicada();
+
+            oferta.retirar(PRESTADOR);
+
+            assertThat(oferta.retirada()).isTrue();
+            assertThat(oferta.publicada()).isPresent();
+            assertThat(oferta.estaVisible()).isFalse();
+        }
+
+        @Test
+        @DisplayName("se puede retirar aunque el RNT esté inactivo")
+        void retirarSinRnt() {
+            Oferta oferta = Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, false,
+                    null, ofertaEnModeracion().pendiente().orElseThrow());
+
+            oferta.retirar(PRESTADOR);
+
+            assertThat(oferta.retirada()).isTrue();
+        }
+
+        @Test
+        @DisplayName("solo el prestador dueño puede retirar")
+        void soloElDueno() {
+            Oferta oferta = ofertaPublicada();
+
+            assertThatThrownBy(() -> oferta.retirar(OTRO_PRESTADOR))
+                    .isInstanceOf(PrestadorNoAutorizadoException.class);
+        }
+
+        @Test
+        @DisplayName("una oferta retirada ignora los avisos de moderación")
+        void retiradaIgnoraModeracion() {
+            Oferta oferta = ofertaEnModeracion();
+            oferta.retirar(PRESTADOR);
+
+            assertThat(oferta.aprobar(1, true, DESPUES)).isFalse();
+            assertThat(oferta.publicada()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("Moderar")
+    class Moderar {
+
+        @Test
+        @DisplayName("aprobar publica la versión pendiente y la oferta pasa a ser visible")
+        void aprobar() {
+            Oferta oferta = ofertaEnModeracion();
+
+            boolean aplicado = oferta.aprobar(1, true, DESPUES);
+
+            assertThat(aplicado).isTrue();
+            assertThat(oferta.pendiente()).isEmpty();
+            assertThat(oferta.publicada()).hasValueSatisfying(publicada -> {
+                assertThat(publicada.estadoModeracion()).isEqualTo(EstadoModeracion.APROBADA);
+                assertThat(publicada.moderacion().revisadaEn()).isEqualTo(DESPUES);
+            });
+            assertThat(oferta.estaVisible()).isTrue();
+        }
+
+        @Test
+        @DisplayName("aprobar dos veces la misma versión no falla ni cambia nada")
+        void aprobarEsIdempotente() {
+            Oferta oferta = ofertaEnModeracion();
+            oferta.aprobar(1, true, DESPUES);
+
+            boolean segundaVez = oferta.aprobar(1, true, DESPUES.plusSeconds(60));
+
+            assertThat(segundaVez).isFalse();
+            assertThat(oferta.publicada().orElseThrow().moderacion().revisadaEn()).isEqualTo(DESPUES);
+        }
+
+        @Test
+        @DisplayName("aprobar copia la habilitación vigente: con el RNT inactivo la oferta queda publicada pero no visible")
+        void aprobarCopiaHabilitacion() {
+            Oferta oferta = ofertaEnModeracion();
+
+            oferta.aprobar(1, false, DESPUES);
+
+            assertThat(oferta.publicada()).isPresent();
+            assertThat(oferta.rntPrestadorActivo()).isFalse();
+            assertThat(oferta.estaVisible()).isFalse();
+        }
+
+        @Test
+        @DisplayName("rechazar deja la versión como pendiente, con su motivo, y la publicada no cambia")
+        void rechazar() {
+            Oferta oferta = ofertaPublicada();
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad("Edición"), zonaActiva(), DESPUES);
+
+            boolean aplicado = oferta.rechazar(2, "Precio inconsistente", DESPUES);
+
+            assertThat(aplicado).isTrue();
+            assertThat(oferta.pendiente()).hasValueSatisfying(pendiente -> {
+                assertThat(pendiente.estadoModeracion()).isEqualTo(EstadoModeracion.RECHAZADA);
+                assertThat(pendiente.moderacion().motivoRechazo()).isEqualTo("Precio inconsistente");
+            });
+            assertThat(oferta.publicada().orElseThrow().numero()).isEqualTo(1);
+            assertThat(oferta.estaVisible()).isTrue();
+        }
+
+        @Test
+        @DisplayName("rechazar dos veces la misma versión no falla ni cambia nada")
+        void rechazarEsIdempotente() {
+            Oferta oferta = ofertaEnModeracion();
+            oferta.rechazar(1, "Primer motivo", AHORA);
+
+            boolean segundaVez = oferta.rechazar(1, "Otro motivo", DESPUES);
+
+            assertThat(segundaVez).isFalse();
+            assertThat(oferta.pendiente().orElseThrow().moderacion().motivoRechazo()).isEqualTo("Primer motivo");
+        }
+
+        @Test
+        @DisplayName("rechazar exige un motivo")
+        void rechazarExigeMotivo() {
+            Oferta oferta = ofertaEnModeracion();
+
+            assertThatThrownBy(() -> oferta.rechazar(1, " ", DESPUES))
+                    .isInstanceOf(DatoInvalidoException.class);
+        }
+    }
+
+    @Test
+    @DisplayName("una oferta tiene al menos una versión publicada o pendiente")
+    void alMenosUnaVersion() {
+        assertThatThrownBy(() -> Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, true, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+}
