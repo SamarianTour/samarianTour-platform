@@ -9,8 +9,12 @@ import java.util.Objects;
  * es agregar una subclase a {@code permits}.
  *
  * <p>Una versión nace como borrador, sin registro de moderación; la oferta le asigna número al enviarla.
+ *
+ * <p>La accesibilidad en silla de ruedas (RF-17) no es un método común: actividad, alojamiento y restaurante
+ * la guardan, y la del paquete se calcula con sus actividades en ReglasPaquete.
  */
-public abstract sealed class VersionOferta permits VersionActividad, VersionAlojamiento {
+public abstract sealed class VersionOferta
+        permits VersionActividad, VersionPaquete, VersionAlojamiento, VersionRestaurante {
 
     private final ContenidoComun contenido;
     private RegistroModeracion moderacion;
@@ -24,8 +28,6 @@ public abstract sealed class VersionOferta permits VersionActividad, VersionAloj
 
     /** Unidad del precio de referencia (RF-20). */
     public abstract String unidadPrecio();
-
-    public abstract boolean esAccesibleSillaRuedas();
 
     public ContenidoComun contenido() {
         return contenido;

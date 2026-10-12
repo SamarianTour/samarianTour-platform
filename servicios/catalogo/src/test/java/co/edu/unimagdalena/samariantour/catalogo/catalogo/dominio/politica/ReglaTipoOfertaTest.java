@@ -20,21 +20,26 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDe
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividadCompletaDeGuia;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.alojamiento;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.contenido;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.paquete;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.restaurante;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ReglaTipoOfertaTest {
 
-    @ParameterizedTest(name = "{0} publica ACTIVIDAD: {1}; ALOJAMIENTO: {2}")
+    @ParameterizedTest(name = "{0} publica ACTIVIDAD: {1}; PAQUETE: {2}; ALOJAMIENTO: {3}; RESTAURANTE: {4}")
     @CsvSource({
-            "ALOJAMIENTO,        false, true",
-            "RESTAURANTE,        false, false",
-            "AGENCIA_OPERADORA,  true,  false",
-            "GUIA_INDEPENDIENTE, true,  false"})
+            "ALOJAMIENTO,        false, false, true,  false",
+            "RESTAURANTE,        false, false, false, true",
+            "AGENCIA_OPERADORA,  true,  true,  false, false",
+            "GUIA_INDEPENDIENTE, true,  true,  false, false"})
     @DisplayName("matriz de tipo de prestador y tipo de oferta (RF-65)")
-    void matriz(TipoPrestador tipoPrestador, boolean puedeActividad, boolean puedeAlojamiento) {
+    void matriz(TipoPrestador tipoPrestador, boolean puedeActividad, boolean puedePaquete, boolean puedeAlojamiento,
+                boolean puedeRestaurante) {
         verificarPermiso(tipoPrestador, actividadCompletaDeGuia(), puedeActividad);
+        verificarPermiso(tipoPrestador, paquete("a", "b"), puedePaquete);
         verificarPermiso(tipoPrestador, alojamiento(), puedeAlojamiento);
+        verificarPermiso(tipoPrestador, restaurante(), puedeRestaurante);
     }
 
     @Test

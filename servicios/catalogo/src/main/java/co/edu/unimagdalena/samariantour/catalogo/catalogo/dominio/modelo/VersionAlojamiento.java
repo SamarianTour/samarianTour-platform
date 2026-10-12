@@ -39,7 +39,6 @@ public final class VersionAlojamiento extends VersionOferta {
         return "por noche y unidad";
     }
 
-    @Override
     public boolean esAccesibleSillaRuedas() {
         return accesibleSillaRuedas;
     }

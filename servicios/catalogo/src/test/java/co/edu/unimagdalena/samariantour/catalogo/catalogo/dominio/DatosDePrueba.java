@@ -10,6 +10,8 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoAct
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionActividad;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionAlojamiento;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionPaquete;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionRestaurante;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 
 import java.math.BigDecimal;
@@ -68,6 +70,16 @@ public final class DatosDePrueba {
         return new VersionAlojamiento(contenido("Cabaña frente al mar"), "cabaña", false);
     }
 
+    public static VersionRestaurante restaurante() {
+        return new VersionRestaurante(contenido("Cocina del Caribe"), true);
+    }
+
+    /** Paquete que incluye las ofertas de actividad con esos identificadores. */
+    public static VersionPaquete paquete(String... actividadIds) {
+        return new VersionPaquete(contenido("Tayrona en dos días"), List.of(actividadIds), 600,
+                List.of(LocalTime.of(6, 30)));
+    }
+
     public static PrestadorCatalogo habilitado() {
         return new PrestadorCatalogo(PRESTADOR, true, 1);
     }
@@ -85,6 +97,20 @@ public final class DatosDePrueba {
     /** Oferta de actividad con su versión 1 aprobada y sin versión pendiente. */
     public static Oferta ofertaPublicada() {
         Oferta oferta = ofertaEnModeracion();
+        oferta.aprobar(1, true, AHORA);
+        return oferta;
+    }
+
+    /** Oferta de actividad de la agencia de prueba, ya aprobada, con el nivel de esfuerzo y la accesibilidad dados. */
+    public static Oferta actividadPublicada(String id, NivelEsfuerzo nivelEsfuerzo, boolean accesibleSillaRuedas) {
+        return actividadPublicada(id, habilitado(), nivelEsfuerzo, accesibleSillaRuedas);
+    }
+
+    public static Oferta actividadPublicada(String id, PrestadorCatalogo prestador, NivelEsfuerzo nivelEsfuerzo,
+                                            boolean accesibleSillaRuedas) {
+        VersionActividad contenido = new VersionActividad(contenido("Actividad " + id), TipoActividad.SENDERISMO,
+                nivelEsfuerzo, accesibleSillaRuedas, List.of(LocalTime.of(7, 0)), null, null, null, List.of());
+        Oferta oferta = Oferta.publicar(id, prestador, TipoPrestador.AGENCIA_OPERADORA, contenido, zonaActiva(), AHORA);
         oferta.aprobar(1, true, AHORA);
         return oferta;
     }
