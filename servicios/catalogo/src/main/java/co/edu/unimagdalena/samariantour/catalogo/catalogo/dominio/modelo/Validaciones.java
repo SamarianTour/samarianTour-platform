@@ -8,7 +8,7 @@ import java.util.Objects;
 
 /**
  * Validaciones de campo del dominio, reunidas en un solo lugar.
- * Pendiente: completar longitudes y rangos cuando se cierre el SRS (regla 7 de docs/decisiones-catalogo-ofertas.md).
+ * Pendiente: completar longitudes y rangos cuando se cierre el SRS (DC-19 de docs/decisiones-catalogo-ofertas.md).
  */
 public final class Validaciones {
 
