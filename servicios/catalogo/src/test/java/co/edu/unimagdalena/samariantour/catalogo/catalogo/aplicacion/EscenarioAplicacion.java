@@ -45,12 +45,13 @@ class EscenarioAplicacion {
     final ZonaRepositoryEnMemoria zonas = new ZonaRepositoryEnMemoria(zonaActiva(), zonaInactiva(),
             new Zona(ZONA_TAGANGA, "Taganga", null, null, false, true, true, List.of(), null));
     final PrestadorCatalogoRepositoryEnMemoria prestadores = new PrestadorCatalogoRepositoryEnMemoria();
+    final PerfilRepositoryEnMemoria perfiles = new PerfilRepositoryEnMemoria();
     final AvisoProcesadoEnMemoria avisosProcesados = new AvisoProcesadoEnMemoria();
     private final Clock reloj = Clock.fixed(AHORA, ZoneOffset.UTC);
 
     final GestionarOfertaService gestion = new GestionarOfertaService(ofertas, zonas, prestadores, reloj);
     final BuscarOfertasService busqueda = new BuscarOfertasService(ofertas);
-    final ConsultarFichaOfertaService ficha = new ConsultarFichaOfertaService(ofertas);
+    final ConsultarFichaOfertaService ficha = new ConsultarFichaOfertaService(ofertas, zonas, perfiles);
     final ConsultarZonasService consultaZonas = new ConsultarZonasService(zonas);
     final AplicarAvisoNucleoService avisos = new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados,
             reloj);
