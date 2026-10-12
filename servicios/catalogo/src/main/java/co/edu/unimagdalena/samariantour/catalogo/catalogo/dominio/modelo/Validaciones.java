@@ -3,6 +3,8 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 
@@ -70,5 +72,33 @@ public final class Validaciones {
             throw new DatoInvalidoException(campo, "debe tener al menos un elemento");
         }
         return copia;
+    }
+
+    /** URL opcional; si viene, debe ser una URL http o https. Un texto en blanco se trata como ausente. */
+    public static String urlOpcional(String valor, String campo) {
+        String url = textoOpcional(valor);
+        return url == null ? null : url(url, campo);
+    }
+
+    /** Lista inmutable de URLs http o https; null se trata como lista vacía. */
+    public static List<String> urls(List<String> valores, String campo) {
+        return lista(valores, campo).stream().map(valor -> url(texto(valor, campo), campo)).toList();
+    }
+
+    private static String url(String valor, String campo) {
+        if (!esUrlHttp(valor)) {
+            throw new DatoInvalidoException(campo, "debe ser una URL http o https");
+        }
+        return valor;
+    }
+
+    private static boolean esUrlHttp(String valor) {
+        try {
+            URI uri = new URI(valor);
+            return uri.getHost() != null
+                    && ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()));
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 }
