@@ -1,6 +1,6 @@
 # Decisiones del prototipo: ofertas del catálogo
 
-Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (gestión de ofertas del prestador, tipos ACTIVIDAD y ALOJAMIENTO). Complementa el diagrama de paquetes, el diagrama de clases y el diccionario de clases; donde los contradice, se indica en la sección final.
+Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (gestión de ofertas del prestador, tipos ACTIVIDAD, PAQUETE, ALOJAMIENTO y RESTAURANTE). Complementa el diagrama de paquetes, el diagrama de clases y el diccionario de clases; donde los contradice, se indica en la sección final.
 
 - **Estado:** vigente, octubre de 2026. Pendiente de rectificar contra el SRS cuando termine su revisión.
 - **Rama:** `feature/catalogo-ofertas`.
@@ -31,6 +31,11 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-19 | Validaciones de campo provisionales | 🆕 hasta cerrar el SRS |
 | DC-20 | Stack del prototipo | 🆕 |
 | DC-21 | Un servicio de aplicación por caso de uso | ✅ diagrama de paquetes |
+| DC-22 | Unidad del precio de referencia por tipo de oferta | 🆕 RF-20 |
+| DC-23 | Actividades que puede incluir un paquete | 🆕 RF-22, DC-09 |
+| DC-24 | El filtro por tipo de actividad incluye los paquetes | 🆕 |
+| DC-25 | El filtro por nivel de esfuerzo es "hasta el nivel indicado" | 🆕 RF-17 |
+| DC-26 | Perfil público: solo la descripción es obligatoria | 🆕 RF-64, RS-03 |
 
 ## Identidad y habilitación del prestador
 
@@ -159,6 +164,46 @@ partialFilterExpression: { rntPrestadorActivo: true, retirada: false, publicada:
 
 **DC-21. Un servicio de aplicación por caso de uso.** Cada puerto de entrada tiene su propia implementación: `GestionarOfertaService`, `BuscarOfertasService`, `ConsultarFichaOfertaService`, `ConsultarZonasService` y `AplicarAvisoNucleoService`. El diagrama de paquetes lo permite literalmente ("cada caso de uso puede implementarse en su propia clase; el diagrama los agrupa en un servicio por módulo"). Se prefirió a un único `CatalogoService` porque ese servicio atendía a tres actores (prestador, turista y núcleo) con dependencias casi disjuntas: separarlo cumple el principio de responsabilidad única y hace que un caso de uso nuevo sea una clase nueva, sin modificar las existentes. La regla "un prestador sin avisos no está habilitado" quedó en un solo lugar, `PrestadorCatalogoRepositoryPort.habilitacionDe`.
 
+## Paquetes, búsqueda y perfil público
+
+**DC-22. Unidad del precio de referencia por tipo de oferta.**
+
+| Tipo de oferta | Unidad |
+|---|---|
+| ACTIVIDAD | por persona |
+| PAQUETE | por persona |
+| ALOJAMIENTO | por noche y unidad |
+| RESTAURANTE | promedio por persona |
+
+El paquete se cobra por persona porque está hecho de actividades, que se cobran por persona.
+
+**DC-23. Actividades que puede incluir un paquete (`ReglasPaquete`).**
+- Dos o más, distintas, todas de tipo ACTIVIDAD y del mismo prestador (RF-22).
+- Una actividad **retirada** no se puede incluir: el paquete se rechaza al publicarlo o editarlo, con 400 `DATO_INVALIDO` (DC-15). El retiro es definitivo (DC-09), así que no tiene sentido incluirla.
+- Una actividad **sin aprobar**, en moderación o rechazada, sí se puede incluir: el prestador puede enviar a moderación las actividades y el paquete al mismo tiempo. El paquete no es visible hasta que todas sus actividades lo sean (RF-22).
+- Una referencia a una oferta que no existe, que no es una actividad o que es de otro prestador responde el mismo 400 `DATO_INVALIDO`, sin distinguir el caso, para no revelar ofertas ajenas.
+
+**DC-24. El filtro por tipo de actividad incluye los paquetes.** Un paquete coincide si al menos una de sus actividades es de ese tipo. Sus `tiposActividad` (conjunto) se derivan de las versiones publicadas de sus actividades, igual que su nivel de esfuerzo y su accesibilidad en silla de ruedas (`ReglasPaquete`). El filtro busca en `tipoActividad` para las actividades y en `tiposActividad` para los paquetes.
+- Los valores no se guardan: se calculan al consultar con `ReglasPaquete`, a partir de las actividades ya cargadas.
+- Pendiente: guardar `tiposActividad`, `nivelEsfuerzo`, `accesibleSillaRuedas` y `actividadesVigentes` en el paquete se decide al construir el adaptador de MongoDB, y solo si la búsqueda lo necesita para usar índices (QAS-07).
+
+**DC-25. El filtro por nivel de esfuerzo es "hasta el nivel indicado".** Incluye los niveles menores:
+
+| Filtro | Devuelve |
+|---|---|
+| BAJO | BAJO |
+| MODERADO | BAJO y MODERADO |
+| ALTA_EXIGENCIA | todos |
+
+- El filtro existe para personas con limitaciones físicas (RF-17), que buscan lo que pueden hacer y no un nivel exacto.
+- Para un paquete se compara con su nivel calculado: el mayor de sus actividades.
+- El orden de exigencia está definido de forma explícita en `NivelEsfuerzo`; no depende del orden en que se declaran los valores.
+- Los alojamientos y los restaurantes no tienen nivel de esfuerzo, así que no aparecen cuando se usa este filtro.
+
+**DC-26. Perfil público: solo la descripción es obligatoria.** Las fotos, los horarios de atención, el sitio web y las redes sociales son opcionales, porque el proyecto exige incluir a los prestadores pequeños con pocos recursos tecnológicos (RS-03).
+- Si vienen, el sitio web, las redes sociales y las fotos deben ser URLs `http` o `https`; si no, se responde 400 `DATO_INVALIDO`.
+- No hay límite de cantidad de fotos: no está definido y queda como `TODO` en `PerfilPublico`.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -166,11 +211,14 @@ partialFilterExpression: { rntPrestadorActivo: true, retirada: false, publicada:
 3. **Diagrama de clases y diccionario:**
    - agregar `PrestadorCatalogo` como clase de réplica del catálogo (DC-02);
    - agregar `rntPrestadorActivo` en `Oferta` (DC-03) y `numero` en `VersionOferta` (DC-05);
-   - cambiar `duracionMinutos : int` por `Integer` en `VersionActividad`, y dejar `modalidad` y `puntoEncuentro` como opcionales: solo son obligatorios para el guía (DC-10).
+   - cambiar `duracionMinutos : int` por `Integer` en `VersionActividad`, y dejar `modalidad` y `puntoEncuentro` como opcionales: solo son obligatorios para el guía (DC-10);
+   - quitar `esAccesibleSillaRuedas()` de los métodos abstractos de `VersionOferta` y `nivelEsfuerzo()` de `VersionPaquete`: actividad, alojamiento y restaurante guardan su accesibilidad, y los valores del paquete se calculan con sus actividades en `ReglasPaquete` (DC-24);
+   - agregar `actividadIds` en `VersionPaquete`: el paquete referencia sus actividades por el identificador de su oferta;
+   - agregar `prestadorId` en `PerfilPublico` (DC-26).
 4. **Modelo documental** (sección 6 del documento de diseño): incluir las colecciones y el índice de DC-16 y DC-17.
 5. **Diagrama del módulo catálogo:** agregar el puerto de salida `PrestadorCatalogoRepositoryPort` (réplica de DC-02) con su adaptador `PrestadorMongoAdapter`.
 6. **Agrupaciones técnicas del código** que no cambian el modelo, por si el docente compara: `ContenidoComun` agrupa los atributos comunes de `VersionOferta`, y `RegistroModeracion` agrupa número, estado, motivo y fechas de moderación de cada versión.
 
 ## Fuera del alcance del prototipo
 
-Paquetes y restaurantes (el diseño admite agregarlos con una subclase de `VersionOferta` y una rama en cada mapper); la regla de visibilidad de paquetes (RF-22); opiniones; perfil público; gestión de zonas; imágenes (MinIO); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).
+Opiniones; la gestión del perfil público por el prestador (RF-64); gestión de zonas; imágenes (MinIO); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).
