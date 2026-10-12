@@ -72,16 +72,22 @@ class EscenarioAplicacion {
 
     /** Publica una actividad de la agencia de prueba (habilitándola si hace falta) y aprueba su versión 1. */
     Oferta ofertaPublicada(String nombre, String precio, String zonaId) {
+        return ofertaPublicada(actividad(nombre, precio, zonaId));
+    }
+
+    /** Publica el contenido con la agencia de prueba (habilitándola si hace falta) y aprueba su versión 1. */
+    Oferta ofertaPublicada(VersionOferta contenido) {
         if (prestadores.buscarPorId(PRESTADOR).isEmpty()) {
             habilitar(PRESTADOR, true, 1);
         }
-        Oferta oferta = publicar(AGENCIA, actividad(nombre, precio, zonaId));
+        Oferta oferta = publicar(AGENCIA, contenido);
         moderar(oferta.id(), 1, DecisionModeracion.APROBAR);
         return oferta;
     }
 
     Pagina<Oferta> buscarTodas() {
-        return busqueda.buscar(new CriteriosBusqueda(null, null, null, null, Paginacion.de(null, null)));
+        return busqueda.buscar(new CriteriosBusqueda(null, null, null, null, null, null, false,
+                Paginacion.de(null, null)));
     }
 
     Oferta guardada(String ofertaId) {
