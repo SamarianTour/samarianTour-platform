@@ -1,0 +1,792 @@
+openapi: 3.0.3
+info:
+  title: Samarian Tour · Catálogo
+  version: 0.1.0
+  description: |
+    API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
+    zonas, publicación y edición de ofertas por el prestador y los avisos internos del núcleo.
+
+    - Las rutas no incluyen el prefijo `/api/catalogo`: es el context-path del servicio y va en `servers`.
+    - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
+    - Retirar una oferta y listar las ofertas del prestador existen como casos de uso, pero aún no tienen endpoint.
+servers:
+  - url: http://localhost:8080/api/catalogo
+    description: Piloto con Docker Compose, detrás de Nginx
+tags:
+  - name: Catálogo público
+    description: Búsqueda y consulta; no exige identidad.
+  - name: Prestador
+    description: Ofertas del prestador. Exige su identidad.
+  - name: Interno
+    description: Avisos del núcleo. Nginx no expone estas rutas hacia afuera.
+
+paths:
+  /ofertas:
+    get:
+      tags: [Catálogo público]
+      operationId: buscarOfertas
+      summary: Buscar ofertas visibles (RF-14 a RF-17)
+      description: |
+        Devuelve solo ofertas visibles: con versión publicada, no retiradas y de un prestador con el RNT activo.
+        Un paquete además exige que todas sus actividades sean visibles (RF-22). Todos los filtros son opcionales.
+        El orden es por precio de referencia y luego por id, para que la paginación sea estable.
+      parameters:
+        - name: tipo
+          in: query
+          schema:
+            $ref: '#/components/schemas/TipoOferta'
+        - name: zonaId
+          in: query
+          schema:
+            type: string
+          example: parque-tayrona
+        - name: precioMin
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: precioMax
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: tipoActividad
+          in: query
+          description: Actividades de ese tipo y paquetes que incluyen al menos una (DC-24).
+          schema:
+            $ref: '#/components/schemas/TipoActividad'
+        - name: nivelEsfuerzoMaximo
+          in: query
+          description: |
+            Actividades y paquetes con ese nivel de esfuerzo o uno menor (DC-25). El de un paquete es el mayor
+            de sus actividades. Los alojamientos y los restaurantes no tienen nivel y quedan fuera.
+          schema:
+            $ref: '#/components/schemas/NivelEsfuerzo'
+        - name: accesibleSillaRuedas
+          in: query
+          description: Con `true`, solo ofertas accesibles en silla de ruedas (RF-17).
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          description: Página pedida; la primera es la 0 (DC-14).
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Página de resultados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaOfertas'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+
+  /ofertas/{id}:
+    get:
+      tags: [Catálogo público]
+      operationId: consultarFichaOferta
+      summary: Ficha de una oferta (RF-20, RF-24, RF-25)
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+      responses:
+        '200':
+          description: Ficha de la oferta, con su zona y el perfil público del prestador.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FichaOferta'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+
+  /zonas:
+    get:
+      tags: [Catálogo público]
+      operationId: consultarZonas
+      summary: Zonas activas, ordenadas por nombre (RF-14, RF-25)
+      responses:
+        '200':
+          description: Zonas activas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Zona'
+
+  /prestador/ofertas:
+    post:
+      tags: [Prestador]
+      operationId: publicarOferta
+      summary: Publicar una oferta (RF-65, RF-67)
+      description: |
+        La oferta nace con su versión 1 en moderación y no es visible hasta que el núcleo avise su aprobación.
+      parameters:
+        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfertaRequest'
+            example:
+              tipo: ACTIVIDAD
+              nombre: Caminata a la cascada de Marinka
+              descripcion: Sendero de montaña con baño en la cascada
+              precioReferencia: 70000
+              zonaId: minca-sierra-nevada
+              capacidadMaxima: 8
+              tipoActividad: SENDERISMO
+              nivelEsfuerzo: MODERADO
+              horariosSalida: ['08:00']
+              puntoEncuentro: Plaza principal de Minca
+              duracionMinutos: 180
+              modalidad: CAMINATA
+              idiomasAtencion: [es]
+      responses:
+        '201':
+          description: Oferta creada, con su versión pendiente en moderación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfertaPrestador'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+
+  /prestador/ofertas/{id}:
+    put:
+      tags: [Prestador]
+      operationId: editarOferta
+      summary: Editar una oferta (RF-66)
+      description: |
+        Crea una versión pendiente con número nuevo, que reemplaza a la pendiente anterior. La versión publicada
+        sigue visible hasta que se apruebe la nueva. El cuerpo trae el contenido completo y el tipo no puede cambiar.
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfertaRequest'
+      responses:
+        '200':
+          description: Oferta con su nueva versión pendiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfertaPrestador'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/OfertaNoEditable'
+
+  /internal/avisos:
+    post:
+      tags: [Interno]
+      operationId: recibirAviso
+      summary: Aviso del núcleo, de moderación o de habilitación RNT (RF-77, RF-79)
+      description: |
+        Es idempotente (DC-04): cada aviso trae un `idAviso` y un aviso repetido no se vuelve a aplicar.
+        Los tres resultados responden 200, para que el núcleo no reintente el aviso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Aviso'
+            examples:
+              aprobar:
+                summary: Aprobar la versión 1 de una oferta
+                value:
+                  idAviso: aviso-0001
+                  tipo: MODERACION
+                  ofertaId: 6f1c2f0e-3b1a-4f6e-9a57-2f0c4e1d9b10
+                  numeroVersion: 1
+                  decision: APROBAR
+              rechazar:
+                summary: Rechazar la versión 2 de una oferta
+                value:
+                  idAviso: aviso-0002
+                  tipo: MODERACION
+                  ofertaId: 6f1c2f0e-3b1a-4f6e-9a57-2f0c4e1d9b10
+                  numeroVersion: 2
+                  decision: RECHAZAR
+                  motivo: El precio no coincide con la descripción
+              inhabilitar:
+                summary: El prestador perdió el RNT
+                value:
+                  idAviso: aviso-0003
+                  tipo: HABILITACION
+                  prestadorId: 10000000-0000-0000-0000-000000000001
+                  rntActivo: false
+                  version: 2
+      responses:
+        '200':
+          description: Aviso recibido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvisoResultado'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+
+components:
+  parameters:
+    OfertaId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: caminata-cabo-san-juan
+    PrestadorId:
+      name: X-Prestador-Id
+      in: header
+      required: true
+      description: |
+        PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+        Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+      schema:
+        type: string
+        format: uuid
+    TipoPrestador:
+      name: X-Tipo-Prestador
+      in: header
+      required: true
+      description: PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10).
+      schema:
+        $ref: '#/components/schemas/TipoPrestador'
+
+  responses:
+    DatoInvalido:
+      description: Un dato no cumple las reglas, o la zona no existe o está inactiva.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: 'precioMin: no puede ser mayor que precioMax'
+            instance: /api/catalogo/ofertas
+            codigo: DATO_INVALIDO
+    NoAutenticado:
+      description: Falta la identidad del prestador.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: No autenticado
+            status: 401
+            detail: Falta el header X-Prestador-Id
+            instance: /api/catalogo/prestador/ofertas
+            codigo: NO_AUTENTICADO
+    Prohibido:
+      description: El prestador no puede hacer la operación; `codigo` dice por qué.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            detail: El RNT del prestador 50000000-0000-0000-0000-000000000005 no está activo
+            instance: /api/catalogo/prestador/ofertas
+            codigo: RNT_INACTIVO
+    OfertaNoEncontrada:
+      description: La oferta no existe, o no es visible para quien la consulta.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: No existe la oferta no-existe
+            instance: /api/catalogo/ofertas/no-existe
+            codigo: OFERTA_NO_ENCONTRADA
+    OfertaNoEditable:
+      description: La oferta está retirada; el retiro es definitivo.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+
+  schemas:
+    TipoOferta:
+      type: string
+      enum: [ACTIVIDAD, PAQUETE, ALOJAMIENTO, RESTAURANTE]
+    TipoPrestador:
+      type: string
+      enum: [ALOJAMIENTO, RESTAURANTE, AGENCIA_OPERADORA, GUIA_INDEPENDIENTE]
+    TipoActividad:
+      type: string
+      description: Valores provisionales, definidos por el equipo; pueden cambiar.
+      enum:
+        - SENDERISMO
+        - BUCEO_SNORKEL
+        - DEPORTES_ACUATICOS
+        - NAUTICO
+        - AVISTAMIENTO_FAUNA
+        - CULTURAL_HISTORICO
+        - ETNOTURISMO
+        - GASTRONOMICO
+        - CICLISMO
+        - AVENTURA
+        - PLAYA_RELAX
+        - OTRO
+    NivelEsfuerzo:
+      type: string
+      description: De menor a mayor exigencia.
+      enum: [BAJO, MODERADO, ALTA_EXIGENCIA]
+    ModalidadRecorrido:
+      type: string
+      enum: [CAMINATA, BICICLETA, KAYAK, OTRA]
+    EstadoModeracion:
+      type: string
+      enum: [EN_MODERACION, APROBADA, RECHAZADA]
+    Hora:
+      type: string
+      pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+      example: '07:30'
+
+    Coordenada:
+      type: object
+      required: [latitud, longitud]
+      properties:
+        latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+
+    OfertaResumen:
+      type: object
+      description: Una oferta en los resultados de la búsqueda; el detalle está en la ficha.
+      required: [id, tipo, nombre, descripcion, precioReferencia, unidadPrecio, zonaId]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precioReferencia:
+          type: number
+          description: Precio informativo y no vinculante, en pesos colombianos.
+        unidadPrecio:
+          type: string
+          description: Según el tipo de oferta (DC-22).
+          enum: [por persona, por noche y unidad, promedio por persona]
+        zonaId:
+          type: string
+
+    PaginaOfertas:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfertaResumen'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
+
+    FichaOferta:
+      type: object
+      description: |
+        Según `tipo`, trae uno de los detalles `actividad`, `paquete` o `alojamiento`; el restaurante no tiene
+        datos propios. Los campos sin valor no se envían.
+      required: [id, tipo, nombre, descripcion, precioReferencia, unidadPrecio, capacidadMaxima, accesibleSillaRuedas]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precioReferencia:
+          type: number
+        unidadPrecio:
+          type: string
+        horarios:
+          type: string
+          description: Texto informativo con los días o la franja de operación.
+        ubicacion:
+          $ref: '#/components/schemas/Coordenada'
+        comoLlegar:
+          type: string
+        capacidadMaxima:
+          type: integer
+          description: Máximo de personas por solicitud.
+        accesibleSillaRuedas:
+          type: boolean
+          description: El de un paquete es `true` solo si todas sus actividades lo son (RF-17).
+        actividad:
+          $ref: '#/components/schemas/DetalleActividad'
+        paquete:
+          $ref: '#/components/schemas/DetallePaquete'
+        alojamiento:
+          $ref: '#/components/schemas/DetalleAlojamiento'
+        zona:
+          $ref: '#/components/schemas/Zona'
+        perfilPrestador:
+          $ref: '#/components/schemas/PerfilPublico'
+
+    DetalleActividad:
+      type: object
+      required: [tipoActividad, nivelEsfuerzo, horariosSalida]
+      properties:
+        tipoActividad:
+          $ref: '#/components/schemas/TipoActividad'
+        nivelEsfuerzo:
+          $ref: '#/components/schemas/NivelEsfuerzo'
+        horariosSalida:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hora'
+        puntoEncuentro:
+          type: string
+        duracionMinutos:
+          type: integer
+        modalidad:
+          $ref: '#/components/schemas/ModalidadRecorrido'
+        idiomasAtencion:
+          type: array
+          items:
+            type: string
+            example: es
+
+    DetallePaquete:
+      type: object
+      required: [actividades, tiposActividad, nivelEsfuerzo, duracionMinutos, horariosSalida]
+      properties:
+        actividades:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/ActividadIncluida'
+        tiposActividad:
+          type: array
+          description: Los de sus actividades (DC-24).
+          items:
+            $ref: '#/components/schemas/TipoActividad'
+        nivelEsfuerzo:
+          description: El mayor de sus actividades (RF-17).
+          allOf:
+            - $ref: '#/components/schemas/NivelEsfuerzo'
+        duracionMinutos:
+          type: integer
+        horariosSalida:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hora'
+
+    ActividadIncluida:
+      type: object
+      required: [id, nombre]
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+
+    DetalleAlojamiento:
+      type: object
+      properties:
+        tipoUnidad:
+          type: string
+          example: cabaña
+
+    Zona:
+      type: object
+      required: [id, nombre, areaProtegida, altaAfluencia, buenasPracticas]
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        ubicacion:
+          $ref: '#/components/schemas/Coordenada'
+        areaProtegida:
+          type: boolean
+          description: Área protegida o ecosistema sensible (RF-25).
+        altaAfluencia:
+          type: boolean
+          description: Zona congestionada (RF-29).
+        buenasPracticas:
+          type: array
+          items:
+            type: string
+        condicionesVisita:
+          type: string
+
+    PerfilPublico:
+      type: object
+      description: Perfil público del prestador (RF-24). No incluye datos de contacto directo.
+      required: [descripcion, fotos, redesSociales]
+      properties:
+        descripcion:
+          type: string
+        fotos:
+          type: array
+          items:
+            type: string
+            format: uri
+        horariosAtencion:
+          type: string
+        sitioWeb:
+          type: string
+          format: uri
+        redesSociales:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    OfertaRequest:
+      type: object
+      description: |
+        Contenido completo de la oferta. `tipo` decide qué campos aplican; los que no corresponden a ese tipo
+        se ignoran.
+
+        | Tipo | Campos propios |
+        |---|---|
+        | ACTIVIDAD | `tipoActividad`, `nivelEsfuerzo` y `horariosSalida` (obligatorios); `puntoEncuentro`, `duracionMinutos`, `modalidad` e `idiomasAtencion` (obligatorios para el guía independiente, RF-67); `accesibleSillaRuedas` |
+        | PAQUETE | `actividadIds`, `duracionMinutos` y `horariosSalida` (obligatorios) |
+        | ALOJAMIENTO | `tipoUnidad`, `accesibleSillaRuedas` |
+        | RESTAURANTE | `accesibleSillaRuedas` |
+      required: [tipo, nombre, descripcion, precioReferencia, zonaId, capacidadMaxima]
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precioReferencia:
+          type: number
+          minimum: 0
+        horarios:
+          type: string
+        zonaId:
+          type: string
+          description: Debe existir y estar activa (RF-84).
+        ubicacion:
+          $ref: '#/components/schemas/Coordenada'
+        comoLlegar:
+          type: string
+        capacidadMaxima:
+          type: integer
+          minimum: 1
+        tipoActividad:
+          $ref: '#/components/schemas/TipoActividad'
+        nivelEsfuerzo:
+          $ref: '#/components/schemas/NivelEsfuerzo'
+        accesibleSillaRuedas:
+          type: boolean
+          default: false
+        horariosSalida:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Hora'
+        puntoEncuentro:
+          type: string
+        duracionMinutos:
+          type: integer
+          minimum: 1
+        modalidad:
+          $ref: '#/components/schemas/ModalidadRecorrido'
+        idiomasAtencion:
+          type: array
+          items:
+            type: string
+            pattern: '^[a-z]{2}$'
+        actividadIds:
+          type: array
+          description: |
+            Ofertas de tipo ACTIVIDAD del mismo prestador, distintas y no retiradas (RF-22, DC-23).
+            Pueden estar aún sin aprobar.
+          minItems: 2
+          items:
+            type: string
+        tipoUnidad:
+          type: string
+
+    OfertaPrestador:
+      type: object
+      description: La oferta como la ve su prestador.
+      required: [id, tipo, retirada]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        retirada:
+          type: boolean
+        publicada:
+          $ref: '#/components/schemas/Version'
+        pendiente:
+          $ref: '#/components/schemas/Version'
+
+    Version:
+      type: object
+      required: [numero, estadoModeracion, enviadaEn, nombre, precioReferencia]
+      properties:
+        numero:
+          type: integer
+          description: Número de la versión; es el que nombra el aviso de moderación (DC-05).
+        estadoModeracion:
+          $ref: '#/components/schemas/EstadoModeracion'
+        motivoRechazo:
+          type: string
+        enviadaEn:
+          type: string
+          format: date-time
+        revisadaEn:
+          type: string
+          format: date-time
+        nombre:
+          type: string
+        precioReferencia:
+          type: number
+
+    Aviso:
+      oneOf:
+        - $ref: '#/components/schemas/AvisoModeracion'
+        - $ref: '#/components/schemas/AvisoHabilitacion'
+      discriminator:
+        propertyName: tipo
+        mapping:
+          MODERACION: '#/components/schemas/AvisoModeracion'
+          HABILITACION: '#/components/schemas/AvisoHabilitacion'
+
+    AvisoModeracion:
+      type: object
+      description: Decisión del Administrador sobre una versión de una oferta (RF-79).
+      required: [idAviso, tipo, ofertaId, numeroVersion, decision]
+      properties:
+        idAviso:
+          type: string
+        tipo:
+          type: string
+          enum: [MODERACION]
+        ofertaId:
+          type: string
+        numeroVersion:
+          type: integer
+          minimum: 1
+          description: Versión que revisó el Administrador; si ya no es la que está en moderación, el aviso se ignora.
+        decision:
+          type: string
+          enum: [APROBAR, RECHAZAR]
+        motivo:
+          type: string
+          description: Obligatorio al rechazar.
+
+    AvisoHabilitacion:
+      type: object
+      description: Cambio en la habilitación RNT de un prestador (RF-77).
+      required: [idAviso, tipo, prestadorId, rntActivo, version]
+      properties:
+        idAviso:
+          type: string
+        tipo:
+          type: string
+          enum: [HABILITACION]
+        prestadorId:
+          type: string
+          format: uuid
+        rntActivo:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Versión del prestador en el núcleo; un aviso con una versión igual o anterior se ignora (DC-02).
+
+    AvisoResultado:
+      type: object
+      required: [resultado]
+      properties:
+        resultado:
+          type: string
+          description: |
+            `APLICADO`: cambió el catálogo. `IGNORADO`: llegó tarde o ya no aplica. `DUPLICADO`: ya se había procesado.
+          enum: [APLICADO, IGNORADO, DUPLICADO]
+
+    Problema:
+      type: object
+      description: ProblemDetail (RFC 7807) con la propiedad `codigo`.
+      required: [status, codigo]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        codigo:
+          type: string
+          description: Motivo estable del error (DC-15).
+          enum:
+            - DATO_INVALIDO
+            - ZONA_NO_DISPONIBLE
+            - NO_AUTENTICADO
+            - PRESTADOR_NO_AUTORIZADO
+            - TIPO_OFERTA_NO_PERMITIDO
+            - RNT_INACTIVO
+            - OFERTA_NO_ENCONTRADA
+            - OFERTA_NO_EDITABLE
