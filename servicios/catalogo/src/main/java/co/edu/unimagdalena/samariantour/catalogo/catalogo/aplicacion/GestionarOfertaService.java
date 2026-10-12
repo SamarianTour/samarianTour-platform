@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionOferta;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionPaquete;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
@@ -17,6 +18,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -42,7 +44,8 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
     public Oferta publicar(PublicarOfertaCommand comando) {
         Oferta oferta = Oferta.publicar(UUID.randomUUID().toString(),
                 prestadores.habilitacionDe(comando.solicitante().prestadorId()),
-                comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()), ahora());
+                comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()),
+                actividadesDe(comando.contenido()), ahora());
         ofertas.guardar(oferta);
         return oferta;
     }
@@ -51,7 +54,8 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
     public Oferta editar(EditarOfertaCommand comando) {
         Oferta oferta = ofertaExistente(comando.ofertaId());
         oferta.editar(prestadores.habilitacionDe(comando.solicitante().prestadorId()),
-                comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()), ahora());
+                comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()),
+                actividadesDe(comando.contenido()), ahora());
         ofertas.guardar(oferta);
         return oferta;
     }
@@ -71,6 +75,11 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
     private Zona zonaDe(VersionOferta contenido) {
         String zonaId = contenido.contenido().zonaId();
         return zonas.buscarPorId(zonaId).orElseThrow(() -> new ZonaNoDisponibleException(zonaId));
+    }
+
+    /** Ofertas que referencia el contenido cuando es un paquete; el dominio verifica que sean del prestador (RF-22). */
+    private List<Oferta> actividadesDe(VersionOferta contenido) {
+        return contenido instanceof VersionPaquete paquete ? ofertas.buscarPorIds(paquete.actividadIds()) : List.of();
     }
 
     private Oferta ofertaExistente(String ofertaId) {

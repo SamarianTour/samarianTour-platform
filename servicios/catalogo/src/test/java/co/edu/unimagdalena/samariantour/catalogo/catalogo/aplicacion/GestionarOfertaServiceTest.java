@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.OfertaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PrestadorNoAutorizadoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
@@ -8,8 +9,11 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Zona
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.Solicitante;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,6 +27,8 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDe
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_INACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.alojamiento;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.paquete;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.restaurante;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -80,6 +86,59 @@ class GestionarOfertaServiceTest {
 
             assertThatThrownBy(() -> escenario.publicar(AGENCIA, alojamiento()))
                     .isInstanceOf(TipoOfertaNoPermitidoException.class);
+        }
+
+        @Test
+        @DisplayName("un paquete se publica con actividades del mismo prestador (RF-22)")
+        void publicarPaquete() {
+            Oferta caminata = escenario.ofertaPublicada("Caminata", "50000", ZONA_ACTIVA);
+            Oferta kayak = escenario.ofertaPublicada("Kayak", "70000", ZONA_ACTIVA);
+
+            Oferta oferta = escenario.publicar(AGENCIA, paquete(caminata.id(), kayak.id()));
+
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.PAQUETE);
+            assertThat(escenario.ofertas.vecesGuardada(oferta.id())).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("un paquete con una actividad inexistente o de otro prestador se rechaza y no se guarda")
+        void paqueteConActividadAjena() {
+            Oferta caminata = escenario.ofertaPublicada("Caminata", "50000", ZONA_ACTIVA);
+            escenario.habilitar(OTRO_PRESTADOR, true, 1);
+            Oferta ajena = escenario.publicar(OTRA_AGENCIA, actividad("De otro", "70000", ZONA_ACTIVA));
+            int totalAntes = escenario.ofertas.total();
+
+            assertThatThrownBy(() -> escenario.publicar(AGENCIA, paquete(caminata.id(), "no-existe")))
+                    .isInstanceOf(DatoInvalidoException.class);
+            assertThatThrownBy(() -> escenario.publicar(AGENCIA, paquete(caminata.id(), ajena.id())))
+                    .isInstanceOf(DatoInvalidoException.class);
+            assertThat(escenario.ofertas.total()).isEqualTo(totalAntes);
+        }
+
+        @Test
+        @DisplayName("un paquete no puede incluir una actividad retirada, pero sí una aún sin aprobar (DC-23)")
+        void paqueteConActividadRetiradaOSinAprobar() {
+            Oferta caminata = escenario.ofertaPublicada("Caminata", "50000", ZONA_ACTIVA);
+            Oferta retirada = escenario.ofertaPublicada("Kayak", "70000", ZONA_ACTIVA);
+            servicio.retirar(new RetirarOfertaCommand(retirada.id(), PRESTADOR));
+            Oferta sinAprobar = escenario.publicar(AGENCIA, actividad("Buceo", "90000", ZONA_ACTIVA));
+
+            assertThatThrownBy(() -> escenario.publicar(AGENCIA, paquete(caminata.id(), retirada.id())))
+                    .isInstanceOf(DatoInvalidoException.class)
+                    .hasMessageContaining("retirada");
+
+            Oferta oferta = escenario.publicar(AGENCIA, paquete(caminata.id(), sinAprobar.id()));
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.PAQUETE);
+        }
+
+        @Test
+        @DisplayName("un restaurante publica una oferta de restaurante")
+        void publicarRestaurante() {
+            escenario.habilitar(PRESTADOR, true, 1);
+
+            Oferta oferta = escenario.publicar(new Solicitante(PRESTADOR, TipoPrestador.RESTAURANTE), restaurante());
+
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.RESTAURANTE);
         }
     }
 
