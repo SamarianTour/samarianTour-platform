@@ -76,3 +76,7 @@ Actualizar solo el catálogo sin detener lo demás:
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build --no-deps catalogo
 ```
+
+## Cómo contribuir
+
+El flujo de ramas (GitFlow), los pull requests y la guía de mensajes de commit están en [CONTRIBUTING.md](CONTRIBUTING.md).
