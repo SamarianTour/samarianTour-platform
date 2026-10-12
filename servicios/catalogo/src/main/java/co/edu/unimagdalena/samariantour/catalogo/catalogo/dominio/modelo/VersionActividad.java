@@ -77,7 +77,6 @@ public final class VersionActividad extends VersionOferta {
         return "por persona";
     }
 
-    @Override
     public boolean esAccesibleSillaRuedas() {
         return accesibleSillaRuedas;
     }

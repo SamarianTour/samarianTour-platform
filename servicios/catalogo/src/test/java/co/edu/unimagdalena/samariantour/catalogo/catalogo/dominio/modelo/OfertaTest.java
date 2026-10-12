@@ -10,18 +10,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.AHORA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.DESPUES;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.OTRO_PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_INACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividad;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividadPublicada;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.alojamiento;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.contenido;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.habilitado;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.inhabilitado;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaEnModeracion;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaPublicada;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.paquete;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.restaurante;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaActiva;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaInactiva;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -325,6 +330,69 @@ class OfertaTest {
 
             assertThatThrownBy(() -> oferta.rechazar(1, " ", DESPUES))
                     .isInstanceOf(DatoInvalidoException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Paquetes y restaurantes")
+    class PaquetesYRestaurantes {
+
+        private final Oferta caminata = actividadPublicada("caminata", NivelEsfuerzo.BAJO, true);
+        private final Oferta buceo = actividadPublicada("buceo", NivelEsfuerzo.ALTA_EXIGENCIA, false);
+
+        @Test
+        @DisplayName("un paquete se publica con dos o más actividades del mismo prestador (RF-22)")
+        void publicarPaquete() {
+            Oferta oferta = Oferta.publicar("p", habilitado(), TipoPrestador.GUIA_INDEPENDIENTE,
+                    paquete("caminata", "buceo"), zonaActiva(), List.of(caminata, buceo), AHORA);
+
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.PAQUETE);
+            assertThat(oferta.pendiente().orElseThrow().numero()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("un paquete que referencia una actividad que no es del prestador se rechaza")
+        void publicarPaqueteSinSusActividades() {
+            assertThatThrownBy(() -> Oferta.publicar("p", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    paquete("caminata", "buceo"), zonaActiva(), List.of(caminata), AHORA))
+                    .isInstanceOf(DatoInvalidoException.class)
+                    .hasMessageContaining("actividadIds");
+            assertThatThrownBy(() -> Oferta.publicar("p", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    paquete("caminata", "buceo"), zonaActiva(), AHORA))
+                    .isInstanceOf(DatoInvalidoException.class);
+        }
+
+        @Test
+        @DisplayName("editar un paquete vuelve a verificar sus actividades")
+        void editarPaquete() {
+            Oferta oferta = Oferta.publicar("p", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    paquete("caminata", "buceo"), zonaActiva(), List.of(caminata, buceo), AHORA);
+
+            assertThatThrownBy(() -> oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    paquete("caminata", "otra"), zonaActiva(), List.of(caminata, buceo), DESPUES))
+                    .isInstanceOf(DatoInvalidoException.class)
+                    .hasMessageContaining("otra");
+
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, paquete("buceo", "caminata"), zonaActiva(),
+                    List.of(caminata, buceo), DESPUES);
+            assertThat(oferta.pendiente().orElseThrow().numero()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("un prestador de alojamiento no puede publicar un paquete")
+        void paqueteSoloParaAgenciasYGuias() {
+            assertThatThrownBy(() -> Oferta.publicar("p", habilitado(), TipoPrestador.ALOJAMIENTO,
+                    paquete("caminata", "buceo"), zonaActiva(), List.of(caminata, buceo), AHORA))
+                    .isInstanceOf(TipoOfertaNoPermitidoException.class);
+        }
+
+        @Test
+        @DisplayName("un restaurante publica una oferta de restaurante")
+        void publicarRestaurante() {
+            Oferta oferta = Oferta.publicar("r", habilitado(), TipoPrestador.RESTAURANTE, restaurante(),
+                    zonaActiva(), AHORA);
+
+            assertThat(oferta.tipo()).isEqualTo(TipoOferta.RESTAURANTE);
         }
     }
 

@@ -7,7 +7,8 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
  * está activo (RF-22, RF-65, RF-77). La búsqueda en MongoDB aplica las mismas tres condiciones en el filtro
  * del índice parcial de QAS-07.
  *
- * <p>Pendiente con los paquetes (ReglasPaquete, RF-22): un paquete además exige que todas sus actividades sean visibles.
+ * <p>Un paquete además exige que todas sus actividades sean visibles (RF-22). Esa condición necesita las ofertas
+ * de sus actividades y está en {@link ReglasPaquete#esVisible}.
  */
 public final class ReglaVisibilidad {
 

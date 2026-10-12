@@ -12,6 +12,8 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDe
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividad;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.alojamiento;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.contenido;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.paquete;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.restaurante;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -23,7 +25,45 @@ class VersionOfertaTest {
     @DisplayName("cada tipo de versión define su unidad de precio (RF-20)")
     void unidadPrecio() {
         assertThat(actividad().unidadPrecio()).isEqualTo("por persona");
+        assertThat(paquete("a", "b").unidadPrecio()).isEqualTo("por persona");
         assertThat(alojamiento().unidadPrecio()).isEqualTo("por noche y unidad");
+        assertThat(restaurante().unidadPrecio()).isEqualTo("promedio por persona");
+    }
+
+    @Test
+    @DisplayName("cada tipo de versión corresponde a un tipo de oferta")
+    void tipoDeOferta() {
+        assertThat(actividad().tipo()).isEqualTo(TipoOferta.ACTIVIDAD);
+        assertThat(paquete("a", "b").tipo()).isEqualTo(TipoOferta.PAQUETE);
+        assertThat(alojamiento().tipo()).isEqualTo(TipoOferta.ALOJAMIENTO);
+        assertThat(restaurante().tipo()).isEqualTo(TipoOferta.RESTAURANTE);
+    }
+
+    @Test
+    @DisplayName("un paquete incluye al menos dos actividades distintas (RF-22)")
+    void actividadesDelPaquete() {
+        assertThatThrownBy(() -> new VersionPaquete(contenido("P"), List.of("a"), 120, SALIDAS))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("RF-22");
+        assertThatThrownBy(() -> new VersionPaquete(contenido("P"), List.of("a", "b", "a"), 120, SALIDAS))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("repetidas");
+        assertThatThrownBy(() -> new VersionPaquete(contenido("P"), List.of("a", " "), 120, SALIDAS))
+                .isInstanceOf(DatoInvalidoException.class);
+
+        assertThat(new VersionPaquete(contenido("P"), List.of("a", "b"), 120, SALIDAS).actividadIds())
+                .containsExactly("a", "b");
+    }
+
+    @Test
+    @DisplayName("un paquete necesita una duración mayor que cero y al menos un horario de salida (RF-30)")
+    void duracionYHorariosDelPaquete() {
+        assertThatThrownBy(() -> new VersionPaquete(contenido("P"), List.of("a", "b"), 0, SALIDAS))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("duracionMinutos");
+        assertThatThrownBy(() -> new VersionPaquete(contenido("P"), List.of("a", "b"), 120, List.of()))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("horariosSalida");
     }
 
     @Test

@@ -7,8 +7,11 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntI
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglaTipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglaVisibilidad;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglasPaquete;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,7 +52,18 @@ public final class Oferta {
      */
     public static Oferta publicar(String id, PrestadorCatalogo prestador, TipoPrestador tipoPrestador,
                                   VersionOferta contenido, Zona zona, Instant ahora) {
-        verificarPuedePublicar(prestador, tipoPrestador, contenido, zona);
+        return publicar(id, prestador, tipoPrestador, contenido, zona, List.of(), ahora);
+    }
+
+    /**
+     * Publica una oferta nueva cuyo contenido puede ser un paquete.
+     *
+     * @param actividades ofertas que referencia el contenido cuando es un paquete; deben ser actividades del mismo
+     *                    prestador (RF-22). Para los demás tipos de oferta no se usa
+     */
+    public static Oferta publicar(String id, PrestadorCatalogo prestador, TipoPrestador tipoPrestador,
+                                  VersionOferta contenido, Zona zona, Collection<Oferta> actividades, Instant ahora) {
+        verificarPuedePublicar(prestador, tipoPrestador, contenido, zona, actividades);
         contenido.enviar(1, ahora);
         return new Oferta(id, contenido.tipo(), prestador.prestadorId(), false, prestador.rntActivo(), null, contenido);
     }
@@ -66,6 +80,17 @@ public final class Oferta {
      */
     public void editar(PrestadorCatalogo prestador, TipoPrestador tipoPrestador, VersionOferta contenido, Zona zona,
                        Instant ahora) {
+        editar(prestador, tipoPrestador, contenido, zona, List.of(), ahora);
+    }
+
+    /**
+     * Edita una oferta cuyo contenido puede ser un paquete.
+     *
+     * @param actividades ofertas que referencia el contenido cuando es un paquete; deben ser actividades del mismo
+     *                    prestador (RF-22). Para los demás tipos de oferta no se usa
+     */
+    public void editar(PrestadorCatalogo prestador, TipoPrestador tipoPrestador, VersionOferta contenido, Zona zona,
+                       Collection<Oferta> actividades, Instant ahora) {
         verificarDueno(prestador.prestadorId());
         if (retirada) {
             throw new OfertaNoEditableException(id);
@@ -73,7 +98,7 @@ public final class Oferta {
         if (contenido.tipo() != tipo) {
             throw new DatoInvalidoException("tipo", "el tipo de una oferta no cambia después de creada");
         }
-        verificarPuedePublicar(prestador, tipoPrestador, contenido, zona);
+        verificarPuedePublicar(prestador, tipoPrestador, contenido, zona, actividades);
         contenido.enviar(siguienteNumeroVersion(), ahora);
         pendiente = contenido;
         rntPrestadorActivo = prestador.rntActivo();
@@ -119,6 +144,10 @@ public final class Oferta {
         return true;
     }
 
+    /**
+     * Visibilidad según ReglaVisibilidad. Para un paquete es necesaria pero no suficiente: además todas sus
+     * actividades deben ser visibles, y eso lo decide {@link ReglasPaquete#esVisible} con ellas cargadas (RF-22).
+     */
     public boolean estaVisible() {
         return ReglaVisibilidad.esVisible(this);
     }
@@ -128,11 +157,14 @@ public final class Oferta {
     }
 
     private static void verificarPuedePublicar(PrestadorCatalogo prestador, TipoPrestador tipoPrestador,
-                                               VersionOferta contenido, Zona zona) {
+                                               VersionOferta contenido, Zona zona, Collection<Oferta> actividades) {
         if (!prestador.rntActivo()) {
             throw new RntInactivoException(prestador.prestadorId());
         }
         ReglaTipoOferta.verificar(Objects.requireNonNull(tipoPrestador, "tipoPrestador"), contenido);
+        if (contenido instanceof VersionPaquete paquete) {
+            ReglasPaquete.verificarActividades(prestador.prestadorId(), paquete, actividades);
+        }
         if (!zona.id().equals(contenido.contenido().zonaId())) {
             throw new IllegalArgumentException("La zona recibida no es la del contenido");
         }
