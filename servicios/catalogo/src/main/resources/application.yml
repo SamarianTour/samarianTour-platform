@@ -1,6 +1,10 @@
 spring:
   application:
     name: catalogo
+  profiles:
+    # Mientras no exista el adaptador de MongoDB, los datos viven en la memoria del proceso (perfil memoria).
+    # El perfil demo, que acepta los headers que sustituyen al token, nunca se activa por defecto.
+    default: memoria
   data:
     mongodb:
       # En Docker Compose se sobrescribe con SPRING_DATA_MONGODB_URI.
@@ -15,3 +19,10 @@ server:
   servlet:
     # Nginx reenvía /api/catalogo/** sin reescribir la ruta; los controladores se mapean sin el prefijo.
     context-path: /api/catalogo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Solo la salud, para el healthcheck de Docker Compose.
+        include: health
