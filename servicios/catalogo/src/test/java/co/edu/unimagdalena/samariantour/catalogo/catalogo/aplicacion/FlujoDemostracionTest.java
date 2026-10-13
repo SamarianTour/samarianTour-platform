@@ -32,10 +32,11 @@ class FlujoDemostracionTest {
 
         escenario.gestion.editar(new EditarOfertaCommand(oferta.id(), AGENCIA,
                 actividad("Caminata editada", "130000", ZONA_ACTIVA)));
-        assertThat(nombrePublicado(escenario.ficha.consultar(oferta.id()))).isEqualTo("Caminata a Cabo San Juan");
+        assertThat(nombrePublicado(escenario.ficha.consultar(oferta.id()).oferta()))
+                .isEqualTo("Caminata a Cabo San Juan");
 
         escenario.moderar(oferta.id(), 2, DecisionModeracion.APROBAR);
-        assertThat(nombrePublicado(escenario.ficha.consultar(oferta.id()))).isEqualTo("Caminata editada");
+        assertThat(nombrePublicado(escenario.ficha.consultar(oferta.id()).oferta())).isEqualTo("Caminata editada");
 
         escenario.habilitar(PRESTADOR, false, 2);
         assertThat(escenario.buscarTodas().contenido()).isEmpty();

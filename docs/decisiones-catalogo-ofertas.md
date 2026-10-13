@@ -36,10 +36,15 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-24 | El filtro por tipo de actividad incluye los paquetes | 🆕 |
 | DC-25 | El filtro por nivel de esfuerzo es "hasta el nivel indicado" | 🆕 RF-17 |
 | DC-26 | Perfil público: solo la descripción es obligatoria | 🆕 RF-64, RS-03 |
+| DC-27 | Perfiles de ejecución `memoria` y `demo` | 🆕 |
+| DC-28 | Con los datos en memoria, cada réplica tiene su propio estado | 🆕 QAS-02 |
+| DC-29 | Forma de las respuestas de la API | 🆕 RF-20, RF-24, RF-25 |
 
 ## Identidad y habilitación del prestador
 
-**DC-01. La identidad viene del token.** El catálogo autoriza con `prestadorId`, rol y tipo de prestador tomados del JWT que emite el núcleo. En el prototipo no hay JWT todavía, así que los envían los headers `X-Prestador-Id`, `X-Rol` y `X-Tipo-Prestador`, marcados en el código como **sustituto del token**. Cuando exista `libs/seguridad-jwt`, solo cambia el adaptador de `compartido/seguridad`. El tipo de prestador **no** se guarda en el catálogo, para no tener dos fuentes de verdad.
+**DC-01. La identidad viene del token.** El catálogo autoriza con `prestadorId`, rol y tipo de prestador tomados del JWT que emite el núcleo. En el prototipo no hay JWT todavía, así que los envían los headers `X-Prestador-Id` y `X-Tipo-Prestador`, marcados en el código como **sustituto del token**. Cuando exista `libs/seguridad-jwt`, solo cambia el adaptador de `compartido/seguridad` (`ResolutorIdentidad`). El tipo de prestador **no** se guarda en el catálogo, para no tener dos fuentes de verdad.
+- Cualquiera puede enviar esos headers, así que solo se aceptan con el perfil `demo` (DC-27). Sin ese perfil, las rutas del prestador responden 401 `NO_AUTENTICADO`.
+- El rol no se envía: las rutas `/prestador/**` solo las usa el prestador, y la autorización por rol llega con el JWT.
 
 **DC-02. Réplica de la habilitación RNT.** `PrestadorCatalogo {prestadorId, rntActivo, version}` reemplaza en el catálogo a la bandeja de salida del núcleo y es la fuente de verdad para autorizar publicaciones.
 - Un prestador del que aún no llega ningún aviso se trata como **no habilitado**. En la demostración, el aviso de habilitación va antes de publicar.
@@ -97,11 +102,12 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | Controlador | Endpoint |
 |---|---|
 | `OfertaPrestadorController` | `POST /prestador/ofertas`, `PUT /prestador/ofertas/{id}`, `PATCH /prestador/ofertas/{id}/retiro`, `GET /prestador/ofertas` |
-| `OfertaPublicaController` | `GET /ofertas?tipo&zonaId&precioMin&precioMax&page&size`, `GET /ofertas/{id}` |
+| `OfertaPublicaController` | `GET /ofertas?tipo&zonaId&precioMin&precioMax&tipoActividad&nivelEsfuerzoMaximo&accesibleSillaRuedas&page&size`, `GET /ofertas/{id}` |
 | `ZonaController` | `GET /zonas` |
 | `AvisoInternoController` | `POST /internal/avisos` |
 
-En el prototipo, la verificación del rol la hace un filtro de `compartido/seguridad`. Se pasa a Spring Security cuando llegue `libs/seguridad-jwt`, sin tocar los controladores.
+- En el prototipo tienen endpoint la búsqueda, la ficha, las zonas, publicar, editar y los avisos; el contrato está en `contratos/catalogo.openapi.yaml`. Retirar (`PATCH`) y listar las ofertas propias (`GET /prestador/ofertas`) existen como casos de uso, pero aún no tienen endpoint.
+- En el prototipo no se verifica el rol: `ResolutorIdentidad`, en `compartido/seguridad`, solo resuelve quién es el prestador (DC-01). La autorización por rol pasa a Spring Security cuando llegue `libs/seguridad-jwt`, sin tocar los controladores.
 
 **DC-14. Paginación.** `page` empieza en 0, como en Spring Data; `size` vale 20 por defecto y como máximo 100. El tope protege la latencia de QAS-07. Un `page` negativo o un `size` fuera de 1 a 100 responde 400. El orden es estable para que no se repitan ni se salten resultados entre páginas: la búsqueda pública ordena por precio y luego por id; las ofertas del prestador, por id.
 
@@ -116,6 +122,9 @@ En el prototipo, la verificación del rol la hace un filtro de `compartido/segur
 | `RNT_INACTIVO` | 403 | DC-11 |
 | `OFERTA_NO_ENCONTRADA` | 404 | No existe, o no es visible para quien la consulta |
 | `OFERTA_NO_EDITABLE` | 409 | La oferta está retirada |
+| `NO_AUTENTICADO` | 401 | Falta la identidad del prestador, o llegan los headers de demostración sin el perfil `demo` (DC-01) |
+
+Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un precio que no es un número, también responde 400 `DATO_INVALIDO`.
 
 ## Persistencia (MongoDB)
 
@@ -203,6 +212,30 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 **DC-26. Perfil público: solo la descripción es obligatoria.** Las fotos, los horarios de atención, el sitio web y las redes sociales son opcionales, porque el proyecto exige incluir a los prestadores pequeños con pocos recursos tecnológicos (RS-03).
 - Si vienen, el sitio web, las redes sociales y las fotos deben ser URLs `http` o `https`; si no, se responde 400 `DATO_INVALIDO`.
 - No hay límite de cantidad de fotos: no está definido y queda como `TODO` en `PerfilPublico`.
+
+## Prototipo de la API
+
+**DC-27. Perfiles de ejecución.**
+
+| Perfil | Qué activa | Cuándo |
+|---|---|---|
+| `memoria` | Los adaptadores de salida en la memoria del proceso (`infraestructura/salida/memoria`), con los datos de demostración de Santa Marta | Por defecto, mientras no exista el adaptador de MongoDB |
+| `demo` | Los headers que sustituyen al token del prestador (DC-01) | Nunca por defecto; solo en la demostración |
+
+- Docker Compose activa los dos (`SPRING_PROFILES_ACTIVE=memoria,demo`).
+- Con `memoria`, la salud del servicio no depende de MongoDB.
+- De Actuator solo se expone `/actuator/health`, para el healthcheck de Docker Compose; Nginx no lo publica hacia afuera.
+
+**DC-28. Con los datos en memoria, cada réplica tiene su propio estado.** Lo que se escribe en una réplica no lo ve la otra.
+- Todas las réplicas arrancan con los mismos datos, con identificadores fijos, así que la búsqueda y la ficha se demuestran con 2 réplicas y el header `X-Instancia` alternando.
+- El flujo de escritura (publicar, aprobar con un aviso y ver la oferta en la búsqueda) se demuestra con 1 réplica.
+- La limitación desaparece con el adaptador de MongoDB, donde el estado es compartido. El control de concurrencia de esas escrituras está en el ADR-05.
+
+**DC-29. Forma de las respuestas.**
+- La búsqueda devuelve un resumen de cada oferta: id, tipo, nombre, descripción, precio de referencia, unidad del precio y zona.
+- La ficha devuelve el contenido completo, la zona con sus buenas prácticas y condiciones de visita (RF-25), el perfil público del prestador si lo completó (RF-24) y un detalle según el tipo: `actividad`, `paquete` o `alojamiento`.
+- En la ficha de un paquete, el nivel de esfuerzo, los tipos de actividad y la accesibilidad se calculan con sus actividades (DC-24).
+- Publicar y editar devuelven la oferta como la ve su prestador: la versión publicada y la pendiente, cada una con su número y su estado de moderación.
 
 ## Cambios pendientes en los documentos de diseño
 

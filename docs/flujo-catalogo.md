@@ -102,7 +102,7 @@ Mientras una edición espera moderación, el turista sigue viendo la última apr
 
 ### ¿Quién hace la petición?
 
-En la versión final, el token JWT del núcleo trae id, rol y tipo de prestador. En el prototipo esos datos llegan en headers (`X-Prestador-Id`, `X-Rol`, `X-Tipo-Prestador`) que simulan el token, y los avisos del núcleo se simulan con `curl`.
+En la versión final, el token JWT del núcleo trae id, rol y tipo de prestador. En el prototipo el id y el tipo llegan en headers (`X-Prestador-Id` y `X-Tipo-Prestador`) que simulan el token y solo se aceptan con el perfil `demo`; los avisos del núcleo se simulan con `curl`.
 
 ## 5. Flujo completo, paso a paso
 
@@ -115,7 +115,7 @@ POST /api/catalogo/internal/avisos
 { idAviso: "a-1", tipo: HABILITACION, prestadorId: Laura, rntActivo: true, version: 1 }
 ```
 
-1. `AvisoInternoController` 🔨 recibe el aviso y llama a `AplicarAvisoNucleoUseCase`, que implementa `AplicarAvisoNucleoService`.
+1. `AvisoInternoController` recibe el aviso y llama a `AplicarAvisoNucleoUseCase`, que implementa `AplicarAvisoNucleoService`.
 2. ¿El aviso `a-1` ya fue procesado? No.
 3. Se busca la réplica de Laura; si no existe, se trata como **no habilitada**.
 4. `aplicarHabilitacion(true, 1)`: la versión 1 es mayor que 0, así que `rntActivo = true`.
@@ -128,16 +128,17 @@ Un aviso repetido se detecta en el paso 2; un aviso viejo lo descarta `aplicarHa
 
 ```
 POST /api/catalogo/prestador/ofertas
-Headers: X-Prestador-Id: Laura, X-Rol: PRESTADOR, X-Tipo-Prestador: GUIA_INDEPENDIENTE
+Headers: X-Prestador-Id: Laura, X-Tipo-Prestador: GUIA_INDEPENDIENTE
 Cuerpo: { tipo: "ACTIVIDAD", nombre: "Avistamiento de aves", zonaId: "minca", precio: 80000, ... }
 ```
 
 ```
 Nginx ──► réplica 1 o 2 del catálogo
    ├─ InstanciaHeaderFilter: agrega X-Instancia (qué réplica atendió)
-   ├─ Filtro de seguridad 🔨: /prestador/** exige rol PRESTADOR
    ▼
-OfertaPrestadorController 🔨 — el mapper web convierte el JSON en objetos del dominio
+OfertaPrestadorController
+   ├─ ResolutorIdentidad: toma el prestador de los headers (solo con el perfil demo; si no, 401)
+   └─ el mapper web convierte el JSON en objetos del dominio
    ▼
 GestionarOfertaService.publicar
    1. Busca la réplica de Laura     (puerto de salida → MongoDB)
@@ -152,12 +153,12 @@ Oferta.publicar  (aquí viven las reglas)
    ¿Zona activa?                        no → 400 ZONA_NO_DISPONIBLE
    OK → pendiente = versión 1 (EN_MODERACION), publicada = vacía
    ▼
-GestionarOfertaService guarda → OfertaMongoAdapter 🔨 → documento en MongoDB
+GestionarOfertaService guarda → OfertaMemoriaAdapter (hoy) u OfertaMongoAdapter 🔨 → documento en MongoDB
    ▼
 201 Created
 ```
 
-Si algo falla, el manejador de errores 🔨 responde en formato ProblemDetail con un `codigo`.
+Si algo falla, el manejador de errores (`ManejadorErrores`) responde en formato ProblemDetail con un `codigo`.
 
 ### Paso 2: Pedro busca y no la ve
 
@@ -204,7 +205,7 @@ Con un aviso posterior (`version: 3`, `true`) todo vuelve a ser visible.
 
 ### Paso 7: Laura retira la oferta
 
-`PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204. Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo.
+`PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204 (el caso de uso existe; el endpoint todavía no 🔨). Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo.
 
 ## 6. Dónde está cada cosa
 
@@ -222,10 +223,12 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Casos de uso | `dominio/puerto/entrada/` |
 | Lo que el dominio necesita de afuera | `dominio/puerto/salida/` |
 | Coordinación de pasos | `aplicacion/`: `GestionarOfertaService`, `BuscarOfertasService`, `ConsultarFichaOfertaService`, `ConsultarZonasService`, `AplicarAvisoNucleoService` |
-| Controladores y JSON | `infraestructura/entrada/rest/` 🔨 |
+| Controladores y JSON | `infraestructura/entrada/rest/` |
+| Creación de los servicios (Spring) | `infraestructura/config/CatalogoConfig` |
+| Datos en memoria del prototipo | `infraestructura/salida/memoria/` |
 | MongoDB | `infraestructura/salida/persistencia/` 🔨 |
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
-| Simulación del token | `compartido/seguridad/` 🔨 |
+| Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |
 
 Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (precarga de zonas 🔨), `.github/workflows/ci.yml`.

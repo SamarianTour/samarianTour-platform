@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. Etapa actual: estructura y herramientas. El flujo de demostración y la trazabilidad con los ADR y QAS se agregan cuando exista la lógica del catálogo.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación y edición por el prestador, y moderación por avisos del núcleo. Todavía guarda los datos en memoria; el adaptador de MongoDB, el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -12,10 +12,10 @@ Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven mul
 | `servicios/nucleo` | Núcleo transaccional (PostgreSQL). Esqueleto. |
 | `servicios/recomendacion` | Recomendación (sin base de datos propia). Esqueleto. |
 | `libs/seguridad-jwt` | Validación del JWT RS256 y roles, compartida por los tres servicios. Pendiente. |
-| `contratos/` | Contratos OpenAPI (API first). Pendiente. |
+| `contratos/` | Contratos OpenAPI (API first). Está el del catálogo: `catalogo.openapi.yaml`. |
 | `frontend/` | Angular. Fuera del alcance del prototipo. |
 | `infra/` | Docker Compose, Nginx y precarga de MongoDB. |
-| `docs/` | Documento de diseño, diagrama de paquetes y ADR. |
+| `docs/` | Documento de diseño, diagramas, [decisiones del prototipo](docs/decisiones-catalogo-ofertas.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
 
 ## Estructura de paquetes de un servicio
 
@@ -36,7 +36,9 @@ co.edu.unimagdalena.samariantour.catalogo
 │   │       └── salida/
 │   ├── aplicacion/             implementa los casos de uso
 │   └── infraestructura/
+│       ├── config/             crea los servicios de aplicación y los conecta con los adaptadores
 │       ├── entrada/rest/       controladores, dto/, mapper/
+│       ├── salida/memoria/     adaptadores en memoria del prototipo (perfil memoria)
 │       └── salida/persistencia/ documentos Mongo, repositorios y mappers
 └── opiniones/                  módulo (fuera del alcance del prototipo)
 ```
@@ -59,23 +61,146 @@ Java 21, Maven 3.9 y Docker (las pruebas de integración usan Testcontainers).
 ## Compilar y probar
 
 ```bash
-mvn test      # unitarias y ArchUnit (no necesita Docker)
+mvn test      # unitarias, controladores, contrato y ArchUnit (no necesita Docker)
 mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 ```
+
+`ContratoCatalogoTest` compara las rutas de los controladores con las de `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
+
+## Perfiles del catálogo
+
+| Perfil | Qué activa | Cuándo |
+|---|---|---|
+| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, mientras no exista el adaptador de MongoDB |
+| `demo` | Los headers que sustituyen al token del prestador | Nunca por defecto; solo en la demostración |
+
+**Identidad provisional del prestador.** Mientras no exista `libs/seguridad-jwt`, las rutas `/prestador/**` identifican al prestador con dos headers: `X-Prestador-Id` (UUID) y `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cualquiera puede enviarlos, así que solo se aceptan con el perfil `demo`; sin él responden 401. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
 
 ## Levantar el piloto
 
 ```bash
-docker compose -f infra/docker-compose.yml up --build
+docker compose -f infra/docker-compose.yml up --build -d
 ```
 
-Nginx queda en `http://localhost:8080` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` no se exponen hacia afuera.
+Nginx queda en `http://localhost:8080` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
+
+Compose activa los perfiles `memoria` y `demo`. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
 
 Actualizar solo el catálogo sin detener lo demás:
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build --no-deps catalogo
 ```
+
+## Demostración paso a paso
+
+Los comandos están en `bash` (en Windows, Git Bash). Los datos de demostración son inventados: 7 zonas, 5 prestadores y 23 ofertas de los cuatro tipos.
+
+```bash
+BASE=http://localhost:8080/api/catalogo
+```
+
+### 1. Búsqueda con filtros, repartida entre las réplicas
+
+```bash
+# El header X-Instancia muestra qué réplica respondió: Nginx reparte las peticiones entre las dos, sin un orden fijo
+for i in 1 2 3 4 5 6 7 8; do curl -s -o /dev/null -D - "$BASE/ofertas" | grep -i '^x-instancia'; done
+
+# Actividades en el Parque Tayrona
+curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=parque-tayrona"
+
+# Lo que puede hacer una persona con movilidad reducida: esfuerzo bajo y accesible en silla de ruedas
+curl -s "$BASE/ofertas?nivelEsfuerzoMaximo=BAJO&accesibleSillaRuedas=true"
+
+# Buceo y snorkel: actividades de ese tipo y paquetes que incluyen alguna
+curl -s "$BASE/ofertas?tipoActividad=BUCEO_SNORKEL"
+
+# Un filtro inválido responde 400 con el código DATO_INVALIDO
+curl -s "$BASE/ofertas?tipo=HOTEL"
+```
+
+### 2. Ficha y zonas
+
+```bash
+# Paquete: sus actividades, el nivel de esfuerzo calculado, la zona protegida y el perfil del prestador
+curl -s "$BASE/ofertas/paquete-tayrona-mar-y-selva"
+
+# Oferta aprobada de un prestador con el RNT inactivo: no es visible, responde 404
+curl -s "$BASE/ofertas/expedicion-ciudad-perdida"
+
+curl -s "$BASE/zonas"
+```
+
+### 3. Publicar, aprobar y ver la oferta en la búsqueda
+
+Con los datos en memoria, cada réplica tiene su propio estado: lo que se publica en una no lo ve la otra. Para este flujo se deja una sola réplica; con el adaptador de MongoDB el estado será compartido y no hará falta.
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --scale catalogo=1 --no-recreate
+```
+
+Publicar una actividad como el guía independiente de la demostración:
+
+```bash
+ID=$(curl -s -X POST "$BASE/prestador/ofertas" \
+  -H "Content-Type: application/json" \
+  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE" \
+  -d '{
+        "tipo": "ACTIVIDAD",
+        "nombre": "Caminata nocturna en Minca",
+        "descripcion": "Recorrido para observar ranas e insectos al caer la noche",
+        "precioReferencia": 75000,
+        "zonaId": "minca-sierra-nevada",
+        "capacidadMaxima": 6,
+        "tipoActividad": "AVISTAMIENTO_FAUNA",
+        "nivelEsfuerzo": "BAJO",
+        "horariosSalida": ["18:30"],
+        "puntoEncuentro": "Plaza principal de Minca",
+        "duracionMinutos": 120,
+        "modalidad": "CAMINATA",
+        "idiomasAtencion": ["es", "en"]
+      }' | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+echo "$ID"
+```
+
+La oferta nace con su versión 1 en moderación y todavía no es visible:
+
+```bash
+curl -s "$BASE/ofertas/$ID"                         # 404 OFERTA_NO_ENCONTRADA
+```
+
+El núcleo avisa la aprobación por una ruta interna. Desde afuera Nginx responde 404; el aviso se envía desde dentro de la red de Docker:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
+
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \
+  -H "Content-Type: application/json" \
+  -d "{\"idAviso\":\"demo-1\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
+# {"resultado":"APLICADO"}; si se repite el mismo aviso, {"resultado":"DUPLICADO"}
+```
+
+Ahora aparece en la ficha y en la búsqueda:
+
+```bash
+curl -s "$BASE/ofertas/$ID"
+curl -s "$BASE/ofertas?zonaId=minca-sierra-nevada&tipoActividad=AVISTAMIENTO_FAUNA"
+```
+
+Para volver a las dos réplicas:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --scale catalogo=2 --no-recreate
+```
+
+Otros casos que se pueden mostrar:
+
+- **Sin identidad:** el mismo `POST` sin los headers responde 401 `NO_AUTENTICADO`.
+- **RNT inactivo:** con `X-Prestador-Id: 50000000-0000-0000-0000-000000000005` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
+- **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
+- **Edición:** un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
 
 ## Cómo contribuir
 

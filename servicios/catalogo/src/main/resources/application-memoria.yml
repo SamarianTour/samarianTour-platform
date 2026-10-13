@@ -1,0 +1,5 @@
+# Con los datos en memoria, el servicio no depende de MongoDB para estar sano.
+management:
+  health:
+    mongo:
+      enabled: false
