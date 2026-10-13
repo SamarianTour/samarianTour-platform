@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`); el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador; el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -13,7 +13,7 @@ Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven mul
 | `servicios/recomendacion` | Recomendación (sin base de datos propia). Esqueleto. |
 | `libs/seguridad-jwt` | Validación del JWT RS256 y roles, compartida por los tres servicios. Pendiente. |
 | `contratos/` | Contratos OpenAPI (API first). Está el del catálogo: `catalogo.openapi.yaml`. |
-| `frontend/` | Angular. Fuera del alcance del prototipo. |
+| `frontend/` | Aplicación Angular: catálogo y ficha para el turista, y panel del prestador. Ver [frontend/README.md](frontend/README.md). |
 | `infra/` | Docker Compose, Nginx y precarga de MongoDB. |
 | `docs/` | Documento de diseño, diagramas, [decisiones del prototipo](docs/decisiones-catalogo-ofertas.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
 
@@ -58,7 +58,7 @@ Las reglas se verifican con ArchUnit en cada build (`ArquitecturaTest`):
 
 ## Requisitos
 
-Java 21, Maven 3.9 y Docker (las pruebas de integración usan Testcontainers).
+Java 21, Maven 3.9 y Docker (las pruebas de integración usan Testcontainers). Para trabajar en el frontend, Node.js 24 (o 22.22 en adelante) con npm; para levantar el piloto con Docker Compose no hace falta Node.
 
 ## Compilar y probar
 
@@ -85,7 +85,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 docker compose -f infra/docker-compose.yml up --build -d
 ```
 
-Nginx queda en `http://localhost:8080` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
+Nginx queda en `http://localhost:8080`: sirve el frontend en `/` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
 
 Compose activa los perfiles `mongo` y `demo`: los datos viven en MongoDB y las dos réplicas comparten el estado. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
 
@@ -101,9 +101,49 @@ Actualizar solo el catálogo sin detener lo demás:
 docker compose -f infra/docker-compose.yml up -d --build --no-deps catalogo
 ```
 
-## Demostración paso a paso
+Actualizar solo el frontend:
 
-Los comandos están en `bash` (en Windows, Git Bash). Los datos de demostración son inventados: 7 zonas, 5 prestadores y 23 ofertas de los cuatro tipos.
+```bash
+docker compose -f infra/docker-compose.yml up -d --build --no-deps nginx
+```
+
+## Frontend en desarrollo
+
+Con el piloto levantado, el frontend también se puede correr fuera de Docker, con recarga al guardar:
+
+```bash
+cd frontend
+npm ci
+npm start        # http://localhost:4200
+```
+
+`ng serve` reenvía `/api` a `http://localhost:8080` (`frontend/proxy.conf.json`), así que el navegador siempre habla con su mismo origen y no hace falta CORS en el backend. El resto (tipos generados desde el contrato, pruebas, estructura) está en [frontend/README.md](frontend/README.md).
+
+## Demostración por la interfaz
+
+Con el piloto levantado, abre `http://localhost:8080`.
+
+1. **Catálogo.** La página inicial lista las ofertas visibles. Filtra por tipo, zona, tipo de actividad, precio, esfuerzo físico máximo ("hasta el nivel") y accesibilidad. Los filtros quedan en la URL: `http://localhost:8080/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005` abre las actividades del Parque Tayrona. Si nada coincide aparece "Limpiar filtros".
+2. **Ficha.** Entra a "Tayrona: mar y selva" (un paquete): muestra sus actividades con enlace, el esfuerzo calculado, la zona con sus buenas prácticas, el perfil del prestador y el mapa con el enlace "Cómo llegar". Una oferta que no es visible, como `http://localhost:8080/ofertas/b00000000000000000000016`, muestra "Esta oferta ya no está disponible".
+3. **Publicar.** En "Soy prestador" elige el prestador demo **Guía** y entra a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
+4. **Aprobar por consola.** La moderación es del núcleo, que todavía no existe: el aviso se envía a mano desde dentro de la red de Docker. El identificador de la oferta está en la URL de "Ver detalle" (`/prestador/ofertas/<id>`):
+
+   ```bash
+   ID=<id de la oferta>
+   docker compose -f infra/docker-compose.yml exec -T nginx \n     curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \n     -H "Content-Type: application/json" \n     -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
+   # {"resultado":"APLICADO"}
+   ```
+
+   Al recargar "Mis ofertas" la oferta está "Publicada" y ya aparece en el catálogo. Para mostrar un rechazo, usa `\"decision\":\"RECHAZAR\",\"motivo\":\"Falta el punto de encuentro\"`: la oferta queda "Rechazada" con su motivo.
+5. **Editar.** En "Mis ofertas", "Editar" abre el formulario con los datos publicados. Cambia el precio y guarda: la oferta pasa a "Publicada con cambios en revisión" y en "Ver detalle" se ven lado a lado la versión publicada (1) y la pendiente (2). El turista sigue viendo la versión 1 hasta que se apruebe la 2 con otro aviso (`numeroVersion: 2` y otro `idAviso`).
+6. **Retirar.** "Retirar" pide confirmación en un diálogo propio. Al confirmar, la oferta queda "Retirada", sin "Editar", y su ficha pública responde "Esta oferta ya no está disponible".
+7. **Errores.** Con el prestador demo **Agencia sin RNT**, publicar muestra que el RNT no está activo. Con **Hotel** o **Restaurante** el formulario solo ofrece el tipo de oferta que ese prestador puede publicar.
+
+La identidad del prestador es provisional: el selector "Prestador demo" sustituye al inicio de sesión mientras no exista el JWT del núcleo.
+
+## Demostración paso a paso por consola
+
+La misma demostración contra la API, sin la interfaz. Los comandos están en `bash` (en Windows, Git Bash). Los datos de demostración son inventados: 7 zonas, 5 prestadores y 23 ofertas de los cuatro tipos.
 
 ```bash
 BASE=http://localhost:8080/api/catalogo
