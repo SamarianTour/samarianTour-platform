@@ -67,15 +67,15 @@ mvn test      # unitarias, controladores, contrato y ArchUnit (no necesita Docke
 mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 ```
 
-`ContratoCatalogoTest` compara las rutas de los controladores con las de `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
+`ContratoCatalogoTest` compara las rutas de los controladores y los campos de los DTO con `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
 
 ## Perfiles del catálogo
 
 | Perfil | Qué activa | Cuándo |
 |---|---|---|
-| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto |
-| `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Pruebas de integración (`mvn verify`) |
-| `demo` | Los headers que sustituyen al token del prestador | Nunca por defecto; solo en la demostración |
+| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, sin Docker |
+| `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Docker Compose y pruebas de integración (`mvn verify`) |
+| `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 
 **Identidad provisional del prestador.** Mientras no exista `libs/seguridad-jwt`, las rutas `/prestador/**` identifican al prestador con dos headers: `X-Prestador-Id` (UUID) y `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cualquiera puede enviarlos, así que solo se aceptan con el perfil `demo`; sin él responden 401. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
 
@@ -87,7 +87,13 @@ docker compose -f infra/docker-compose.yml up --build -d
 
 Nginx queda en `http://localhost:8080` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
 
-Compose activa los perfiles `memoria` y `demo`. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
+Compose activa los perfiles `mongo` y `demo`: los datos viven en MongoDB y las dos réplicas comparten el estado. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
+
+Para volver a los datos iniciales hay que borrar el volumen de MongoDB:
+
+```bash
+docker compose -f infra/docker-compose.yml down -v
+```
 
 Actualizar solo el catálogo sin detener lo demás:
 
@@ -125,7 +131,8 @@ curl -s "$BASE/ofertas?tipo=HOTEL"
 ### 2. Ficha y zonas
 
 ```bash
-# Paquete: sus actividades, el nivel de esfuerzo calculado, la zona protegida y el perfil del prestador
+# Paquete: su ubicación, sus actividades, el nivel de esfuerzo calculado, la zona protegida
+# y el perfil del prestador con su nombre comercial
 curl -s "$BASE/ofertas/b00000000000000000000008"
 
 # Oferta aprobada de un prestador con el RNT inactivo: no es visible, responde 404
@@ -136,11 +143,7 @@ curl -s "$BASE/zonas"
 
 ### 3. Publicar, aprobar y ver la oferta en la búsqueda
 
-Con los datos en memoria, cada réplica tiene su propio estado: lo que se publica en una no lo ve la otra. Para este flujo se deja una sola réplica; con el adaptador de MongoDB el estado será compartido y no hará falta.
-
-```bash
-docker compose -f infra/docker-compose.yml up -d --scale catalogo=1 --no-recreate
-```
+Los datos están en MongoDB, así que el flujo funciona con las dos réplicas: lo que escribe una lo ve la otra.
 
 Publicar una actividad como el guía independiente de la demostración:
 
@@ -181,8 +184,8 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \
   -H "Content-Type: application/json" \
-  -d "{\"idAviso\":\"demo-1\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
-# {"resultado":"APLICADO"}; si se repite el mismo aviso, {"resultado":"DUPLICADO"}
+  -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
+# {"resultado":"APLICADO"}; si se repite el mismo aviso, {"resultado":"DUPLICADO"}, aunque llegue a la otra réplica
 ```
 
 Ahora aparece en la ficha y en la búsqueda:
@@ -192,10 +195,29 @@ curl -s "$BASE/ofertas/$ID"
 curl -s "$BASE/ofertas?zonaId=a00000000000000000000007&tipoActividad=AVISTAMIENTO_FAUNA"
 ```
 
-Para volver a las dos réplicas:
+### 4. Ofertas propias y retiro
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d --scale catalogo=2 --no-recreate
+# Las ofertas del guía en cualquier estado, con su versión publicada y la pendiente
+curl -s "$BASE/prestador/ofertas" \
+  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+
+# Retirar la oferta recién publicada: 204. El retiro es definitivo
+curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro" \
+  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+
+# Ya no es visible para el turista (404), pero sigue en las ofertas propias como "retirada": true
+curl -s "$BASE/ofertas/$ID"
+```
+
+### 5. Rutas que no se exponen
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 ```
 
 Otros casos que se pueden mostrar:
@@ -203,9 +225,8 @@ Otros casos que se pueden mostrar:
 - **Sin identidad:** el mismo `POST` sin los headers responde 401 `NO_AUTENTICADO`.
 - **RNT inactivo:** con `X-Prestador-Id: 50000000-0000-0000-0000-000000000005` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
 - **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
-- **Edición:** un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
-- **Ofertas propias:** `GET $BASE/prestador/ofertas` con los mismos headers lista las ofertas del guía en cualquier estado, con su versión publicada y la pendiente.
-- **Retiro:** `curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro"` con los mismos headers responde 204. La oferta sale de la búsqueda, sigue en la lista de ofertas propias como `"retirada": true` y un `PUT` posterior responde 409 `OFERTA_NO_EDITABLE`.
+- **Edición:** antes de retirarla, un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
+- **Oferta retirada:** después del retiro, ese mismo `PUT` responde 409 `OFERTA_NO_EDITABLE`.
 
 ## Cómo contribuir
 

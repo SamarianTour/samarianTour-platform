@@ -226,13 +226,14 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Controladores y JSON | `infraestructura/entrada/rest/` |
 | Creación de los servicios (Spring) | `infraestructura/config/CatalogoConfig` |
 | Datos en memoria del prototipo | `infraestructura/salida/memoria/` |
+| Carga de los datos de demostración en MongoDB | `infraestructura/salida/persistencia/CargaDemoMongo` |
 | MongoDB | `infraestructura/salida/persistencia/` (adaptadores), `document/` y `mapper/` |
 | Datos de demostración | `infraestructura/salida/demo/` |
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
 | Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |
 
-Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (precarga de zonas 🔨), `.github/workflows/ci.yml`.
+Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (vacío: los datos de demostración los carga `CargaDemoMongo` al arrancar), `.github/workflows/ci.yml`.
 
 ## 7. Resumen por capa
 

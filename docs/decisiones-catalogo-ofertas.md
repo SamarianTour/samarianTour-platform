@@ -37,7 +37,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-25 | El filtro por nivel de esfuerzo es "hasta el nivel indicado" | 🆕 RF-17 |
 | DC-26 | Perfil público: solo la descripción es obligatoria | 🆕 RF-64, RS-03 |
 | DC-27 | Perfiles de ejecución `memoria`, `mongo` y `demo` | 🆕 |
-| DC-28 | Con los datos en memoria, cada réplica tiene su propio estado | 🆕 QAS-02 |
+| DC-28 | Con MongoDB las réplicas comparten el estado; con los datos en memoria, no | 🆕 QAS-02 |
 | DC-29 | Forma de las respuestas de la API | 🆕 RF-20, RF-24, RF-25 |
 | DC-30 | Los identificadores del catálogo son `ObjectId` | ✅ modelo documental |
 | DC-31 | La búsqueda de paquetes usa una agregación | 🆕 RF-22, QAS-07 |
@@ -137,7 +137,7 @@ Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un pr
 - El discriminador `tipo` va en la raíz, porque no cambia, y cada versión guarda solo los campos de su tipo.
 - El precio se guarda como `Decimal128`. Por defecto Spring lo guardaría como texto y la búsqueda por rango de precio fallaría.
 - Se desactiva el campo `_class` de Spring.
-- Otras colecciones: `zonas`, `prestadores` (réplica de DC-02) y `avisos_procesados` (`_id = idAviso`).
+- Otras colecciones: `zonas`, `prestadores` (réplica de DC-02), `perfiles` (un perfil público por prestador, con `nombreComercial` opcional, DC-26) y `avisos_procesados` (`_id = idAviso`).
 
 **DC-17. Índices parciales para la búsqueda (evidencia de QAS-07).**
 
@@ -216,7 +216,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - El orden de exigencia está definido de forma explícita en `NivelEsfuerzo`; no depende del orden en que se declaran los valores.
 - Los alojamientos y los restaurantes no tienen nivel de esfuerzo, así que no aparecen cuando se usa este filtro.
 
-**DC-26. Perfil público: solo la descripción es obligatoria.** Las fotos, los horarios de atención, el sitio web y las redes sociales son opcionales, porque el proyecto exige incluir a los prestadores pequeños con pocos recursos tecnológicos (RS-03).
+**DC-26. Perfil público: solo la descripción es obligatoria.** El nombre comercial, las fotos, los horarios de atención, el sitio web y las redes sociales son opcionales, porque el proyecto exige incluir a los prestadores pequeños con pocos recursos tecnológicos (RS-03).
 - Si vienen, el sitio web, las redes sociales y las fotos deben ser URLs `http` o `https`; si no, se responde 400 `DATO_INVALIDO`.
 - No hay límite de cantidad de fotos: no está definido y queda como `TODO` en `PerfilPublico`.
 
@@ -227,17 +227,20 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 | Perfil | Qué activa | Cuándo |
 |---|---|---|
 | `memoria` | Los adaptadores de salida en la memoria del proceso (`infraestructura/salida/memoria`), con los datos de demostración de Santa Marta | Por defecto, y en las pruebas que no necesitan MongoDB |
-| `mongo` | Los adaptadores de salida de MongoDB (`infraestructura/salida/persistencia`) y la creación de sus índices (DC-33) | En las pruebas de integración; en Docker Compose cuando exista la carga de los datos de demostración en MongoDB |
-| `demo` | Los headers que sustituyen al token del prestador (DC-01) | Nunca por defecto; solo en la demostración |
+| `mongo` | Los adaptadores de salida de MongoDB (`infraestructura/salida/persistencia`) y la creación de sus índices (DC-33) | En Docker Compose y en las pruebas de integración |
+| `demo` | Los headers que sustituyen al token del prestador (DC-01) y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 
-- Docker Compose activa los dos (`SPRING_PROFILES_ACTIVE=memoria,demo`).
-- Con `memoria`, la salud del servicio no depende de MongoDB.
+- Docker Compose activa `mongo` y `demo` (`SPRING_PROFILES_ACTIVE=mongo,demo`).
+- **Carga de los datos de demostración** (`CargaDemoMongo`, [SUPUESTO] perfiles `mongo` y `demo` a la vez): al arrancar inserta en MongoDB los mismos datos de Santa Marta que usa el perfil `memoria`. Una colección solo se carga si está vacía, así que no toca una base que ya tiene datos.
+- Las dos réplicas arrancan a la vez y pueden ver vacía la misma colección: cada documento se inserta por separado, con su identificador fijo, y un duplicado se ignora. La carga queda idempotente sin coordinación entre réplicas.
+- Con `memoria`, la salud del servicio no depende de MongoDB; con `mongo`, sí.
 - De Actuator solo se expone `/actuator/health`, para el healthcheck de Docker Compose; Nginx no lo publica hacia afuera.
 
-**DC-28. Con los datos en memoria, cada réplica tiene su propio estado.** Lo que se escribe en una réplica no lo ve la otra.
-- Todas las réplicas arrancan con los mismos datos, con identificadores fijos, así que la búsqueda y la ficha se demuestran con 2 réplicas y el header `X-Instancia` alternando.
-- El flujo de escritura (publicar, aprobar con un aviso y ver la oferta en la búsqueda) se demuestra con 1 réplica.
-- La limitación desaparece con el adaptador de MongoDB, donde el estado es compartido. El control de concurrencia de esas escrituras está en el ADR-05.
+**DC-28. Con MongoDB las réplicas comparten el estado; con los datos en memoria, no.**
+- Con el perfil `mongo`, que es el de Docker Compose, lo que se escribe por una réplica lo ve la otra. Toda la demostración, lectura y escritura, se hace con las 2 réplicas y el header `X-Instancia` muestra cuál respondió.
+- Los avisos procesados también están en la base, así que un aviso repetido se reconoce aunque llegue a otra réplica.
+- El control de concurrencia de esas escrituras está en el ADR-05.
+- Con el perfil `memoria` cada réplica tiene su propio estado: sirve para una sola instancia y para las pruebas sin MongoDB, no para un despliegue con réplicas.
 
 **DC-29. Forma de las respuestas.**
 - La búsqueda devuelve un resumen de cada oferta: id, tipo, nombre, descripción, precio de referencia, unidad del precio y zona.
@@ -279,11 +282,12 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
    - cambiar `duracionMinutos : int` por `Integer` en `VersionActividad`, y dejar `modalidad` y `puntoEncuentro` como opcionales: solo son obligatorios para el guía (DC-10);
    - quitar `esAccesibleSillaRuedas()` de los métodos abstractos de `VersionOferta` y `nivelEsfuerzo()` de `VersionPaquete`: actividad, alojamiento y restaurante guardan su accesibilidad, y los valores del paquete se calculan con sus actividades en `ReglasPaquete` (DC-24);
    - agregar `actividadIds` en `VersionPaquete`: el paquete referencia sus actividades por el identificador de su oferta;
-   - agregar `prestadorId` en `PerfilPublico` (DC-26).
+   - agregar `prestadorId` y `nombreComercial : String` (opcional) en `PerfilPublico` (DC-26).
 4. **Modelo documental (MongoDB)** (sección 2 del documento de diseño):
    - quitar la base `recomendacion` (DC-32);
    - marcar `publicada` como `| null`: una oferta nueva solo tiene versión pendiente (DC-06);
    - marcar `ubicacion` y `tipoUnidad` como opcionales mientras el SRS no diga lo contrario (DC-19);
+   - agregar `nombreComercial` (texto, opcional) en la colección `perfiles` (DC-26);
    - agregar los índices: los dos parciales de búsqueda y `{prestadorId, _id}` en `ofertas` (DC-17), único en `perfiles.prestadorId` y único en `{ofertaId, turistaId}` de `opiniones` (RF-61);
    - usar el mismo nombre de base que el diagrama de despliegue y Docker Compose: `catalogo_db`.
 5. **Diagrama del módulo catálogo:** agregar el puerto de salida `PrestadorCatalogoRepositoryPort` (réplica de DC-02) con su adaptador `PrestadorMongoAdapter`.
