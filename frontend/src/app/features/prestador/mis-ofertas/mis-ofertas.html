@@ -1,0 +1,101 @@
+<section class="pagina">
+  <header class="encabezado encabezado--con-accion">
+    <div>
+      <h1>Mis ofertas</h1>
+      <p class="texto-suave">Cada oferta nueva o editada pasa por moderación antes de verse en el catálogo.</p>
+    </div>
+    <a class="boton" routerLink="/prestador/ofertas/nueva">
+      <app-icono nombre="mas" />
+      Publicar oferta
+    </a>
+  </header>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (pagina(); as resultado) {
+      @if (filas().length > 0) {
+        <div class="tarjeta tarjeta--tabla">
+          <table class="tabla">
+            <caption class="solo-lectores">
+              Ofertas del prestador, {{ resultado.totalElementos }} en total
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Nombre de la oferta</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Precio ref.</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of filas(); track fila.oferta.id) {
+                <tr>
+                  <th scope="row" data-etiqueta="Nombre de la oferta">{{ fila.nombre }}</th>
+                  <td data-etiqueta="Tipo">{{ etiquetaTipo[fila.oferta.tipo] }}</td>
+                  <td data-etiqueta="Precio ref.">
+                    <span class="precio">
+                      <strong>{{ fila.precio | precio }}</strong>&ngsp;
+                      <span>{{ unidad[fila.oferta.tipo] }}</span>
+                    </span>
+                  </td>
+                  <td data-etiqueta="Estado">
+                    <span class="etiqueta" [class]="claseDeEstado[fila.estado]">{{ etiquetaEstado[fila.estado] }}</span>
+                    @if (fila.estado === 'RECHAZADA') {
+                      <p class="motivo">Motivo: {{ fila.motivoRechazo ?? 'no se indicó' }}</p>
+                      @if (fila.oferta.publicada) {
+                        <p class="nota">Tu versión publicada sigue visible en el catálogo.</p>
+                      }
+                    }
+                  </td>
+                  <td data-etiqueta="Acciones">
+                    <div class="acciones">
+                      <a class="accion" [routerLink]="['/prestador/ofertas', fila.oferta.id]">
+                        Ver detalle<span class="solo-lectores"> de {{ fila.nombre }}</span>
+                      </a>
+                      @if (fila.editable) {
+                        <a class="accion" [routerLink]="['/prestador/ofertas', fila.oferta.id, 'editar']">
+                          Editar<span class="solo-lectores"> {{ fila.nombre }}</span>
+                        </a>
+                      }
+                      @if (!fila.oferta.retirada) {
+                        <button type="button" class="accion accion--peligro" (click)="pedirRetiro(fila)">
+                          Retirar<span class="solo-lectores"> {{ fila.nombre }}</span>
+                        </button>
+                      }
+                    </div>
+                    @if (!fila.oferta.retirada && !fila.editable) {
+                      <p class="nota">Podrás editarla cuando tenga una versión publicada.</p>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-paginacion [pagina]="resultado.pagina" [totalPaginas]="resultado.totalPaginas" (cambiar)="irAPagina($event)" />
+      } @else {
+        <div class="tarjeta vacio">
+          <h2>Todavía no tienes ofertas</h2>
+          <p class="texto-suave">Publica la primera y la enviaremos a moderación.</p>
+          <a class="boton" routerLink="/prestador/ofertas/nueva">Publicar oferta</a>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">Cargando tus ofertas…</p>
+    }
+  </div>
+</section>
+
+<app-dialogo-confirmacion
+  titulo="¿Retirar esta oferta?"
+  [mensaje]="mensajeDeRetiro()"
+  accion="Retirar oferta"
+  (confirmado)="retirar()"
+/>
