@@ -1,0 +1,80 @@
+.detalle__cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.detalle__cabecera h1 {
+  margin-top: 0.25rem;
+}
+
+.detalle__cabecera .etiqueta {
+  align-self: center;
+  font-size: 0.8125rem;
+  white-space: normal;
+}
+
+.versiones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+/* Cada dato en un renglón: el nombre a la izquierda y el valor a la derecha. */
+.renglones {
+  margin: 0;
+}
+
+.renglones > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--borde);
+  padding: 0.75rem 0;
+}
+
+.renglones > div:last-child {
+  padding-bottom: 0;
+}
+
+.renglones dt {
+  color: var(--texto-suave);
+  font-size: 0.9375rem;
+}
+
+.renglones dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.renglon--rechazo dd {
+  color: var(--peligro);
+}
+
+.renglon__precio {
+  color: var(--enlace);
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.acciones .alerta {
+  margin: 0;
+}
+
+@media (max-width: 44rem) {
+  .versiones {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

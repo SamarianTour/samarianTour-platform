@@ -1,10 +1,18 @@
 spring:
   application:
     name: catalogo
+  profiles:
+    # Por defecto los datos viven en la memoria del proceso (perfil memoria); el perfil mongo usa los adaptadores
+    # de MongoDB.
+    # El perfil demo, que acepta los headers que sustituyen al token, nunca se activa por defecto.
+    default: memoria
   data:
     mongodb:
       # En Docker Compose se sobrescribe con SPRING_DATA_MONGODB_URI.
       uri: mongodb://localhost:27017/catalogo_db
+      # Los UUID de prestadores y turistas se guardan como binario estándar (subtipo 4), no con el formato
+      # heredado del driver Java, para que cualquier herramienta los lea igual (DC-16).
+      uuid-representation: standard
   mvc:
     # Errores en formato RFC 7807 (application/problem+json).
     problemdetails:
@@ -15,3 +23,10 @@ server:
   servlet:
     # Nginx reenvía /api/catalogo/** sin reescribir la ruta; los controladores se mapean sin el prefijo.
     context-path: /api/catalogo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Solo la salud, para el healthcheck de Docker Compose.
+        include: health

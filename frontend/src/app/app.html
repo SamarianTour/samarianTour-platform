@@ -1,0 +1,32 @@
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+
+<header class="cabecera">
+  <div class="cabecera__interior">
+    <a class="marca" routerLink="/">
+      <span class="marca__logo"><app-icono nombre="hoja" /></span>
+      Samarian Tour
+    </a>
+    <nav aria-label="Principal">
+      <ul class="navegacion">
+        <li>
+          <a routerLink="/" [class.activo]="!enPrestador()" [attr.aria-current]="enPrestador() ? null : 'page'">Catálogo</a>
+        </li>
+        <li>
+          <a routerLink="/prestador/ofertas" [class.activo]="enPrestador()" [attr.aria-current]="enPrestador() ? 'page' : null">
+            Soy prestador
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="contenido" tabindex="-1">
+  <router-outlet />
+</main>
+
+<footer class="pie">
+  <p>Samarian Tour · Turismo sostenible en Santa Marta</p>
+</footer>
+
+<app-avisos />

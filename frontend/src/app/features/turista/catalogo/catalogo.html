@@ -1,0 +1,193 @@
+<section class="pagina catalogo">
+  <header class="catalogo__cabecera">
+    <div>
+      <h1>Catálogo turístico</h1>
+      <p class="texto-suave">Actividades, paquetes, alojamientos y restaurantes de prestadores con el RNT activo.</p>
+    </div>
+    @if (pagina(); as resultado) {
+      <p class="resultados__total" aria-live="polite">
+        {{ resultado.totalElementos }}
+        {{ resultado.totalElementos === 1 ? 'oferta encontrada' : 'ofertas encontradas' }}
+      </p>
+    }
+  </header>
+
+  <form class="filtros tarjeta" [formGroup]="formulario" aria-labelledby="filtros-titulo">
+    <h2 id="filtros-titulo" class="filtros__titulo">Filtros</h2>
+
+    <fieldset class="grupo">
+      <legend>Tipo de oferta</legend>
+      <label class="opcion">
+        <input type="radio" formControlName="tipo" value="" />
+        <span>Todas</span>
+      </label>
+      @for (tipo of tipos; track tipo) {
+        <label class="opcion">
+          <input type="radio" formControlName="tipo" [value]="tipo" />
+          <span>{{ etiquetaTipo[tipo] }}</span>
+        </label>
+      }
+    </fieldset>
+
+    <hr class="separador" />
+
+    <div class="campo">
+      <label for="zonaId">Zona</label>
+      <select id="zonaId" formControlName="zonaId">
+        <option value="">Todas las zonas</option>
+        @for (zona of zonas(); track zona.id) {
+          <option [value]="zona.id">{{ zona.nombre }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="tipoActividad">Tipo de actividad</label>
+      <select id="tipoActividad" formControlName="tipoActividad" aria-describedby="tipoActividad-ayuda">
+        <option value="">Cualquiera</option>
+        @for (tipo of tiposActividad; track tipo) {
+          <option [value]="tipo">{{ etiquetaActividad[tipo] }}</option>
+        }
+      </select>
+      <p class="campo__ayuda" id="tipoActividad-ayuda">Incluye los paquetes que tienen una actividad de ese tipo.</p>
+    </div>
+
+    <hr class="separador" />
+
+    <fieldset class="grupo">
+      <legend>Rango de precio (COP)</legend>
+      <div class="campo-doble">
+        <div class="campo">
+          <label for="precioMin">Mínimo</label>
+          <input
+            id="precioMin"
+            type="number"
+            min="0"
+            step="1000"
+            inputmode="numeric"
+            formControlName="precioMin"
+            [attr.aria-invalid]="errorDe('precioMin') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('precioMin') ? 'precioMin-error' : null"
+          />
+        </div>
+        <div class="campo">
+          <label for="precioMax">Máximo</label>
+          <input
+            id="precioMax"
+            type="number"
+            min="0"
+            step="1000"
+            inputmode="numeric"
+            formControlName="precioMax"
+            [attr.aria-invalid]="errorDe('precioMax') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('precioMax') ? 'precioMax-error' : null"
+          />
+        </div>
+      </div>
+      @if (errorDe('precioMin'); as mensaje) {
+        <p class="campo__error" id="precioMin-error">{{ mensaje }}</p>
+      }
+      @if (errorDe('precioMax'); as mensaje) {
+        <p class="campo__error" id="precioMax-error">{{ mensaje }}</p>
+      }
+    </fieldset>
+
+    <hr class="separador" />
+
+    <div class="campo">
+      <label for="nivelEsfuerzoMaximo">Esfuerzo físico máximo</label>
+      <select id="nivelEsfuerzoMaximo" formControlName="nivelEsfuerzoMaximo" aria-describedby="esfuerzo-ayuda">
+        <option value="">Cualquiera</option>
+        @for (nivel of niveles; track nivel) {
+          <option [value]="nivel">Hasta {{ etiquetaNivel[nivel].toLowerCase() }}</option>
+        }
+      </select>
+      <p class="campo__ayuda" id="esfuerzo-ayuda">Muestra actividades y paquetes de ese nivel o de uno menor.</p>
+    </div>
+
+    <fieldset class="grupo">
+      <legend>Accesibilidad</legend>
+      <label class="opcion">
+        <input type="checkbox" formControlName="accesibleSillaRuedas" />
+        <span>Accesible en silla de ruedas</span>
+      </label>
+    </fieldset>
+
+    <button type="button" class="boton boton--secundario boton--ancho" [disabled]="!conFiltros()" (click)="limpiar()">
+      Limpiar filtros
+    </button>
+  </form>
+
+  <div class="resultados" [attr.aria-busy]="cargando()">
+    @if (zonaElegida(); as zona) {
+      @if (zona.altaAfluencia) {
+        <p class="alerta alerta--aviso">
+          <app-icono nombre="alerta" />
+          <span><strong>Zona de alta afluencia: {{ zona.nombre }}.</strong> Suele estar congestionada en temporada alta.</span>
+        </p>
+      }
+      @if (zona.areaProtegida) {
+        <p class="alerta alerta--exito">
+          <app-icono nombre="hoja" />
+          <span>
+            <strong>Área protegida: {{ zona.nombre }}.</strong> Cada ficha trae las buenas prácticas para visitarla.
+          </span>
+        </p>
+      }
+    }
+
+    @if (error(); as fallo) {
+      @if (!fallo.campo) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ fallo.mensaje }}</span>
+        </p>
+      }
+    }
+
+    @if (pagina(); as resultado) {
+      @if (resultado.contenido.length > 0) {
+        <ul class="rejilla">
+          @for (oferta of resultado.contenido; track oferta.id) {
+            <li>
+              <a class="oferta" [routerLink]="['/ofertas', oferta.id]">
+                <div class="oferta__portada portada">
+                  <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
+                  <span>{{ etiquetaTipo[oferta.tipo] }}</span>
+                </div>
+                <div class="oferta__cuerpo">
+                  <span class="etiqueta etiqueta--sello">RNT verificado</span>
+                  <h2 class="oferta__nombre">{{ oferta.nombre }}</h2>
+                  @if (zona(oferta.zonaId); as nombreZona) {
+                    <p class="oferta__zona">{{ nombreZona }}</p>
+                  }
+                  <p class="oferta__descripcion">{{ oferta.descripcion }}</p>
+                  <div class="oferta__pie">
+                    <p class="oferta__precio">
+                      <strong>{{ oferta.precioReferencia | precio }}</strong>&ngsp;
+                      <span>{{ oferta.unidadPrecio }}</span>
+                    </p>
+                    <app-icono class="oferta__flecha" nombre="flecha" />
+                  </div>
+                </div>
+              </a>
+            </li>
+          }
+        </ul>
+        <app-paginacion
+          [pagina]="resultado.pagina"
+          [totalPaginas]="resultado.totalPaginas"
+          (cambiar)="irAPagina($event)"
+        />
+      } @else {
+        <div class="vacio tarjeta">
+          <h2>No encontramos ofertas con esos filtros</h2>
+          <p class="texto-suave">Prueba con otra zona, otro rango de precio o un nivel de esfuerzo mayor.</p>
+          <button type="button" class="boton" (click)="limpiar()">Limpiar filtros</button>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">Buscando ofertas…</p>
+    }
+  </div>
+</section>

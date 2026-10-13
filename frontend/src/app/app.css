@@ -1,0 +1,133 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.saltar {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 1100;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--enlace);
+  color: #fff;
+}
+
+.saltar:focus {
+  top: 1rem;
+}
+
+.cabecera {
+  border-bottom: 1px solid var(--borde);
+  background: var(--superficie);
+}
+
+.cabecera__interior {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  flex-wrap: wrap;
+  max-width: var(--ancho);
+  min-height: 4.5rem;
+  margin: 0 auto;
+  padding: 0.5rem 1.5rem;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 44px;
+  color: var(--texto);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.marca:hover {
+  color: var(--texto);
+}
+
+.marca__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: var(--acento);
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.navegacion {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navegacion a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  color: var(--texto-suave);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.navegacion a:hover {
+  color: var(--enlace);
+}
+
+.navegacion a.activo {
+  color: var(--enlace);
+  font-weight: 600;
+}
+
+/* Raya corta bajo la sección activa. */
+.navegacion a.activo::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 1.5rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--acento);
+  transform: translateX(-50%);
+}
+
+main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  outline: none;
+}
+
+.pie {
+  border-top: 1px solid var(--borde);
+  padding: 1rem;
+  background: var(--superficie);
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.pie p {
+  margin: 0;
+}
+
+@media (max-width: 30rem) {
+  .cabecera__interior {
+    padding-inline: 1rem;
+  }
+}

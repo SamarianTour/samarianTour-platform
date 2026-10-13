@@ -26,23 +26,37 @@ services:
     image: samarian-tour/catalogo:latest
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/catalogo_db
+      # mongo: los datos viven en MongoDB y las réplicas comparten el estado.
+      # demo: headers que sustituyen al token del prestador y carga de los datos de demostración
+      # si las colecciones están vacías. El perfil demo es solo para la demostración.
+      SPRING_PROFILES_ACTIVE: mongo,demo
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/catalogo/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
     # Sin puertos publicados ni container_name: solo Nginx es accesible desde fuera (QAS-02).
     deploy:
       replicas: 2
     mem_limit: 512m
     restart: unless-stopped
 
+  # Nginx sirve el frontend ya compilado y reenvía /api/catalogo/ al catálogo.
   nginx:
-    image: nginx:1.27-alpine
+    build:
+      context: ../frontend
+    image: samarian-tour/frontend:latest
     ports:
       - "8080:8080"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - catalogo
+      catalogo:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
