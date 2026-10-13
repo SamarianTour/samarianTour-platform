@@ -18,8 +18,11 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.ResultadoAviso;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.Solicitante;
 
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.EjecutorConReintento;
+
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -48,13 +51,15 @@ class EscenarioAplicacion {
     final PerfilRepositoryEnMemoria perfiles = new PerfilRepositoryEnMemoria();
     final AvisoProcesadoEnMemoria avisosProcesados = new AvisoProcesadoEnMemoria();
     private final Clock reloj = Clock.fixed(AHORA, ZoneOffset.UTC);
+    /** Los mismos 3 intentos que en producción, sin esperar entre ellos. */
+    private final EjecutorConReintento reintento = new EjecutorConReintento(3, Duration.ZERO);
 
-    final GestionarOfertaService gestion = new GestionarOfertaService(ofertas, zonas, prestadores, reloj);
+    final GestionarOfertaService gestion = new GestionarOfertaService(ofertas, zonas, prestadores, reloj, reintento);
     final BuscarOfertasService busqueda = new BuscarOfertasService(ofertas);
     final ConsultarFichaOfertaService ficha = new ConsultarFichaOfertaService(ofertas, zonas, perfiles);
     final ConsultarZonasService consultaZonas = new ConsultarZonasService(zonas);
     final AplicarAvisoNucleoService avisos = new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados,
-            reloj);
+            reloj, reintento);
 
     private int secuenciaAvisos;
 

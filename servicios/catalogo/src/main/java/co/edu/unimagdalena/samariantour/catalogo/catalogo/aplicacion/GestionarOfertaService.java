@@ -16,6 +16,8 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PrestadorCatalogoRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.ZonaRepositoryPort;
 
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.EjecutorConReintento;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -24,6 +26,9 @@ import java.util.UUID;
 /**
  * Publicar, editar y retirar ofertas del prestador (RF-65 a RF-67). Las reglas viven en {@link Oferta};
  * este servicio reúne lo que el dominio necesita (habilitación, zona, hora) y guarda el resultado.
+ *
+ * <p>Editar y retirar se reintentan completos si otra escritura se cruza con ellos (ADR-05). Publicar no: crea un
+ * documento nuevo, así que no puede chocar con otra escritura.
  */
 public class GestionarOfertaService implements GestionarOfertaUseCase {
 
@@ -31,18 +36,21 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
     private final ZonaRepositoryPort zonas;
     private final PrestadorCatalogoRepositoryPort prestadores;
     private final Clock reloj;
+    private final EjecutorConReintento reintento;
 
     public GestionarOfertaService(OfertaRepositoryPort ofertas, ZonaRepositoryPort zonas,
-                                  PrestadorCatalogoRepositoryPort prestadores, Clock reloj) {
+                                  PrestadorCatalogoRepositoryPort prestadores, Clock reloj,
+                                  EjecutorConReintento reintento) {
         this.ofertas = ofertas;
         this.zonas = zonas;
         this.prestadores = prestadores;
         this.reloj = reloj;
+        this.reintento = reintento;
     }
 
     @Override
     public Oferta publicar(PublicarOfertaCommand comando) {
-        Oferta oferta = Oferta.publicar(UUID.randomUUID().toString(),
+        Oferta oferta = Oferta.publicar(ofertas.nuevoId(),
                 prestadores.habilitacionDe(comando.solicitante().prestadorId()),
                 comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()),
                 actividadesDe(comando.contenido()), ahora());
@@ -52,19 +60,23 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
 
     @Override
     public Oferta editar(EditarOfertaCommand comando) {
-        Oferta oferta = ofertaExistente(comando.ofertaId());
-        oferta.editar(prestadores.habilitacionDe(comando.solicitante().prestadorId()),
-                comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()),
-                actividadesDe(comando.contenido()), ahora());
-        ofertas.guardar(oferta);
-        return oferta;
+        return reintento.ejecutar(() -> {
+            Oferta oferta = ofertaExistente(comando.ofertaId());
+            oferta.editar(prestadores.habilitacionDe(comando.solicitante().prestadorId()),
+                    comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()),
+                    actividadesDe(comando.contenido()), ahora());
+            ofertas.guardar(oferta);
+            return oferta;
+        });
     }
 
     @Override
     public void retirar(RetirarOfertaCommand comando) {
-        Oferta oferta = ofertaExistente(comando.ofertaId());
-        oferta.retirar(comando.prestadorId());
-        ofertas.guardar(oferta);
+        reintento.ejecutar(() -> {
+            Oferta oferta = ofertaExistente(comando.ofertaId());
+            oferta.retirar(comando.prestadorId());
+            ofertas.guardar(oferta);
+        });
     }
 
     @Override

@@ -17,8 +17,13 @@ final class CopiaOferta {
     }
 
     static Oferta de(Oferta oferta) {
+        return de(oferta, oferta.rntPrestadorActivo(), oferta.versionHabilitacion(), oferta.revision());
+    }
+
+    /** Copia la oferta con otra habilitación y otra revisión, como al guardarla o al actualizar su RNT. */
+    static Oferta de(Oferta oferta, boolean rntPrestadorActivo, long versionHabilitacion, long revision) {
         return Oferta.reconstituir(oferta.id(), oferta.tipo(), oferta.prestadorId(), oferta.retirada(),
-                oferta.rntPrestadorActivo(), oferta.publicada().map(CopiaOferta::de).orElse(null),
+                rntPrestadorActivo, versionHabilitacion, revision, oferta.publicada().map(CopiaOferta::de).orElse(null),
                 oferta.pendiente().map(CopiaOferta::de).orElse(null));
     }
 

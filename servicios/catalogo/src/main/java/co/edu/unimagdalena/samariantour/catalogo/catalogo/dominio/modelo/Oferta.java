@@ -22,16 +22,21 @@ import java.util.UUID;
  */
 public final class Oferta {
 
+    /** Revisión de una oferta que todavía no se ha guardado. */
+    public static final long REVISION_NUEVA = 0;
+
     private final String id;
     private final TipoOferta tipo;
     private final UUID prestadorId;
     private boolean retirada;
     private boolean rntPrestadorActivo;
+    private long versionHabilitacion;
+    private final long revision;
     private VersionOferta publicada;
     private VersionOferta pendiente;
 
     private Oferta(String id, TipoOferta tipo, UUID prestadorId, boolean retirada, boolean rntPrestadorActivo,
-                   VersionOferta publicada, VersionOferta pendiente) {
+                   long versionHabilitacion, long revision, VersionOferta publicada, VersionOferta pendiente) {
         this.id = Validaciones.texto(id, "id");
         this.tipo = Objects.requireNonNull(tipo, "tipo");
         this.prestadorId = Objects.requireNonNull(prestadorId, "prestadorId");
@@ -40,6 +45,8 @@ public final class Oferta {
         }
         this.retirada = retirada;
         this.rntPrestadorActivo = rntPrestadorActivo;
+        this.versionHabilitacion = versionHabilitacion;
+        this.revision = revision;
         this.publicada = publicada;
         this.pendiente = pendiente;
     }
@@ -64,14 +71,21 @@ public final class Oferta {
     public static Oferta publicar(String id, PrestadorCatalogo prestador, TipoPrestador tipoPrestador,
                                   VersionOferta contenido, Zona zona, Collection<Oferta> actividades, Instant ahora) {
         verificarPuedePublicar(prestador, tipoPrestador, contenido, zona, actividades);
-        contenido.enviar(1, ahora);
-        return new Oferta(id, contenido.tipo(), prestador.prestadorId(), false, prestador.rntActivo(), null, contenido);
+        return new Oferta(id, contenido.tipo(), prestador.prestadorId(), false, prestador.rntActivo(),
+                prestador.version(), REVISION_NUEVA, null, contenido.enviada(1, ahora));
     }
 
-    /** Reconstruye una oferta guardada; solo para los adaptadores de persistencia. */
+    /**
+     * Reconstruye una oferta guardada; solo para los adaptadores de persistencia.
+     *
+     * @param versionHabilitacion versión del aviso de habilitación copiado junto con {@code rntPrestadorActivo}
+     * @param revision            revisión técnica con la que se leyó, para el bloqueo optimista (ADR-05)
+     */
     public static Oferta reconstituir(String id, TipoOferta tipo, UUID prestadorId, boolean retirada,
-                                      boolean rntPrestadorActivo, VersionOferta publicada, VersionOferta pendiente) {
-        return new Oferta(id, tipo, prestadorId, retirada, rntPrestadorActivo, publicada, pendiente);
+                                      boolean rntPrestadorActivo, long versionHabilitacion, long revision,
+                                      VersionOferta publicada, VersionOferta pendiente) {
+        return new Oferta(id, tipo, prestadorId, retirada, rntPrestadorActivo, versionHabilitacion, revision,
+                publicada, pendiente);
     }
 
     /**
@@ -99,9 +113,8 @@ public final class Oferta {
             throw new DatoInvalidoException("tipo", "el tipo de una oferta no cambia después de creada");
         }
         verificarPuedePublicar(prestador, tipoPrestador, contenido, zona, actividades);
-        contenido.enviar(siguienteNumeroVersion(), ahora);
-        pendiente = contenido;
-        rntPrestadorActivo = prestador.rntActivo();
+        pendiente = contenido.enviada(siguienteNumeroVersion(), ahora);
+        copiarHabilitacion(prestador);
     }
 
     /** Retira la oferta del catálogo. Es definitivo (RF-65) y se permite aunque el RNT esté inactivo. */
@@ -114,18 +127,21 @@ public final class Oferta {
      * Aplica la aprobación de la versión indicada. Es idempotente: si la versión ya no está en moderación
      * (ya se aplicó, fue reemplazada o la oferta está retirada) no cambia nada.
      *
-     * @param rntActivoActual habilitación vigente según la réplica; se vuelve a copiar porque solo a partir de aquí
-     *                        la oferta puede ser visible
+     * @param habilitacion réplica de la habilitación del dueño; se vuelve a copiar porque solo a partir de aquí la
+     *                     oferta puede ser visible (DC-03, ADR-05)
      * @return true si la aprobación cambió la oferta
      */
-    public boolean aprobar(int numeroVersion, boolean rntActivoActual, Instant ahora) {
+    public boolean aprobar(int numeroVersion, PrestadorCatalogo habilitacion, Instant ahora) {
+        if (!esDe(habilitacion.prestadorId())) {
+            throw new IllegalArgumentException("La habilitación no es la del dueño de la oferta");
+        }
         if (!tienePendienteEnModeracion(numeroVersion)) {
             return false;
         }
         pendiente.aprobar(ahora);
         publicada = pendiente;
         pendiente = null;
-        rntPrestadorActivo = rntActivoActual;
+        copiarHabilitacion(habilitacion);
         return true;
     }
 
@@ -173,6 +189,12 @@ public final class Oferta {
         }
     }
 
+    /** La copia del RNT y la versión del aviso que la produjo siempre se copian juntas (ADR-05). */
+    private void copiarHabilitacion(PrestadorCatalogo prestador) {
+        rntPrestadorActivo = prestador.rntActivo();
+        versionHabilitacion = prestador.version();
+    }
+
     private void verificarDueno(UUID solicitante) {
         if (!esDe(solicitante)) {
             throw new PrestadorNoAutorizadoException(id);
@@ -212,6 +234,19 @@ public final class Oferta {
     /** Copia de la habilitación RNT del prestador, para que la búsqueda use solo el índice de ofertas (QAS-07). */
     public boolean rntPrestadorActivo() {
         return rntPrestadorActivo;
+    }
+
+    /** Versión del aviso de habilitación del que viene la copia del RNT; solo avanza (ADR-05). */
+    public long versionHabilitacion() {
+        return versionHabilitacion;
+    }
+
+    /**
+     * Revisión técnica para el bloqueo optimista (ADR-05). Ninguna regla de negocio la interpreta: la asigna
+     * la persistencia y no es {@link VersionOferta#numero()}.
+     */
+    public long revision() {
+        return revision;
     }
 
     public Optional<VersionOferta> publicada() {

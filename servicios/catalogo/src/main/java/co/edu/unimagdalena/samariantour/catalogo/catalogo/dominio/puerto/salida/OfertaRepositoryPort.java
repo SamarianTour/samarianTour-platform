@@ -15,6 +15,12 @@ import java.util.UUID;
  */
 public interface OfertaRepositoryPort {
 
+    /**
+     * Identificador para una oferta nueva. Lo genera la persistencia, no la aplicación: en MongoDB es un ObjectId
+     * (DC-30). Para el dominio es un texto opaco.
+     */
+    String nuevoId();
+
     Optional<Oferta> buscarPorId(String id);
 
     /**
@@ -25,7 +31,11 @@ public interface OfertaRepositoryPort {
         return ids.stream().map(this::buscarPorId).flatMap(Optional::stream).toList();
     }
 
-    /** Crea la oferta o reemplaza la guardada con el mismo id. */
+    /**
+     * Crea la oferta o reemplaza la guardada con el mismo id, solo si su revisión sigue siendo la que se leyó
+     * (bloqueo optimista, ADR-05). Si otra escritura la cambió en medio, lanza ConflictoConcurrenciaException
+     * y no guarda nada.
+     */
     void guardar(Oferta oferta);
 
     /**
@@ -39,6 +49,9 @@ public interface OfertaRepositoryPort {
     /** Ofertas del prestador en cualquier estado, ordenadas por id. */
     Pagina<Oferta> buscarPorPrestador(UUID prestadorId, Paginacion paginacion);
 
-    /** Actualiza la copia de la habilitación RNT en todas las ofertas del prestador. */
-    void actualizarRntPrestador(UUID prestadorId, boolean rntActivo);
+    /**
+     * Copia la habilitación RNT en las ofertas del prestador cuya versionHabilitacion es menor que {@code version},
+     * y les sube la revisión. Solo avanza: una actualización atrasada no cambia nada (ADR-05).
+     */
+    void actualizarRntPrestador(UUID prestadorId, boolean rntActivo, long version);
 }

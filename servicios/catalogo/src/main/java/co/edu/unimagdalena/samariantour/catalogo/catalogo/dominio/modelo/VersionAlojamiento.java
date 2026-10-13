@@ -30,6 +30,11 @@ public final class VersionAlojamiento extends VersionOferta {
     }
 
     @Override
+    VersionAlojamiento conModeracion(RegistroModeracion moderacion) {
+        return new VersionAlojamiento(contenido(), tipoUnidad, accesibleSillaRuedas, moderacion);
+    }
+
+    @Override
     public TipoOferta tipo() {
         return TipoOferta.ALOJAMIENTO;
     }

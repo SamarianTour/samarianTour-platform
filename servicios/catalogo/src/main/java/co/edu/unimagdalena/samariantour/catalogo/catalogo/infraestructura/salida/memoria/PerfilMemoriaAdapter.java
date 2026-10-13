@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PerfilRepositoryPort;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 

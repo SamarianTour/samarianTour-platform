@@ -26,9 +26,10 @@ services:
     image: samarian-tour/catalogo:latest
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/catalogo_db
-      # Mientras no exista el adaptador de MongoDB: datos en la memoria de cada réplica (memoria)
-      # y headers que sustituyen al token del prestador (demo). El perfil demo es solo para la demostración.
-      SPRING_PROFILES_ACTIVE: memoria,demo
+      # mongo: los datos viven en MongoDB y las réplicas comparten el estado.
+      # demo: headers que sustituyen al token del prestador y carga de los datos de demostración
+      # si las colecciones están vacías. El perfil demo es solo para la demostración.
+      SPRING_PROFILES_ACTIVE: mongo,demo
     depends_on:
       mongo:
         condition: service_healthy

@@ -15,6 +15,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PerfilRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PrestadorCatalogoRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.ZonaRepositoryPort;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.EjecutorConReintento;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -45,14 +46,16 @@ public class CatalogoConfig {
 
     @Bean
     GestionarOfertaUseCase gestionarOferta(OfertaRepositoryPort ofertas, ZonaRepositoryPort zonas,
-                                           PrestadorCatalogoRepositoryPort prestadores, Clock reloj) {
-        return new GestionarOfertaService(ofertas, zonas, prestadores, reloj);
+                                           PrestadorCatalogoRepositoryPort prestadores, Clock reloj,
+                                           EjecutorConReintento reintento) {
+        return new GestionarOfertaService(ofertas, zonas, prestadores, reloj, reintento);
     }
 
     @Bean
     AplicarAvisoNucleoUseCase aplicarAvisoNucleo(OfertaRepositoryPort ofertas,
                                                  PrestadorCatalogoRepositoryPort prestadores,
-                                                 AvisoProcesadoPort avisosProcesados, Clock reloj) {
-        return new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados, reloj);
+                                                 AvisoProcesadoPort avisosProcesados, Clock reloj,
+                                                 EjecutorConReintento reintento) {
+        return new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados, reloj, reintento);
     }
 }

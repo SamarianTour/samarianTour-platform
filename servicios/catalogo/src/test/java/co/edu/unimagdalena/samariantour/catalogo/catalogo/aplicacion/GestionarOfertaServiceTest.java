@@ -14,6 +14,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPre
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.Solicitante;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -202,6 +203,63 @@ class GestionarOfertaServiceTest {
 
             assertThat(mias.contenido()).extracting(Oferta::id)
                     .containsExactlyInAnyOrder(publicada.id(), enModeracion.id());
+        }
+    }
+
+    @Nested
+    @DisplayName("Concurrencia (ADR-05)")
+    class Concurrencia {
+
+        @Test
+        @DisplayName("si otra escritura se cruza, la edición se reintenta completa y se aplica una sola vez")
+        void edicionSeReintenta() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            escenario.ofertas.simularConflictos(2);
+
+            servicio.editar(new EditarOfertaCommand(oferta.id(), AGENCIA,
+                    actividad("Tour editado", "55000", ZONA_ACTIVA)));
+
+            // Si el reintento reutilizara la oferta del intento fallido, la versión pendiente sería la 4, no la 2.
+            assertThat(escenario.guardada(oferta.id()).pendiente().orElseThrow().numero()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("si el conflicto sigue después de 3 intentos, la edición falla sin cambiar nada")
+        void edicionAgotaLosIntentos() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            escenario.ofertas.simularConflictos(3);
+
+            assertThatThrownBy(() -> servicio.editar(new EditarOfertaCommand(oferta.id(), AGENCIA,
+                    actividad("Tour editado", "55000", ZONA_ACTIVA))))
+                    .isInstanceOf(ConflictoConcurrenciaException.class);
+            assertThat(escenario.guardada(oferta.id()).pendiente()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("una edición basada en una lectura vieja no pisa el cambio de otra réplica")
+        void lecturaViejaNoPisa() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            Oferta leidaAntes = escenario.guardada(oferta.id());
+            servicio.retirar(new RetirarOfertaCommand(oferta.id(), PRESTADOR));
+
+            leidaAntes.editar(escenario.prestadores.habilitacionDe(PRESTADOR), TipoPrestador.AGENCIA_OPERADORA,
+                    actividad("Edición tardía", "60000", ZONA_ACTIVA), escenario.zonas.buscarPorId(ZONA_ACTIVA)
+                            .orElseThrow(), AHORA);
+
+            assertThatThrownBy(() -> escenario.ofertas.guardar(leidaAntes))
+                    .isInstanceOf(ConflictoConcurrenciaException.class);
+            assertThat(escenario.guardada(oferta.id()).retirada()).isTrue();
+        }
+
+        @Test
+        @DisplayName("retirar también se reintenta ante un conflicto")
+        void retiroSeReintenta() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            escenario.ofertas.simularConflictos(1);
+
+            servicio.retirar(new RetirarOfertaCommand(oferta.id(), PRESTADOR));
+
+            assertThat(escenario.guardada(oferta.id()).retirada()).isTrue();
         }
     }
 }

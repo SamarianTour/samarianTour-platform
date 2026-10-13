@@ -153,7 +153,7 @@ Oferta.publicar  (aquí viven las reglas)
    ¿Zona activa?                        no → 400 ZONA_NO_DISPONIBLE
    OK → pendiente = versión 1 (EN_MODERACION), publicada = vacía
    ▼
-GestionarOfertaService guarda → OfertaMemoriaAdapter (hoy) u OfertaMongoAdapter 🔨 → documento en MongoDB
+GestionarOfertaService guarda → OfertaMongoAdapter (perfil mongo: documento en MongoDB) u OfertaMemoriaAdapter (perfil memoria)
    ▼
 201 Created
 ```
@@ -205,7 +205,7 @@ Con un aviso posterior (`version: 3`, `true`) todo vuelve a ser visible.
 
 ### Paso 7: Laura retira la oferta
 
-`PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204 (el caso de uso existe; el endpoint todavía no 🔨). Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo.
+`PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204, sin cuerpo. Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo: la oferta sale de la búsqueda, ya no se puede editar (409 OFERTA_NO_EDITABLE) y sigue apareciendo como retirada en `GET /api/catalogo/prestador/ofertas`, la lista de ofertas propias.
 
 ## 6. Dónde está cada cosa
 
@@ -226,12 +226,14 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Controladores y JSON | `infraestructura/entrada/rest/` |
 | Creación de los servicios (Spring) | `infraestructura/config/CatalogoConfig` |
 | Datos en memoria del prototipo | `infraestructura/salida/memoria/` |
-| MongoDB | `infraestructura/salida/persistencia/` 🔨 |
+| Carga de los datos de demostración en MongoDB | `infraestructura/salida/persistencia/CargaDemoMongo` |
+| MongoDB | `infraestructura/salida/persistencia/` (adaptadores), `document/` y `mapper/` |
+| Datos de demostración | `infraestructura/salida/demo/` |
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
 | Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |
 
-Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (precarga de zonas 🔨), `.github/workflows/ci.yml`.
+Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (vacío: los datos de demostración los carga `CargaDemoMongo` al arrancar), `.github/workflows/ci.yml`.
 
 ## 7. Resumen por capa
 

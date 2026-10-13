@@ -52,12 +52,19 @@ public abstract sealed class VersionOferta
         return moderacion().estado();
     }
 
-    void enviar(int numero, Instant ahora) {
+    /**
+     * Copia de este borrador enviada a moderación con el número indicado. El borrador no cambia, así que el caso de
+     * uso que lo envía puede repetirse si otra escritura se cruza con él (ADR-05).
+     */
+    VersionOferta enviada(int numero, Instant ahora) {
         if (moderacion != null) {
             throw new IllegalStateException("La versión ya fue enviada a moderación");
         }
-        moderacion = RegistroModeracion.enviada(numero, Objects.requireNonNull(ahora));
+        return conModeracion(RegistroModeracion.enviada(numero, Objects.requireNonNull(ahora)));
     }
+
+    /** Copia de esta versión con otro registro de moderación; cada tipo crea la suya. */
+    abstract VersionOferta conModeracion(RegistroModeracion moderacion);
 
     void aprobar(Instant ahora) {
         moderacion = moderacion().aprobada(ahora);

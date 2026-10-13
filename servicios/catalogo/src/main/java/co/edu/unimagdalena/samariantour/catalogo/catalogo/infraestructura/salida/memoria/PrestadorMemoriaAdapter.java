@@ -2,6 +2,9 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PrestadorCatalogo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PrestadorCatalogoRepositoryPort;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
+
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +39,14 @@ public class PrestadorMemoriaAdapter implements PrestadorCatalogoRepositoryPort 
 
     @Override
     public void guardar(PrestadorCatalogo prestador) {
-        prestadores.put(prestador.prestadorId(), copia(prestador));
+        // compute es atómico por clave: simula el guardado condicionado de MongoDB (ADR-05).
+        prestadores.compute(prestador.prestadorId(), (id, guardado) -> {
+            if (guardado != null && guardado.version() >= prestador.version()) {
+                throw new ConflictoConcurrenciaException("La habilitación del prestador %s ya tiene la versión %d"
+                        .formatted(id, guardado.version()));
+            }
+            return copia(prestador);
+        });
     }
 
     private static PrestadorCatalogo copia(PrestadorCatalogo prestador) {

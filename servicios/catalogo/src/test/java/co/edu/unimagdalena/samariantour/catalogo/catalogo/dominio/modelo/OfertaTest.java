@@ -124,7 +124,7 @@ class OfertaTest {
             });
             assertThat(oferta.estaVisible()).isTrue();
 
-            oferta.aprobar(2, true, DESPUES);
+            oferta.aprobar(2, habilitado(), DESPUES);
 
             assertThat(oferta.pendiente()).isEmpty();
             assertThat(oferta.publicada()).hasValueSatisfying(publicada ->
@@ -153,7 +153,7 @@ class OfertaTest {
             Oferta oferta = ofertaEnModeracion();
             oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad("Versión 2"), zonaActiva(), DESPUES);
 
-            boolean aplicado = oferta.aprobar(1, true, DESPUES);
+            boolean aplicado = oferta.aprobar(1, habilitado(), DESPUES);
 
             assertThat(aplicado).isFalse();
             assertThat(oferta.publicada()).isEmpty();
@@ -222,8 +222,8 @@ class OfertaTest {
         @Test
         @DisplayName("se puede retirar aunque el RNT esté inactivo")
         void retirarSinRnt() {
-            Oferta oferta = Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, false,
-                    null, ofertaEnModeracion().pendiente().orElseThrow());
+            Oferta oferta = Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, false, 2,
+                    Oferta.REVISION_NUEVA, null, ofertaEnModeracion().pendiente().orElseThrow());
 
             oferta.retirar(PRESTADOR);
 
@@ -245,7 +245,7 @@ class OfertaTest {
             Oferta oferta = ofertaEnModeracion();
             oferta.retirar(PRESTADOR);
 
-            assertThat(oferta.aprobar(1, true, DESPUES)).isFalse();
+            assertThat(oferta.aprobar(1, habilitado(), DESPUES)).isFalse();
             assertThat(oferta.publicada()).isEmpty();
         }
     }
@@ -259,7 +259,7 @@ class OfertaTest {
         void aprobar() {
             Oferta oferta = ofertaEnModeracion();
 
-            boolean aplicado = oferta.aprobar(1, true, DESPUES);
+            boolean aplicado = oferta.aprobar(1, habilitado(), DESPUES);
 
             assertThat(aplicado).isTrue();
             assertThat(oferta.pendiente()).isEmpty();
@@ -274,9 +274,9 @@ class OfertaTest {
         @DisplayName("aprobar dos veces la misma versión no falla ni cambia nada")
         void aprobarEsIdempotente() {
             Oferta oferta = ofertaEnModeracion();
-            oferta.aprobar(1, true, DESPUES);
+            oferta.aprobar(1, habilitado(), DESPUES);
 
-            boolean segundaVez = oferta.aprobar(1, true, DESPUES.plusSeconds(60));
+            boolean segundaVez = oferta.aprobar(1, habilitado(), DESPUES.plusSeconds(60));
 
             assertThat(segundaVez).isFalse();
             assertThat(oferta.publicada().orElseThrow().moderacion().revisadaEn()).isEqualTo(DESPUES);
@@ -287,7 +287,7 @@ class OfertaTest {
         void aprobarCopiaHabilitacion() {
             Oferta oferta = ofertaEnModeracion();
 
-            oferta.aprobar(1, false, DESPUES);
+            oferta.aprobar(1, inhabilitado(), DESPUES);
 
             assertThat(oferta.publicada()).isPresent();
             assertThat(oferta.rntPrestadorActivo()).isFalse();
@@ -399,7 +399,79 @@ class OfertaTest {
     @Test
     @DisplayName("una oferta tiene al menos una versión publicada o pendiente")
     void alMenosUnaVersion() {
-        assertThatThrownBy(() -> Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, true, null, null))
+        assertThatThrownBy(() -> Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, true, 1,
+                Oferta.REVISION_NUEVA, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Nested
+    @DisplayName("Habilitación y revisión (ADR-05)")
+    class HabilitacionYRevision {
+
+        @Test
+        @DisplayName("una oferta nueva copia la versión de la habilitación y nace sin revisión")
+        void publicarCopiaLaVersion() {
+            Oferta oferta = Oferta.publicar("o", new PrestadorCatalogo(PRESTADOR, true, 4),
+                    TipoPrestador.AGENCIA_OPERADORA, actividad(), zonaActiva(), AHORA);
+
+            assertThat(oferta.versionHabilitacion()).isEqualTo(4);
+            assertThat(oferta.revision()).isEqualTo(Oferta.REVISION_NUEVA);
+        }
+
+        @Test
+        @DisplayName("editar copia el RNT y su versión juntos")
+        void editarCopiaLaHabilitacion() {
+            Oferta oferta = ofertaPublicada();
+
+            oferta.editar(new PrestadorCatalogo(PRESTADOR, true, 7), TipoPrestador.AGENCIA_OPERADORA,
+                    actividad("Edición"), zonaActiva(), DESPUES);
+
+            assertThat(oferta.rntPrestadorActivo()).isTrue();
+            assertThat(oferta.versionHabilitacion()).isEqualTo(7);
+        }
+
+        @Test
+        @DisplayName("aprobar copia el RNT y su versión desde la réplica del dueño")
+        void aprobarCopiaLaHabilitacion() {
+            Oferta oferta = ofertaEnModeracion();
+
+            oferta.aprobar(1, new PrestadorCatalogo(PRESTADOR, false, 9), DESPUES);
+
+            assertThat(oferta.rntPrestadorActivo()).isFalse();
+            assertThat(oferta.versionHabilitacion()).isEqualTo(9);
+        }
+
+        @Test
+        @DisplayName("aprobar con la habilitación de otro prestador es un error de programación")
+        void aprobarConOtraHabilitacion() {
+            Oferta oferta = ofertaEnModeracion();
+
+            assertThatThrownBy(() -> oferta.aprobar(1, new PrestadorCatalogo(OTRO_PRESTADOR, true, 1), DESPUES))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("publicar y editar no modifican el borrador recibido, así el caso de uso se puede reintentar")
+        void borradorReutilizable() {
+            VersionActividad borrador = actividad("Borrador");
+
+            Oferta oferta = Oferta.publicar("o", habilitado(), TipoPrestador.AGENCIA_OPERADORA, borrador,
+                    zonaActiva(), AHORA);
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, borrador, zonaActiva(), DESPUES);
+
+            assertThat(borrador.estaEnviada()).isFalse();
+            assertThat(oferta.pendiente().orElseThrow().numero()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("la revisión es opaca: reconstituir la conserva y ninguna regla la cambia")
+        void revisionOpaca() {
+            Oferta guardada = Oferta.reconstituir("o", TipoOferta.ACTIVIDAD, PRESTADOR, false, true, 1, 12,
+                    null, ofertaEnModeracion().pendiente().orElseThrow());
+
+            guardada.aprobar(1, habilitado(), DESPUES);
+
+            assertThat(guardada.revision()).isEqualTo(12);
+        }
     }
 }

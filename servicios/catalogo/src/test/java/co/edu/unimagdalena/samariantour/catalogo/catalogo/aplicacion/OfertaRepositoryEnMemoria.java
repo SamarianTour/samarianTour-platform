@@ -14,6 +14,8 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Version
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglasPaquete;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
 
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
+
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -26,23 +28,47 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * Doble en memoria de OfertaRepositoryPort con la misma semántica que el adaptador de MongoDB.
- * Cuenta las veces que se guarda cada oferta para detectar un servicio que olvide guardar.
+ * Doble en memoria de OfertaRepositoryPort con la misma semántica que el adaptador de MongoDB: guarda y entrega
+ * copias, y aplica el bloqueo optimista por revisión (ADR-05). Cuenta las veces que se guarda cada oferta para
+ * detectar un servicio que olvide guardar, y puede simular conflictos de concurrencia.
  */
 class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
 
     private final Map<String, Oferta> ofertas = new LinkedHashMap<>();
+    private int secuenciaIds;
     private final Map<String, Integer> guardadas = new HashMap<>();
+    private int conflictosPorSimular;
+
+    /** Ids con formato ObjectId (24 dígitos hexadecimales), predecibles para las pruebas. */
+    @Override
+    public String nuevoId() {
+        return "%024x".formatted(++secuenciaIds);
+    }
 
     @Override
     public Optional<Oferta> buscarPorId(String id) {
-        return Optional.ofNullable(ofertas.get(id));
+        return Optional.ofNullable(ofertas.get(id)).map(CopiaEnPrueba::de);
     }
 
     @Override
     public void guardar(Oferta oferta) {
-        ofertas.put(oferta.id(), oferta);
+        if (conflictosPorSimular > 0) {
+            conflictosPorSimular--;
+            throw new ConflictoConcurrenciaException("Conflicto simulado en la prueba");
+        }
+        Oferta guardada = ofertas.get(oferta.id());
+        long revisionGuardada = guardada == null ? Oferta.REVISION_NUEVA : guardada.revision();
+        if (revisionGuardada != oferta.revision()) {
+            throw new ConflictoConcurrenciaException("La oferta " + oferta.id() + " cambió desde que se leyó");
+        }
+        ofertas.put(oferta.id(), CopiaEnPrueba.de(oferta, oferta.rntPrestadorActivo(), oferta.versionHabilitacion(),
+                oferta.revision() + 1));
         guardadas.merge(oferta.id(), 1, Integer::sum);
+    }
+
+    /** Los próximos {@code cantidad} guardados fallan con un conflicto, como si otra réplica escribiera antes. */
+    void simularConflictos(int cantidad) {
+        conflictosPorSimular = cantidad;
     }
 
     @Override
@@ -89,10 +115,9 @@ class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
     }
 
     @Override
-    public void actualizarRntPrestador(UUID prestadorId, boolean rntActivo) {
-        ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId)
-                ? Oferta.reconstituir(oferta.id(), oferta.tipo(), oferta.prestadorId(), oferta.retirada(), rntActivo,
-                        oferta.publicada().orElse(null), oferta.pendiente().orElse(null))
+    public void actualizarRntPrestador(UUID prestadorId, boolean rntActivo, long version) {
+        ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId) && oferta.versionHabilitacion() < version
+                ? CopiaEnPrueba.de(oferta, rntActivo, version, oferta.revision() + 1)
                 : oferta);
     }
 

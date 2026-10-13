@@ -1,22 +1,50 @@
-package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria;
+package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coordenada;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PrestadorCatalogo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglasPaquete;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.AGENCIA_SIN_RNT;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CAMINATA_CABO_SAN_JUAN;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CENTRO_HISTORICO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.MINCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.PASEO_LANCHA_PLAYA_BLANCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAGANGA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAYRONA;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 class DatosSantaMartaTest {
+
+    /** Unos 27 km: la zona más extensa, Minca y Sierra Nevada, llega hasta Ciudad Perdida. */
+    private static final double GRADOS_ALREDEDOR_DE_LA_ZONA = 0.25;
+
+    @Test
+    @DisplayName("los identificadores de zonas y ofertas son ObjectId válidos y no se repiten (DC-30)")
+    void identificadoresObjectId() {
+        List<String> ids = new ArrayList<>();
+        DatosSantaMarta.zonas().forEach(zona -> ids.add(zona.id()));
+        DatosSantaMarta.ofertas().forEach(oferta -> ids.add(oferta.id()));
+
+        assertThat(ids).allMatch(ObjectId::isValid);
+        assertThat(new HashSet<>(ids)).hasSameSizeAs(ids);
+    }
 
     private final List<Oferta> ofertas = DatosSantaMarta.ofertas();
     private final Map<String, Oferta> porId = ofertas.stream().collect(Collectors.toMap(Oferta::id, Function.identity()));
@@ -29,12 +57,12 @@ class DatosSantaMartaTest {
 
         assertThat(zonas).hasSize(7);
         assertThat(zonas.values()).allMatch(Zona::activa);
-        assertThat(zonas.get(DatosSantaMarta.TAYRONA)).matches(Zona::areaProtegida).matches(Zona::altaAfluencia);
-        assertThat(zonas.get(DatosSantaMarta.TAGANGA)).matches(zona -> !zona.areaProtegida())
+        assertThat(zonas.get(TAYRONA)).matches(Zona::areaProtegida).matches(Zona::altaAfluencia);
+        assertThat(zonas.get(TAGANGA)).matches(zona -> !zona.areaProtegida())
                 .matches(Zona::altaAfluencia);
-        assertThat(zonas.get(DatosSantaMarta.MINCA)).matches(Zona::areaProtegida)
+        assertThat(zonas.get(MINCA)).matches(Zona::areaProtegida)
                 .matches(zona -> !zona.altaAfluencia());
-        assertThat(zonas.get(DatosSantaMarta.CENTRO_HISTORICO)).matches(zona -> !zona.areaProtegida())
+        assertThat(zonas.get(CENTRO_HISTORICO)).matches(zona -> !zona.areaProtegida())
                 .matches(zona -> !zona.altaAfluencia());
     }
 
@@ -62,6 +90,32 @@ class DatosSantaMartaTest {
     }
 
     @Test
+    @DisplayName("toda versión de toda oferta tiene una ubicación aproximada, cerca del centro de su zona")
+    void ubicacionDeLasOfertas() {
+        Map<String, Zona> zonas = DatosSantaMarta.zonas().stream()
+                .collect(Collectors.toMap(Zona::id, Function.identity()));
+
+        assertThat(ofertas).allSatisfy(oferta ->
+                Stream.concat(oferta.publicada().stream(), oferta.pendiente().stream()).forEach(version -> {
+                    Coordenada ubicacion = version.contenido().ubicacion();
+                    Coordenada centro = zonas.get(version.contenido().zonaId()).ubicacion();
+
+                    assertThat(ubicacion).as("ubicación de %s", version.contenido().nombre()).isNotNull();
+                    assertThat(ubicacion.latitud()).isCloseTo(centro.latitud(), within(GRADOS_ALREDEDOR_DE_LA_ZONA));
+                    assertThat(ubicacion.longitud()).isCloseTo(centro.longitud(), within(GRADOS_ALREDEDOR_DE_LA_ZONA));
+                }));
+    }
+
+    @Test
+    @DisplayName("el nombre comercial del perfil es opcional: unos prestadores lo tienen y el guía no (DC-26)")
+    void nombreComercialDeLosPerfiles() {
+        assertThat(DatosSantaMarta.perfiles()).filteredOn(perfil -> perfil.nombreComercial() != null).isNotEmpty();
+        assertThat(DatosSantaMarta.perfiles()).filteredOn(perfil -> perfil.prestadorId().equals(DatosSantaMarta.GUIA))
+                .singleElement()
+                .satisfies(guia -> assertThat(guia.nombreComercial()).isNull());
+    }
+
+    @Test
     @DisplayName("todos los paquetes son visibles: sus actividades existen y están publicadas")
     void paquetesVisibles() {
         assertThat(ofertas).filteredOn(oferta -> oferta.tipo() == TipoOferta.PAQUETE).allSatisfy(paquete -> {
@@ -75,8 +129,8 @@ class DatosSantaMartaTest {
     void prestadorConRntInactivo() {
         assertThat(DatosSantaMarta.prestadores())
                 .filteredOn(prestador -> !prestador.rntActivo())
-                .extracting(PrestadorCatalogo::prestadorId).containsExactly(DatosSantaMarta.AGENCIA_SIN_RNT);
-        assertThat(ofertas).filteredOn(oferta -> oferta.esDe(DatosSantaMarta.AGENCIA_SIN_RNT))
+                .extracting(PrestadorCatalogo::prestadorId).containsExactly(AGENCIA_SIN_RNT);
+        assertThat(ofertas).filteredOn(oferta -> oferta.esDe(AGENCIA_SIN_RNT))
                 .isNotEmpty()
                 .allSatisfy(oferta -> {
                     assertThat(oferta.publicada()).isPresent();
@@ -87,7 +141,7 @@ class DatosSantaMartaTest {
     @Test
     @DisplayName("una oferta tiene una edición pendiente y sigue mostrando la versión aprobada (RF-66)")
     void ofertaConEdicionPendiente() {
-        Oferta caminata = porId.get("caminata-cabo-san-juan");
+        Oferta caminata = porId.get(CAMINATA_CABO_SAN_JUAN);
 
         assertThat(caminata.estaVisible()).isTrue();
         assertThat(caminata.publicada().orElseThrow().contenido().precioReferencia()).isEqualByComparingTo("150000");
@@ -101,7 +155,7 @@ class DatosSantaMartaTest {
     @Test
     @DisplayName("una oferta sigue en moderación y aún no es visible (RF-79)")
     void ofertaSinAprobar() {
-        Oferta lancha = porId.get("paseo-lancha-playa-blanca");
+        Oferta lancha = porId.get(PASEO_LANCHA_PLAYA_BLANCA);
 
         assertThat(lancha.publicada()).isEmpty();
         assertThat(lancha.estaVisible()).isFalse();

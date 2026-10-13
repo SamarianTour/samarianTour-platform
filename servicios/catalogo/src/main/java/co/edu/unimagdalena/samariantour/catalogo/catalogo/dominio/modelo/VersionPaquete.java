@@ -56,6 +56,11 @@ public final class VersionPaquete extends VersionOferta {
     }
 
     @Override
+    VersionPaquete conModeracion(RegistroModeracion moderacion) {
+        return new VersionPaquete(contenido(), actividadIds, duracionMinutos, horariosSalida, moderacion);
+    }
+
+    @Override
     public TipoOferta tipo() {
         return TipoOferta.PAQUETE;
     }

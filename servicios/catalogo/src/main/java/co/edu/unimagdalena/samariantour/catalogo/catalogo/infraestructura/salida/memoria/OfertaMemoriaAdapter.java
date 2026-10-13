@@ -13,6 +13,10 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Version
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionRestaurante;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglasPaquete;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
+
+import org.bson.types.ObjectId;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -28,10 +32,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /**
- * Ofertas en la memoria del proceso, para el prototipo mientras no exista el adaptador de MongoDB.
+ * Ofertas en la memoria del proceso, para el perfil {@code memoria}: la demostración y las pruebas sin MongoDB.
  *
  * <p>Guarda y entrega copias, igual que una base de datos: un cambio que no se guarda no queda registrado.
  * Cada réplica del servicio tiene su propia memoria, así que lo que se escribe en una no lo ve la otra.
+ *
+ * <p>Simula el bloqueo optimista de MongoDB (ADR-05): guarda solo si la revisión no cambió desde la lectura,
+ * y cada guardado o actualización del RNT sube la revisión.
  */
 @Component
 @Profile("memoria")
@@ -44,8 +51,15 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
         this(DatosSantaMarta.ofertas());
     }
 
+    /** Guarda las iniciales como cualquier oferta, así que quedan con la revisión siguiente, como en MongoDB. */
     public OfertaMemoriaAdapter(Collection<Oferta> iniciales) {
-        iniciales.forEach(oferta -> ofertas.put(oferta.id(), CopiaOferta.de(oferta)));
+        iniciales.forEach(this::guardarComparandoRevision);
+    }
+
+    /** Mismo formato que en MongoDB, para que los identificadores no cambien al cambiar de perfil (DC-30). */
+    @Override
+    public String nuevoId() {
+        return new ObjectId().toHexString();
     }
 
     @Override
@@ -55,7 +69,19 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
 
     @Override
     public void guardar(Oferta oferta) {
-        ofertas.put(oferta.id(), CopiaOferta.de(oferta));
+        guardarComparandoRevision(oferta);
+    }
+
+    private void guardarComparandoRevision(Oferta oferta) {
+        // compute es atómico por clave: la comparación y el guardado no se intercalan con otra escritura.
+        ofertas.compute(oferta.id(), (id, guardada) -> {
+            long revisionGuardada = guardada == null ? Oferta.REVISION_NUEVA : guardada.revision();
+            if (revisionGuardada != oferta.revision()) {
+                throw new ConflictoConcurrenciaException("La oferta %s cambió desde que se leyó".formatted(id));
+            }
+            return CopiaOferta.de(oferta, oferta.rntPrestadorActivo(), oferta.versionHabilitacion(),
+                    oferta.revision() + 1);
+        });
     }
 
     @Override
@@ -102,10 +128,9 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
     }
 
     @Override
-    public void actualizarRntPrestador(UUID prestadorId, boolean rntActivo) {
-        ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId)
-                ? Oferta.reconstituir(oferta.id(), oferta.tipo(), oferta.prestadorId(), oferta.retirada(), rntActivo,
-                        oferta.publicada().orElse(null), oferta.pendiente().orElse(null))
+    public void actualizarRntPrestador(UUID prestadorId, boolean rntActivo, long version) {
+        ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId) && oferta.versionHabilitacion() < version
+                ? CopiaOferta.de(oferta, rntActivo, version, oferta.revision() + 1)
                 : oferta);
     }
 

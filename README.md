@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación y edición por el prestador, y moderación por avisos del núcleo. Todavía guarda los datos en memoria; el adaptador de MongoDB, el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`); el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -38,21 +38,23 @@ co.edu.unimagdalena.samariantour.catalogo
 │   └── infraestructura/
 │       ├── config/             crea los servicios de aplicación y los conecta con los adaptadores
 │       ├── entrada/rest/       controladores, dto/, mapper/
-│       ├── salida/memoria/     adaptadores en memoria del prototipo (perfil memoria)
-│       └── salida/persistencia/ documentos Mongo, repositorios y mappers
+│       ├── salida/memoria/     adaptadores en memoria (perfil memoria)
+│       ├── salida/demo/        datos de demostración de Santa Marta
+│       └── salida/persistencia/ adaptadores MongoDB (perfil mongo), document/ y mapper/
 └── opiniones/                  módulo (fuera del alcance del prototipo)
 ```
 
 Las reglas se verifican con ArchUnit en cada build (`ArquitecturaTest`):
 
 1. `dominio` no importa Spring, Jakarta, Jackson, MongoDB, `aplicacion` ni `infraestructura`.
-2. `aplicacion` solo depende de `dominio` (se permiten `@Service` y `@Transactional`).
+2. `aplicacion` solo depende de `dominio` y de `compartido.concurrencia` (se permiten `@Service` y `@Transactional`; ADR-05).
 3. Ningún paquete depende de `infraestructura`.
 4. Un módulo solo importa el paquete `api` de otro módulo.
 5. Los módulos no forman ciclos.
 6. `compartido` no importa ningún módulo.
 7. Los controladores solo llaman puertos de entrada; nunca repositorios ni puertos de salida.
 8. Los documentos Mongo y los repositorios viven en `infraestructura/salida/persistencia`.
+9. `compartido.concurrencia` es Java puro, porque lo usa `aplicacion` (ADR-05).
 
 ## Requisitos
 
@@ -65,14 +67,15 @@ mvn test      # unitarias, controladores, contrato y ArchUnit (no necesita Docke
 mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 ```
 
-`ContratoCatalogoTest` compara las rutas de los controladores con las de `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
+`ContratoCatalogoTest` compara las rutas de los controladores y los campos de los DTO con `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
 
 ## Perfiles del catálogo
 
 | Perfil | Qué activa | Cuándo |
 |---|---|---|
-| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, mientras no exista el adaptador de MongoDB |
-| `demo` | Los headers que sustituyen al token del prestador | Nunca por defecto; solo en la demostración |
+| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, sin Docker |
+| `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Docker Compose y pruebas de integración (`mvn verify`) |
+| `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 
 **Identidad provisional del prestador.** Mientras no exista `libs/seguridad-jwt`, las rutas `/prestador/**` identifican al prestador con dos headers: `X-Prestador-Id` (UUID) y `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cualquiera puede enviarlos, así que solo se aceptan con el perfil `demo`; sin él responden 401. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
 
@@ -84,7 +87,13 @@ docker compose -f infra/docker-compose.yml up --build -d
 
 Nginx queda en `http://localhost:8080` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
 
-Compose activa los perfiles `memoria` y `demo`. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
+Compose activa los perfiles `mongo` y `demo`: los datos viven en MongoDB y las dos réplicas comparten el estado. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
+
+Para volver a los datos iniciales hay que borrar el volumen de MongoDB:
+
+```bash
+docker compose -f infra/docker-compose.yml down -v
+```
 
 Actualizar solo el catálogo sin detener lo demás:
 
@@ -107,7 +116,7 @@ BASE=http://localhost:8080/api/catalogo
 for i in 1 2 3 4 5 6 7 8; do curl -s -o /dev/null -D - "$BASE/ofertas" | grep -i '^x-instancia'; done
 
 # Actividades en el Parque Tayrona
-curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=parque-tayrona"
+curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=a00000000000000000000005"
 
 # Lo que puede hacer una persona con movilidad reducida: esfuerzo bajo y accesible en silla de ruedas
 curl -s "$BASE/ofertas?nivelEsfuerzoMaximo=BAJO&accesibleSillaRuedas=true"
@@ -122,22 +131,19 @@ curl -s "$BASE/ofertas?tipo=HOTEL"
 ### 2. Ficha y zonas
 
 ```bash
-# Paquete: sus actividades, el nivel de esfuerzo calculado, la zona protegida y el perfil del prestador
-curl -s "$BASE/ofertas/paquete-tayrona-mar-y-selva"
+# Paquete: su ubicación, sus actividades, el nivel de esfuerzo calculado, la zona protegida
+# y el perfil del prestador con su nombre comercial
+curl -s "$BASE/ofertas/b00000000000000000000008"
 
 # Oferta aprobada de un prestador con el RNT inactivo: no es visible, responde 404
-curl -s "$BASE/ofertas/expedicion-ciudad-perdida"
+curl -s "$BASE/ofertas/b00000000000000000000016"
 
 curl -s "$BASE/zonas"
 ```
 
 ### 3. Publicar, aprobar y ver la oferta en la búsqueda
 
-Con los datos en memoria, cada réplica tiene su propio estado: lo que se publica en una no lo ve la otra. Para este flujo se deja una sola réplica; con el adaptador de MongoDB el estado será compartido y no hará falta.
-
-```bash
-docker compose -f infra/docker-compose.yml up -d --scale catalogo=1 --no-recreate
-```
+Los datos están en MongoDB, así que el flujo funciona con las dos réplicas: lo que escribe una lo ve la otra.
 
 Publicar una actividad como el guía independiente de la demostración:
 
@@ -151,7 +157,7 @@ ID=$(curl -s -X POST "$BASE/prestador/ofertas" \
         "nombre": "Caminata nocturna en Minca",
         "descripcion": "Recorrido para observar ranas e insectos al caer la noche",
         "precioReferencia": 75000,
-        "zonaId": "minca-sierra-nevada",
+        "zonaId": "a00000000000000000000007",
         "capacidadMaxima": 6,
         "tipoActividad": "AVISTAMIENTO_FAUNA",
         "nivelEsfuerzo": "BAJO",
@@ -178,21 +184,40 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \
   -H "Content-Type: application/json" \
-  -d "{\"idAviso\":\"demo-1\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
-# {"resultado":"APLICADO"}; si se repite el mismo aviso, {"resultado":"DUPLICADO"}
+  -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
+# {"resultado":"APLICADO"}; si se repite el mismo aviso, {"resultado":"DUPLICADO"}, aunque llegue a la otra réplica
 ```
 
 Ahora aparece en la ficha y en la búsqueda:
 
 ```bash
 curl -s "$BASE/ofertas/$ID"
-curl -s "$BASE/ofertas?zonaId=minca-sierra-nevada&tipoActividad=AVISTAMIENTO_FAUNA"
+curl -s "$BASE/ofertas?zonaId=a00000000000000000000007&tipoActividad=AVISTAMIENTO_FAUNA"
 ```
 
-Para volver a las dos réplicas:
+### 4. Ofertas propias y retiro
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d --scale catalogo=2 --no-recreate
+# Las ofertas del guía en cualquier estado, con su versión publicada y la pendiente
+curl -s "$BASE/prestador/ofertas" \
+  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+
+# Retirar la oferta recién publicada: 204. El retiro es definitivo
+curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro" \
+  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+
+# Ya no es visible para el turista (404), pero sigue en las ofertas propias como "retirada": true
+curl -s "$BASE/ofertas/$ID"
+```
+
+### 5. Rutas que no se exponen
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 ```
 
 Otros casos que se pueden mostrar:
@@ -200,7 +225,8 @@ Otros casos que se pueden mostrar:
 - **Sin identidad:** el mismo `POST` sin los headers responde 401 `NO_AUTENTICADO`.
 - **RNT inactivo:** con `X-Prestador-Id: 50000000-0000-0000-0000-000000000005` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
 - **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
-- **Edición:** un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
+- **Edición:** antes de retirarla, un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
+- **Oferta retirada:** después del retiro, ese mismo `PUT` responde 409 `OFERTA_NO_EDITABLE`.
 
 ## Cómo contribuir
 

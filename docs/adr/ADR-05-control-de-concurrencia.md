@@ -2,7 +2,7 @@
 
 | Campo | Contenido |
 |---|---|
-| Estado | Aceptada. Implementación pendiente: se hace junto con el adaptador de MongoDB |
+| Estado | Aceptada e implementada en el dominio, la aplicación y los adaptadores en memoria y de MongoDB |
 | Decidida en | Fase de Construcción, durante el servicio de catálogo (octubre de 2026) |
 | Responsable | Líder técnico / Arquitecto |
 
@@ -45,7 +45,7 @@ Bloqueo optimista con un número de revisión técnico en cada oferta, reintento
 - Los avisos procesados se guardan en la base compartida, así que la deduplicación cruza réplicas. Si dos réplicas reciben el mismo aviso a la vez, el caso queda cubierto por tres cosas juntas:
   1. el dominio es idempotente: `numeroVersion` en la moderación y `version` en la habilitación;
   2. el bloqueo optimista hace fallar la segunda escritura, y al reintentar el aviso se ignora;
-  3. el adaptador de MongoDB tiene un índice único sobre `idAviso`, y `marcarProcesado` tolera el duplicado.
+  3. en MongoDB el `_id` de `avisos_procesados` es el `idAviso`, así que no se repite, y `marcarProcesado` tolera el duplicado.
 
 ### Habilitación RNT: escrituras que solo avanzan
 
@@ -55,11 +55,12 @@ Bloqueo optimista con un número de revisión técnico en cada oferta, reintento
 4. **Editar y aprobar** copian `rntActivo` y `version` de `PrestadorCatalogo`, no solo el RNT.
 5. **Una oferta nueva** nace con la `versionHabilitacion` de la réplica en ese momento: 0 si el prestador aún no tiene avisos.
 
-### Notas para el adaptador de MongoDB
+### Adaptador de MongoDB
 
-- En el documento, el campo `@Version` es `Long` y la revisión inicial se mapea a `null`. El mapper conserva la revisión en ambos sentidos.
+- La revisión se maneja de forma explícita, sin `@Version` (DC-33): una oferta nueva se inserta con la revisión 1 y una oferta leída se reemplaza con el filtro `{_id, revision}`, en una sola operación atómica. Si el filtro no encuentra el documento, o si al insertar el `_id` ya existe, el adaptador lanza `ConflictoConcurrenciaException`. El mapper conserva la revisión en ambos sentidos.
 - El `$inc` de `revision` en la actualización masiva hace que una edición o una aprobación que se cruce con ella falle y se reintente con el RNT ya actualizado.
-- El adaptador en memoria del prototipo debe simular lo mismo: comparar la revisión al guardar e incrementarla en la actualización masiva.
+- La réplica de habilitación se guarda con un upsert filtrado por `version < nueva`; si la guardada es igual o más nueva, el upsert choca con el `_id` existente y el adaptador lanza el conflicto.
+- El adaptador en memoria simula lo mismo: compara la revisión al guardar y la incrementa en la actualización masiva. Los dos cumplen las mismas pruebas de contrato.
 
 ## Alternativas descartadas
 
@@ -87,7 +88,7 @@ Positivas:
 Negativas:
 
 - `Oferta` lleva dos datos técnicos más, `revision` y `versionHabilitacion`, que se mapean en ambos sentidos.
-- Los servicios que escriben deben poder ejecutarse varias veces sin efectos fuera de la base: no pueden notificar ni llamar a otro servicio antes de guardar.
+- Los servicios que escriben deben poder ejecutarse varias veces sin efectos fuera de la base: no pueden notificar ni llamar a otro servicio antes de guardar. Tampoco pueden modificar sus entradas: enviar a moderación devuelve una copia del borrador (`VersionOferta.enviada`), porque el reintento vuelve a usar el mismo comando. La prueba de reintento de la edición lo detectó.
 - Con contención alta sobre una misma oferta, un cliente puede recibir 409. Se espera que sea raro: una oferta la editan su prestador y los avisos del núcleo.
 - La regla 2 de ArchUnit deja de ser "solo dominio" y admite `compartido.concurrencia`.
 
@@ -99,7 +100,7 @@ Escenario ligado a QAS-01 y QAS-02; no se crea un QAS nuevo.
 - **Avisos de habilitación en desorden.** Con los avisos de las versiones 2 y 3 procesados a la vez o en orden inverso, la réplica y todas las ofertas del prestador terminan con el RNT y la `versionHabilitacion` de la versión 3.
 - **Mismo aviso en dos réplicas.** Se aplica una sola vez.
 
-Se prueba con pruebas unitarias que usan un doble en memoria que lanza el conflicto, y con una prueba de integración contra MongoDB cuando exista el adaptador.
+Se prueba con pruebas unitarias que usan un doble en memoria que lanza el conflicto, y con las pruebas de contrato de los adaptadores, que corren en memoria y contra MongoDB (Testcontainers).
 
 ## Trazabilidad
 
@@ -117,5 +118,5 @@ Se prueba con pruebas unitarias que usan un doble en memoria que lanza el confli
 ## Alcance
 
 - Este ADR cubre el servicio de catálogo.
-- **No está implementado.** La `revision`, `versionHabilitacion`, `ConflictoConcurrenciaException`, `EjecutorConReintento` y el parámetro `version` del puerto se construyen junto con el adaptador de MongoDB. Hasta entonces, el prototipo en memoria puede perder una escritura si dos se cruzan sobre la misma oferta.
+- **Implementado:** `revision` y `versionHabilitacion` en `Oferta`, `ConflictoConcurrenciaException` y `EjecutorConReintento` en `compartido.concurrencia`, el reintento en `GestionarOfertaService` (editar y retirar) y en `AplicarAvisoNucleoService`, el 409 `CONFLICTO_CONCURRENCIA`, el guardado condicionado en los adaptadores en memoria y de MongoDB (con el `updateMany` filtrado y la deduplicación de avisos por `_id`) y la regla 2 de ArchUnit ampliada (más una regla 9 que exige que `compartido.concurrencia` sea Java puro).
 - El núcleo tendrá su propia decisión cuando se diseñe el módulo de solicitudes: bloqueo optimista de JPA con `@Version` y toma de la cola con `FOR UPDATE SKIP LOCKED`.
