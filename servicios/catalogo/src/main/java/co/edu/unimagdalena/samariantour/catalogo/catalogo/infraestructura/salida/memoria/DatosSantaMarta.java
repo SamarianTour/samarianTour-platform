@@ -45,13 +45,38 @@ final class DatosSantaMarta {
     /** Agencia a la que el núcleo le retiró la habilitación: sus ofertas no son visibles (RF-77). */
     static final UUID AGENCIA_SIN_RNT = UUID.fromString("50000000-0000-0000-0000-000000000005");
 
-    static final String CENTRO_HISTORICO = "centro-historico";
-    static final String RODADERO = "rodadero-gaira";
-    static final String TAGANGA = "taganga";
-    static final String ZONA_SUR = "zona-sur-hotelera";
-    static final String TAYRONA = "parque-tayrona";
-    static final String TRONCAL = "troncal-del-caribe";
-    static final String MINCA = "minca-sierra-nevada";
+    static final String CENTRO_HISTORICO = "a00000000000000000000001";
+    static final String RODADERO = "a00000000000000000000002";
+    static final String TAGANGA = "a00000000000000000000003";
+    static final String ZONA_SUR = "a00000000000000000000004";
+    static final String TAYRONA = "a00000000000000000000005";
+    static final String TRONCAL = "a00000000000000000000006";
+    static final String MINCA = "a00000000000000000000007";
+
+    // Identificadores fijos con formato ObjectId (DC-30): iguales en memoria y en la precarga de MongoDB.
+    static final String CAMINATA_CABO_SAN_JUAN = "b00000000000000000000001";
+    static final String SNORKEL_PLAYA_CRISTAL = "b00000000000000000000002";
+    static final String BAUTIZO_BUCEO_TAGANGA = "b00000000000000000000003";
+    static final String KAYAK_BAHIA_TAGANGA = "b00000000000000000000004";
+    static final String TUBING_RIO_BURITACA = "b00000000000000000000005";
+    static final String RECORRIDO_CENTRO_HISTORICO = "b00000000000000000000006";
+    static final String ATARDECER_VELERO_BAHIA = "b00000000000000000000007";
+    static final String PAQUETE_TAYRONA_MAR_Y_SELVA = "b00000000000000000000008";
+    static final String PAQUETE_TAGANGA_BAJO_EL_AGUA = "b00000000000000000000009";
+    static final String AVISTAMIENTO_AVES_MINCA = "b0000000000000000000000a";
+    static final String RUTA_CAFE_CACAO_MINCA = "b0000000000000000000000b";
+    static final String CAMINATA_POZO_AZUL_MARINKA = "b0000000000000000000000c";
+    static final String DESCENSO_BICICLETA_SIERRA = "b0000000000000000000000d";
+    static final String PAQUETE_MINCA_AVES_Y_CAFE = "b0000000000000000000000e";
+    static final String CABANA_FRENTE_AL_MAR_BURITACA = "b0000000000000000000000f";
+    static final String HABITACION_DOBLE_RODADERO = "b00000000000000000000010";
+    static final String APARTAMENTO_POZOS_COLORADOS = "b00000000000000000000011";
+    static final String HABITACION_ECOLOGICA_MINCA = "b00000000000000000000012";
+    static final String COCINA_CARIBE_CENTRO_HISTORICO = "b00000000000000000000013";
+    static final String PESCADOS_FRENTE_AL_MAR_TAGANGA = "b00000000000000000000014";
+    static final String PARRILLA_RODADERO = "b00000000000000000000015";
+    static final String EXPEDICION_CIUDAD_PERDIDA = "b00000000000000000000016";
+    static final String PASEO_LANCHA_PLAYA_BLANCA = "b00000000000000000000017";
 
     private static final Instant CARGA = Instant.parse("2026-10-01T13:00:00Z");
 
@@ -113,40 +138,40 @@ final class DatosSantaMarta {
         List<Oferta> ofertas = new ArrayList<>();
 
         // Actividades de la agencia
-        Oferta caminataCaboSanJuan = publicada(zonas, "caminata-cabo-san-juan", AGENCIA,
+        Oferta caminataCaboSanJuan = publicada(zonas, CAMINATA_CABO_SAN_JUAN, AGENCIA,
                 TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Caminata a Cabo San Juan del Guía",
                                 "Sendero por la selva y las playas del parque hasta Cabo San Juan", "150000",
                                 "Martes a domingo", TAYRONA, 12),
                         TipoActividad.SENDERISMO, NivelEsfuerzo.MODERADO, false, horas(7, 8), 420));
-        Oferta snorkelPlayaCristal = publicada(zonas, "snorkel-playa-cristal", AGENCIA,
+        Oferta snorkelPlayaCristal = publicada(zonas, SNORKEL_PLAYA_CRISTAL, AGENCIA,
                 TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Snorkel en Playa Cristal",
                                 "Traslado en lancha y careteo guiado sobre el arrecife", "180000",
                                 "Todos los días", TAYRONA, 10),
                         TipoActividad.BUCEO_SNORKEL, NivelEsfuerzo.BAJO, false, horas(8), 360));
-        Oferta bautizoBuceo = publicada(zonas, "bautizo-buceo-taganga", AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
+        Oferta bautizoBuceo = publicada(zonas, BAUTIZO_BUCEO_TAGANGA, AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Bautizo de buceo en Taganga",
                                 "Primera inmersión con instructor, sin experiencia previa", "320000",
                                 "Todos los días", TAGANGA, 6),
                         TipoActividad.BUCEO_SNORKEL, NivelEsfuerzo.MODERADO, false, horas(8, 13), 240));
-        Oferta kayakTaganga = publicada(zonas, "kayak-bahia-taganga", AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
+        Oferta kayakTaganga = publicada(zonas, KAYAK_BAHIA_TAGANGA, AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Kayak en la bahía de Taganga",
                                 "Recorrido en kayak doble por la bahía con parada para nadar", "110000",
                                 "Todos los días", TAGANGA, 8),
                         TipoActividad.DEPORTES_ACUATICOS, NivelEsfuerzo.MODERADO, false, horas(7, 15), 150));
-        Oferta tubingBuritaca = publicada(zonas, "tubing-rio-buritaca", AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
+        Oferta tubingBuritaca = publicada(zonas, TUBING_RIO_BURITACA, AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Tubing por el río Buritaca",
                                 "Descenso en neumático por el río hasta su desembocadura en el mar", "90000",
                                 "Todos los días", TRONCAL, 15),
                         TipoActividad.AVENTURA, NivelEsfuerzo.BAJO, false, horas(9, 14), 180));
-        Oferta recorridoCentro = publicada(zonas, "recorrido-centro-historico", AGENCIA,
+        Oferta recorridoCentro = publicada(zonas, RECORRIDO_CENTRO_HISTORICO, AGENCIA,
                 TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Recorrido a pie por el Centro Histórico",
                                 "Caminata guiada por la catedral, las plazas y el malecón", "60000",
                                 "Lunes a sábado", CENTRO_HISTORICO, 20),
                         TipoActividad.CULTURAL_HISTORICO, NivelEsfuerzo.BAJO, true, horas(9, 16), 120));
-        Oferta veleroBahia = publicada(zonas, "atardecer-velero-bahia", AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
+        Oferta veleroBahia = publicada(zonas, ATARDECER_VELERO_BAHIA, AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Atardecer en velero por la bahía",
                                 "Navegación al atardecer con salida desde la marina", "220000",
                                 "Jueves a domingo", CENTRO_HISTORICO, 8),
@@ -155,13 +180,13 @@ final class DatosSantaMarta {
                 recorridoCentro, veleroBahia));
 
         // Paquetes de la agencia
-        ofertas.add(publicada(zonas, "paquete-tayrona-mar-y-selva", AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
+        ofertas.add(publicada(zonas, PAQUETE_TAYRONA_MAR_Y_SELVA, AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
                 new VersionPaquete(contenido("Tayrona: mar y selva",
                         "Dos días en el parque: caminata a Cabo San Juan y snorkel en Playa Cristal", "300000",
                         "Salidas los martes y los viernes", TAYRONA, 10),
                         List.of(caminataCaboSanJuan.id(), snorkelPlayaCristal.id()), 780, horas(7)),
                 caminataCaboSanJuan, snorkelPlayaCristal));
-        ofertas.add(publicada(zonas, "paquete-taganga-bajo-el-agua", AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
+        ofertas.add(publicada(zonas, PAQUETE_TAGANGA_BAJO_EL_AGUA, AGENCIA, TipoPrestador.AGENCIA_OPERADORA,
                 new VersionPaquete(contenido("Taganga bajo el agua",
                         "Kayak por la bahía en la mañana y bautizo de buceo en la tarde", "390000",
                         "Todos los días", TAGANGA, 6),
@@ -169,26 +194,26 @@ final class DatosSantaMarta {
                 kayakTaganga, bautizoBuceo));
 
         // Actividades del guía independiente: exigen punto de encuentro, duración, modalidad e idiomas (RF-67)
-        Oferta avesMinca = publicada(zonas, "avistamiento-aves-minca", GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
+        Oferta avesMinca = publicada(zonas, AVISTAMIENTO_AVES_MINCA, GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
                 actividadDeGuia(contenido("Avistamiento de aves en Minca",
                                 "Recorrido al amanecer para observar aves de la Sierra", "120000",
                                 "Todos los días", MINCA, 6),
                         TipoActividad.AVISTAMIENTO_FAUNA, NivelEsfuerzo.BAJO, horas(6), "Plaza principal de Minca",
                         240, ModalidadRecorrido.CAMINATA, List.of("es", "en")));
-        Oferta cafeCacao = publicada(zonas, "ruta-cafe-cacao-minca", GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
+        Oferta cafeCacao = publicada(zonas, RUTA_CAFE_CACAO_MINCA, GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
                 actividadDeGuia(contenido("Ruta del café y el cacao",
                                 "Visita a fincas de la vereda con degustación", "85000",
                                 "Lunes a sábado", MINCA, 10),
                         TipoActividad.GASTRONOMICO, NivelEsfuerzo.BAJO, horas(9, 14), "Plaza principal de Minca",
                         180, ModalidadRecorrido.CAMINATA, List.of("es", "en", "fr")));
         ofertas.addAll(List.of(avesMinca, cafeCacao));
-        ofertas.add(publicada(zonas, "caminata-pozo-azul-marinka", GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
+        ofertas.add(publicada(zonas, CAMINATA_POZO_AZUL_MARINKA, GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
                 actividadDeGuia(contenido("Caminata a Pozo Azul y cascada de Marinka",
                                 "Sendero de montaña con baño en pozos y cascadas", "95000",
                                 "Todos los días", MINCA, 8),
                         TipoActividad.SENDERISMO, NivelEsfuerzo.MODERADO, horas(8), "Plaza principal de Minca",
                         300, ModalidadRecorrido.CAMINATA, List.of("es"))));
-        ofertas.add(publicada(zonas, "descenso-bicicleta-sierra", GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
+        ofertas.add(publicada(zonas, DESCENSO_BICICLETA_SIERRA, GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
                 actividadDeGuia(contenido("Descenso en bicicleta desde la Sierra",
                                 "Bajada por caminos destapados desde la parte alta hasta Minca", "160000",
                                 "Miércoles a domingo", MINCA, 6),
@@ -196,7 +221,7 @@ final class DatosSantaMarta {
                         300, ModalidadRecorrido.BICICLETA, List.of("es", "en"))));
 
         // Paquete del guía
-        ofertas.add(publicada(zonas, "paquete-minca-aves-y-cafe", GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
+        ofertas.add(publicada(zonas, PAQUETE_MINCA_AVES_Y_CAFE, GUIA, TipoPrestador.GUIA_INDEPENDIENTE,
                 new VersionPaquete(contenido("Minca: aves y café",
                         "Avistamiento de aves al amanecer y ruta del café y el cacao", "190000",
                         "Lunes a sábado", MINCA, 6),
@@ -204,33 +229,33 @@ final class DatosSantaMarta {
                 avesMinca, cafeCacao));
 
         // Alojamientos
-        ofertas.add(publicada(zonas, "cabana-frente-al-mar-buritaca", HOTEL, TipoPrestador.ALOJAMIENTO,
+        ofertas.add(publicada(zonas, CABANA_FRENTE_AL_MAR_BURITACA, HOTEL, TipoPrestador.ALOJAMIENTO,
                 new VersionAlojamiento(contenido("Cabaña frente al mar en Buritaca",
                         "Cabaña para cuatro personas entre el río y el mar", "380000", null, TRONCAL, 4),
                         "cabaña", false)));
-        ofertas.add(publicada(zonas, "habitacion-doble-rodadero", HOTEL, TipoPrestador.ALOJAMIENTO,
+        ofertas.add(publicada(zonas, HABITACION_DOBLE_RODADERO, HOTEL, TipoPrestador.ALOJAMIENTO,
                 new VersionAlojamiento(contenido("Habitación doble en El Rodadero",
                         "Habitación con aire acondicionado a dos cuadras de la playa", "290000", null, RODADERO, 2),
                         "habitación", true)));
-        ofertas.add(publicada(zonas, "apartamento-pozos-colorados", HOTEL, TipoPrestador.ALOJAMIENTO,
+        ofertas.add(publicada(zonas, APARTAMENTO_POZOS_COLORADOS, HOTEL, TipoPrestador.ALOJAMIENTO,
                 new VersionAlojamiento(contenido("Apartamento en Pozos Colorados",
                         "Apartamento familiar con cocina y acceso a la playa", "450000", null, ZONA_SUR, 6),
                         "apartamento", true)));
-        ofertas.add(publicada(zonas, "habitacion-ecologica-minca", HOTEL, TipoPrestador.ALOJAMIENTO,
+        ofertas.add(publicada(zonas, HABITACION_ECOLOGICA_MINCA, HOTEL, TipoPrestador.ALOJAMIENTO,
                 new VersionAlojamiento(contenido("Habitación ecológica en Minca",
                         "Habitación con vista a la montaña y desayuno incluido", "210000", null, MINCA, 2),
                         "habitación", false)));
 
         // Restaurantes
-        ofertas.add(publicada(zonas, "cocina-caribe-centro-historico", RESTAURANTE, TipoPrestador.RESTAURANTE,
+        ofertas.add(publicada(zonas, COCINA_CARIBE_CENTRO_HISTORICO, RESTAURANTE, TipoPrestador.RESTAURANTE,
                 new VersionRestaurante(contenido("Cocina del Caribe en el Centro Histórico",
                         "Platos tradicionales de la región en una casa colonial", "65000",
                         "Todos los días, de 12:00 a 22:00", CENTRO_HISTORICO, 12), true)));
-        ofertas.add(publicada(zonas, "pescados-frente-al-mar-taganga", RESTAURANTE, TipoPrestador.RESTAURANTE,
+        ofertas.add(publicada(zonas, PESCADOS_FRENTE_AL_MAR_TAGANGA, RESTAURANTE, TipoPrestador.RESTAURANTE,
                 new VersionRestaurante(contenido("Pescados frente al mar en Taganga",
                         "Pesca del día frita o a la plancha, con patacón y arroz de coco", "55000",
                         "Todos los días, de 11:00 a 18:00", TAGANGA, 10), false)));
-        ofertas.add(publicada(zonas, "parrilla-rodadero", RESTAURANTE, TipoPrestador.RESTAURANTE,
+        ofertas.add(publicada(zonas, PARRILLA_RODADERO, RESTAURANTE, TipoPrestador.RESTAURANTE,
                 new VersionRestaurante(contenido("Parrilla en El Rodadero",
                         "Carnes y mariscos a la parrilla", "70000",
                         "Martes a domingo, de 12:00 a 23:00", RODADERO, 16), true)));
@@ -248,11 +273,11 @@ final class DatosSantaMarta {
                         "Traslado en lancha desde El Rodadero y tarde de playa", "50000",
                         "Todos los días", RODADERO, 20),
                 TipoActividad.NAUTICO, NivelEsfuerzo.BAJO, false, horas(9, 10, 11), 300);
-        ofertas.add(Oferta.publicar("paseo-lancha-playa-blanca", habilitado(AGENCIA),
+        ofertas.add(Oferta.publicar(PASEO_LANCHA_PLAYA_BLANCA, habilitado(AGENCIA),
                 TipoPrestador.AGENCIA_OPERADORA, lanchaPlayaBlanca, zonas.get(RODADERO), CARGA));
 
         // Aprobada, pero de un prestador con el RNT inactivo: no es visible (RF-77)
-        Oferta ciudadPerdida = publicada(zonas, "expedicion-ciudad-perdida", AGENCIA_SIN_RNT,
+        Oferta ciudadPerdida = publicada(zonas, EXPEDICION_CIUDAD_PERDIDA, AGENCIA_SIN_RNT,
                 TipoPrestador.AGENCIA_OPERADORA,
                 actividad(contenido("Expedición a Ciudad Perdida",
                                 "Caminata de cuatro días por la Sierra Nevada hasta Teyuna", "2150000",

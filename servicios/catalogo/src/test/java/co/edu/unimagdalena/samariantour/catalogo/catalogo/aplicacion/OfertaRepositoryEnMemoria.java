@@ -32,7 +32,14 @@ import java.util.function.Predicate;
 class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
 
     private final Map<String, Oferta> ofertas = new LinkedHashMap<>();
+    private int secuenciaIds;
     private final Map<String, Integer> guardadas = new HashMap<>();
+
+    /** Ids con formato ObjectId (24 dígitos hexadecimales), predecibles para las pruebas. */
+    @Override
+    public String nuevoId() {
+        return "%024x".formatted(++secuenciaIds);
+    }
 
     @Override
     public Optional<Oferta> buscarPorId(String id) {

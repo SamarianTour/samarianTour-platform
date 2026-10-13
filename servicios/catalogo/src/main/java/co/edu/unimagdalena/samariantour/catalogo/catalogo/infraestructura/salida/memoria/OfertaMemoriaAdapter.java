@@ -13,6 +13,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Version
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionRestaurante;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglasPaquete;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
+import org.bson.types.ObjectId;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -46,6 +47,12 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
 
     public OfertaMemoriaAdapter(Collection<Oferta> iniciales) {
         iniciales.forEach(oferta -> ofertas.put(oferta.id(), CopiaOferta.de(oferta)));
+    }
+
+    /** Mismo formato que en MongoDB, para que los identificadores no cambien al cambiar de perfil (DC-30). */
+    @Override
+    public String nuevoId() {
+        return new ObjectId().toHexString();
     }
 
     @Override

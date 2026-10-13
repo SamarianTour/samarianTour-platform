@@ -38,7 +38,7 @@ class DemostracionApiTest {
               "nombre": "Caminata nocturna en Minca",
               "descripcion": "Recorrido para observar ranas e insectos al caer la noche",
               "precioReferencia": 75000,
-              "zonaId": "minca-sierra-nevada",
+              "zonaId": "a00000000000000000000007",
               "capacidadMaxima": 6,
               "tipoActividad": "AVISTAMIENTO_FAUNA",
               "nivelEsfuerzo": "BAJO",
@@ -57,10 +57,10 @@ class DemostracionApiTest {
     @DisplayName("[Demostración] buscar → ficha → publicar → no aparece → aprobar con un aviso → aparece → editar "
             + "→ sigue la versión aprobada")
     void flujoDeLaDemostracion() throws Exception {
-        http.perform(get("/ofertas").param("tipo", "ACTIVIDAD").param("zonaId", "parque-tayrona"))
+        http.perform(get("/ofertas").param("tipo", "ACTIVIDAD").param("zonaId", "a00000000000000000000005"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contenido[*].id", hasItem("caminata-cabo-san-juan")));
-        http.perform(get("/ofertas/paquete-tayrona-mar-y-selva"))
+                .andExpect(jsonPath("$.contenido[*].id", hasItem("b00000000000000000000001")));
+        http.perform(get("/ofertas/b00000000000000000000008"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paquete.actividades", hasSize(2)))
                 .andExpect(jsonPath("$.paquete.nivelEsfuerzo").value("MODERADO"))
@@ -78,7 +78,7 @@ class DemostracionApiTest {
 
         http.perform(get("/ofertas/" + id)).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
-        http.perform(get("/ofertas").param("zonaId", "minca-sierra-nevada"))
+        http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007"))
                 .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
 
         String aviso = """
@@ -89,7 +89,7 @@ class DemostracionApiTest {
         http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content(aviso))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("DUPLICADO"));
 
-        http.perform(get("/ofertas").param("zonaId", "minca-sierra-nevada"))
+        http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007"))
                 .andExpect(jsonPath("$.contenido[*].id", hasItem(id)));
         http.perform(get("/ofertas/" + id))
                 .andExpect(status().isOk())

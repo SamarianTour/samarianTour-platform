@@ -39,7 +39,7 @@ paths:
           in: query
           schema:
             type: string
-          example: parque-tayrona
+          example: a00000000000000000000005
         - name: precioMin
           in: query
           schema:
@@ -145,7 +145,7 @@ paths:
               nombre: Caminata a la cascada de Marinka
               descripcion: Sendero de montaña con baño en la cascada
               precioReferencia: 70000
-              zonaId: minca-sierra-nevada
+              zonaId: a00000000000000000000007
               capacidadMaxima: 8
               tipoActividad: SENDERISMO
               nivelEsfuerzo: MODERADO
@@ -262,7 +262,7 @@ components:
       required: true
       schema:
         type: string
-      example: caminata-cabo-san-juan
+      example: b00000000000000000000001
     PrestadorId:
       name: X-Prestador-Id
       in: header

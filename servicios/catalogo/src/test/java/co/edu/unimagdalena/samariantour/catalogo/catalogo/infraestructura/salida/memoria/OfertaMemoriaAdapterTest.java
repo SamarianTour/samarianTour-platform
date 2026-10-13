@@ -7,11 +7,35 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
+
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.AGENCIA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.APARTAMENTO_POZOS_COLORADOS;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.AVISTAMIENTO_AVES_MINCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.BAUTIZO_BUCEO_TAGANGA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.CAMINATA_CABO_SAN_JUAN;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.CAMINATA_POZO_AZUL_MARINKA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.COCINA_CARIBE_CENTRO_HISTORICO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.DESCENSO_BICICLETA_SIERRA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.EXPEDICION_CIUDAD_PERDIDA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.GUIA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.HABITACION_DOBLE_RODADERO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.MINCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PAQUETE_MINCA_AVES_Y_CAFE;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PAQUETE_TAGANGA_BAJO_EL_AGUA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PAQUETE_TAYRONA_MAR_Y_SELVA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PARRILLA_RODADERO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PASEO_LANCHA_PLAYA_BLANCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PESCADOS_FRENTE_AL_MAR_TAGANGA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.RECORRIDO_CENTRO_HISTORICO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.RUTA_CAFE_CACAO_MINCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.SNORKEL_PLAYA_CRISTAL;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.TAGANGA;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,15 +45,25 @@ class OfertaMemoriaAdapterTest {
     private final OfertaMemoriaAdapter ofertas = new OfertaMemoriaAdapter();
 
     @Test
+    @DisplayName("genera identificadores nuevos con formato ObjectId, como MongoDB (DC-30)")
+    void nuevoId() {
+        String uno = ofertas.nuevoId();
+        String otro = ofertas.nuevoId();
+
+        assertThat(ObjectId.isValid(uno)).isTrue();
+        assertThat(uno).isNotEqualTo(otro);
+    }
+
+    @Test
     @DisplayName("entrega copias: un cambio que no se guarda no queda registrado")
     void guardaYEntregaCopias() {
-        Oferta leida = ofertas.buscarPorId("recorrido-centro-historico").orElseThrow();
+        Oferta leida = ofertas.buscarPorId(RECORRIDO_CENTRO_HISTORICO).orElseThrow();
 
-        leida.retirar(DatosSantaMarta.AGENCIA);
-        assertThat(ofertas.buscarPorId("recorrido-centro-historico").orElseThrow().retirada()).isFalse();
+        leida.retirar(AGENCIA);
+        assertThat(ofertas.buscarPorId(RECORRIDO_CENTRO_HISTORICO).orElseThrow().retirada()).isFalse();
 
         ofertas.guardar(leida);
-        assertThat(ofertas.buscarPorId("recorrido-centro-historico").orElseThrow().retirada()).isTrue();
+        assertThat(ofertas.buscarPorId(RECORRIDO_CENTRO_HISTORICO).orElseThrow().retirada()).isTrue();
     }
 
     @Test
@@ -38,7 +72,7 @@ class OfertaMemoriaAdapterTest {
         Pagina<Oferta> todas = buscar(null, null, null, null, false, 100);
 
         assertThat(todas.contenido()).extracting(Oferta::id)
-                .doesNotContain("paseo-lancha-playa-blanca", "expedicion-ciudad-perdida");
+                .doesNotContain(PASEO_LANCHA_PLAYA_BLANCA, EXPEDICION_CIUDAD_PERDIDA);
         assertThat(todas.totalElementos()).isEqualTo(DatosSantaMarta.ofertas().size() - 2);
         assertThat(todas.contenido())
                 .extracting(oferta -> oferta.publicada().orElseThrow().contenido().precioReferencia())
@@ -48,21 +82,21 @@ class OfertaMemoriaAdapterTest {
     @Test
     @DisplayName("filtra por tipo, zona y precio")
     void filtrosBasicos() {
-        assertThat(ids(buscar(TipoOferta.RESTAURANTE, DatosSantaMarta.TAGANGA, null, null, false, 100)))
-                .containsExactly("pescados-frente-al-mar-taganga");
+        assertThat(ids(buscar(TipoOferta.RESTAURANTE, TAGANGA, null, null, false, 100)))
+                .containsExactly(PESCADOS_FRENTE_AL_MAR_TAGANGA);
 
-        CriteriosBusqueda hastaCienMil = new CriteriosBusqueda(TipoOferta.ACTIVIDAD, DatosSantaMarta.MINCA, null,
+        CriteriosBusqueda hastaCienMil = new CriteriosBusqueda(TipoOferta.ACTIVIDAD, MINCA, null,
                 new BigDecimal("100000"), null, null, false, Paginacion.de(null, null));
         assertThat(ids(ofertas.buscarVisibles(hastaCienMil)))
-                .containsExactly("ruta-cafe-cacao-minca", "caminata-pozo-azul-marinka");
+                .containsExactly(RUTA_CAFE_CACAO_MINCA, CAMINATA_POZO_AZUL_MARINKA);
     }
 
     @Test
     @DisplayName("el filtro por tipo de actividad incluye los paquetes que tienen una de ese tipo (DC-24)")
     void porTipoDeActividad() {
         assertThat(ids(buscar(null, null, TipoActividad.BUCEO_SNORKEL, null, false, 100)))
-                .containsExactlyInAnyOrder("snorkel-playa-cristal", "bautizo-buceo-taganga",
-                        "paquete-tayrona-mar-y-selva", "paquete-taganga-bajo-el-agua");
+                .containsExactlyInAnyOrder(SNORKEL_PLAYA_CRISTAL, BAUTIZO_BUCEO_TAGANGA,
+                        PAQUETE_TAYRONA_MAR_Y_SELVA, PAQUETE_TAGANGA_BAJO_EL_AGUA);
     }
 
     @Test
@@ -72,19 +106,19 @@ class OfertaMemoriaAdapterTest {
 
         assertThat(bajas.contenido()).extracting(Oferta::tipo)
                 .containsOnly(TipoOferta.ACTIVIDAD, TipoOferta.PAQUETE);
-        assertThat(ids(bajas)).contains("snorkel-playa-cristal", "paquete-minca-aves-y-cafe")
-                .doesNotContain("caminata-cabo-san-juan", "paquete-tayrona-mar-y-selva",
-                        "descenso-bicicleta-sierra");
+        assertThat(ids(bajas)).contains(SNORKEL_PLAYA_CRISTAL, PAQUETE_MINCA_AVES_Y_CAFE)
+                .doesNotContain(CAMINATA_CABO_SAN_JUAN, PAQUETE_TAYRONA_MAR_Y_SELVA,
+                        DESCENSO_BICICLETA_SIERRA);
         assertThat(ids(buscar(null, null, null, NivelEsfuerzo.ALTA_EXIGENCIA, false, 100)))
-                .contains("descenso-bicicleta-sierra", "paquete-tayrona-mar-y-selva");
+                .contains(DESCENSO_BICICLETA_SIERRA, PAQUETE_TAYRONA_MAR_Y_SELVA);
     }
 
     @Test
     @DisplayName("filtra las ofertas accesibles en silla de ruedas (RF-17)")
     void soloAccesibles() {
         assertThat(ids(buscar(null, null, null, null, true, 100)))
-                .containsExactlyInAnyOrder("recorrido-centro-historico", "habitacion-doble-rodadero",
-                        "apartamento-pozos-colorados", "cocina-caribe-centro-historico", "parrilla-rodadero");
+                .containsExactlyInAnyOrder(RECORRIDO_CENTRO_HISTORICO, HABITACION_DOBLE_RODADERO,
+                        APARTAMENTO_POZOS_COLORADOS, COCINA_CARIBE_CENTRO_HISTORICO, PARRILLA_RODADERO);
     }
 
     @Test
@@ -101,24 +135,25 @@ class OfertaMemoriaAdapterTest {
     @Test
     @DisplayName("al cambiar el RNT de un prestador, sus ofertas y paquetes dejan de ser visibles y vuelven (RF-77)")
     void actualizarRntPrestador() {
-        ofertas.actualizarRntPrestador(DatosSantaMarta.AGENCIA, false);
+        ofertas.actualizarRntPrestador(AGENCIA, false);
         assertThat(buscar(null, null, null, null, false, 100).contenido())
-                .noneMatch(oferta -> oferta.esDe(DatosSantaMarta.AGENCIA));
+                .noneMatch(oferta -> oferta.esDe(AGENCIA));
 
-        ofertas.actualizarRntPrestador(DatosSantaMarta.AGENCIA, true);
+        ofertas.actualizarRntPrestador(AGENCIA, true);
         assertThat(ids(buscar(null, null, null, null, false, 100)))
-                .contains("caminata-cabo-san-juan", "paquete-tayrona-mar-y-selva");
+                .contains(CAMINATA_CABO_SAN_JUAN, PAQUETE_TAYRONA_MAR_Y_SELVA);
     }
 
     @Test
     @DisplayName("lista las ofertas de un prestador en cualquier estado, ordenadas por id")
     void porPrestador() {
-        Pagina<Oferta> delGuia = ofertas.buscarPorPrestador(DatosSantaMarta.GUIA, Paginacion.de(null, null));
+        Pagina<Oferta> delGuia = ofertas.buscarPorPrestador(GUIA, Paginacion.de(null, null));
 
-        assertThat(ids(delGuia)).containsExactly("avistamiento-aves-minca", "caminata-pozo-azul-marinka",
-                "descenso-bicicleta-sierra", "paquete-minca-aves-y-cafe", "ruta-cafe-cacao-minca");
-        assertThat(ids(ofertas.buscarPorPrestador(DatosSantaMarta.AGENCIA, Paginacion.de(null, null))))
-                .contains("paseo-lancha-playa-blanca");
+        assertThat(ids(delGuia)).containsExactly(AVISTAMIENTO_AVES_MINCA,
+                RUTA_CAFE_CACAO_MINCA, CAMINATA_POZO_AZUL_MARINKA,
+                DESCENSO_BICICLETA_SIERRA, PAQUETE_MINCA_AVES_Y_CAFE);
+        assertThat(ids(ofertas.buscarPorPrestador(AGENCIA, Paginacion.de(null, null))))
+                .contains(PASEO_LANCHA_PLAYA_BLANCA);
     }
 
     private Pagina<Oferta> buscar(TipoOferta tipo, String zonaId, TipoActividad tipoActividad,

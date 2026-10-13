@@ -42,7 +42,7 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
 
     @Override
     public Oferta publicar(PublicarOfertaCommand comando) {
-        Oferta oferta = Oferta.publicar(UUID.randomUUID().toString(),
+        Oferta oferta = Oferta.publicar(ofertas.nuevoId(),
                 prestadores.habilitacionDe(comando.solicitante().prestadorId()),
                 comando.solicitante().tipoPrestador(), comando.contenido(), zonaDe(comando.contenido()),
                 actividadesDe(comando.contenido()), ahora());

@@ -107,7 +107,7 @@ BASE=http://localhost:8080/api/catalogo
 for i in 1 2 3 4 5 6 7 8; do curl -s -o /dev/null -D - "$BASE/ofertas" | grep -i '^x-instancia'; done
 
 # Actividades en el Parque Tayrona
-curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=parque-tayrona"
+curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=a00000000000000000000005"
 
 # Lo que puede hacer una persona con movilidad reducida: esfuerzo bajo y accesible en silla de ruedas
 curl -s "$BASE/ofertas?nivelEsfuerzoMaximo=BAJO&accesibleSillaRuedas=true"
@@ -123,10 +123,10 @@ curl -s "$BASE/ofertas?tipo=HOTEL"
 
 ```bash
 # Paquete: sus actividades, el nivel de esfuerzo calculado, la zona protegida y el perfil del prestador
-curl -s "$BASE/ofertas/paquete-tayrona-mar-y-selva"
+curl -s "$BASE/ofertas/b00000000000000000000008"
 
 # Oferta aprobada de un prestador con el RNT inactivo: no es visible, responde 404
-curl -s "$BASE/ofertas/expedicion-ciudad-perdida"
+curl -s "$BASE/ofertas/b00000000000000000000016"
 
 curl -s "$BASE/zonas"
 ```
@@ -151,7 +151,7 @@ ID=$(curl -s -X POST "$BASE/prestador/ofertas" \
         "nombre": "Caminata nocturna en Minca",
         "descripcion": "Recorrido para observar ranas e insectos al caer la noche",
         "precioReferencia": 75000,
-        "zonaId": "minca-sierra-nevada",
+        "zonaId": "a00000000000000000000007",
         "capacidadMaxima": 6,
         "tipoActividad": "AVISTAMIENTO_FAUNA",
         "nivelEsfuerzo": "BAJO",
@@ -186,7 +186,7 @@ Ahora aparece en la ficha y en la búsqueda:
 
 ```bash
 curl -s "$BASE/ofertas/$ID"
-curl -s "$BASE/ofertas?zonaId=minca-sierra-nevada&tipoActividad=AVISTAMIENTO_FAUNA"
+curl -s "$BASE/ofertas?zonaId=a00000000000000000000007&tipoActividad=AVISTAMIENTO_FAUNA"
 ```
 
 Para volver a las dos réplicas:

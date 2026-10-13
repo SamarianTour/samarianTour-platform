@@ -15,6 +15,12 @@ import java.util.UUID;
  */
 public interface OfertaRepositoryPort {
 
+    /**
+     * Identificador para una oferta nueva. Lo genera la persistencia, no la aplicación: en MongoDB es un ObjectId
+     * (DC-30). Para el dominio es un texto opaco.
+     */
+    String nuevoId();
+
     Optional<Oferta> buscarPorId(String id);
 
     /**
