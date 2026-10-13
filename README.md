@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación y edición por el prestador, y moderación por avisos del núcleo. Todavía guarda los datos en memoria; el adaptador de MongoDB, el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`); el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -38,8 +38,9 @@ co.edu.unimagdalena.samariantour.catalogo
 │   └── infraestructura/
 │       ├── config/             crea los servicios de aplicación y los conecta con los adaptadores
 │       ├── entrada/rest/       controladores, dto/, mapper/
-│       ├── salida/memoria/     adaptadores en memoria del prototipo (perfil memoria)
-│       └── salida/persistencia/ documentos Mongo, repositorios y mappers
+│       ├── salida/memoria/     adaptadores en memoria (perfil memoria)
+│       ├── salida/demo/        datos de demostración de Santa Marta
+│       └── salida/persistencia/ adaptadores MongoDB (perfil mongo), document/ y mapper/
 └── opiniones/                  módulo (fuera del alcance del prototipo)
 ```
 
@@ -72,7 +73,8 @@ mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 
 | Perfil | Qué activa | Cuándo |
 |---|---|---|
-| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, mientras no exista el adaptador de MongoDB |
+| `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto |
+| `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Pruebas de integración (`mvn verify`) |
 | `demo` | Los headers que sustituyen al token del prestador | Nunca por defecto; solo en la demostración |
 
 **Identidad provisional del prestador.** Mientras no exista `libs/seguridad-jwt`, las rutas `/prestador/**` identifican al prestador con dos headers: `X-Prestador-Id` (UUID) y `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cualquiera puede enviarlos, así que solo se aceptan con el perfil `demo`; sin él responden 401. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.

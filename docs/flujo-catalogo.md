@@ -153,7 +153,7 @@ Oferta.publicar  (aquí viven las reglas)
    ¿Zona activa?                        no → 400 ZONA_NO_DISPONIBLE
    OK → pendiente = versión 1 (EN_MODERACION), publicada = vacía
    ▼
-GestionarOfertaService guarda → OfertaMemoriaAdapter (hoy) u OfertaMongoAdapter 🔨 → documento en MongoDB
+GestionarOfertaService guarda → OfertaMongoAdapter (perfil mongo: documento en MongoDB) u OfertaMemoriaAdapter (perfil memoria)
    ▼
 201 Created
 ```
@@ -226,7 +226,8 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Controladores y JSON | `infraestructura/entrada/rest/` |
 | Creación de los servicios (Spring) | `infraestructura/config/CatalogoConfig` |
 | Datos en memoria del prototipo | `infraestructura/salida/memoria/` |
-| MongoDB | `infraestructura/salida/persistencia/` 🔨 |
+| MongoDB | `infraestructura/salida/persistencia/` (adaptadores), `document/` y `mapper/` |
+| Datos de demostración | `infraestructura/salida/demo/` |
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
 | Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |

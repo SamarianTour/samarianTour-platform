@@ -26,7 +26,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-14 | Paginación | 🆕 QAS-07 |
 | DC-15 | Errores en ProblemDetail con código de motivo | 🆕 |
 | DC-16 | Modelo documental de `ofertas` | ✅ ADR-03 |
-| DC-17 | Índice parcial para la búsqueda | 🆕 QAS-07 |
+| DC-17 | Índices parciales para la búsqueda | 🆕 QAS-07 |
 | DC-18 | Zonas de la precarga | ✅ D-04 [SUPUESTO] |
 | DC-19 | Validaciones de campo provisionales | 🆕 hasta cerrar el SRS |
 | DC-20 | Stack del prototipo | 🆕 |
@@ -36,12 +36,13 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-24 | El filtro por tipo de actividad incluye los paquetes | 🆕 |
 | DC-25 | El filtro por nivel de esfuerzo es "hasta el nivel indicado" | 🆕 RF-17 |
 | DC-26 | Perfil público: solo la descripción es obligatoria | 🆕 RF-64, RS-03 |
-| DC-27 | Perfiles de ejecución `memoria` y `demo` | 🆕 |
+| DC-27 | Perfiles de ejecución `memoria`, `mongo` y `demo` | 🆕 |
 | DC-28 | Con los datos en memoria, cada réplica tiene su propio estado | 🆕 QAS-02 |
 | DC-29 | Forma de las respuestas de la API | 🆕 RF-20, RF-24, RF-25 |
 | DC-30 | Los identificadores del catálogo son `ObjectId` | ✅ modelo documental |
 | DC-31 | La búsqueda de paquetes usa una agregación | 🆕 RF-22, QAS-07 |
 | DC-32 | El servicio de recomendación no tiene base de datos | ✅ ADR-02, ADR-03 |
+| DC-33 | Implementación de los adaptadores de MongoDB | 🆕 ADR-05, DC-16, DC-17 |
 
 ## Identidad y habilitación del prestador
 
@@ -138,17 +139,19 @@ Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un pr
 - Se desactiva el campo `_class` de Spring.
 - Otras colecciones: `zonas`, `prestadores` (réplica de DC-02) y `avisos_procesados` (`_id = idAviso`).
 
-**DC-17. Índice parcial para la búsqueda (evidencia de QAS-07).**
+**DC-17. Índices parciales para la búsqueda (evidencia de QAS-07).**
 
 ```
-{ tipo: 1, "publicada.zonaId": 1, "publicada.precioReferencia": 1, _id: 1 }
-partialFilterExpression: { rntPrestadorActivo: true, retirada: false, publicada: { $exists: true } }
+busqueda_tipo_zona_precio: { tipo: 1, "publicada.zonaId": 1, "publicada.precioReferencia": 1, _id: 1 }
+busqueda_precio:           { "publicada.precioReferencia": 1, _id: 1 }
+partialFilterExpression (los dos): { rntPrestadorActivo: true, retirada: false, publicada: { $exists: true } }
 ```
 
-- El índice solo contiene ofertas visibles, así que es pequeño, y su clave coincide con la documentada en QAS-07. `_id` al final da el orden estable de DC-14.
-- La prueba de integración verifica con `explain()` que la búsqueda usa el índice (`IXSCAN`, no `COLLSCAN`).
-- Limitación aceptada: si la búsqueda no filtra por `tipo`, el índice se usa igual, pero recorre más claves.
-- Aparte va `{ prestadorId: 1 }`, para el `updateMany` de DC-03 y para listar las ofertas del prestador.
+- Los dos índices solo contienen ofertas visibles, así que son pequeños. La clave del primero coincide con la documentada en QAS-07; `_id` al final da el orden estable de DC-14.
+- El segundo cubre la búsqueda que no filtra por tipo: la recorre ya ordenada por precio, sin ordenar en memoria.
+- MongoDB solo usa un índice parcial si la consulta incluye las condiciones de su filtro; la búsqueda siempre las incluye, porque son las de `ReglaVisibilidad`.
+- Las pruebas de integración verifican con `explain()` que la búsqueda usa un índice (`IXSCAN`, no `COLLSCAN`), con filtros y sin ellos.
+- Aparte van `ofertas_del_prestador`, `{ prestadorId: 1, _id: 1 }`, para el `updateMany` de DC-03 y para listar las ofertas del prestador en orden de id, y `perfil_por_prestador`, único sobre `perfiles.prestadorId`.
 
 ## Datos
 
@@ -198,7 +201,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 
 **DC-24. El filtro por tipo de actividad incluye los paquetes.** Un paquete coincide si al menos una de sus actividades es de ese tipo. Sus `tiposActividad` (conjunto) se derivan de las versiones publicadas de sus actividades, igual que su nivel de esfuerzo y su accesibilidad en silla de ruedas (`ReglasPaquete`). El filtro busca en `tipoActividad` para las actividades y en `tiposActividad` para los paquetes.
 - Los valores no se guardan: se calculan al consultar con `ReglasPaquete`, a partir de las actividades ya cargadas.
-- Pendiente: guardar `tiposActividad`, `nivelEsfuerzo`, `accesibleSillaRuedas` y `actividadesVigentes` en el paquete se decide al construir el adaptador de MongoDB, y solo si la búsqueda lo necesita para usar índices (QAS-07).
+- En MongoDB tampoco se guardan: la búsqueda los calcula en la agregación de DC-31.
 
 **DC-25. El filtro por nivel de esfuerzo es "hasta el nivel indicado".** Incluye los niveles menores:
 
@@ -223,7 +226,8 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 
 | Perfil | Qué activa | Cuándo |
 |---|---|---|
-| `memoria` | Los adaptadores de salida en la memoria del proceso (`infraestructura/salida/memoria`), con los datos de demostración de Santa Marta | Por defecto, mientras no exista el adaptador de MongoDB |
+| `memoria` | Los adaptadores de salida en la memoria del proceso (`infraestructura/salida/memoria`), con los datos de demostración de Santa Marta | Por defecto, y en las pruebas que no necesitan MongoDB |
+| `mongo` | Los adaptadores de salida de MongoDB (`infraestructura/salida/persistencia`) y la creación de sus índices (DC-33) | En las pruebas de integración; en Docker Compose cuando exista la carga de los datos de demostración en MongoDB |
 | `demo` | Los headers que sustituyen al token del prestador (DC-01) | Nunca por defecto; solo en la demostración |
 
 - Docker Compose activa los dos (`SPRING_PROFILES_ACTIVE=memoria,demo`).
@@ -256,6 +260,15 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 
 **DC-32. El servicio de recomendación no tiene base de datos.** Se corrige el modelo documental, que mostraba una base `recomendacion` con `registro_exposicion` y `cache_alertas`. Según el ADR-02, el ADR-03 y el diagrama de paquetes, las alertas del IDEAM viven en una caché en memoria del servicio y el registro de exposición se envía al núcleo, que lo guarda en PostgreSQL (RET-02).
 
+**DC-33. Implementación de los adaptadores de MongoDB.** Los cinco adaptadores del diagrama del módulo (`OfertaMongoAdapter`, `ZonaMongoAdapter`, `PerfilMongoAdapter`, `PrestadorMongoAdapter` y `AvisoProcesadoMongoAdapter`) viven en `infraestructura/salida/persistencia`, con los documentos en `document/` y los mappers en `mapper/`.
+- **`MongoTemplate`, sin repositorios de Spring Data.** El reemplazo condicionado por revisión, el upsert filtrado por versión y el `updateMany` del ADR-05, y la agregación de DC-31, no se expresan con un repositorio derivado. Usar repositorios solo en zonas y perfiles mezclaría dos estilos.
+- **Revisión explícita, sin `@Version`.** Una oferta nueva (revisión 0) se inserta con la revisión 1; una oferta leída se reemplaza con el filtro `{_id, revision}` y queda con la siguiente; si el filtro no encuentra nada, el adaptador lanza `ConflictoConcurrenciaException`. Con `@Version`, Spring trata la revisión 0 como entidad nueva y la guarda como 0, así que el mapper tendría que correr la revisión en uno. El adaptador en memoria hace lo mismo y también guarda sus datos iniciales con la revisión 1.
+- **Réplica de habilitación:** un upsert con el filtro `{_id, version < nueva}`. Si la réplica guardada tiene una versión igual o mayor, el upsert intenta crear otra con el mismo `_id`, la base lo rechaza y el adaptador lanza el conflicto.
+- **Avisos procesados:** el `_id` es el idAviso, guardado siempre como texto; un `_id` repetido se ignora.
+- **Formato:** los documentos son records con los campos del modelo documental; los campos sin valor no se guardan. El precio es `Decimal128`, las referencias son `ObjectId`, los UUID usan la representación estándar (subtipo 4), las ubicaciones son puntos GeoJSON `[longitud, latitud]` y las horas de salida son textos `HH:mm`. `MongoConfig` (en `compartido/config`) quita el campo `_class`. MongoDB guarda las fechas con precisión de milisegundos.
+- **Índices:** los crea `IndicesMongo` al arrancar con el perfil `mongo`; crear un índice que ya existe no hace nada, así que todas las réplicas pueden hacerlo. Así también los tienen las pruebas de integración.
+- **Pruebas:** `ContratoOfertaRepository` y `ContratoPrestadorRepository` son las mismas pruebas para los dos adaptadores, en memoria y en MongoDB, con los datos de demostración. Los datos de demostración pasaron a `infraestructura/salida/demo` para compartirlos.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -271,7 +284,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
    - quitar la base `recomendacion` (DC-32);
    - marcar `publicada` como `| null`: una oferta nueva solo tiene versión pendiente (DC-06);
    - marcar `ubicacion` y `tipoUnidad` como opcionales mientras el SRS no diga lo contrario (DC-19);
-   - agregar los índices: el parcial de QAS-07 y `{prestadorId}` en `ofertas` (DC-17), único en `perfiles.prestadorId` y único en `{ofertaId, turistaId}` de `opiniones` (RF-61);
+   - agregar los índices: los dos parciales de búsqueda y `{prestadorId, _id}` en `ofertas` (DC-17), único en `perfiles.prestadorId` y único en `{ofertaId, turistaId}` de `opiniones` (RF-61);
    - usar el mismo nombre de base que el diagrama de despliegue y Docker Compose: `catalogo_db`.
 5. **Diagrama del módulo catálogo:** agregar el puerto de salida `PrestadorCatalogoRepositoryPort` (réplica de DC-02) con su adaptador `PrestadorMongoAdapter`.
 6. **Agrupaciones técnicas del código** que no cambian el modelo, por si el docente compara: `ContenidoComun` agrupa los atributos comunes de `VersionOferta`, y `RegistroModeracion` agrupa número, estado, motivo y fechas de moderación de cada versión.
