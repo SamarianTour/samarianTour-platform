@@ -39,6 +39,9 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-27 | Perfiles de ejecución `memoria` y `demo` | 🆕 |
 | DC-28 | Con los datos en memoria, cada réplica tiene su propio estado | 🆕 QAS-02 |
 | DC-29 | Forma de las respuestas de la API | 🆕 RF-20, RF-24, RF-25 |
+| DC-30 | Los identificadores del catálogo son `ObjectId` | ✅ modelo documental |
+| DC-31 | La búsqueda de paquetes usa una agregación | 🆕 RF-22, QAS-07 |
+| DC-32 | El servicio de recomendación no tiene base de datos | ✅ ADR-02, ADR-03 |
 
 ## Identidad y habilitación del prestador
 
@@ -237,6 +240,21 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - En la ficha de un paquete, el nivel de esfuerzo, los tipos de actividad y la accesibilidad se calculan con sus actividades (DC-24).
 - Publicar y editar devuelven la oferta como la ve su prestador: la versión publicada y la pendiente, cada una con su número y su estado de moderación.
 
+## Modelo documental en MongoDB
+
+**DC-30. Los identificadores del catálogo son `ObjectId`.** Siguen el modelo documental: `_id` de `ofertas`, `zonas`, `perfiles` y `opiniones`, y las referencias `zonaId`, `actividadIds` y `opiniones.ofertaId`.
+- El id de una oferta nueva lo genera la persistencia con `OfertaRepositoryPort.nuevoId()`, no el servicio de aplicación. En MongoDB es un `ObjectId`; para el dominio sigue siendo un texto opaco.
+- El adaptador en memoria genera el mismo formato, y los datos de demostración usan ids fijos con formato `ObjectId` (zonas `a0…`, ofertas `b0…`). Así la demostración y el README sirven igual con los dos perfiles.
+- Un id que no tiene formato `ObjectId` se trata como inexistente: 404 en la ficha y `ZONA_NO_DISPONIBLE` o `DATO_INVALIDO` en las referencias.
+- Los ids de prestadores y turistas siguen siendo `UUID`, porque los emite el núcleo.
+
+**DC-31. La búsqueda de paquetes usa una agregación.** La visibilidad de un paquete (RF-22) y los filtros por tipo de actividad, nivel de esfuerzo y accesibilidad (DC-24, DC-25) dependen de sus actividades, que son otros documentos.
+- La búsqueda es una agregación: `$match` sobre el índice de QAS-07 (DC-17), `$lookup` de las actividades de los paquetes, el filtro sobre los valores calculados y `$facet` para la página y el total. La paginación y el total quedan correctos.
+- Los valores del paquete no se guardan; se calculan al consultar, como en el adaptador en memoria.
+- Si las pruebas de carga de la iteración 11 lo exigen, se pasa a guardar los valores calculados en el paquete y a mantenerlos al aprobar, editar o retirar sus actividades.
+
+**DC-32. El servicio de recomendación no tiene base de datos.** Se corrige el modelo documental, que mostraba una base `recomendacion` con `registro_exposicion` y `cache_alertas`. Según el ADR-02, el ADR-03 y el diagrama de paquetes, las alertas del IDEAM viven en una caché en memoria del servicio y el registro de exposición se envía al núcleo, que lo guarda en PostgreSQL (RET-02).
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -248,7 +266,12 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
    - quitar `esAccesibleSillaRuedas()` de los métodos abstractos de `VersionOferta` y `nivelEsfuerzo()` de `VersionPaquete`: actividad, alojamiento y restaurante guardan su accesibilidad, y los valores del paquete se calculan con sus actividades en `ReglasPaquete` (DC-24);
    - agregar `actividadIds` en `VersionPaquete`: el paquete referencia sus actividades por el identificador de su oferta;
    - agregar `prestadorId` en `PerfilPublico` (DC-26).
-4. **Modelo documental** (sección 6 del documento de diseño): incluir las colecciones y el índice de DC-16 y DC-17.
+4. **Modelo documental (MongoDB)** (sección 2 del documento de diseño):
+   - quitar la base `recomendacion` (DC-32);
+   - marcar `publicada` como `| null`: una oferta nueva solo tiene versión pendiente (DC-06);
+   - marcar `ubicacion` y `tipoUnidad` como opcionales mientras el SRS no diga lo contrario (DC-19);
+   - agregar los índices: el parcial de QAS-07 y `{prestadorId}` en `ofertas` (DC-17), único en `perfiles.prestadorId` y único en `{ofertaId, turistaId}` de `opiniones` (RF-61);
+   - usar el mismo nombre de base que el diagrama de despliegue y Docker Compose: `catalogo_db`.
 5. **Diagrama del módulo catálogo:** agregar el puerto de salida `PrestadorCatalogoRepositoryPort` (réplica de DC-02) con su adaptador `PrestadorMongoAdapter`.
 6. **Agrupaciones técnicas del código** que no cambian el modelo, por si el docente compara: `ContenidoComun` agrupa los atributos comunes de `VersionOferta`, y `RegistroModeracion` agrupa número, estado, motivo y fechas de moderación de cada versión.
 
