@@ -283,8 +283,9 @@ final class DatosSantaMarta {
                                 "Caminata de cuatro días por la Sierra Nevada hasta Teyuna", "2150000",
                                 "Salidas diarias", MINCA, 12),
                         TipoActividad.SENDERISMO, NivelEsfuerzo.ALTA_EXIGENCIA, false, horas(8), 5760));
+        // Aprobada cuando su prestador estaba habilitado; después el aviso de la versión 2 le retiró el RNT.
         ofertas.add(Oferta.reconstituir(ciudadPerdida.id(), ciudadPerdida.tipo(), ciudadPerdida.prestadorId(), false,
-                false, ciudadPerdida.publicada().orElseThrow(), null));
+                false, 2, Oferta.REVISION_NUEVA, ciudadPerdida.publicada().orElseThrow(), null));
 
         return List.copyOf(ofertas);
     }
@@ -292,9 +293,10 @@ final class DatosSantaMarta {
     /** Publica la oferta con un prestador habilitado y aprueba su primera versión. */
     private static Oferta publicada(Map<String, Zona> zonas, String id, UUID prestadorId, TipoPrestador tipoPrestador,
                                     VersionOferta version, Oferta... actividades) {
-        Oferta oferta = Oferta.publicar(id, habilitado(prestadorId), tipoPrestador, version,
+        PrestadorCatalogo prestador = habilitado(prestadorId);
+        Oferta oferta = Oferta.publicar(id, prestador, tipoPrestador, version,
                 zonas.get(version.contenido().zonaId()), List.of(actividades), CARGA);
-        oferta.aprobar(1, true, CARGA);
+        oferta.aprobar(1, prestador, CARGA);
         return oferta;
     }
 

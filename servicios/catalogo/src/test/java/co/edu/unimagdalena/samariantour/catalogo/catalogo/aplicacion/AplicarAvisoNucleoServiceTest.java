@@ -8,6 +8,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.ResultadoAviso;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.Esce
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AplicarAvisoNucleoServiceTest {
 
@@ -126,6 +128,66 @@ class AplicarAvisoNucleoServiceTest {
         void ofertaInexistente() {
             assertThat(escenario.moderar("no-existe", 1, DecisionModeracion.APROBAR))
                     .isEqualTo(ResultadoAviso.IGNORADO);
+        }
+    }
+
+    @Nested
+    @DisplayName("Concurrencia (ADR-05)")
+    class Concurrencia {
+
+        @Test
+        @DisplayName("si otra escritura se cruza con la aprobación, el aviso se reintenta y se aplica una sola vez")
+        void moderacionSeReintenta() {
+            escenario.habilitar(PRESTADOR, true, 1);
+            Oferta oferta = escenario.publicar(AGENCIA, actividad("Tour", "50000", ZONA_ACTIVA));
+            escenario.ofertas.simularConflictos(1);
+            AvisoModeracion aviso = new AvisoModeracion("mod-1", oferta.id(), 1, DecisionModeracion.APROBAR, null);
+
+            assertThat(servicio.aplicar(aviso)).isEqualTo(ResultadoAviso.APLICADO);
+            assertThat(escenario.guardada(oferta.id()).publicada()).isPresent();
+            assertThat(servicio.aplicar(aviso)).isEqualTo(ResultadoAviso.DUPLICADO);
+        }
+
+        @Test
+        @DisplayName("si se agotan los intentos, el aviso no queda procesado y el núcleo puede reenviarlo")
+        void avisoAgotaLosIntentos() {
+            escenario.habilitar(PRESTADOR, true, 1);
+            Oferta oferta = escenario.publicar(AGENCIA, actividad("Tour", "50000", ZONA_ACTIVA));
+            escenario.ofertas.simularConflictos(3);
+            AvisoModeracion aviso = new AvisoModeracion("mod-1", oferta.id(), 1, DecisionModeracion.APROBAR, null);
+
+            assertThatThrownBy(() -> servicio.aplicar(aviso)).isInstanceOf(ConflictoConcurrenciaException.class);
+            assertThat(escenario.avisosProcesados.fueProcesado("mod-1")).isFalse();
+
+            assertThat(servicio.aplicar(aviso)).isEqualTo(ResultadoAviso.APLICADO);
+        }
+
+        @Test
+        @DisplayName("dos avisos de habilitación en orden inverso dejan la réplica y las ofertas en la versión más nueva")
+        void habilitacionEnDesorden() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+
+            escenario.habilitar(PRESTADOR, false, 3);
+            ResultadoAviso atrasado = escenario.habilitar(PRESTADOR, true, 2);
+
+            assertThat(atrasado).isEqualTo(ResultadoAviso.IGNORADO);
+            PrestadorCatalogo replica = escenario.prestadores.buscarPorId(PRESTADOR).orElseThrow();
+            assertThat(replica.rntActivo()).isFalse();
+            assertThat(replica.version()).isEqualTo(3);
+            Oferta guardada = escenario.guardada(oferta.id());
+            assertThat(guardada.rntPrestadorActivo()).isFalse();
+            assertThat(guardada.versionHabilitacion()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("una actualización masiva atrasada no cambia ofertas que ya tienen una versión más nueva")
+        void actualizacionMasivaAtrasada() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            escenario.habilitar(PRESTADOR, false, 3);
+
+            escenario.ofertas.actualizarRntPrestador(PRESTADOR, true, 2);
+
+            assertThat(escenario.guardada(oferta.id()).rntPrestadorActivo()).isFalse();
         }
     }
 }

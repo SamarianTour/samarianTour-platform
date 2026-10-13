@@ -49,11 +49,12 @@ class ArquitecturaTest {
     }
 
     @Test
-    @DisplayName("2. aplicacion solo depende de dominio (se permiten @Service y @Transactional)")
+    @DisplayName("2. aplicacion solo depende de dominio y del control de concurrencia (se permiten @Service y "
+            + "@Transactional; ADR-05)")
     void aplicacionSoloDependeDeDominio() {
         classes().that().resideInAPackage("..aplicacion..")
                 .should().onlyDependOnClassesThat().resideInAnyPackage(
-                        "..dominio..", "..aplicacion..", "java..",
+                        "..dominio..", "..aplicacion..", "java..", BASE + ".compartido.concurrencia..",
                         "org.springframework.stereotype..", "org.springframework.transaction.annotation..")
                 .check(clases);
     }
@@ -101,6 +102,15 @@ class ArquitecturaTest {
                 .or().areAssignableTo(Repository.class)
                 .should().resideInAPackage("..infraestructura.salida.persistencia..")
                 .allowEmptyShould(true)
+                .check(clases);
+    }
+
+    @Test
+    @DisplayName("9. el control de concurrencia es Java puro: lo usa aplicacion (ADR-05)")
+    void concurrenciaEsJavaPuro() {
+        noClasses().that().resideInAPackage(BASE + ".compartido.concurrencia..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "org.springframework..", "jakarta..", "com.fasterxml.jackson..", "org.bson..", "com.mongodb..")
                 .check(clases);
     }
 

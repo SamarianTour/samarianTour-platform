@@ -13,6 +13,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Version
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.PublicarOfertaCommand;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -199,6 +200,13 @@ class OfertaPrestadorControllerTest {
         http.perform(comoAgencia(put("/prestador/ofertas/oferta-1")).content(ACTIVIDAD))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_EDITABLE"));
+
+        // Los reintentos del servidor no alcanzaron: el cliente puede volver a intentarlo (ADR-05).
+        doThrow(new ConflictoConcurrenciaException("cruce")).when(gestionarOferta).editar(any());
+        http.perform(comoAgencia(put("/prestador/ofertas/oferta-1")).content(ACTIVIDAD))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_CONCURRENCIA"));
     }
 
     @Test

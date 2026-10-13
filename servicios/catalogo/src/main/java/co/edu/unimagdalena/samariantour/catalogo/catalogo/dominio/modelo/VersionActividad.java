@@ -68,6 +68,12 @@ public final class VersionActividad extends VersionOferta {
     }
 
     @Override
+    VersionActividad conModeracion(RegistroModeracion moderacion) {
+        return new VersionActividad(contenido(), tipoActividad, nivelEsfuerzo, accesibleSillaRuedas, horariosSalida,
+                puntoEncuentro, duracionMinutos, modalidad, idiomasAtencion, moderacion);
+    }
+
+    @Override
     public TipoOferta tipo() {
         return TipoOferta.ACTIVIDAD;
     }

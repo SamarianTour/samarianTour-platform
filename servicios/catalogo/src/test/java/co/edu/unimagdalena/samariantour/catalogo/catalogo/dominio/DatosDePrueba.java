@@ -97,7 +97,7 @@ public final class DatosDePrueba {
     /** Oferta de actividad con su versión 1 aprobada y sin versión pendiente. */
     public static Oferta ofertaPublicada() {
         Oferta oferta = ofertaEnModeracion();
-        oferta.aprobar(1, true, AHORA);
+        oferta.aprobar(1, habilitado(), AHORA);
         return oferta;
     }
 
@@ -111,7 +111,7 @@ public final class DatosDePrueba {
         VersionActividad contenido = new VersionActividad(contenido("Actividad " + id), TipoActividad.SENDERISMO,
                 nivelEsfuerzo, accesibleSillaRuedas, List.of(LocalTime.of(7, 0)), null, null, null, List.of());
         Oferta oferta = Oferta.publicar(id, prestador, TipoPrestador.AGENCIA_OPERADORA, contenido, zonaActiva(), AHORA);
-        oferta.aprobar(1, true, AHORA);
+        oferta.aprobar(1, prestador, AHORA);
         return oferta;
     }
 }

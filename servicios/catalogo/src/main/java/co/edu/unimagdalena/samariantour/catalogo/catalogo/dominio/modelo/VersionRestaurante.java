@@ -26,6 +26,11 @@ public final class VersionRestaurante extends VersionOferta {
     }
 
     @Override
+    VersionRestaurante conModeracion(RegistroModeracion moderacion) {
+        return new VersionRestaurante(contenido(), accesibleSillaRuedas, moderacion);
+    }
+
+    @Override
     public TipoOferta tipo() {
         return TipoOferta.RESTAURANTE;
     }

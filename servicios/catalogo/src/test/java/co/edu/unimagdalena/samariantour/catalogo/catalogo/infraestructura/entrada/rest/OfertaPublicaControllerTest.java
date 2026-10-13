@@ -159,7 +159,7 @@ class OfertaPublicaControllerTest {
         Oferta buceo = actividadPublicada("buceo", NivelEsfuerzo.ALTA_EXIGENCIA, false);
         Oferta paquete = Oferta.publicar("paquete-1", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
                 paquete("caminata", "buceo"), zonaActiva(), List.of(caminata, buceo), AHORA);
-        paquete.aprobar(1, true, AHORA);
+        paquete.aprobar(1, habilitado(), AHORA);
         when(consultarFicha.consultar("paquete-1")).thenReturn(
                 new FichaOferta(paquete, Optional.empty(), Optional.empty(), List.of(caminata, buceo)));
 

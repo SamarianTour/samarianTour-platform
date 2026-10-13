@@ -132,7 +132,7 @@ class ReglasPaqueteTest {
         void tiposDeActividad() {
             Oferta aves = Oferta.publicar("aves", habilitado(), TipoPrestador.GUIA_INDEPENDIENTE,
                     actividadCompletaDeGuia(), zonaActiva(), AHORA);
-            aves.aprobar(1, true, AHORA);
+            aves.aprobar(1, habilitado(), AHORA);
 
             assertThat(ReglasPaquete.tiposActividad(List.of(caminata, buceo, aves)))
                     .containsExactlyInAnyOrder(TipoActividad.SENDERISMO, TipoActividad.AVISTAMIENTO_FAUNA);
@@ -195,7 +195,7 @@ class ReglasPaqueteTest {
         private Oferta paquetePublicado() {
             Oferta paquete = Oferta.publicar("paquete-1", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
                     paquete("caminata", "buceo"), zonaActiva(), List.of(caminata, buceo), AHORA);
-            paquete.aprobar(1, true, AHORA);
+            paquete.aprobar(1, habilitado(), AHORA);
             return paquete;
         }
     }

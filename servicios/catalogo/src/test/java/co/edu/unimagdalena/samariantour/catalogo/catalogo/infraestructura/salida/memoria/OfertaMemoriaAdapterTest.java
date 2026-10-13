@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.TAGANGA;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** El adaptador en memoria con los datos de demostración de Santa Marta. */
 class OfertaMemoriaAdapterTest {
@@ -135,13 +137,49 @@ class OfertaMemoriaAdapterTest {
     @Test
     @DisplayName("al cambiar el RNT de un prestador, sus ofertas y paquetes dejan de ser visibles y vuelven (RF-77)")
     void actualizarRntPrestador() {
-        ofertas.actualizarRntPrestador(AGENCIA, false);
+        ofertas.actualizarRntPrestador(AGENCIA, false, 2);
         assertThat(buscar(null, null, null, null, false, 100).contenido())
                 .noneMatch(oferta -> oferta.esDe(AGENCIA));
 
-        ofertas.actualizarRntPrestador(AGENCIA, true);
+        ofertas.actualizarRntPrestador(AGENCIA, true, 3);
         assertThat(ids(buscar(null, null, null, null, false, 100)))
                 .contains(CAMINATA_CABO_SAN_JUAN, PAQUETE_TAYRONA_MAR_Y_SELVA);
+    }
+
+    @Test
+    @DisplayName("la actualización del RNT solo avanza: una versión atrasada no cambia nada (ADR-05)")
+    void actualizarRntSoloAvanza() {
+        ofertas.actualizarRntPrestador(AGENCIA, false, 3);
+
+        ofertas.actualizarRntPrestador(AGENCIA, true, 2);
+
+        Oferta caminata = ofertas.buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow();
+        assertThat(caminata.rntPrestadorActivo()).isFalse();
+        assertThat(caminata.versionHabilitacion()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("guardar sube la revisión, y guardar con una revisión vieja lanza un conflicto (ADR-05)")
+    void bloqueoOptimista() {
+        Oferta primeraLectura = ofertas.buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow();
+        Oferta segundaLectura = ofertas.buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow();
+
+        ofertas.guardar(primeraLectura);
+
+        assertThat(ofertas.buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow().revision())
+                .isEqualTo(primeraLectura.revision() + 1);
+        assertThatThrownBy(() -> ofertas.guardar(segundaLectura))
+                .isInstanceOf(ConflictoConcurrenciaException.class);
+    }
+
+    @Test
+    @DisplayName("la actualización masiva del RNT también sube la revisión: una edición cruzada se reintenta")
+    void actualizarRntSubeLaRevision() {
+        Oferta leida = ofertas.buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow();
+
+        ofertas.actualizarRntPrestador(AGENCIA, false, 5);
+
+        assertThatThrownBy(() -> ofertas.guardar(leida)).isInstanceOf(ConflictoConcurrenciaException.class);
     }
 
     @Test
