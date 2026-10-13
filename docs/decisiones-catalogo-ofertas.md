@@ -126,6 +126,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | `OFERTA_NO_ENCONTRADA` | 404 | No existe, o no es visible para quien la consulta |
 | `OFERTA_NO_EDITABLE` | 409 | La oferta está retirada |
 | `NO_AUTENTICADO` | 401 | Falta la identidad del prestador, o llegan los headers de demostración sin el perfil `demo` (DC-01) |
+| `CONFLICTO_CONCURRENCIA` | 409 | Otra operación modificó la misma oferta o la misma habilitación al mismo tiempo y los reintentos no alcanzaron (ADR-05) |
 
 Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un precio que no es un número, también responde 400 `DATO_INVALIDO`.
 

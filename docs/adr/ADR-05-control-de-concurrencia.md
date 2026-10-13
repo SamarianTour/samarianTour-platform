@@ -2,7 +2,7 @@
 
 | Campo | Contenido |
 |---|---|
-| Estado | Aceptada. Implementación pendiente: se hace junto con el adaptador de MongoDB |
+| Estado | Aceptada. Implementada en el dominio, la aplicación y el adaptador en memoria; falta el adaptador de MongoDB |
 | Decidida en | Fase de Construcción, durante el servicio de catálogo (octubre de 2026) |
 | Responsable | Líder técnico / Arquitecto |
 
@@ -87,7 +87,7 @@ Positivas:
 Negativas:
 
 - `Oferta` lleva dos datos técnicos más, `revision` y `versionHabilitacion`, que se mapean en ambos sentidos.
-- Los servicios que escriben deben poder ejecutarse varias veces sin efectos fuera de la base: no pueden notificar ni llamar a otro servicio antes de guardar.
+- Los servicios que escriben deben poder ejecutarse varias veces sin efectos fuera de la base: no pueden notificar ni llamar a otro servicio antes de guardar. Tampoco pueden modificar sus entradas: enviar a moderación devuelve una copia del borrador (`VersionOferta.enviada`), porque el reintento vuelve a usar el mismo comando. La prueba de reintento de la edición lo detectó.
 - Con contención alta sobre una misma oferta, un cliente puede recibir 409. Se espera que sea raro: una oferta la editan su prestador y los avisos del núcleo.
 - La regla 2 de ArchUnit deja de ser "solo dominio" y admite `compartido.concurrencia`.
 
@@ -117,5 +117,6 @@ Se prueba con pruebas unitarias que usan un doble en memoria que lanza el confli
 ## Alcance
 
 - Este ADR cubre el servicio de catálogo.
-- **No está implementado.** La `revision`, `versionHabilitacion`, `ConflictoConcurrenciaException`, `EjecutorConReintento` y el parámetro `version` del puerto se construyen junto con el adaptador de MongoDB. Hasta entonces, el prototipo en memoria puede perder una escritura si dos se cruzan sobre la misma oferta.
+- **Implementado:** `revision` y `versionHabilitacion` en `Oferta`, `ConflictoConcurrenciaException` y `EjecutorConReintento` en `compartido.concurrencia`, el reintento en `GestionarOfertaService` (editar y retirar) y en `AplicarAvisoNucleoService`, el 409 `CONFLICTO_CONCURRENCIA`, el guardado condicionado en los adaptadores en memoria y la regla 2 de ArchUnit ampliada (más una regla 9 que exige que `compartido.concurrencia` sea Java puro).
+- **Pendiente:** el adaptador de MongoDB, con `@Version`, el `updateMany` filtrado y el índice único de `avisos_procesados`.
 - El núcleo tendrá su propia decisión cuando se diseñe el módulo de solicitudes: bloqueo optimista de JPA con `@Version` y toma de la cola con `FOR UPDATE SKIP LOCKED`.

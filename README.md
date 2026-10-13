@@ -46,13 +46,14 @@ co.edu.unimagdalena.samariantour.catalogo
 Las reglas se verifican con ArchUnit en cada build (`ArquitecturaTest`):
 
 1. `dominio` no importa Spring, Jakarta, Jackson, MongoDB, `aplicacion` ni `infraestructura`.
-2. `aplicacion` solo depende de `dominio` (se permiten `@Service` y `@Transactional`).
+2. `aplicacion` solo depende de `dominio` y de `compartido.concurrencia` (se permiten `@Service` y `@Transactional`; ADR-05).
 3. Ningún paquete depende de `infraestructura`.
 4. Un módulo solo importa el paquete `api` de otro módulo.
 5. Los módulos no forman ciclos.
 6. `compartido` no importa ningún módulo.
 7. Los controladores solo llaman puertos de entrada; nunca repositorios ni puertos de salida.
 8. Los documentos Mongo y los repositorios viven en `infraestructura/salida/persistencia`.
+9. `compartido.concurrencia` es Java puro, porque lo usa `aplicacion` (ADR-05).
 
 ## Requisitos
 
