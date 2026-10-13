@@ -109,7 +109,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | `ZonaController` | `GET /zonas` |
 | `AvisoInternoController` | `POST /internal/avisos` |
 
-- En el prototipo tienen endpoint la búsqueda, la ficha, las zonas, publicar, editar y los avisos; el contrato está en `contratos/catalogo.openapi.yaml`. Retirar (`PATCH`) y listar las ofertas propias (`GET /prestador/ofertas`) existen como casos de uso, pero aún no tienen endpoint.
+- En el prototipo todos los casos de uso tienen endpoint; el contrato está en `contratos/catalogo.openapi.yaml`. Retirar no lleva cuerpo y responde 204; retirar una oferta ya retirada no cambia nada y también responde 204. Listar las ofertas propias usa la paginación de DC-14 y devuelve la oferta como la ve su prestador (`OfertaPrestador`), incluidas las retiradas.
 - En el prototipo no se verifica el rol: `ResolutorIdentidad`, en `compartido/seguridad`, solo resuelve quién es el prestador (DC-01). La autorización por rol pasa a Spring Security cuando llegue `libs/seguridad-jwt`, sin tocar los controladores.
 
 **DC-14. Paginación.** `page` empieza en 0, como en Spring Data; `size` vale 20 por defecto y como máximo 100. El tope protege la latencia de QAS-07. Un `page` negativo o un `size` fuera de 1 a 100 responde 400. El orden es estable para que no se repitan ni se salten resultados entre páginas: la búsqueda pública ordena por precio y luego por id; las ofertas del prestador, por id.

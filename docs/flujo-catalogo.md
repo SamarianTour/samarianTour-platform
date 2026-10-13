@@ -205,7 +205,7 @@ Con un aviso posterior (`version: 3`, `true`) todo vuelve a ser visible.
 
 ### Paso 7: Laura retira la oferta
 
-`PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204 (el caso de uso existe; el endpoint todavía no 🔨). Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo.
+`PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204, sin cuerpo. Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo: la oferta sale de la búsqueda, ya no se puede editar (409 OFERTA_NO_EDITABLE) y sigue apareciendo como retirada en `GET /api/catalogo/prestador/ofertas`, la lista de ofertas propias.
 
 ## 6. Dónde está cada cosa
 

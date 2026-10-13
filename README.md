@@ -202,6 +202,8 @@ Otros casos que se pueden mostrar:
 - **RNT inactivo:** con `X-Prestador-Id: 50000000-0000-0000-0000-000000000005` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
 - **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
 - **Edición:** un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
+- **Ofertas propias:** `GET $BASE/prestador/ofertas` con los mismos headers lista las ofertas del guía en cualquier estado, con su versión publicada y la pendiente.
+- **Retiro:** `curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro"` con los mismos headers responde 204. La oferta sale de la búsqueda, sigue en la lista de ofertas propias como `"retirada": true` y un `PUT` posterior responde 409 `OFERTA_NO_EDITABLE`.
 
 ## Cómo contribuir
 
