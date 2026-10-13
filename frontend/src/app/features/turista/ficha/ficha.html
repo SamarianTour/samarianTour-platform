@@ -1,0 +1,289 @@
+<section class="pagina">
+  @switch (estado().tipo) {
+    @case ('cargando') {
+      <p class="texto-suave" aria-live="polite">Cargando la oferta…</p>
+    }
+    @case ('no-disponible') {
+      <div class="tarjeta vacio" role="alert">
+        <h1>Esta oferta ya no está disponible</h1>
+        <p class="texto-suave">Puede que el prestador la haya retirado o que esté en revisión.</p>
+        <a class="boton" routerLink="/">Ver el catálogo</a>
+      </div>
+    }
+    @case ('error') {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensajeDeError() }}</span>
+      </p>
+      <a class="boton boton--secundario" routerLink="/">Volver al catálogo</a>
+    }
+    @case ('lista') {
+      @let oferta = ficha()!;
+
+      <nav class="migas" aria-label="Ruta de navegación">
+        <a routerLink="/">Catálogo</a>
+        <app-icono nombre="chevron" />
+        <span aria-current="page">{{ oferta.nombre }}</span>
+      </nav>
+
+      <div class="ficha__portada portada">
+        <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
+        <span>{{ etiquetaTipo[oferta.tipo] }}</span>
+      </div>
+
+      <div class="ficha">
+        <div class="ficha__principal">
+          <header class="ficha__titulo">
+            <div class="ficha__nombre">
+              <h1>{{ oferta.nombre }}</h1>
+              <span class="etiqueta etiqueta--sello">RNT verificado</span>
+            </div>
+            <p class="texto-suave">
+              {{ etiquetaTipo[oferta.tipo] }}
+              @if (oferta.zona; as zona) {
+                en {{ zona.nombre }}
+              }
+              @if (oferta.perfilPrestador; as perfil) {
+                · Operador: {{ perfil.nombreComercial ?? 'Prestador local' }}
+              }
+            </p>
+          </header>
+
+          @if (oferta.zona; as zona) {
+            @if (zona.areaProtegida) {
+              <p class="alerta alerta--exito">
+                <app-icono nombre="hoja" />
+                <span><strong>Área protegida.</strong> Sigue las buenas prácticas de la zona durante tu visita.</span>
+              </p>
+            }
+            @if (zona.altaAfluencia) {
+              <p class="alerta alerta--aviso">
+                <app-icono nombre="alerta" />
+                <span><strong>Zona de alta afluencia.</strong> Suele estar congestionada en temporada alta.</span>
+              </p>
+            }
+          }
+
+          <section class="tarjeta" aria-labelledby="descripcion-titulo">
+            <h2 id="descripcion-titulo">Descripción</h2>
+            <p class="ficha__texto">{{ oferta.descripcion }}</p>
+          </section>
+
+          @if (oferta.actividad; as actividad) {
+            <section class="tarjeta" aria-labelledby="actividad-titulo">
+              <h2 id="actividad-titulo">Sobre la actividad</h2>
+              <dl class="datos">
+                <div>
+                  <dt>Tipo</dt>
+                  <dd>{{ etiquetaActividad[actividad.tipoActividad] }}</dd>
+                </div>
+                <div>
+                  <dt>Esfuerzo físico</dt>
+                  <dd>{{ etiquetaNivel[actividad.nivelEsfuerzo] }}</dd>
+                </div>
+                <div>
+                  <dt>Horarios de salida</dt>
+                  <dd>{{ actividad.horariosSalida.join(', ') }}</dd>
+                </div>
+                @if (actividad.puntoEncuentro) {
+                  <div>
+                    <dt>Punto de encuentro</dt>
+                    <dd>{{ actividad.puntoEncuentro }}</dd>
+                  </div>
+                }
+                @if (actividad.duracionMinutos) {
+                  <div>
+                    <dt>Duración</dt>
+                    <dd>{{ actividad.duracionMinutos | duracion }}</dd>
+                  </div>
+                }
+                @if (actividad.modalidad) {
+                  <div>
+                    <dt>Modalidad</dt>
+                    <dd>{{ etiquetaModalidad[actividad.modalidad] }}</dd>
+                  </div>
+                }
+                @if (actividad.idiomasAtencion?.length) {
+                  <div>
+                    <dt>Idiomas</dt>
+                    <dd>{{ actividad.idiomasAtencion?.join(', ') }}</dd>
+                  </div>
+                }
+              </dl>
+            </section>
+          }
+
+          @if (oferta.paquete; as paquete) {
+            <section class="tarjeta" aria-labelledby="paquete-titulo">
+              <h2 id="paquete-titulo">Actividades incluidas</h2>
+              <ul class="lista-enlaces incluidas">
+                @for (actividad of paquete.actividades; track actividad.id) {
+                  <li>
+                    <a [routerLink]="['/ofertas', actividad.id]">
+                      <app-icono nombre="actividad" />
+                      {{ actividad.nombre }}
+                    </a>
+                  </li>
+                }
+              </ul>
+              <dl class="datos">
+                <div>
+                  <dt>Esfuerzo físico</dt>
+                  <dd>{{ etiquetaNivel[paquete.nivelEsfuerzo] }} (el mayor de sus actividades)</dd>
+                </div>
+                <div>
+                  <dt>Tipos de actividad</dt>
+                  <dd>
+                    @for (tipo of paquete.tiposActividad; track tipo; let ultimo = $last) {
+                      {{ etiquetaActividad[tipo] }}{{ ultimo ? '' : ', ' }}
+                    }
+                  </dd>
+                </div>
+                <div>
+                  <dt>Duración</dt>
+                  <dd>{{ paquete.duracionMinutos | duracion }}</dd>
+                </div>
+                <div>
+                  <dt>Horarios de salida</dt>
+                  <dd>{{ paquete.horariosSalida.join(', ') }}</dd>
+                </div>
+              </dl>
+            </section>
+          }
+
+          @if (oferta.alojamiento?.tipoUnidad; as tipoUnidad) {
+            <section class="tarjeta" aria-labelledby="alojamiento-titulo">
+              <h2 id="alojamiento-titulo">Sobre el alojamiento</h2>
+              <dl class="datos">
+                <div>
+                  <dt>Tipo de unidad</dt>
+                  <dd class="mayuscula-inicial">{{ tipoUnidad }}</dd>
+                </div>
+              </dl>
+            </section>
+          }
+
+          @if (oferta.ubicacion; as ubicacion) {
+            <section class="tarjeta" aria-labelledby="ubicacion-titulo">
+              <h2 id="ubicacion-titulo">Ubicación</h2>
+              @if (oferta.comoLlegar) {
+                <p class="ficha__texto">{{ oferta.comoLlegar }}</p>
+              }
+              <app-mapa [ubicacion]="ubicacion" [descripcion]="'Mapa con la ubicación de ' + oferta.nombre" />
+              <p class="ficha__mapa-enlace">
+                <a class="boton boton--secundario" [href]="comoLlegar()" target="_blank" rel="noopener noreferrer">
+                  <app-icono nombre="externo" />
+                  Cómo llegar
+                  <span class="solo-lectores">(abre Google Maps en otra pestaña)</span>
+                </a>
+              </p>
+            </section>
+          }
+
+          @if (oferta.zona; as zona) {
+            <section class="tarjeta" aria-labelledby="zona-titulo">
+              <h2 id="zona-titulo">Zona: {{ zona.nombre }}</h2>
+              @if (zona.descripcion) {
+                <p class="ficha__texto">{{ zona.descripcion }}</p>
+              }
+              @if (zona.buenasPracticas.length > 0) {
+                <h3 class="rotulo">Buenas prácticas</h3>
+                <ul class="practicas">
+                  @for (practica of zona.buenasPracticas; track practica) {
+                    <li>
+                      <app-icono nombre="hoja" />
+                      <span>{{ practica }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (zona.condicionesVisita) {
+                <h3 class="rotulo">Condiciones de visita</h3>
+                <p class="ficha__texto">{{ zona.condicionesVisita }}</p>
+              }
+            </section>
+          }
+        </div>
+
+        <aside class="ficha__lateral">
+          <section class="tarjeta resumen" aria-label="Resumen de la oferta">
+            <div class="resumen__precio">
+              <p class="texto-suave">Precio de referencia</p>
+              <p class="ficha__precio">
+                <strong>{{ oferta.precioReferencia | precio }}</strong>&ngsp;
+                <span>{{ oferta.unidadPrecio }}</span>
+              </p>
+            </div>
+            <p class="campo__ayuda">Informativo y no vinculante.</p>
+
+            <hr class="separador" />
+
+            <ul class="resumen__lista">
+              @if (oferta.zona; as zona) {
+                <li>
+                  <app-icono nombre="ubicacion" />
+                  <span>Zona: {{ zona.nombre }}</span>
+                </li>
+              }
+              @if (oferta.horarios) {
+                <li>
+                  <app-icono nombre="reloj" />
+                  <span>Horario: {{ oferta.horarios }}</span>
+                </li>
+              }
+              <li>
+                <app-icono nombre="personas" />
+                <span>
+                  Capacidad máxima: {{ oferta.capacidadMaxima }}
+                  {{ oferta.capacidadMaxima === 1 ? 'persona' : 'personas' }}
+                </span>
+              </li>
+              @if (nivelEsfuerzo(); as nivel) {
+                <li>
+                  <app-icono nombre="esfuerzo" />
+                  <span class="etiqueta etiqueta--sello etiqueta--neutra">Esfuerzo {{ etiquetaNivel[nivel] }}</span>
+                </li>
+              }
+              <li>
+                <app-icono nombre="silla" />
+                @if (oferta.accesibleSillaRuedas) {
+                  <span class="etiqueta etiqueta--sello">Accesible en silla de ruedas</span>
+                } @else {
+                  <span>No es accesible en silla de ruedas</span>
+                }
+              </li>
+            </ul>
+          </section>
+
+          @if (oferta.perfilPrestador; as perfil) {
+            <section class="tarjeta" aria-labelledby="prestador-titulo">
+              <p class="rotulo">Prestador</p>
+              <h2 id="prestador-titulo">{{ perfil.nombreComercial ?? 'Prestador local' }}</h2>
+              <p class="ficha__texto">{{ perfil.descripcion }}</p>
+              @if (perfil.horariosAtencion) {
+                <p class="prestador__horario">
+                  <app-icono nombre="reloj" />
+                  <span>Atención: {{ perfil.horariosAtencion }}</span>
+                </p>
+              }
+              @if (perfil.sitioWeb || perfil.redesSociales.length > 0) {
+                <ul class="lista-enlaces">
+                  @if (perfil.sitioWeb; as sitio) {
+                    <li>
+                      <a [href]="sitio" target="_blank" rel="noopener noreferrer">Sitio web: {{ dominio(sitio) }}</a>
+                    </li>
+                  }
+                  @for (red of perfil.redesSociales; track red) {
+                    <li>
+                      <a [href]="red" target="_blank" rel="noopener noreferrer">Red social: {{ dominio(red) }}</a>
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+          }
+        </aside>
+      </div>
+    }
+  }
+</section>
