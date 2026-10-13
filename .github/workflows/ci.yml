@@ -22,3 +22,34 @@ jobs:
 
       - name: Construir imagen del catálogo
         run: docker build -f servicios/catalogo/Dockerfile -t samarian-tour/catalogo:ci .
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Los tipos de la API se generan desde contratos/catalogo.openapi.yaml y están versionados:
+      # si el contrato cambió y no se regeneraron, el build falla aquí.
+      - name: Generar tipos desde el contrato
+        run: npm run gen:api
+
+      - name: Verificar que los tipos versionados están al día
+        run: git diff --exit-code -- src/app/core/api/catalogo-api.ts
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Probar
+        run: npm test -- --no-watch

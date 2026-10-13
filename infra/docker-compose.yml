@@ -45,8 +45,11 @@ services:
     mem_limit: 512m
     restart: unless-stopped
 
+  # Nginx sirve el frontend ya compilado y reenvía /api/catalogo/ al catálogo.
   nginx:
-    image: nginx:1.27-alpine
+    build:
+      context: ../frontend
+    image: samarian-tour/frontend:latest
     ports:
       - "8080:8080"
     volumes:

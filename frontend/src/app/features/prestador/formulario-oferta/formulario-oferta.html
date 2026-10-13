@@ -1,0 +1,515 @@
+<section class="pagina">
+  <nav class="migas" aria-label="Ruta de navegación">
+    <a routerLink="/prestador/ofertas">Mis ofertas</a>
+    <app-icono nombre="chevron" />
+    <span aria-current="page">{{ editando() ? 'Editar oferta' : 'Publicar oferta' }}</span>
+  </nav>
+
+  <header class="encabezado">
+    <h1>{{ editando() ? 'Editar oferta' : 'Publicar oferta' }}</h1>
+    <p class="texto-suave">
+      Al guardar, la oferta va a moderación.
+      @if (editando()) {
+        La versión publicada sigue visible mientras se revisan los cambios.
+      }
+    </p>
+  </header>
+
+  @switch (estado().tipo) {
+    @case ('cargando') {
+      <p class="texto-suave" aria-live="polite">Cargando el formulario…</p>
+    }
+    @case ('bloqueada') {
+      <p class="alerta alerta--aviso" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensajeDeBloqueo() }}</span>
+      </p>
+      <a class="boton boton--secundario" routerLink="/prestador/ofertas">Volver a mis ofertas</a>
+    }
+    @case ('lista') {
+      @if (conCambiosEnRevision()) {
+        <p class="alerta alerta--aviso formulario__aviso">
+          <app-icono nombre="alerta" />
+          <span>
+            Esta oferta ya tiene cambios en revisión. El formulario parte de la versión publicada; al guardar, la
+            versión nueva reemplaza a la que está pendiente.
+          </span>
+        </p>
+      }
+
+      <form class="formulario" [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <p class="campo__ayuda">Los campos con <span class="requerido" aria-hidden="true">*</span><span class="solo-lectores">asterisco</span> son obligatorios.</p>
+        <section class="tarjeta seccion" aria-labelledby="general-titulo">
+          <h2 id="general-titulo">Datos generales</h2>
+
+          @if (editando()) {
+            <p class="tipo-fijo">
+              Tipo de oferta: <strong>{{ etiquetaTipo[tipo()] }}</strong>
+            </p>
+          } @else if (tiposPermitidos.length > 1) {
+            <fieldset class="grupo">
+              <legend>Tipo de oferta</legend>
+              <div class="opciones">
+                @for (opcion of tiposPermitidos; track opcion) {
+                  <label class="opcion">
+                    <input type="radio" formControlName="tipo" [value]="opcion" />
+                    <span>{{ etiquetaTipo[opcion] }}</span>
+                  </label>
+                }
+              </div>
+            </fieldset>
+          } @else {
+            <p class="tipo-fijo">
+              Tipo de oferta: <strong>{{ etiquetaTipo[tipo()] }}</strong>
+              <span class="texto-suave"> (el único que publica tu tipo de prestador)</span>
+            </p>
+          }
+
+          <div class="campo">
+            <label for="nombre">Nombre <span class="requerido" aria-hidden="true">*</span></label>
+            <input
+              id="nombre"
+              type="text"
+              formControlName="nombre"
+              autocomplete="off"
+              aria-required="true"
+              [attr.aria-invalid]="errorDe('nombre') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('nombre') ? 'nombre-error' : null"
+            />
+            @if (errorDe('nombre'); as mensaje) {
+              <p class="campo__error" id="nombre-error">{{ mensaje }}</p>
+            }
+          </div>
+
+          <div class="campo">
+            <label for="descripcion">Descripción <span class="requerido" aria-hidden="true">*</span></label>
+            <textarea
+              id="descripcion"
+              formControlName="descripcion"
+              aria-required="true"
+              [attr.aria-invalid]="errorDe('descripcion') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('descripcion') ? 'descripcion-error' : null"
+            ></textarea>
+            @if (errorDe('descripcion'); as mensaje) {
+              <p class="campo__error" id="descripcion-error">{{ mensaje }}</p>
+            }
+          </div>
+
+          <div class="campo-doble">
+            <div class="campo">
+              <label for="precioReferencia">Precio de referencia (COP) <span class="requerido" aria-hidden="true">*</span></label>
+              <input
+                id="precioReferencia"
+                type="number"
+                min="0"
+                step="1000"
+                inputmode="numeric"
+                formControlName="precioReferencia"
+                aria-required="true"
+                [attr.aria-invalid]="errorDe('precioReferencia') ? 'true' : null"
+                [attr.aria-describedby]="
+                  errorDe('precioReferencia') ? 'precioReferencia-error precioReferencia-ayuda' : 'precioReferencia-ayuda'
+                "
+              />
+              <p class="campo__ayuda" id="precioReferencia-ayuda">Se muestra {{ unidad[tipo()] }}. Es informativo.</p>
+              @if (errorDe('precioReferencia'); as mensaje) {
+                <p class="campo__error" id="precioReferencia-error">{{ mensaje }}</p>
+              }
+            </div>
+
+            <div class="campo">
+              <label for="capacidadMaxima">Capacidad máxima <span class="requerido" aria-hidden="true">*</span></label>
+              <input
+                id="capacidadMaxima"
+                type="number"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                formControlName="capacidadMaxima"
+                aria-required="true"
+                [attr.aria-invalid]="errorDe('capacidadMaxima') ? 'true' : null"
+                [attr.aria-describedby]="
+                  errorDe('capacidadMaxima') ? 'capacidadMaxima-error capacidadMaxima-ayuda' : 'capacidadMaxima-ayuda'
+                "
+              />
+              <p class="campo__ayuda" id="capacidadMaxima-ayuda">Personas por solicitud.</p>
+              @if (errorDe('capacidadMaxima'); as mensaje) {
+                <p class="campo__error" id="capacidadMaxima-error">{{ mensaje }}</p>
+              }
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="zonaId">Zona <span class="requerido" aria-hidden="true">*</span></label>
+            <select
+              id="zonaId"
+              formControlName="zonaId"
+              aria-required="true"
+              [attr.aria-invalid]="errorDe('zonaId') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('zonaId') ? 'zonaId-error' : null"
+            >
+              <option value="">Elige una zona</option>
+              @for (zona of zonas(); track zona.id) {
+                <option [value]="zona.id">{{ zona.nombre }}</option>
+              }
+            </select>
+            @if (errorDe('zonaId'); as mensaje) {
+              <p class="campo__error" id="zonaId-error">{{ mensaje }}</p>
+            }
+          </div>
+
+          <div class="campo">
+            <label for="horarios">Horarios</label>
+            <input
+              id="horarios"
+              type="text"
+              formControlName="horarios"
+              autocomplete="off"
+              aria-describedby="horarios-ayuda"
+              [attr.aria-invalid]="errorDe('horarios') ? 'true' : null"
+            />
+            <p class="campo__ayuda" id="horarios-ayuda">Días o franja de operación, por ejemplo “Todos los días, 8:00 a 17:00”.</p>
+            @if (errorDe('horarios'); as mensaje) {
+              <p class="campo__error">{{ mensaje }}</p>
+            }
+          </div>
+
+          @if (tipo() !== 'PAQUETE') {
+            <label class="opcion">
+              <input id="accesibleSillaRuedas" type="checkbox" formControlName="accesibleSillaRuedas" />
+              <span>Accesible en silla de ruedas</span>
+            </label>
+          }
+        </section>
+
+        @if (tipo() === 'ACTIVIDAD') {
+          <section class="tarjeta seccion" aria-labelledby="actividad-titulo">
+            <h2 id="actividad-titulo">Datos de la actividad</h2>
+            @if (exigeRecorrido) {
+              <p class="campo__ayuda">Como guía independiente debes completar los datos del recorrido.</p>
+            }
+
+            <div class="campo-doble">
+              <div class="campo">
+                <label for="tipoActividad">Tipo de actividad <span class="requerido" aria-hidden="true">*</span></label>
+                <select
+                  id="tipoActividad"
+                  formControlName="tipoActividad"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('tipoActividad') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('tipoActividad') ? 'tipoActividad-error' : null"
+                >
+                  <option value="">Elige un tipo</option>
+                  @for (opcion of tiposActividad; track opcion) {
+                    <option [value]="opcion">{{ etiquetaActividad[opcion] }}</option>
+                  }
+                </select>
+                @if (errorDe('tipoActividad'); as mensaje) {
+                  <p class="campo__error" id="tipoActividad-error">{{ mensaje }}</p>
+                }
+              </div>
+
+              <div class="campo">
+                <label for="nivelEsfuerzo">Esfuerzo físico <span class="requerido" aria-hidden="true">*</span></label>
+                <select
+                  id="nivelEsfuerzo"
+                  formControlName="nivelEsfuerzo"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('nivelEsfuerzo') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('nivelEsfuerzo') ? 'nivelEsfuerzo-error' : null"
+                >
+                  <option value="">Elige un nivel</option>
+                  @for (opcion of niveles; track opcion) {
+                    <option [value]="opcion">{{ etiquetaNivel[opcion] }}</option>
+                  }
+                </select>
+                @if (errorDe('nivelEsfuerzo'); as mensaje) {
+                  <p class="campo__error" id="nivelEsfuerzo-error">{{ mensaje }}</p>
+                }
+              </div>
+            </div>
+
+            <div class="campo-doble">
+              <div class="campo">
+                <label for="horariosSalida">Horarios de salida <span class="requerido" aria-hidden="true">*</span></label>
+                <input
+                  id="horariosSalida"
+                  type="text"
+                  formControlName="horariosSalida"
+                  autocomplete="off"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('horariosSalida') ? 'true' : null"
+                  [attr.aria-describedby]="
+                    errorDe('horariosSalida') ? 'horariosSalida-error horariosSalida-ayuda' : 'horariosSalida-ayuda'
+                  "
+                />
+                <p class="campo__ayuda" id="horariosSalida-ayuda">Horas en formato de 24 horas, separadas por comas: 07:30, 14:00.</p>
+                @if (errorDe('horariosSalida'); as mensaje) {
+                  <p class="campo__error" id="horariosSalida-error">{{ mensaje }}</p>
+                }
+              </div>
+
+              <div class="campo">
+                <label for="duracionMinutos">
+                  Duración en minutos
+                  @if (exigeRecorrido) {
+                    <span class="requerido" aria-hidden="true">*</span>
+                  }
+                </label>
+                <input
+                  id="duracionMinutos"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  formControlName="duracionMinutos"
+                  [attr.aria-required]="exigeRecorrido ? 'true' : null"
+                  [attr.aria-invalid]="errorDe('duracionMinutos') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('duracionMinutos') ? 'duracionMinutos-error' : null"
+                />
+                @if (errorDe('duracionMinutos'); as mensaje) {
+                  <p class="campo__error" id="duracionMinutos-error">{{ mensaje }}</p>
+                }
+              </div>
+            </div>
+
+            <div class="campo">
+              <label for="puntoEncuentro">
+                Punto de encuentro
+                @if (exigeRecorrido) {
+                  <span class="requerido" aria-hidden="true">*</span>
+                }
+              </label>
+              <input
+                id="puntoEncuentro"
+                type="text"
+                formControlName="puntoEncuentro"
+                autocomplete="off"
+                [attr.aria-required]="exigeRecorrido ? 'true' : null"
+                [attr.aria-invalid]="errorDe('puntoEncuentro') ? 'true' : null"
+                [attr.aria-describedby]="errorDe('puntoEncuentro') ? 'puntoEncuentro-error' : null"
+              />
+              @if (errorDe('puntoEncuentro'); as mensaje) {
+                <p class="campo__error" id="puntoEncuentro-error">{{ mensaje }}</p>
+              }
+            </div>
+
+            <div class="campo-doble">
+              <div class="campo">
+                <label for="modalidad">
+                  Modalidad del recorrido
+                  @if (exigeRecorrido) {
+                    <span class="requerido" aria-hidden="true">*</span>
+                  }
+                </label>
+                <select
+                  id="modalidad"
+                  formControlName="modalidad"
+                  [attr.aria-required]="exigeRecorrido ? 'true' : null"
+                  [attr.aria-invalid]="errorDe('modalidad') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('modalidad') ? 'modalidad-error' : null"
+                >
+                  <option value="">Sin definir</option>
+                  @for (opcion of modalidades; track opcion) {
+                    <option [value]="opcion">{{ etiquetaModalidad[opcion] }}</option>
+                  }
+                </select>
+                @if (errorDe('modalidad'); as mensaje) {
+                  <p class="campo__error" id="modalidad-error">{{ mensaje }}</p>
+                }
+              </div>
+
+              <div class="campo">
+                <label for="idiomasAtencion">
+                  Idiomas de atención
+                  @if (exigeRecorrido) {
+                    <span class="requerido" aria-hidden="true">*</span>
+                  }
+                </label>
+                <input
+                  id="idiomasAtencion"
+                  type="text"
+                  formControlName="idiomasAtencion"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  [attr.aria-required]="exigeRecorrido ? 'true' : null"
+                  [attr.aria-invalid]="errorDe('idiomasAtencion') ? 'true' : null"
+                  [attr.aria-describedby]="
+                    errorDe('idiomasAtencion') ? 'idiomasAtencion-error idiomasAtencion-ayuda' : 'idiomasAtencion-ayuda'
+                  "
+                />
+                <p class="campo__ayuda" id="idiomasAtencion-ayuda">Códigos de dos letras separados por comas: es, en.</p>
+                @if (errorDe('idiomasAtencion'); as mensaje) {
+                  <p class="campo__error" id="idiomasAtencion-error">{{ mensaje }}</p>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (tipo() === 'PAQUETE') {
+          <section class="tarjeta seccion" aria-labelledby="paquete-titulo">
+            <h2 id="paquete-titulo">Datos del paquete</h2>
+
+            <fieldset
+              class="grupo"
+              id="actividadIds"
+              tabindex="-1"
+              [attr.aria-invalid]="errorDe('actividadIds') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('actividadIds') ? 'actividadIds-error actividadIds-ayuda' : 'actividadIds-ayuda'"
+            >
+              <legend>Actividades incluidas <span class="requerido" aria-hidden="true">*</span></legend>
+              <p class="campo__ayuda" id="actividadIds-ayuda">
+                Elige {{ minimoActividades }} o más de tus actividades. El esfuerzo físico y la accesibilidad del paquete
+                salen de ellas.
+              </p>
+              @for (actividad of actividades(); track actividad.id) {
+                <label class="opcion">
+                  <input
+                    type="checkbox"
+                    [checked]="marcada(actividad.id)"
+                    (change)="alternarActividad(actividad.id, $any($event.target).checked)"
+                  />
+                  <span>
+                    {{ actividad.nombre }}
+                    @if (actividad.sinAprobar) {
+                      <span class="texto-suave">(aún sin aprobar)</span>
+                    }
+                  </span>
+                </label>
+              } @empty {
+                <p class="alerta alerta--aviso">
+                  No tienes actividades para incluir. Publica primero al menos {{ minimoActividades }} actividades.
+                </p>
+              }
+              @if (errorDe('actividadIds'); as mensaje) {
+                <p class="campo__error" id="actividadIds-error">{{ mensaje }}</p>
+              }
+            </fieldset>
+
+            <div class="campo-doble">
+              <div class="campo">
+                <label for="horariosSalida">Horarios de salida <span class="requerido" aria-hidden="true">*</span></label>
+                <input
+                  id="horariosSalida"
+                  type="text"
+                  formControlName="horariosSalida"
+                  autocomplete="off"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('horariosSalida') ? 'true' : null"
+                  [attr.aria-describedby]="
+                    errorDe('horariosSalida') ? 'horariosSalida-error horariosSalida-ayuda' : 'horariosSalida-ayuda'
+                  "
+                />
+                <p class="campo__ayuda" id="horariosSalida-ayuda">Horas en formato de 24 horas, separadas por comas: 07:30, 14:00.</p>
+                @if (errorDe('horariosSalida'); as mensaje) {
+                  <p class="campo__error" id="horariosSalida-error">{{ mensaje }}</p>
+                }
+              </div>
+
+              <div class="campo">
+                <label for="duracionMinutos">Duración en minutos <span class="requerido" aria-hidden="true">*</span></label>
+                <input
+                  id="duracionMinutos"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  formControlName="duracionMinutos"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('duracionMinutos') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('duracionMinutos') ? 'duracionMinutos-error' : null"
+                />
+                @if (errorDe('duracionMinutos'); as mensaje) {
+                  <p class="campo__error" id="duracionMinutos-error">{{ mensaje }}</p>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (tipo() === 'ALOJAMIENTO') {
+          <section class="tarjeta seccion" aria-labelledby="alojamiento-titulo">
+            <h2 id="alojamiento-titulo">Datos del alojamiento</h2>
+            <div class="campo">
+              <label for="tipoUnidad">Tipo de unidad</label>
+              <input
+                id="tipoUnidad"
+                type="text"
+                formControlName="tipoUnidad"
+                autocomplete="off"
+                aria-describedby="tipoUnidad-ayuda"
+                [attr.aria-invalid]="errorDe('tipoUnidad') ? 'true' : null"
+              />
+              <p class="campo__ayuda" id="tipoUnidad-ayuda">Por ejemplo: cabaña, habitación doble, hamaca.</p>
+              @if (errorDe('tipoUnidad'); as mensaje) {
+                <p class="campo__error">{{ mensaje }}</p>
+              }
+            </div>
+          </section>
+        }
+
+        <section class="tarjeta seccion" aria-labelledby="ubicacion-titulo">
+          <h2 id="ubicacion-titulo">Ubicación <span class="opcional">(opcional)</span></h2>
+          <p class="campo__ayuda" id="mapa-ayuda">
+            Haz clic en el mapa para poner el pin donde está la oferta. Para moverlo, haz clic en otro punto.
+          </p>
+          <app-mapa
+            [ubicacion]="ubicacion()"
+            [editable]="true"
+            descripcion="Mapa para elegir la ubicación de la oferta"
+            (ubicacionElegida)="ponerUbicacion($event)"
+          />
+
+          <div class="campo-doble">
+            <div class="campo">
+              <label for="latitud">Latitud</label>
+              <input id="latitud" type="text" readonly [value]="ubicacion()?.latitud ?? ''" placeholder="Sin ubicación" />
+            </div>
+            <div class="campo">
+              <label for="longitud">Longitud</label>
+              <input id="longitud" type="text" readonly [value]="ubicacion()?.longitud ?? ''" placeholder="Sin ubicación" />
+            </div>
+          </div>
+
+          <div>
+            <button type="button" class="boton boton--secundario" [disabled]="!ubicacion()" (click)="quitarUbicacion()">
+              Quitar ubicación
+            </button>
+          </div>
+
+          <div class="campo">
+            <label for="comoLlegar">Cómo llegar</label>
+            <textarea
+              id="comoLlegar"
+              class="corto"
+              formControlName="comoLlegar"
+              [attr.aria-invalid]="errorDe('comoLlegar') ? 'true' : null"
+            ></textarea>
+            @if (errorDe('comoLlegar'); as mensaje) {
+              <p class="campo__error">{{ mensaje }}</p>
+            }
+          </div>
+        </section>
+
+        @if (errorGeneral(); as mensaje) {
+          <p class="alerta alerta--error" role="alert">
+            <app-icono nombre="alerta" />
+            <span>{{ mensaje }}</span>
+          </p>
+        }
+
+        <div class="acciones">
+          <p class="alerta alerta--info">
+            <app-icono nombre="info" />
+            <span>Un administrador revisa la oferta antes de que se vea en el catálogo.</span>
+          </p>
+          <button type="submit" class="boton" [disabled]="guardando()">
+            {{ guardando() ? 'Enviando…' : 'Enviar a moderación' }}
+          </button>
+          <a class="boton boton--secundario" routerLink="/prestador/ofertas">Cancelar</a>
+        </div>
+      </form>
+    }
+  }
+</section>

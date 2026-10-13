@@ -70,7 +70,7 @@ Solo se usan estos:
 
 ### Alcances
 
-El alcance es opcional. Si se usa, es uno de estos: `catalogo`, `nucleo`, `recomendacion`, `seguridad-jwt`, `contratos`, `infra`, `ci`.
+El alcance es opcional. Si se usa, es uno de estos: `catalogo`, `nucleo`, `recomendacion`, `seguridad-jwt`, `contratos`, `frontend`, `infra`, `ci`.
 
 ### Reglas
 

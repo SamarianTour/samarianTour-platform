@@ -1,0 +1,96 @@
+<section class="pagina">
+  <nav class="migas" aria-label="Ruta de navegación">
+    <a routerLink="/prestador/ofertas">Mis ofertas</a>
+    <app-icono nombre="chevron" />
+    <span aria-current="page">Detalle de la oferta</span>
+  </nav>
+
+  @switch (estado().tipo) {
+    @case ('cargando') {
+      <p class="texto-suave" aria-live="polite">Cargando la oferta…</p>
+    }
+    @case ('no-encontrada') {
+      <div class="tarjeta vacio" role="alert">
+        <h1>No encontramos esta oferta entre las tuyas</h1>
+        <p class="texto-suave">Revisa que el prestador demo elegido sea el dueño de la oferta.</p>
+        <a class="boton" routerLink="/prestador/ofertas">Ver mis ofertas</a>
+      </div>
+    }
+    @case ('error') {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensajeDeError() }}</span>
+      </p>
+    }
+    @case ('lista') {
+      @let propia = oferta()!;
+      @let calculado = estadoCalculado()!;
+
+      <header class="encabezado detalle__cabecera">
+        <div>
+          <p class="rotulo">{{ etiquetaTipo[propia.tipo] }}</p>
+          <h1>{{ (propia.pendiente ?? propia.publicada)?.nombre }}</h1>
+        </div>
+        <span class="etiqueta" [class]="claseDeEstado[calculado]">{{ etiquetaEstado[calculado] }}</span>
+      </header>
+
+      <div class="versiones">
+        @for (columna of versiones(); track columna.titulo) {
+          <section class="tarjeta" [attr.aria-label]="columna.titulo">
+            <h2>{{ columna.titulo }}</h2>
+            @if (columna.version; as version) {
+              <dl class="renglones">
+                <div>
+                  <dt>Número de versión</dt>
+                  <dd>{{ version.numero }}</dd>
+                </div>
+                <div>
+                  <dt>Estado de moderación</dt>
+                  <dd>{{ etiquetaModeracion[version.estadoModeracion] }}</dd>
+                </div>
+                <div>
+                  <dt>Enviada a moderación</dt>
+                  <dd>{{ version.enviadaEn | date: 'd MMM y, h:mm a' }}</dd>
+                </div>
+                <div>
+                  <dt>Revisada</dt>
+                  <dd>{{ version.revisadaEn ? (version.revisadaEn | date: 'd MMM y, h:mm a') : 'Aún no' }}</dd>
+                </div>
+                @if (version.motivoRechazo) {
+                  <div class="renglon--rechazo">
+                    <dt>Motivo del rechazo</dt>
+                    <dd>{{ version.motivoRechazo }}</dd>
+                  </div>
+                }
+                <div>
+                  <dt>Nombre</dt>
+                  <dd>{{ version.nombre }}</dd>
+                </div>
+                <div>
+                  <dt>Precio de referencia</dt>
+                  <dd class="renglon__precio">{{ version.precioReferencia | precio: unidad[propia.tipo] }}</dd>
+                </div>
+              </dl>
+            } @else {
+              <p class="texto-suave">{{ columna.vacio }}</p>
+            }
+          </section>
+        }
+      </div>
+
+      <div class="acciones">
+        @if (editable()) {
+          <a class="boton" [routerLink]="['/prestador/ofertas', propia.id, 'editar']">Editar oferta</a>
+        } @else if (!propia.retirada) {
+          <p class="alerta alerta--info">
+            <app-icono nombre="info" />
+            <span>Podrás editarla cuando tenga una versión publicada.</span>
+          </p>
+        }
+        @if (propia.publicada && !propia.retirada) {
+          <a class="boton boton--secundario" [routerLink]="['/ofertas', propia.id]">Ver en el catálogo</a>
+        }
+      </div>
+    }
+  }
+</section>
