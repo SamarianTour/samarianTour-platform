@@ -13,6 +13,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Version
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.VersionRestaurante;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.politica.ReglasPaquete;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
 
 import org.bson.types.ObjectId;
@@ -31,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /**
- * Ofertas en la memoria del proceso, para el prototipo mientras no exista el adaptador de MongoDB.
+ * Ofertas en la memoria del proceso, para el perfil {@code memoria}: la demostración y las pruebas sin MongoDB.
  *
  * <p>Guarda y entrega copias, igual que una base de datos: un cambio que no se guarda no queda registrado.
  * Cada réplica del servicio tiene su propia memoria, así que lo que se escribe en una no lo ve la otra.
@@ -50,8 +51,9 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
         this(DatosSantaMarta.ofertas());
     }
 
+    /** Guarda las iniciales como cualquier oferta, así que quedan con la revisión siguiente, como en MongoDB. */
     public OfertaMemoriaAdapter(Collection<Oferta> iniciales) {
-        iniciales.forEach(oferta -> ofertas.put(oferta.id(), CopiaOferta.de(oferta)));
+        iniciales.forEach(this::guardarComparandoRevision);
     }
 
     /** Mismo formato que en MongoDB, para que los identificadores no cambien al cambiar de perfil (DC-30). */
@@ -67,6 +69,10 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
 
     @Override
     public void guardar(Oferta oferta) {
+        guardarComparandoRevision(oferta);
+    }
+
+    private void guardarComparandoRevision(Oferta oferta) {
         // compute es atómico por clave: la comparación y el guardado no se intercalan con otra escritura.
         ofertas.compute(oferta.id(), (id, guardada) -> {
             long revisionGuardada = guardada == null ? Oferta.REVISION_NUEVA : guardada.revision();

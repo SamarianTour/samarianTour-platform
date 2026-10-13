@@ -1,4 +1,4 @@
-package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria;
+package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
@@ -17,13 +17,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.AGENCIA_SIN_RNT;
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.CAMINATA_CABO_SAN_JUAN;
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.CENTRO_HISTORICO;
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.MINCA;
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.PASEO_LANCHA_PLAYA_BLANCA;
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.TAGANGA;
-import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria.DatosSantaMarta.TAYRONA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.AGENCIA_SIN_RNT;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CAMINATA_CABO_SAN_JUAN;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CENTRO_HISTORICO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.MINCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.PASEO_LANCHA_PLAYA_BLANCA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAGANGA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAYRONA;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

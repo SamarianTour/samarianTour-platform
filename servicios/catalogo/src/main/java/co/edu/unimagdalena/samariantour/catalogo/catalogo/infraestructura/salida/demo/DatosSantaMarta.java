@@ -1,4 +1,4 @@
-package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria;
+package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ContenidoComun;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coordenada;
@@ -36,54 +36,54 @@ import java.util.stream.Collectors;
  * <p>Los identificadores son fijos para que todas las réplicas arranquen con los mismos datos. Las ofertas
  * se construyen con las operaciones del dominio (publicar, aprobar, editar), así que cumplen sus reglas.
  */
-final class DatosSantaMarta {
+public final class DatosSantaMarta {
 
-    static final UUID AGENCIA = UUID.fromString("10000000-0000-0000-0000-000000000001");
-    static final UUID GUIA = UUID.fromString("20000000-0000-0000-0000-000000000002");
-    static final UUID HOTEL = UUID.fromString("30000000-0000-0000-0000-000000000003");
-    static final UUID RESTAURANTE = UUID.fromString("40000000-0000-0000-0000-000000000004");
+    public static final UUID AGENCIA = UUID.fromString("10000000-0000-0000-0000-000000000001");
+    public static final UUID GUIA = UUID.fromString("20000000-0000-0000-0000-000000000002");
+    public static final UUID HOTEL = UUID.fromString("30000000-0000-0000-0000-000000000003");
+    public static final UUID RESTAURANTE = UUID.fromString("40000000-0000-0000-0000-000000000004");
     /** Agencia a la que el núcleo le retiró la habilitación: sus ofertas no son visibles (RF-77). */
-    static final UUID AGENCIA_SIN_RNT = UUID.fromString("50000000-0000-0000-0000-000000000005");
+    public static final UUID AGENCIA_SIN_RNT = UUID.fromString("50000000-0000-0000-0000-000000000005");
 
-    static final String CENTRO_HISTORICO = "a00000000000000000000001";
-    static final String RODADERO = "a00000000000000000000002";
-    static final String TAGANGA = "a00000000000000000000003";
-    static final String ZONA_SUR = "a00000000000000000000004";
-    static final String TAYRONA = "a00000000000000000000005";
-    static final String TRONCAL = "a00000000000000000000006";
-    static final String MINCA = "a00000000000000000000007";
+    public static final String CENTRO_HISTORICO = "a00000000000000000000001";
+    public static final String RODADERO = "a00000000000000000000002";
+    public static final String TAGANGA = "a00000000000000000000003";
+    public static final String ZONA_SUR = "a00000000000000000000004";
+    public static final String TAYRONA = "a00000000000000000000005";
+    public static final String TRONCAL = "a00000000000000000000006";
+    public static final String MINCA = "a00000000000000000000007";
 
     // Identificadores fijos con formato ObjectId (DC-30): iguales en memoria y en la precarga de MongoDB.
-    static final String CAMINATA_CABO_SAN_JUAN = "b00000000000000000000001";
-    static final String SNORKEL_PLAYA_CRISTAL = "b00000000000000000000002";
-    static final String BAUTIZO_BUCEO_TAGANGA = "b00000000000000000000003";
-    static final String KAYAK_BAHIA_TAGANGA = "b00000000000000000000004";
-    static final String TUBING_RIO_BURITACA = "b00000000000000000000005";
-    static final String RECORRIDO_CENTRO_HISTORICO = "b00000000000000000000006";
-    static final String ATARDECER_VELERO_BAHIA = "b00000000000000000000007";
-    static final String PAQUETE_TAYRONA_MAR_Y_SELVA = "b00000000000000000000008";
-    static final String PAQUETE_TAGANGA_BAJO_EL_AGUA = "b00000000000000000000009";
-    static final String AVISTAMIENTO_AVES_MINCA = "b0000000000000000000000a";
-    static final String RUTA_CAFE_CACAO_MINCA = "b0000000000000000000000b";
-    static final String CAMINATA_POZO_AZUL_MARINKA = "b0000000000000000000000c";
-    static final String DESCENSO_BICICLETA_SIERRA = "b0000000000000000000000d";
-    static final String PAQUETE_MINCA_AVES_Y_CAFE = "b0000000000000000000000e";
-    static final String CABANA_FRENTE_AL_MAR_BURITACA = "b0000000000000000000000f";
-    static final String HABITACION_DOBLE_RODADERO = "b00000000000000000000010";
-    static final String APARTAMENTO_POZOS_COLORADOS = "b00000000000000000000011";
-    static final String HABITACION_ECOLOGICA_MINCA = "b00000000000000000000012";
-    static final String COCINA_CARIBE_CENTRO_HISTORICO = "b00000000000000000000013";
-    static final String PESCADOS_FRENTE_AL_MAR_TAGANGA = "b00000000000000000000014";
-    static final String PARRILLA_RODADERO = "b00000000000000000000015";
-    static final String EXPEDICION_CIUDAD_PERDIDA = "b00000000000000000000016";
-    static final String PASEO_LANCHA_PLAYA_BLANCA = "b00000000000000000000017";
+    public static final String CAMINATA_CABO_SAN_JUAN = "b00000000000000000000001";
+    public static final String SNORKEL_PLAYA_CRISTAL = "b00000000000000000000002";
+    public static final String BAUTIZO_BUCEO_TAGANGA = "b00000000000000000000003";
+    public static final String KAYAK_BAHIA_TAGANGA = "b00000000000000000000004";
+    public static final String TUBING_RIO_BURITACA = "b00000000000000000000005";
+    public static final String RECORRIDO_CENTRO_HISTORICO = "b00000000000000000000006";
+    public static final String ATARDECER_VELERO_BAHIA = "b00000000000000000000007";
+    public static final String PAQUETE_TAYRONA_MAR_Y_SELVA = "b00000000000000000000008";
+    public static final String PAQUETE_TAGANGA_BAJO_EL_AGUA = "b00000000000000000000009";
+    public static final String AVISTAMIENTO_AVES_MINCA = "b0000000000000000000000a";
+    public static final String RUTA_CAFE_CACAO_MINCA = "b0000000000000000000000b";
+    public static final String CAMINATA_POZO_AZUL_MARINKA = "b0000000000000000000000c";
+    public static final String DESCENSO_BICICLETA_SIERRA = "b0000000000000000000000d";
+    public static final String PAQUETE_MINCA_AVES_Y_CAFE = "b0000000000000000000000e";
+    public static final String CABANA_FRENTE_AL_MAR_BURITACA = "b0000000000000000000000f";
+    public static final String HABITACION_DOBLE_RODADERO = "b00000000000000000000010";
+    public static final String APARTAMENTO_POZOS_COLORADOS = "b00000000000000000000011";
+    public static final String HABITACION_ECOLOGICA_MINCA = "b00000000000000000000012";
+    public static final String COCINA_CARIBE_CENTRO_HISTORICO = "b00000000000000000000013";
+    public static final String PESCADOS_FRENTE_AL_MAR_TAGANGA = "b00000000000000000000014";
+    public static final String PARRILLA_RODADERO = "b00000000000000000000015";
+    public static final String EXPEDICION_CIUDAD_PERDIDA = "b00000000000000000000016";
+    public static final String PASEO_LANCHA_PLAYA_BLANCA = "b00000000000000000000017";
 
     private static final Instant CARGA = Instant.parse("2026-10-01T13:00:00Z");
 
     private DatosSantaMarta() {
     }
 
-    static List<Zona> zonas() {
+    public static List<Zona> zonas() {
         List<String> practicasAreaProtegida = List.of("No dejar residuos", "No extraer fauna ni flora",
                 "Permanecer en los senderos señalizados");
         String condicionesAreaProtegida = "Consulta los horarios de ingreso y los cierres temporales antes de tu visita";
@@ -109,12 +109,12 @@ final class DatosSantaMarta {
                         condicionesAreaProtegida));
     }
 
-    static List<PrestadorCatalogo> prestadores() {
+    public static List<PrestadorCatalogo> prestadores() {
         return List.of(habilitado(AGENCIA), habilitado(GUIA), habilitado(HOTEL), habilitado(RESTAURANTE),
                 new PrestadorCatalogo(AGENCIA_SIN_RNT, false, 2));
     }
 
-    static List<PerfilPublico> perfiles() {
+    public static List<PerfilPublico> perfiles() {
         return List.of(
                 new PerfilPublico(AGENCIA, "Agencia operadora local con salidas diarias al Tayrona y a Taganga",
                         List.of("https://www.example.com/fotos/agencia-1.jpg",
@@ -133,7 +133,7 @@ final class DatosSantaMarta {
                         List.of("https://www.example.com/redes/restaurante")));
     }
 
-    static List<Oferta> ofertas() {
+    public static List<Oferta> ofertas() {
         Map<String, Zona> zonas = zonas().stream().collect(Collectors.toMap(Zona::id, Function.identity()));
         List<Oferta> ofertas = new ArrayList<>();
 
