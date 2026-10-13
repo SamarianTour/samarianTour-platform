@@ -1,0 +1,104 @@
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 52rem;
+}
+
+.formulario__aviso {
+  max-width: 52rem;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.seccion h2 {
+  margin: 0;
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: 0.875rem;
+}
+
+.campo-doble {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* El tipo de oferta se elige en fichas: la marcada se resalta. */
+.opciones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.opciones .opcion {
+  flex: 1 1 10rem;
+  border: 1px solid var(--borde-control);
+  border-radius: 8px;
+  padding: 0 1rem;
+  font-weight: 500;
+}
+
+.opciones .opcion:has(input:checked) {
+  border-color: var(--enlace);
+  background: var(--acento-suave);
+  color: var(--enlace-fuerte);
+  font-weight: 600;
+}
+
+.opciones .opcion:has(input:focus-visible) {
+  outline: 3px solid var(--enlace);
+  outline-offset: 2px;
+}
+
+.tipo-fijo {
+  margin: 0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: var(--superficie-suave);
+  font-size: 0.9375rem;
+}
+
+.opcional {
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.campo textarea.corto {
+  min-height: 4.5rem;
+}
+
+.grupo[aria-invalid='true'] {
+  border-left: 3px solid var(--peligro);
+  padding-left: 0.75rem;
+}
+
+.grupo .alerta {
+  margin: 0.5rem 0 0;
+}
+
+.acciones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.acciones .alerta {
+  flex-basis: 100%;
+  margin: 0 0 0.25rem;
+}
+
+.formulario > .alerta {
+  margin: 0;
+}
+
+@media (max-width: 36rem) {
+  .campo-doble {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
