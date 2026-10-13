@@ -1,0 +1,128 @@
+/* Barra lateral a la izquierda y la pantalla a su derecha; ocupa todo el alto que deja la cabecera. */
+:host {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+}
+
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border-right: 1px solid var(--borde);
+  padding: 1.5rem;
+  background: var(--superficie);
+}
+
+.identidad {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.identidad__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--acento-suave);
+  color: var(--enlace);
+  font-weight: 700;
+}
+
+.identidad__datos {
+  flex: 1;
+  min-width: 0;
+}
+
+.identidad p {
+  margin: 0;
+}
+
+.identidad__nombre {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.identidad__tipo {
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 0 0.875rem;
+  color: var(--texto);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.menu a:hover {
+  background: var(--superficie-suave);
+}
+
+.menu a.activo {
+  background: var(--acento-suave);
+  color: var(--enlace);
+  font-weight: 600;
+}
+
+/* Barra a la izquierda de la sección activa. */
+.menu a.activo::before {
+  content: '';
+  position: absolute;
+  top: 0.625rem;
+  bottom: 0.625rem;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--acento);
+}
+
+.contenido {
+  min-width: 0;
+  /* Las pantallas del panel se alinean a la izquierda, junto a la barra lateral. */
+  --pagina-margen: 0;
+  --pagina-relleno: 2rem 2.5rem 3.5rem;
+}
+
+@media (max-width: 56rem) {
+  :host {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lateral {
+    gap: 1rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--borde);
+    padding: 1rem;
+  }
+
+  .menu {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .contenido {
+    --pagina-relleno: 1.5rem 1rem 3rem;
+  }
+}
