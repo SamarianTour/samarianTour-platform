@@ -202,7 +202,7 @@ paths:
         '404':
           $ref: '#/components/responses/OfertaNoEncontrada'
         '409':
-          $ref: '#/components/responses/OfertaNoEditable'
+          $ref: '#/components/responses/Conflicto'
 
   /internal/avisos:
     post:
@@ -212,6 +212,8 @@ paths:
       description: |
         Es idempotente (DC-04): cada aviso trae un `idAviso` y un aviso repetido no se vuelve a aplicar.
         Los tres resultados responden 200, para que el núcleo no reintente el aviso.
+        Si otra escritura se cruza y los reintentos del servidor no alcanzan, responde 409 sin marcar el aviso como
+        procesado, y el núcleo lo reenvía (ADR-05).
       requestBody:
         required: true
         content:
@@ -224,7 +226,7 @@ paths:
                 value:
                   idAviso: aviso-0001
                   tipo: MODERACION
-                  ofertaId: 6f1c2f0e-3b1a-4f6e-9a57-2f0c4e1d9b10
+                  ofertaId: b00000000000000000000001
                   numeroVersion: 1
                   decision: APROBAR
               rechazar:
@@ -232,7 +234,7 @@ paths:
                 value:
                   idAviso: aviso-0002
                   tipo: MODERACION
-                  ofertaId: 6f1c2f0e-3b1a-4f6e-9a57-2f0c4e1d9b10
+                  ofertaId: b00000000000000000000001
                   numeroVersion: 2
                   decision: RECHAZAR
                   motivo: El precio no coincide con la descripción
@@ -253,6 +255,8 @@ paths:
                 $ref: '#/components/schemas/AvisoResultado'
         '400':
           $ref: '#/components/responses/DatoInvalido'
+        '409':
+          $ref: '#/components/responses/ConflictoConcurrencia'
 
 components:
   parameters:
@@ -334,12 +338,44 @@ components:
             detail: No existe la oferta no-existe
             instance: /api/catalogo/ofertas/no-existe
             codigo: OFERTA_NO_ENCONTRADA
-    OfertaNoEditable:
-      description: La oferta está retirada; el retiro es definitivo.
+    Conflicto:
+      description: |
+        La oferta está retirada y el retiro es definitivo (`OFERTA_NO_EDITABLE`), u otra operación la modificó al
+        mismo tiempo y los reintentos del servidor no alcanzaron (`CONFLICTO_CONCURRENCIA`, ADR-05); en ese caso
+        el cliente puede volver a intentarlo.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problema'
+          examples:
+            retirada:
+              value:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: La oferta b00000000000000000000001 está retirada y no se puede editar
+                codigo: OFERTA_NO_EDITABLE
+            concurrencia:
+              value:
+                type: about:blank
+                title: Conflicto de concurrencia
+                status: 409
+                detail: Otra operación modificó el mismo dato al mismo tiempo; vuelve a intentarlo
+                codigo: CONFLICTO_CONCURRENCIA
+    ConflictoConcurrencia:
+      description: |
+        Otra operación modificó el mismo dato al mismo tiempo y los reintentos del servidor no alcanzaron (ADR-05).
+        El aviso no queda procesado: el núcleo lo reenvía más tarde.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflicto de concurrencia
+            status: 409
+            detail: Otra operación modificó el mismo dato al mismo tiempo; vuelve a intentarlo
+            codigo: CONFLICTO_CONCURRENCIA
 
   schemas:
     TipoOferta:
@@ -790,3 +826,4 @@ components:
             - RNT_INACTIVO
             - OFERTA_NO_ENCONTRADA
             - OFERTA_NO_EDITABLE
+            - CONFLICTO_CONCURRENCIA
