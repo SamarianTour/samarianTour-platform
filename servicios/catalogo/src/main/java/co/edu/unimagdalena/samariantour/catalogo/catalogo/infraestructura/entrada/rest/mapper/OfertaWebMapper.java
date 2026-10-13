@@ -62,9 +62,12 @@ public final class OfertaWebMapper {
     }
 
     public static PaginaResponse<OfertaResumenResponse> aPagina(Pagina<Oferta> pagina) {
-        return new PaginaResponse<>(pagina.contenido().stream().map(OfertaWebMapper::aResumen).toList(),
-                pagina.paginacion().pagina(), pagina.paginacion().tamano(), pagina.totalElementos(),
-                pagina.totalPaginas());
+        return aPaginaResponse(pagina.map(OfertaWebMapper::aResumen));
+    }
+
+    /** Ofertas propias del prestador, en cualquier estado. */
+    public static PaginaResponse<OfertaPrestadorResponse> aPaginaPrestador(Pagina<Oferta> pagina) {
+        return aPaginaResponse(pagina.map(OfertaWebMapper::aRespuestaPrestador));
     }
 
     public static FichaOfertaResponse aFicha(FichaOferta ficha) {
@@ -87,6 +90,11 @@ public final class OfertaWebMapper {
         return new OfertaPrestadorResponse(oferta.id(), oferta.tipo(), oferta.retirada(),
                 oferta.publicada().map(OfertaWebMapper::aVersionResponse).orElse(null),
                 oferta.pendiente().map(OfertaWebMapper::aVersionResponse).orElse(null));
+    }
+
+    private static <T> PaginaResponse<T> aPaginaResponse(Pagina<T> pagina) {
+        return new PaginaResponse<>(pagina.contenido(), pagina.paginacion().pagina(), pagina.paginacion().tamano(),
+                pagina.totalElementos(), pagina.totalPaginas());
     }
 
     private static OfertaResumenResponse aResumen(Oferta oferta) {

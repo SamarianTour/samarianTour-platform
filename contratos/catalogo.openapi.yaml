@@ -4,11 +4,11 @@ info:
   version: 0.1.0
   description: |
     API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
-    zonas, publicación y edición de ofertas por el prestador y los avisos internos del núcleo.
+    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias) y los avisos internos
+    del núcleo.
 
     - Las rutas no incluyen el prefijo `/api/catalogo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
-    - Retirar una oferta y listar las ofertas del prestador existen como casos de uso, pero aún no tienen endpoint.
 servers:
   - url: http://localhost:8080/api/catalogo
     description: Piloto con Docker Compose, detrás de Nginx
@@ -68,20 +68,8 @@ paths:
           schema:
             type: boolean
             default: false
-        - name: page
-          in: query
-          description: Página pedida; la primera es la 0 (DC-14).
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
       responses:
         '200':
           description: Página de resultados.
@@ -125,6 +113,29 @@ paths:
                   $ref: '#/components/schemas/Zona'
 
   /prestador/ofertas:
+    get:
+      tags: [Prestador]
+      operationId: listarOfertasPropias
+      summary: Listar las ofertas del prestador (RF-65)
+      description: |
+        Devuelve las ofertas del prestador de la identidad en cualquier estado, incluidas las retiradas y las que
+        aún no tienen versión publicada, ordenadas por id.
+      parameters:
+        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/TipoPrestador'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Página de ofertas del prestador.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaOfertasPrestador'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
     post:
       tags: [Prestador]
       operationId: publicarOferta
@@ -203,6 +214,32 @@ paths:
           $ref: '#/components/responses/OfertaNoEncontrada'
         '409':
           $ref: '#/components/responses/Conflicto'
+
+  /prestador/ofertas/{id}/retiro:
+    patch:
+      tags: [Prestador]
+      operationId: retirarOferta
+      summary: Retirar una oferta (RF-65)
+      description: |
+        Marca la oferta como retirada; no la borra, porque las solicitudes en curso siguen apuntando a ella.
+        El retiro es definitivo (DC-09): la oferta deja de ser visible y ya no se puede editar. Se permite aunque
+        el RNT del prestador esté inactivo, porque no publica nada. Retirar una oferta ya retirada no cambia nada
+        y también responde 204. No lleva cuerpo.
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/TipoPrestador'
+      responses:
+        '204':
+          description: Oferta retirada.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/PrestadorNoAutorizado'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ConflictoConcurrencia'
 
   /internal/avisos:
     post:
@@ -284,6 +321,22 @@ components:
       description: PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10).
       schema:
         $ref: '#/components/schemas/TipoPrestador'
+    Page:
+      name: page
+      in: query
+      description: Página pedida; la primera es la 0 (DC-14).
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
 
   responses:
     DatoInvalido:
@@ -325,6 +378,19 @@ components:
             detail: El RNT del prestador 50000000-0000-0000-0000-000000000005 no está activo
             instance: /api/catalogo/prestador/ofertas
             codigo: RNT_INACTIVO
+    PrestadorNoAutorizado:
+      description: La oferta es de otro prestador (`PRESTADOR_NO_AUTORIZADO`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            detail: El prestador no es el dueño de la oferta b00000000000000000000001
+            instance: /api/catalogo/prestador/ofertas/b00000000000000000000001/retiro
+            codigo: PRESTADOR_NO_AUTORIZADO
     OfertaNoEncontrada:
       description: La oferta no existe, o no es visible para quien la consulta.
       content:
@@ -365,7 +431,7 @@ components:
     ConflictoConcurrencia:
       description: |
         Otra operación modificó el mismo dato al mismo tiempo y los reintentos del servidor no alcanzaron (ADR-05).
-        El aviso no queda procesado: el núcleo lo reenvía más tarde.
+        No se guardó nada y el cliente puede volver a intentarlo.
       content:
         application/problem+json:
           schema:
@@ -712,6 +778,27 @@ components:
           $ref: '#/components/schemas/Version'
         pendiente:
           $ref: '#/components/schemas/Version'
+
+    PaginaOfertasPrestador:
+      type: object
+      description: Como `PaginaOfertas`, pero con las ofertas como las ve su prestador.
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfertaPrestador'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
 
     Version:
       type: object

@@ -10,10 +10,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -103,6 +105,46 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.publicada.numero").value(1))
                 .andExpect(jsonPath("$.pendiente.numero").value(2));
         http.perform(get("/ofertas/" + id)).andExpect(jsonPath("$.precioReferencia").value(75000));
+    }
+
+    @Test
+    @DisplayName("[Demostración] retirar una oferta aprobada: sale de la búsqueda, sigue en la lista del prestador "
+            + "como retirada y ya no se puede editar")
+    void retiro() throws Exception {
+        String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .content(NUEVA_ACTIVIDAD))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(creada, "$.id");
+        http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"idAviso": "retiro-1", "tipo": "MODERACION", "ofertaId": "%s", "numeroVersion": 1,
+                         "decision": "APROBAR"}
+                        """.formatted(id)))
+                .andExpect(jsonPath("$.resultado").value("APLICADO"));
+        http.perform(get("/ofertas/" + id)).andExpect(status().isOk());
+
+        http.perform(patch("/prestador/ofertas/" + id + "/retiro")
+                        .header("X-Prestador-Id", "10000000-0000-0000-0000-000000000001")
+                        .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
+        http.perform(patch("/prestador/ofertas/" + id + "/retiro")
+                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+                .andExpect(status().isNoContent());
+
+        http.perform(get("/ofertas/" + id)).andExpect(status().isNotFound());
+        http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007").param("size", "100"))
+                .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
+        http.perform(get("/prestador/ofertas").param("size", "100")
+                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[?(@.id == '%s')].retirada".formatted(id), contains(true)));
+        http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .content(NUEVA_ACTIVIDAD))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("OFERTA_NO_EDITABLE"));
     }
 
     @Test
