@@ -137,8 +137,8 @@ public final class OfertaWebMapper {
     }
 
     private static PerfilPublicoResponse aPerfil(PerfilPublico perfil) {
-        return new PerfilPublicoResponse(perfil.descripcion(), perfil.fotos(), perfil.horariosAtencion(),
-                perfil.sitioWeb(), perfil.redesSociales());
+        return new PerfilPublicoResponse(perfil.nombreComercial(), perfil.descripcion(), perfil.fotos(),
+                perfil.horariosAtencion(), perfil.sitioWeb(), perfil.redesSociales());
     }
 
     private static VersionResponse aVersionResponse(VersionOferta version) {

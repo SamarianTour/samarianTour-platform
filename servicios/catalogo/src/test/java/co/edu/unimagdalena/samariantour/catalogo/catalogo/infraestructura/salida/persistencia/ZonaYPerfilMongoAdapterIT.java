@@ -106,7 +106,7 @@ class ZonaYPerfilMongoAdapterIT extends BasePersistenciaMongo {
     @Test
     @DisplayName("un prestador tiene a lo sumo un perfil: el índice único lo garantiza")
     void unPerfilPorPrestador() {
-        PerfilPublico otro = new PerfilPublico(GUIA, "Otro perfil", List.of(), null, null, List.of());
+        PerfilPublico otro = new PerfilPublico(GUIA, null, "Otro perfil", List.of(), null, null, List.of());
 
         assertThatThrownBy(() -> mongo.insert(PerfilMongoMapper.aDocumento(new ObjectId(), otro)))
                 .isInstanceOf(DuplicateKeyException.class);

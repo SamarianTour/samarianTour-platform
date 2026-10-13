@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coordenada;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PrestadorCatalogo;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.AGENCIA_SIN_RNT;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CAMINATA_CABO_SAN_JUAN;
@@ -26,8 +28,12 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAYRONA;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 class DatosSantaMartaTest {
+
+    /** Unos 27 km: la zona más extensa, Minca y Sierra Nevada, llega hasta Ciudad Perdida. */
+    private static final double GRADOS_ALREDEDOR_DE_LA_ZONA = 0.25;
 
     @Test
     @DisplayName("los identificadores de zonas y ofertas son ObjectId válidos y no se repiten (DC-30)")
@@ -81,6 +87,32 @@ class DatosSantaMartaTest {
             assertThat(prestadores).contains(oferta.prestadorId());
             assertThat(zonas).contains(oferta.publicada().or(oferta::pendiente).orElseThrow().contenido().zonaId());
         });
+    }
+
+    @Test
+    @DisplayName("toda versión de toda oferta tiene una ubicación aproximada, cerca del centro de su zona")
+    void ubicacionDeLasOfertas() {
+        Map<String, Zona> zonas = DatosSantaMarta.zonas().stream()
+                .collect(Collectors.toMap(Zona::id, Function.identity()));
+
+        assertThat(ofertas).allSatisfy(oferta ->
+                Stream.concat(oferta.publicada().stream(), oferta.pendiente().stream()).forEach(version -> {
+                    Coordenada ubicacion = version.contenido().ubicacion();
+                    Coordenada centro = zonas.get(version.contenido().zonaId()).ubicacion();
+
+                    assertThat(ubicacion).as("ubicación de %s", version.contenido().nombre()).isNotNull();
+                    assertThat(ubicacion.latitud()).isCloseTo(centro.latitud(), within(GRADOS_ALREDEDOR_DE_LA_ZONA));
+                    assertThat(ubicacion.longitud()).isCloseTo(centro.longitud(), within(GRADOS_ALREDEDOR_DE_LA_ZONA));
+                }));
+    }
+
+    @Test
+    @DisplayName("el nombre comercial del perfil es opcional: unos prestadores lo tienen y el guía no (DC-26)")
+    void nombreComercialDeLosPerfiles() {
+        assertThat(DatosSantaMarta.perfiles()).filteredOn(perfil -> perfil.nombreComercial() != null).isNotEmpty();
+        assertThat(DatosSantaMarta.perfiles()).filteredOn(perfil -> perfil.prestadorId().equals(DatosSantaMarta.GUIA))
+                .singleElement()
+                .satisfies(guia -> assertThat(guia.nombreComercial()).isNull());
     }
 
     @Test

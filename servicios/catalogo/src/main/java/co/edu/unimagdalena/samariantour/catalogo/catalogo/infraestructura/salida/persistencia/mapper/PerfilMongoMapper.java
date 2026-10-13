@@ -15,12 +15,12 @@ public final class PerfilMongoMapper {
 
     /** @param id el {@code _id} del documento: el del perfil ya guardado, o uno nuevo */
     public static PerfilDocument aDocumento(ObjectId id, PerfilPublico perfil) {
-        return new PerfilDocument(id, perfil.prestadorId(), perfil.descripcion(), perfil.fotos(),
-                perfil.horariosAtencion(), perfil.sitioWeb(), perfil.redesSociales());
+        return new PerfilDocument(id, perfil.prestadorId(), perfil.nombreComercial(), perfil.descripcion(),
+                perfil.fotos(), perfil.horariosAtencion(), perfil.sitioWeb(), perfil.redesSociales());
     }
 
     public static PerfilPublico aDominio(PerfilDocument documento) {
-        return new PerfilPublico(documento.prestadorId(), documento.descripcion(),
+        return new PerfilPublico(documento.prestadorId(), documento.nombreComercial(), documento.descripcion(),
                 ConversionesMongo.lista(documento.fotos()), documento.horariosAtencion(), documento.sitioWeb(),
                 ConversionesMongo.lista(documento.redesSociales()));
     }

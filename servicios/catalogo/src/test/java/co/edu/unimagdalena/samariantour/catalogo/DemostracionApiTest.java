@@ -67,6 +67,9 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.paquete.actividades", hasSize(2)))
                 .andExpect(jsonPath("$.paquete.nivelEsfuerzo").value("MODERADO"))
                 .andExpect(jsonPath("$.zona.areaProtegida").value(true))
+                .andExpect(jsonPath("$.ubicacion.latitud").value(11.2785))
+                .andExpect(jsonPath("$.ubicacion.longitud").value(-73.9255))
+                .andExpect(jsonPath("$.perfilPrestador.nombreComercial").value("Mar y Selva Expediciones"))
                 .andExpect(jsonPath("$.perfilPrestador.descripcion").exists());
 
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)

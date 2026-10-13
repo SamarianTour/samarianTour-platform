@@ -1,7 +1,20 @@
 package co.edu.unimagdalena.samariantour.catalogo;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ActividadIncluidaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.AvisoResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.CoordenadaDto;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.FichaOfertaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPrestadorResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ZonaResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,18 +25,23 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
- * API first: las rutas de los controladores del catálogo son exactamente las del contrato
- * {@code contratos/catalogo.openapi.yaml}. Si una ruta existe en un lado y no en el otro, esta prueba falla.
+ * API first: los controladores y los DTO del catálogo coinciden con el contrato
+ * {@code contratos/catalogo.openapi.yaml}. Si una ruta o un campo existe en un lado y no en el otro, esta prueba falla.
  */
 @SpringBootTest(properties = "spring.autoconfigure.exclude="
         + "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration,"
@@ -47,6 +65,30 @@ class ContratoCatalogoTest {
         assertThat(rutasDeLosControladores()).isEqualTo(rutasDelContratoOpenApi());
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("esquemasConSuDto")
+    @DisplayName("cada esquema del contrato tiene los mismos campos que su DTO")
+    void camposDelContrato(String esquema, Class<? extends Record> dto) throws IOException {
+        assertThat(camposDe(dto)).as("campos de %s", dto.getSimpleName()).isEqualTo(camposDelEsquema(esquema));
+    }
+
+    static Stream<Arguments> esquemasConSuDto() {
+        return Stream.of(
+                arguments("Coordenada", CoordenadaDto.class),
+                arguments("OfertaResumen", OfertaResumenResponse.class),
+                arguments("FichaOferta", FichaOfertaResponse.class),
+                arguments("DetalleActividad", FichaOfertaResponse.DetalleActividad.class),
+                arguments("DetallePaquete", FichaOfertaResponse.DetallePaquete.class),
+                arguments("DetalleAlojamiento", FichaOfertaResponse.DetalleAlojamiento.class),
+                arguments("ActividadIncluida", ActividadIncluidaResponse.class),
+                arguments("Zona", ZonaResponse.class),
+                arguments("PerfilPublico", PerfilPublicoResponse.class),
+                arguments("OfertaRequest", OfertaRequest.class),
+                arguments("OfertaPrestador", OfertaPrestadorResponse.class),
+                arguments("Version", VersionResponse.class),
+                arguments("AvisoResultado", AvisoResponse.class));
+    }
+
     private Set<String> rutasDeLosControladores() {
         Set<String> resultado = new TreeSet<>();
         rutas.getHandlerMethods().forEach((RequestMappingInfo ruta, org.springframework.web.method.HandlerMethod metodo) -> {
@@ -60,14 +102,28 @@ class ContratoCatalogoTest {
 
     @SuppressWarnings("unchecked")
     private static Set<String> rutasDelContratoOpenApi() throws IOException {
-        Map<String, Object> contrato;
-        try (Reader lector = Files.newBufferedReader(CONTRATO, StandardCharsets.UTF_8)) {
-            contrato = new Yaml().load(lector);
-        }
         Set<String> resultado = new TreeSet<>();
-        ((Map<String, Map<String, Object>>) contrato.get("paths")).forEach((ruta, operaciones) ->
+        ((Map<String, Map<String, Object>>) contrato().get("paths")).forEach((ruta, operaciones) ->
                 operaciones.keySet().stream().filter(METODOS::contains)
                         .forEach(verbo -> resultado.add(verbo.toUpperCase() + " " + ruta)));
         return resultado;
+    }
+
+    private static Set<String> camposDe(Class<? extends Record> dto) {
+        return Arrays.stream(dto.getRecordComponents()).map(RecordComponent::getName)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Set<String> camposDelEsquema(String esquema) throws IOException {
+        Map<String, Object> componentes = (Map<String, Object>) contrato().get("components");
+        Map<String, Map<String, Object>> esquemas = (Map<String, Map<String, Object>>) componentes.get("schemas");
+        return new TreeSet<>(((Map<String, Object>) esquemas.get(esquema).get("properties")).keySet());
+    }
+
+    private static Map<String, Object> contrato() throws IOException {
+        try (Reader lector = Files.newBufferedReader(CONTRATO, StandardCharsets.UTF_8)) {
+            return new Yaml().load(lector);
+        }
     }
 }

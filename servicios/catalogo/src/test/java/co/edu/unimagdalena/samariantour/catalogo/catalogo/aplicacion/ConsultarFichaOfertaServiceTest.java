@@ -43,7 +43,8 @@ class ConsultarFichaOfertaServiceTest {
         Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
         assertThat(servicio.consultar(oferta.id()).perfil()).isEmpty();
 
-        escenario.perfiles.guardar(new PerfilPublico(PRESTADOR, "Agencia local", List.of(), null, null, List.of()));
+        escenario.perfiles.guardar(
+                new PerfilPublico(PRESTADOR, null, "Agencia local", List.of(), null, null, List.of()));
 
         assertThat(servicio.consultar(oferta.id()).perfil()).map(PerfilPublico::descripcion).contains("Agencia local");
     }

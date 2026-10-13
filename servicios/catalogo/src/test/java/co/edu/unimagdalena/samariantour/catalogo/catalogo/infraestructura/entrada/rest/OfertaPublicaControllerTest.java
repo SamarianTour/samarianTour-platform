@@ -128,7 +128,7 @@ class OfertaPublicaControllerTest {
     @Test
     @DisplayName("la ficha de una actividad trae su detalle, la zona y el perfil público del prestador")
     void fichaDeActividad() throws Exception {
-        PerfilPublico perfil = new PerfilPublico(PRESTADOR, "Agencia local", List.of(), null,
+        PerfilPublico perfil = new PerfilPublico(PRESTADOR, "Agencia Mar y Selva", "Agencia local", List.of(), null,
                 "https://www.example.com/agencia", List.of());
         when(consultarFicha.consultar("oferta-1")).thenReturn(
                 new FichaOferta(ofertaPublicada(), Optional.of(zonaActiva()), Optional.of(perfil), List.of()));
@@ -148,6 +148,7 @@ class OfertaPublicaControllerTest {
                 .andExpect(jsonPath("$.zona.id").value(ZONA_ACTIVA))
                 .andExpect(jsonPath("$.zona.areaProtegida").value(true))
                 .andExpect(jsonPath("$.zona.buenasPracticas[0]").value("No dejar residuos"))
+                .andExpect(jsonPath("$.perfilPrestador.nombreComercial").value("Agencia Mar y Selva"))
                 .andExpect(jsonPath("$.perfilPrestador.descripcion").value("Agencia local"))
                 .andExpect(jsonPath("$.perfilPrestador.sitioWeb").value("https://www.example.com/agencia"));
     }

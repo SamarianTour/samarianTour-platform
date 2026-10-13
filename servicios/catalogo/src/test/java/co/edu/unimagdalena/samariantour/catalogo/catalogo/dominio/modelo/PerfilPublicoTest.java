@@ -20,14 +20,14 @@ class PerfilPublicoTest {
     @Test
     @DisplayName("el perfil se asocia a un prestador")
     void prestadorObligatorio() {
-        assertThatThrownBy(() -> new PerfilPublico(null, DESCRIPCION, List.of(), null, null, List.of()))
+        assertThatThrownBy(() -> new PerfilPublico(null, null, DESCRIPCION, List.of(), null, null, List.of()))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     @DisplayName("la descripción es obligatoria")
     void descripcionObligatoria() {
-        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, "  ", null, null, null, null))
+        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, "  ", null, null, null, null))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("descripcion");
     }
@@ -35,9 +35,10 @@ class PerfilPublicoTest {
     @Test
     @DisplayName("un perfil solo con descripción es válido: los demás campos son opcionales")
     void camposOpcionales() {
-        PerfilPublico perfil = new PerfilPublico(PRESTADOR, DESCRIPCION, null, "", " ", null);
+        PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, "", " ", null);
 
         assertThat(perfil.descripcion()).isEqualTo(DESCRIPCION);
+        assertThat(perfil.nombreComercial()).isNull();
         assertThat(perfil.horariosAtencion()).isNull();
         assertThat(perfil.sitioWeb()).isNull();
         assertThat(perfil.fotos()).isEmpty();
@@ -45,9 +46,18 @@ class PerfilPublicoTest {
     }
 
     @Test
+    @DisplayName("el nombre comercial es opcional; en blanco se trata como ausente")
+    void nombreComercial() {
+        assertThat(new PerfilPublico(PRESTADOR, " Aves de Minca ", DESCRIPCION, null, null, null, null)
+                .nombreComercial()).isEqualTo("Aves de Minca");
+        assertThat(new PerfilPublico(PRESTADOR, "  ", DESCRIPCION, null, null, null, null).nombreComercial())
+                .isNull();
+    }
+
+    @Test
     @DisplayName("acepta URLs http y https en el sitio web, las redes sociales y las fotos")
     void urlsValidas() {
-        PerfilPublico perfil = new PerfilPublico(PRESTADOR, DESCRIPCION,
+        PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION,
                 List.of("https://ejemplo.co/fotos/1.jpg"), "Lunes a sábado", "http://ejemplo.co",
                 List.of("https://red-social.ejemplo.co/guias-minca"));
 
@@ -60,13 +70,13 @@ class PerfilPublicoTest {
     @ValueSource(strings = {"ejemplo.co", "ftp://ejemplo.co/foto.jpg", "https://", "javascript:alert(1)", "http://e j.co"})
     @DisplayName("rechaza lo que no es una URL http o https")
     void urlsInvalidas(String valor) {
-        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, DESCRIPCION, null, null, valor, null))
+        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, null, valor, null))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("sitioWeb");
-        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, DESCRIPCION, List.of(valor), null, null, null))
+        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, List.of(valor), null, null, null))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("fotos");
-        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, DESCRIPCION, null, null, null, List.of(valor)))
+        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, null, null, List.of(valor)))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("redesSociales");
     }
@@ -75,7 +85,7 @@ class PerfilPublicoTest {
     @DisplayName("las listas del perfil no se pueden modificar desde fuera")
     void listasInmutables() {
         List<String> fotos = new ArrayList<>(List.of("https://ejemplo.co/foto-1.jpg"));
-        PerfilPublico perfil = new PerfilPublico(PRESTADOR, DESCRIPCION, fotos, null, null,
+        PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION, fotos, null, null,
                 List.of("https://ejemplo.co/red-social"));
 
         fotos.add("https://ejemplo.co/foto-2.jpg");

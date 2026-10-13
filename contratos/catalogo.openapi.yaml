@@ -675,6 +675,10 @@ components:
       description: Perfil público del prestador (RF-24). No incluye datos de contacto directo.
       required: [descripcion, fotos, redesSociales]
       properties:
+        nombreComercial:
+          type: string
+          description: Nombre con el que el prestador se presenta al turista. Opcional (DC-26).
+          example: Mar y Selva Expediciones
         descripcion:
           type: string
         fotos:

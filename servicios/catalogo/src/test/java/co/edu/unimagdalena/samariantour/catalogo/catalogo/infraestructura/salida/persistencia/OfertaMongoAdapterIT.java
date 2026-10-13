@@ -72,7 +72,11 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
             assertThat(publicada.get("zonaId").getBsonType()).isEqualTo(BsonType.OBJECT_ID);
             assertThat(publicada.get("enviadaEn").getBsonType()).isEqualTo(BsonType.DATE_TIME);
             assertThat(publicada.getArray("horariosSalida").get(0).asString().getValue()).matches("\\d{2}:\\d{2}");
-            assertThat(publicada.containsKey("ubicacion")).as("la ubicación es opcional (DC-19)").isFalse();
+            BsonDocument ubicacion = publicada.getDocument("ubicacion");
+            assertThat(ubicacion.getString("type").getValue()).isEqualTo("Point");
+            assertThat(ubicacion.getArray("coordinates")).as("GeoJSON guarda [longitud, latitud]")
+                    .extracting(valor -> valor.asDouble().getValue())
+                    .containsExactly(-73.9647, 11.3247);
         }
 
         @Test

@@ -15,6 +15,7 @@ import java.util.UUID;
 public record PerfilDocument(
         @Id ObjectId id,
         UUID prestadorId,
+        String nombreComercial,
         String descripcion,
         List<String> fotos,
         String horariosAtencion,
