@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * Sin el perfil {@code demo} no hay forma de identificar al prestador: el JWT aún no existe y los headers
+ * Sin el perfil {@code demo} no hay forma de identificar al usuario: el JWT aún no existe y los headers
  * que lo sustituyen no se aceptan. Toda petición que necesite identidad se rechaza.
  */
 @Component
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class IdentidadNoDisponible implements ResolutorIdentidad {
 
     @Override
-    public IdentidadPrestador prestadorDe(HttpServletRequest peticion) {
+    public Identidad identidadDe(HttpServletRequest peticion) {
         throw new NoAutenticadoException(
                 "La autenticación con JWT aún no está disponible; los headers de demostración exigen el perfil demo");
     }

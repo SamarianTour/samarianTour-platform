@@ -73,7 +73,8 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.perfilPrestador.descripcion").exists());
 
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
                         .content(NUEVA_ACTIVIDAD))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.pendiente.numero").value(1))
@@ -102,7 +103,8 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.actividad.horariosSalida[0]").value("18:30"));
 
         http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
                         .content(NUEVA_ACTIVIDAD.replace("75000", "82000")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.publicada.numero").value(1))
@@ -115,7 +117,8 @@ class DemostracionApiTest {
             + "como retirada y ya no se puede editar")
     void retiro() throws Exception {
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
                         .content(NUEVA_ACTIVIDAD))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -128,23 +131,26 @@ class DemostracionApiTest {
         http.perform(get("/ofertas/" + id)).andExpect(status().isOk());
 
         http.perform(patch("/prestador/ofertas/" + id + "/retiro")
-                        .header("X-Prestador-Id", "10000000-0000-0000-0000-000000000001")
+                        .header("X-Usuario-Id", "10000000-0000-0000-0000-000000000001").header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
         http.perform(patch("/prestador/ofertas/" + id + "/retiro")
-                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
                 .andExpect(status().isNoContent());
 
         http.perform(get("/ofertas/" + id)).andExpect(status().isNotFound());
         http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007").param("size", "100"))
                 .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
         http.perform(get("/prestador/ofertas").param("size", "100")
-                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[?(@.id == '%s')].retirada".formatted(id), contains(true)));
         http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Prestador-Id", GUIA).header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
                         .content(NUEVA_ACTIVIDAD))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_EDITABLE"));
@@ -154,7 +160,7 @@ class DemostracionApiTest {
     @DisplayName("un prestador con el RNT inactivo no puede publicar: 403 RNT_INACTIVO")
     void prestadorConRntInactivo() throws Exception {
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Prestador-Id", "50000000-0000-0000-0000-000000000005")
+                        .header("X-Usuario-Id", "50000000-0000-0000-0000-000000000005").header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "AGENCIA_OPERADORA")
                         .content(NUEVA_ACTIVIDAD))
                 .andExpect(status().isForbidden())
