@@ -44,6 +44,8 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-32 | El servicio de recomendación no tiene base de datos | ✅ ADR-02, ADR-03 |
 | DC-33 | Implementación de los adaptadores de MongoDB | 🆕 ADR-05, DC-16, DC-17 |
 | DC-34 | El sello RNT se muestra sin el número de registro | 🆕 desvía RF-24 |
+| DC-35 | Consulta interna de una oferta para el núcleo | ✅ RF-30, modelo relacional |
+| DC-36 | Ofertas visibles para la recomendación, sin datos que sesguen | ✅ RF-26, RF-29, RET-02 |
 
 ## Identidad y habilitación del prestador
 
@@ -276,6 +278,21 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 
 **DC-34. El sello RNT se muestra sin el número de registro.** RF-24 pide mostrar el sello "RNT verificado" con el número de registro. El equipo decidió mostrar solo el sello. El número es un dato del núcleo, que lo verifica contra la API del RNT, y el catálogo solo recibe si la habilitación está activa (DC-02); mostrarlo obligaría a replicar un dato más en los avisos de habilitación. Queda registrado como desviación de RF-24 para ajustar el SRS.
 
+## Consultas internas
+
+**DC-35. Consulta interna de una oferta para el núcleo.** `GET /api/catalogo/internal/ofertas/{id}` (`ConsultaInternaController`, `ConsultarOfertaInternaUseCase`, RF-30). El núcleo la llama al crear una solicitud, con el corte de circuito de 3 s del ADR-04.
+- Devuelve lo que la tabla `solicitud` copia de la oferta (`nombre`, `tipo`, `zonaId` y `prestadorId`) y lo que el núcleo valida: `horariosSalida`, para la hora que elige el turista (solo actividad y paquete), y `capacidadMaxima`, para el número de personas. Todo sale de la versión publicada.
+- No devuelve el tipo de actividad: el tablero de demanda agrupa por zona y tipo de oferta (CU-09 del Entregable 2), y la solicitud no lo guarda. Tampoco el precio: el precio base lo registra el operador al atender la solicitud (RF-37) y es el que se cobra (RF-46, RF-49); el precio de referencia del catálogo no es vinculante (RF-20).
+- Aplica la misma visibilidad que la ficha: si la oferta no existe, no tiene versión aprobada, está retirada, su prestador tiene el RNT inactivo o es un paquete con alguna actividad no visible, responde 404 `OFERTA_NO_ENCONTRADA` y la solicitud no se crea.
+
+**DC-36. Ofertas visibles para la recomendación.** `GET /api/catalogo/internal/ofertas` (`ConsultarOfertasVisiblesUseCase`, RF-26, RF-29, RET-02). Es la base de conocimiento cerrada de la recomendación, que la guarda en caché.
+- Reutiliza la búsqueda pública: misma visibilidad, mismo orden (precio de referencia y luego id) y misma paginación (hasta 100 por página), con filtros opcionales `tipo` y `zonaId`.
+- Cada oferta trae los datos de los criterios explícitos de la recomendación (`ReglaCriteriosExplicitos`): tipo de oferta, tipos de actividad, zona, accesibilidad, nivel de esfuerzo y precio; el nombre y la descripción, para explicar la recomendación (RF-27); y `zonaAltaAfluencia`, para proponer alternativas fuera de las zonas congestionadas (RF-29, `ReglaAlternativas`). En un paquete, los tipos de actividad, el esfuerzo y la accesibilidad se calculan con sus actividades, como en la búsqueda (DC-24, DC-25).
+- `prestadorId` va para que la recomendación arme el registro de exposición que mide el sesgo por prestador (RET-02).
+- **No** van calificaciones, opiniones, comisión ni el tamaño del prestador: así la recomendación no puede favorecer a nadie por esos datos (RET-02). El catálogo no prioriza a ningún prestador; la rotación entre ofertas de igual afinidad es de la recomendación (`PoliticaRotacion`).
+
+Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y la autenticación entre servicios llega con el JWT.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -295,7 +312,8 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
    - agregar los índices: los dos parciales de búsqueda y `{prestadorId, _id}` en `ofertas` (DC-17), único en `perfiles.prestadorId` y único en `{ofertaId, turistaId}` de `opiniones` (RF-61);
    - usar el mismo nombre de base que el diagrama de despliegue y Docker Compose: `catalogo_db`.
 5. **Diagrama del módulo catálogo:** agregar el puerto de salida `PrestadorCatalogoRepositoryPort` (réplica de DC-02) con su adaptador `PrestadorMongoAdapter`.
-6. **Agrupaciones técnicas del código** que no cambian el modelo, por si el docente compara: `ContenidoComun` agrupa los atributos comunes de `VersionOferta`, y `RegistroModeracion` agrupa número, estado, motivo y fechas de moderación de cada versión.
+6. **Agrupaciones técnicas del código** que no cambian el modelo, por si el docente compara: `ContenidoComun` agrupa los atributos comunes de `VersionOferta`, `RegistroModeracion` agrupa número, estado, motivo y fechas de moderación de cada versión, y `OfertaVisible` reúne una oferta con lo que la recomendación necesita de ella (DC-36).
+7. **SRS, RF-85 y RF-88:** cambiar "tipo de actividad" por "tipo de oferta", como ya lo hizo el CU-09 del Entregable 2; la solicitud no guarda el tipo de actividad (DC-35).
 
 ## Fuera del alcance del prototipo
 

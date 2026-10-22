@@ -255,10 +255,29 @@ curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/r
 curl -s "$BASE/ofertas/$ID"
 ```
 
-### 5. Rutas que no se exponen
+### 5. Consultas internas del núcleo y de la recomendación
+
+El núcleo consulta la oferta al crear una solicitud, y la recomendación lee las ofertas visibles. Como los avisos, solo responden dentro de la red de Docker:
+
+```bash
+# Lo que la solicitud copia (nombre, tipo, zona, prestador) y lo que valida (horarios de salida y capacidad)
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000001
+
+# Oferta aprobada de un prestador con el RNT inactivo: no se puede pedir, 404
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000016
+
+# Paquetes visibles del Parque Tayrona, con la alta afluencia de la zona, los tipos de actividad y el esfuerzo
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s "http://catalogo:8080/api/catalogo/internal/ofertas?zonaId=a00000000000000000000005&tipo=PAQUETE"
+```
+
+### 6. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/ofertas"             # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 ```
