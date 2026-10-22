@@ -22,7 +22,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-10 | Qué puede publicar cada tipo de prestador | ✅ RF-65, RF-67 |
 | DC-11 | Publicar y editar exigen el RNT activo | ✅ RF-79, reparto Núcleo/Catálogo |
 | DC-12 | La zona debe estar activa | ✅ RF-84 |
-| DC-13 | Rutas del prestador en `/prestador/**` | 🆕 |
+| DC-13 | Autorización por prefijo de ruta: `/prestador/**`, `/admin/**` y `/turista/**` | 🆕 |
 | DC-14 | Paginación | 🆕 QAS-07 |
 | DC-15 | Errores en ProblemDetail con código de motivo | 🆕 |
 | DC-16 | Modelo documental de `ofertas` | ✅ ADR-03 |
@@ -43,12 +43,13 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-31 | La búsqueda de paquetes usa una agregación | 🆕 RF-22, QAS-07 |
 | DC-32 | El servicio de recomendación no tiene base de datos | ✅ ADR-02, ADR-03 |
 | DC-33 | Implementación de los adaptadores de MongoDB | 🆕 ADR-05, DC-16, DC-17 |
+| DC-34 | El sello RNT se muestra sin el número de registro | 🆕 desvía RF-24 |
 
 ## Identidad y habilitación del prestador
 
-**DC-01. La identidad viene del token.** El catálogo autoriza con `prestadorId`, rol y tipo de prestador tomados del JWT que emite el núcleo. En el prototipo no hay JWT todavía, así que los envían los headers `X-Prestador-Id` y `X-Tipo-Prestador`, marcados en el código como **sustituto del token**. Cuando exista `libs/seguridad-jwt`, solo cambia el adaptador de `compartido/seguridad` (`ResolutorIdentidad`). El tipo de prestador **no** se guarda en el catálogo, para no tener dos fuentes de verdad.
-- Cualquiera puede enviar esos headers, así que solo se aceptan con el perfil `demo` (DC-27). Sin ese perfil, las rutas del prestador responden 401 `NO_AUTENTICADO`.
-- El rol no se envía: las rutas `/prestador/**` solo las usa el prestador, y la autorización por rol llega con el JWT.
+**DC-01. La identidad viene del token.** El catálogo autoriza con el id del usuario, su rol y, si es prestador, su tipo, tomados del JWT que emite el núcleo. En el prototipo no hay JWT todavía, así que los envían los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador`, marcados en el código como **sustituto del token**. Cuando exista `libs/seguridad-jwt`, solo cambia el adaptador de `compartido/seguridad` (`ResolutorIdentidad`). El tipo de prestador **no** se guarda en el catálogo, para no tener dos fuentes de verdad.
+- Cualquiera puede enviar esos headers, así que solo se aceptan con el perfil `demo` (DC-27). Sin ese perfil, las rutas que exigen identidad responden 401 `NO_AUTENTICADO`.
+- Roles que el catálogo distingue: `TURISTA`, `PRESTADOR` y `ADMINISTRADOR`. El tipo de prestador solo se exige con el rol `PRESTADOR`.
 
 **DC-02. Réplica de la habilitación RNT.** `PrestadorCatalogo {prestadorId, rntActivo, version}` reemplaza en el catálogo a la bandeja de salida del núcleo y es la fuente de verdad para autorizar publicaciones.
 - Un prestador del que aún no llega ningún aviso se trata como **no habilitado**. En la demostración, el aviso de habilitación va antes de publicar.
@@ -101,7 +102,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 
 ## API
 
-**DC-13. Rutas del prestador en `/prestador/**`.** Así se puede autorizar por ruta (el rol PRESTADOR) en un solo lugar.
+**DC-13. Autorización por prefijo de ruta.** Cada prefijo exige un rol y se verifica en un solo lugar (`ExigirRol`, registrado en `compartido/config/SeguridadConfig`) antes de llegar al controlador: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA. Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`. La búsqueda, la ficha y las zonas son públicas, y `/internal/**` solo es accesible desde la red interna. El controlador lee la identidad ya verificada con `Identidad.de(peticion)`.
 
 | Controlador | Endpoint |
 |---|---|
@@ -126,7 +127,8 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | `RNT_INACTIVO` | 403 | DC-11 |
 | `OFERTA_NO_ENCONTRADA` | 404 | No existe, o no es visible para quien la consulta |
 | `OFERTA_NO_EDITABLE` | 409 | La oferta está retirada |
-| `NO_AUTENTICADO` | 401 | Falta la identidad del prestador, o llegan los headers de demostración sin el perfil `demo` (DC-01) |
+| `NO_AUTENTICADO` | 401 | Falta la identidad del usuario, o llegan los headers de demostración sin el perfil `demo` (DC-01) |
+| `ACCESO_DENEGADO` | 403 | El rol del usuario no es el que exige el prefijo de la ruta (DC-13) |
 | `CONFLICTO_CONCURRENCIA` | 409 | Otra operación modificó la misma oferta o la misma habilitación al mismo tiempo y los reintentos no alcanzaron (ADR-05) |
 
 Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un precio que no es un número, también responde 400 `DATO_INVALIDO`.
@@ -271,6 +273,8 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - **Formato:** los documentos son records con los campos del modelo documental; los campos sin valor no se guardan. El precio es `Decimal128`, las referencias son `ObjectId`, los UUID usan la representación estándar (subtipo 4), las ubicaciones son puntos GeoJSON `[longitud, latitud]` y las horas de salida son textos `HH:mm`. `MongoConfig` (en `compartido/config`) quita el campo `_class`. MongoDB guarda las fechas con precisión de milisegundos.
 - **Índices:** los crea `IndicesMongo` al arrancar con el perfil `mongo`; crear un índice que ya existe no hace nada, así que todas las réplicas pueden hacerlo. Así también los tienen las pruebas de integración.
 - **Pruebas:** `ContratoOfertaRepository` y `ContratoPrestadorRepository` son las mismas pruebas para los dos adaptadores, en memoria y en MongoDB, con los datos de demostración. Los datos de demostración pasaron a `infraestructura/salida/demo` para compartirlos.
+
+**DC-34. El sello RNT se muestra sin el número de registro.** RF-24 pide mostrar el sello "RNT verificado" con el número de registro. El equipo decidió mostrar solo el sello. El número es un dato del núcleo, que lo verifica contra la API del RNT, y el catálogo solo recibe si la habilitación está activa (DC-02); mostrarlo obligaría a replicar un dato más en los avisos de habilitación. Queda registrado como desviación de RF-24 para ajustar el SRS.
 
 ## Cambios pendientes en los documentos de diseño
 

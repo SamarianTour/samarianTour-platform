@@ -77,7 +77,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 | `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Docker Compose y pruebas de integración (`mvn verify`) |
 | `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 
-**Identidad provisional del prestador.** Mientras no exista `libs/seguridad-jwt`, las rutas `/prestador/**` identifican al prestador con dos headers: `X-Prestador-Id` (UUID) y `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cualquiera puede enviarlos, así que solo se aceptan con el perfil `demo`; sin él responden 401. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
+**Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
 
 ## Levantar el piloto
 
@@ -190,7 +190,8 @@ Publicar una actividad como el guía independiente de la demostración:
 ```bash
 ID=$(curl -s -X POST "$BASE/prestador/ofertas" \
   -H "Content-Type: application/json" \
-  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Rol: PRESTADOR" \
   -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE" \
   -d '{
         "tipo": "ACTIVIDAD",
@@ -240,12 +241,14 @@ curl -s "$BASE/ofertas?zonaId=a00000000000000000000007&tipoActividad=AVISTAMIENT
 ```bash
 # Las ofertas del guía en cualquier estado, con su versión publicada y la pendiente
 curl -s "$BASE/prestador/ofertas" \
-  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Rol: PRESTADOR" \
   -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
 
 # Retirar la oferta recién publicada: 204. El retiro es definitivo
 curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro" \
-  -H "X-Prestador-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Rol: PRESTADOR" \
   -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
 
 # Ya no es visible para el turista (404), pero sigue en las ofertas propias como "retirada": true
@@ -263,7 +266,8 @@ curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 
 Otros casos que se pueden mostrar:
 
 - **Sin identidad:** el mismo `POST` sin los headers responde 401 `NO_AUTENTICADO`.
-- **RNT inactivo:** con `X-Prestador-Id: 50000000-0000-0000-0000-000000000005` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
+- **Rol equivocado:** el mismo `POST` con `X-Rol: TURISTA` responde 403 `ACCESO_DENEGADO`.
+- **RNT inactivo:** con `X-Usuario-Id: 50000000-0000-0000-0000-000000000005`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
 - **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
 - **Edición:** antes de retirarla, un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
 - **Oferta retirada:** después del retiro, ese mismo `PUT` responde 409 `OFERTA_NO_EDITABLE`.
