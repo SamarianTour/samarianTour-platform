@@ -28,6 +28,7 @@ export class ErrorApi extends Error {
 /** Mensaje para el usuario de cada código de la API (DC-15). */
 export const MENSAJES: Record<CodigoError, string> = {
   NO_AUTENTICADO: 'Elige un prestador demo para continuar.',
+  ACCESO_DENEGADO: 'Tu cuenta no tiene permiso para entrar a esta sección.',
   RNT_INACTIVO: 'Tu Registro Nacional de Turismo no está activo, así que no puedes publicar ni editar ofertas.',
   TIPO_OFERTA_NO_PERMITIDO: 'Tu tipo de prestador no puede publicar este tipo de oferta.',
   PRESTADOR_NO_AUTORIZADO: 'Esta oferta es de otro prestador.',

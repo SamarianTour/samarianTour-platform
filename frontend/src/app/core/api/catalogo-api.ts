@@ -403,7 +403,7 @@ export interface components {
              * @description Motivo estable del error (DC-15).
              * @enum {string}
              */
-            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA";
+            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA";
         };
     };
     responses: {
@@ -426,7 +426,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problema"];
             };
         };
-        /** @description Falta la identidad del prestador. */
+        /** @description Falta la identidad del usuario, o está mal formada. */
         NoAutenticado: {
             headers: {
                 [name: string]: unknown;
@@ -437,7 +437,7 @@ export interface components {
                  *       "type": "about:blank",
                  *       "title": "No autenticado",
                  *       "status": 401,
-                 *       "detail": "Falta el header X-Prestador-Id",
+                 *       "detail": "Falta el header X-Usuario-Id",
                  *       "instance": "/api/catalogo/prestador/ofertas",
                  *       "codigo": "NO_AUTENTICADO"
                  *     }
@@ -445,8 +445,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problema"];
             };
         };
-        /** @description El prestador no puede hacer la operación; `codigo` dice por qué. */
+        /**
+         * @description El usuario no puede hacer la operación; `codigo` dice por qué: `ACCESO_DENEGADO` si su rol no es el que exige
+         *     la ruta, o una regla del prestador (`RNT_INACTIVO`, `TIPO_OFERTA_NO_PERMITIDO`, `PRESTADOR_NO_AUTORIZADO`).
+         */
         Prohibido: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
+        /** @description El rol del usuario no es el que exige la ruta (`ACCESO_DENEGADO`). */
+        AccesoDenegado: {
             headers: {
                 [name: string]: unknown;
             };
@@ -454,17 +466,20 @@ export interface components {
                 /**
                  * @example {
                  *       "type": "about:blank",
-                 *       "title": "Forbidden",
+                 *       "title": "Acceso denegado",
                  *       "status": 403,
-                 *       "detail": "El RNT del prestador 50000000-0000-0000-0000-000000000005 no está activo",
+                 *       "detail": "Esta ruta es solo para el rol PRESTADOR",
                  *       "instance": "/api/catalogo/prestador/ofertas",
-                 *       "codigo": "RNT_INACTIVO"
+                 *       "codigo": "ACCESO_DENEGADO"
                  *     }
                  */
                 "application/problem+json": components["schemas"]["Problema"];
             };
         };
-        /** @description La oferta es de otro prestador (`PRESTADOR_NO_AUTORIZADO`). */
+        /**
+         * @description La oferta es de otro prestador (`PRESTADOR_NO_AUTORIZADO`), o el rol del usuario no es PRESTADOR
+         *     (`ACCESO_DENEGADO`, como en la respuesta `AccesoDenegado`).
+         */
         PrestadorNoAutorizado: {
             headers: {
                 [name: string]: unknown;
@@ -541,11 +556,19 @@ export interface components {
         /** @example b00000000000000000000001 */
         OfertaId: string;
         /**
-         * @description PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+         * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
          *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
          */
-        PrestadorId: string;
-        /** @description PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10). */
+        UsuarioId: string;
+        /**
+         * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+         *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+         */
+        Rol: "TURISTA" | "PRESTADOR" | "ADMINISTRADOR";
+        /**
+         * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+         *     puede publicar (DC-10).
+         */
         TipoPrestador: components["schemas"]["TipoPrestador"];
         /** @description Página pedida; la primera es la 0 (DC-14). */
         Page: number;
@@ -649,11 +672,19 @@ export interface operations {
             };
             header: {
                 /**
-                 * @description PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
                  *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
                  */
-                "X-Prestador-Id": components["parameters"]["PrestadorId"];
-                /** @description PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10). */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
                 "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
             };
             path?: never;
@@ -672,6 +703,7 @@ export interface operations {
             };
             400: components["responses"]["DatoInvalido"];
             401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
         };
     };
     publicarOferta: {
@@ -679,11 +711,19 @@ export interface operations {
             query?: never;
             header: {
                 /**
-                 * @description PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
                  *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
                  */
-                "X-Prestador-Id": components["parameters"]["PrestadorId"];
-                /** @description PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10). */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
                 "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
             };
             path?: never;
@@ -735,11 +775,19 @@ export interface operations {
             query?: never;
             header: {
                 /**
-                 * @description PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
                  *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
                  */
-                "X-Prestador-Id": components["parameters"]["PrestadorId"];
-                /** @description PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10). */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
                 "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
             };
             path: {
@@ -775,11 +823,19 @@ export interface operations {
             query?: never;
             header: {
                 /**
-                 * @description PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
                  *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
                  */
-                "X-Prestador-Id": components["parameters"]["PrestadorId"];
-                /** @description PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10). */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
                 "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
             };
             path: {
@@ -849,4 +905,5 @@ export const avisoModeracionTipoValues: ReadonlyArray<FlattenedDeepRequired<comp
 export const avisoModeracionDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracion"]["decision"]> = ["APROBAR", "RECHAZAR"];
 export const avisoHabilitacionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoHabilitacion"]["tipo"]> = ["HABILITACION"];
 export const avisoResultadoResultadoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoResultado"]["resultado"]> = ["APLICADO", "IGNORADO", "DUPLICADO"];
-export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA"];
+export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA"];
+export const componentsParametersRolValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["Rol"]> = ["TURISTA", "PRESTADOR", "ADMINISTRADOR"];

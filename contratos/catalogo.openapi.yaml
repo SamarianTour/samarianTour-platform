@@ -9,6 +9,9 @@ info:
 
     - Las rutas no incluyen el prefijo `/api/catalogo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
+    - Las rutas `/prestador/**`, `/admin/**` y `/turista/**` exigen la identidad del usuario con el rol PRESTADOR,
+      ADMINISTRADOR o TURISTA, respectivamente (DC-13). Sin identidad responden 401 `NO_AUTENTICADO`; con otro rol,
+      403 `ACCESO_DENEGADO`. Las demás rutas son públicas.
 servers:
   - url: http://localhost:8080/api/catalogo
     description: Piloto con Docker Compose, detrás de Nginx
@@ -16,7 +19,7 @@ tags:
   - name: Catálogo público
     description: Búsqueda y consulta; no exige identidad.
   - name: Prestador
-    description: Ofertas del prestador. Exige su identidad.
+    description: Ofertas del prestador. Exige la identidad con el rol PRESTADOR.
   - name: Interno
     description: Avisos del núcleo. Nginx no expone estas rutas hacia afuera.
 
@@ -121,7 +124,8 @@ paths:
         Devuelve las ofertas del prestador de la identidad en cualquier estado, incluidas las retiradas y las que
         aún no tienen versión publicada, ordenadas por id.
       parameters:
-        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
         - $ref: '#/components/parameters/TipoPrestador'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -136,6 +140,8 @@ paths:
           $ref: '#/components/responses/DatoInvalido'
         '401':
           $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
     post:
       tags: [Prestador]
       operationId: publicarOferta
@@ -143,7 +149,8 @@ paths:
       description: |
         La oferta nace con su versión 1 en moderación y no es visible hasta que el núcleo avise su aprobación.
       parameters:
-        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
         - $ref: '#/components/parameters/TipoPrestador'
       requestBody:
         required: true
@@ -189,7 +196,8 @@ paths:
         sigue visible hasta que se apruebe la nueva. El cuerpo trae el contenido completo y el tipo no puede cambiar.
       parameters:
         - $ref: '#/components/parameters/OfertaId'
-        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
         - $ref: '#/components/parameters/TipoPrestador'
       requestBody:
         required: true
@@ -227,7 +235,8 @@ paths:
         y también responde 204. No lleva cuerpo.
       parameters:
         - $ref: '#/components/parameters/OfertaId'
-        - $ref: '#/components/parameters/PrestadorId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
         - $ref: '#/components/parameters/TipoPrestador'
       responses:
         '204':
@@ -304,21 +313,33 @@ components:
       schema:
         type: string
       example: b00000000000000000000001
-    PrestadorId:
-      name: X-Prestador-Id
+    UsuarioId:
+      name: X-Usuario-Id
       in: header
       required: true
       description: |
-        PROVISIONAL (DC-01): sustituye al identificador del prestador que traerá el JWT del núcleo.
+        PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
         Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
       schema:
         type: string
         format: uuid
+    Rol:
+      name: X-Rol
+      in: header
+      required: true
+      description: |
+        PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+        `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+      schema:
+        type: string
+        enum: [TURISTA, PRESTADOR, ADMINISTRADOR]
     TipoPrestador:
       name: X-Tipo-Prestador
       in: header
       required: true
-      description: PROVISIONAL (DC-01), igual que `X-Prestador-Id`. Decide qué tipos de oferta puede publicar (DC-10).
+      description: |
+        PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+        puede publicar (DC-10).
       schema:
         $ref: '#/components/schemas/TipoPrestador'
     Page:
@@ -353,7 +374,7 @@ components:
             instance: /api/catalogo/ofertas
             codigo: DATO_INVALIDO
     NoAutenticado:
-      description: Falta la identidad del prestador.
+      description: Falta la identidad del usuario, o está mal formada.
       content:
         application/problem+json:
           schema:
@@ -362,24 +383,51 @@ components:
             type: about:blank
             title: No autenticado
             status: 401
-            detail: Falta el header X-Prestador-Id
+            detail: Falta el header X-Usuario-Id
             instance: /api/catalogo/prestador/ofertas
             codigo: NO_AUTENTICADO
     Prohibido:
-      description: El prestador no puede hacer la operación; `codigo` dice por qué.
+      description: |
+        El usuario no puede hacer la operación; `codigo` dice por qué: `ACCESO_DENEGADO` si su rol no es el que exige
+        la ruta, o una regla del prestador (`RNT_INACTIVO`, `TIPO_OFERTA_NO_PERMITIDO`, `PRESTADOR_NO_AUTORIZADO`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            rntInactivo:
+              value:
+                type: about:blank
+                title: Forbidden
+                status: 403
+                detail: El RNT del prestador 50000000-0000-0000-0000-000000000005 no está activo
+                instance: /api/catalogo/prestador/ofertas
+                codigo: RNT_INACTIVO
+            accesoDenegado:
+              value:
+                type: about:blank
+                title: Acceso denegado
+                status: 403
+                detail: Esta ruta es solo para el rol PRESTADOR
+                instance: /api/catalogo/prestador/ofertas
+                codigo: ACCESO_DENEGADO
+    AccesoDenegado:
+      description: El rol del usuario no es el que exige la ruta (`ACCESO_DENEGADO`).
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problema'
           example:
             type: about:blank
-            title: Forbidden
+            title: Acceso denegado
             status: 403
-            detail: El RNT del prestador 50000000-0000-0000-0000-000000000005 no está activo
+            detail: Esta ruta es solo para el rol PRESTADOR
             instance: /api/catalogo/prestador/ofertas
-            codigo: RNT_INACTIVO
+            codigo: ACCESO_DENEGADO
     PrestadorNoAutorizado:
-      description: La oferta es de otro prestador (`PRESTADOR_NO_AUTORIZADO`).
+      description: |
+        La oferta es de otro prestador (`PRESTADOR_NO_AUTORIZADO`), o el rol del usuario no es PRESTADOR
+        (`ACCESO_DENEGADO`, como en la respuesta `AccesoDenegado`).
       content:
         application/problem+json:
           schema:
@@ -912,6 +960,7 @@ components:
             - DATO_INVALIDO
             - ZONA_NO_DISPONIBLE
             - NO_AUTENTICADO
+            - ACCESO_DENEGADO
             - PRESTADOR_NO_AUTORIZADO
             - TIPO_OFERTA_NO_PERMITIDO
             - RNT_INACTIVO
