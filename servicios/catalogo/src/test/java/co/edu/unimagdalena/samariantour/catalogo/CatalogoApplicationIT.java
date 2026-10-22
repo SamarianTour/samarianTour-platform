@@ -45,6 +45,18 @@ class CatalogoApplicationIT extends IntegracionMongoBase {
     }
 
     @Test
+    @DisplayName("con el perfil mongo responden las consultas internas del núcleo y de la recomendación")
+    void consultasInternasConMongo() {
+        var visibles = http.getForEntity("/internal/ofertas?tipo=PAQUETE", String.class);
+        assertThat(visibles.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(visibles.getBody()).contains("\"contenido\"");
+
+        var inexistente = http.getForEntity("/internal/ofertas/b00000000000000000000099", String.class);
+        assertThat(inexistente.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(inexistente.getBody()).contains("OFERTA_NO_ENCONTRADA");
+    }
+
+    @Test
     void respondeLosErroresComoProblemDetailConElHeaderDeInstancia() {
         var respuesta = http.getForEntity("/ruta-inexistente", String.class);
 

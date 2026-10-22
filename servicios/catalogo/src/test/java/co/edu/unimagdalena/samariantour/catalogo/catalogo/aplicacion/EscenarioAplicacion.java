@@ -35,18 +35,19 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDe
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaInactiva;
 
 /**
- * Los cinco servicios de aplicación conectados a dobles en memoria de los puertos de salida, con la hora fija.
+ * Los servicios de aplicación conectados a dobles en memoria de los puertos de salida, con la hora fija.
  * Reúne las acciones que se repiten en las pruebas (habilitar, publicar, moderar).
  */
 class EscenarioAplicacion {
 
+    /** Zona activa sin alta afluencia; la de DatosDePrueba (ZONA_ACTIVA) sí la tiene. */
     static final String ZONA_TAGANGA = "taganga";
     static final Solicitante AGENCIA = new Solicitante(PRESTADOR, TipoPrestador.AGENCIA_OPERADORA);
     static final Solicitante OTRA_AGENCIA = new Solicitante(OTRO_PRESTADOR, TipoPrestador.AGENCIA_OPERADORA);
 
     final OfertaRepositoryEnMemoria ofertas = new OfertaRepositoryEnMemoria();
     final ZonaRepositoryEnMemoria zonas = new ZonaRepositoryEnMemoria(zonaActiva(), zonaInactiva(),
-            new Zona(ZONA_TAGANGA, "Taganga", null, null, false, true, true, List.of(), null));
+            new Zona(ZONA_TAGANGA, "Taganga", null, null, false, false, true, List.of(), null));
     final PrestadorCatalogoRepositoryEnMemoria prestadores = new PrestadorCatalogoRepositoryEnMemoria();
     final PerfilRepositoryEnMemoria perfiles = new PerfilRepositoryEnMemoria();
     final AvisoProcesadoEnMemoria avisosProcesados = new AvisoProcesadoEnMemoria();
@@ -57,6 +58,8 @@ class EscenarioAplicacion {
     final GestionarOfertaService gestion = new GestionarOfertaService(ofertas, zonas, prestadores, reloj, reintento);
     final BuscarOfertasService busqueda = new BuscarOfertasService(ofertas);
     final ConsultarFichaOfertaService ficha = new ConsultarFichaOfertaService(ofertas, zonas, perfiles);
+    final ConsultarOfertaInternaService consultaInterna = new ConsultarOfertaInternaService(ofertas);
+    final ConsultarOfertasVisiblesService visibles = new ConsultarOfertasVisiblesService(ofertas, zonas);
     final ConsultarZonasService consultaZonas = new ConsultarZonasService(zonas);
     final AplicarAvisoNucleoService avisos = new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados,
             reloj, reintento);
