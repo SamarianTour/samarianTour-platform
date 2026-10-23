@@ -32,8 +32,8 @@ class SaludApiTest {
     }
 
     @Test
-    @DisplayName("de Actuator solo se expone la salud")
-    void soloLaSalud() throws Exception {
+    @DisplayName("de Actuator solo se exponen la salud y las métricas")
+    void soloLaSaludYLasMetricas() throws Exception {
         http.perform(get("/actuator/env")).andExpect(status().isNotFound());
         http.perform(get("/actuator/beans")).andExpect(status().isNotFound());
     }

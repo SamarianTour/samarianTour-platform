@@ -36,11 +36,21 @@ management:
   endpoints:
     web:
       exposure:
-        # Solo la salud, para el healthcheck de Docker Compose.
-        include: health
+        # La salud, para el healthcheck de Docker Compose, y las métricas para medir QAS-07. Nginx no deja llegar a
+        # /actuator desde fuera: solo se consultan desde la red de Docker.
+        include: health,prometheus
+  metrics:
+    distribution:
+      # Latencia de cada ruta (QAS-07, DC-48): cuántas peticiones respondieron dentro de cada umbral desde el arranque.
+      # Los contadores se suman entre réplicas; "p95 <= 2 s" se cumple si al menos el 95 % cae en el de 2 s.
+      slo:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,750ms,1s,1500ms,2s,3s
 
 catalogo:
   fotos:
     limpieza:
       # Cada hora, en el minuto 17, borra las fotos que pasaron 24 horas sin uso (DC-47). Con "-" no corre.
       cron: "0 17 * * * *"
+  carga:
+    # Ofertas sintéticas que carga el perfil carga para la prueba de QAS-07 (DC-48).
+    ofertas: 5000
