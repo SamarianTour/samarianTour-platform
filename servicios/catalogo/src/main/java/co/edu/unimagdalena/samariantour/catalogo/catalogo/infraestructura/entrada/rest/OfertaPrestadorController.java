@@ -11,7 +11,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PaginaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.mapper.OfertaWebMapper;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.mapper.SolicitanteWebMapper;
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.ResolutorIdentidad;
+import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.Identidad;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,18 +27,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Ofertas del prestador: publicar, editar, retirar y listar las propias (RF-65 a RF-67). Todas las rutas van bajo
- * {@code /prestador} para autorizarlas en un solo lugar (DC-13) y exigen la identidad del prestador.
+ * {@code /prestador} para autorizarlas en un solo lugar (DC-13): {@code ExigirRol} exige el rol PRESTADOR antes de
+ * llegar aquí.
  */
 @RestController
 @RequestMapping("/prestador/ofertas")
 public class OfertaPrestadorController {
 
     private final GestionarOfertaUseCase gestionarOferta;
-    private final ResolutorIdentidad identidad;
 
-    public OfertaPrestadorController(GestionarOfertaUseCase gestionarOferta, ResolutorIdentidad identidad) {
+    public OfertaPrestadorController(GestionarOfertaUseCase gestionarOferta) {
         this.gestionarOferta = gestionarOferta;
-        this.identidad = identidad;
     }
 
     @PostMapping
@@ -76,6 +75,6 @@ public class OfertaPrestadorController {
     }
 
     private Solicitante solicitanteDe(HttpServletRequest peticion) {
-        return SolicitanteWebMapper.aSolicitante(identidad.prestadorDe(peticion));
+        return SolicitanteWebMapper.aSolicitante(Identidad.de(peticion));
     }
 }

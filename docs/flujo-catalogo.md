@@ -102,7 +102,7 @@ Mientras una edición espera moderación, el turista sigue viendo la última apr
 
 ### ¿Quién hace la petición?
 
-En la versión final, el token JWT del núcleo trae id, rol y tipo de prestador. En el prototipo el id y el tipo llegan en headers (`X-Prestador-Id` y `X-Tipo-Prestador`) que simulan el token y solo se aceptan con el perfil `demo`; los avisos del núcleo se simulan con `curl`.
+En la versión final, el token JWT del núcleo trae id, rol y tipo de prestador. En el prototipo llegan en headers (`X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador`) que simulan el token y solo se aceptan con el perfil `demo`; los avisos del núcleo se simulan con `curl`.
 
 ## 5. Flujo completo, paso a paso
 
@@ -128,7 +128,7 @@ Un aviso repetido se detecta en el paso 2; un aviso viejo lo descarta `aplicarHa
 
 ```
 POST /api/catalogo/prestador/ofertas
-Headers: X-Prestador-Id: Laura, X-Tipo-Prestador: GUIA_INDEPENDIENTE
+Headers: X-Usuario-Id: Laura, X-Rol: PRESTADOR, X-Tipo-Prestador: GUIA_INDEPENDIENTE
 Cuerpo: { tipo: "ACTIVIDAD", nombre: "Avistamiento de aves", zonaId: "minca", precio: 80000, ... }
 ```
 

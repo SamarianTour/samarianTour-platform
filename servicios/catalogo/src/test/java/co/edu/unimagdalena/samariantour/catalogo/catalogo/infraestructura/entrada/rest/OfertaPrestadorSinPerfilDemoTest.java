@@ -33,7 +33,7 @@ class OfertaPrestadorSinPerfilDemoTest {
     @DisplayName("sin el perfil demo, publicar con los headers de identidad responde 401 NO_AUTENTICADO")
     void headersNoAceptados() throws Exception {
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content("{}")
-                        .header("X-Prestador-Id", PRESTADOR.toString())
+                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));

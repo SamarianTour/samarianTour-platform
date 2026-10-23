@@ -61,7 +61,7 @@ Los colores, la tipografía y las piezas comunes (tarjetas, etiquetas, botones, 
 
 ## Identidad provisional
 
-No hay inicio de sesión. El panel del prestador tiene el selector **Prestador demo** con los cinco prestadores de los datos de demostración; el elegido se guarda en `localStorage`. Un interceptor agrega `X-Prestador-Id` y `X-Tipo-Prestador` solo a las peticiones a `/api/catalogo/prestador/**`. Cuando exista el JWT del núcleo, se reemplazan `core/identidad` y el selector.
+No hay inicio de sesión. El panel del prestador tiene el selector **Prestador demo** con los cinco prestadores de los datos de demostración; el elegido se guarda en `localStorage`. Un interceptor agrega `X-Usuario-Id`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador` solo a las peticiones a `/api/catalogo/prestador/**`. Cuando exista el JWT del núcleo, se reemplazan `core/identidad` y el selector.
 
 ## Errores de la API
 

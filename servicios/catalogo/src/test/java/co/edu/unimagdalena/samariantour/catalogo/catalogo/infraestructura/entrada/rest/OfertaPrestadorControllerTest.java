@@ -149,9 +149,27 @@ class OfertaPrestadorControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
-                        .header("X-Prestador-Id", "no-es-un-uuid").header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+                        .header("X-Usuario-Id", "no-es-un-uuid").header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
+        http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
+                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail", containsString("X-Rol")));
+
+        verifyNoInteractions(gestionarOferta);
+    }
+
+    @Test
+    @DisplayName("un usuario con otro rol no entra a las rutas del prestador: 403 ACCESO_DENEGADO")
+    void otroRol() throws Exception {
+        for (String rol : new String[] {"TURISTA", "ADMINISTRADOR"}) {
+            http.perform(get("/prestador/ofertas").header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", rol))
+                    .andExpect(status().isForbidden())
+                    .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                    .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
+        }
 
         verifyNoInteractions(gestionarOferta);
     }
@@ -174,7 +192,8 @@ class OfertaPrestadorControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
-                        .header("X-Prestador-Id", PRESTADOR.toString()).header("X-Tipo-Prestador", "HOTEL"))
+                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", "HOTEL"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail", containsString("tipoPrestador")));
 
@@ -335,7 +354,8 @@ class OfertaPrestadorControllerTest {
 
     private static MockHttpServletRequestBuilder comoAgencia(MockHttpServletRequestBuilder peticion) {
         return peticion.contentType(MediaType.APPLICATION_JSON)
-                .header("X-Prestador-Id", PRESTADOR.toString())
+                .header("X-Usuario-Id", PRESTADOR.toString())
+                .header("X-Rol", "PRESTADOR")
                 .header("X-Tipo-Prestador", "AGENCIA_OPERADORA");
     }
 }

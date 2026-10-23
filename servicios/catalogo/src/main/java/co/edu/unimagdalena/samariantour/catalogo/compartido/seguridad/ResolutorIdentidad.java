@@ -3,11 +3,11 @@ package co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Obtiene la identidad del prestador que hace la petición. Hoy la da un sustituto del token (DC-01);
+ * Obtiene la identidad del usuario que hace la petición. Hoy la da un sustituto del token (DC-01);
  * cuando exista libs/seguridad-jwt solo cambia la implementación.
  */
 public interface ResolutorIdentidad {
 
     /** @throws NoAutenticadoException si la petición no trae una identidad válida */
-    IdentidadPrestador prestadorDe(HttpServletRequest peticion);
+    Identidad identidadDe(HttpServletRequest peticion);
 }
