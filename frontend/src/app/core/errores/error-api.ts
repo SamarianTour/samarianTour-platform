@@ -40,6 +40,8 @@ export const MENSAJES: Record<CodigoError, string> = {
   OPINION_NO_HABILITADA: 'Solo puedes opinar sobre ofertas que hayas pagado.',
   OPINION_DUPLICADA: 'Ya opinaste sobre esta oferta.',
   OPINION_NO_ENCONTRADA: 'Esta opinión ya no está disponible.',
+  PERFIL_NO_ENCONTRADO: 'Todavía no tienes perfil público. Guarda primero tu descripción.',
+  FOTO_NO_ENCONTRADA: 'Esta foto ya no está disponible.',
 };
 
 export const MENSAJE_SIN_CONEXION = 'No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.';

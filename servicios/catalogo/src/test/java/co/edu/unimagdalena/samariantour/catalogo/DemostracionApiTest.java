@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.almacenamiento.ImagenesDePrueba;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,17 +8,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,9 +32,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * El servicio completo con los perfiles de la demostración: controladores, casos de uso y adaptadores en memoria
  * con los datos de Santa Marta. No necesita MongoDB ni Docker.
  */
-@SpringBootTest(properties = "spring.autoconfigure.exclude="
+@SpringBootTest(properties = {"spring.autoconfigure.exclude="
         + "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration,"
-        + "org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration")
+        + "org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration",
+        // Las fotos van a una carpeta del build, no a la carpeta temporal del equipo.
+        "catalogo.fotos.carpeta=target/fotos-demostracion"})
 @AutoConfigureMockMvc
 @ActiveProfiles({"memoria", "demo"})
 class DemostracionApiTest {
@@ -315,6 +324,47 @@ class DemostracionApiTest {
         http.perform(get("/ofertas/b00000000000000000000016/opiniones"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
+    }
+
+    @Test
+    @DisplayName("[Demostración] el guía completa su perfil, sube una foto de celular, se ve en la ficha de su oferta "
+            + "y la quita")
+    void perfilConFotos() throws Exception {
+        http.perform(comoGuia(put("/prestador/perfil")).contentType(MediaType.APPLICATION_JSON).content("""
+                        {"nombreComercial": "Aves de Minca",
+                         "descripcion": "Guía independiente de Minca, especializado en aves y cultura cafetera",
+                         "horariosAtencion": "Todos los días desde las 5:30"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombreComercial").value("Aves de Minca"));
+
+        // Una foto de celular: acostada, con la orientación en sus metadatos EXIF.
+        String perfil = http.perform(comoGuia(multipart("/prestador/perfil/fotos").file(new MockMultipartFile(
+                        "foto", "IMG_2024.jpg", "image/jpeg", ImagenesDePrueba.jpgConOrientacion(1600, 1200, 6)))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fotos", hasSize(1)))
+                .andReturn().getResponse().getContentAsString();
+        String fotoId = JsonPath.read(perfil, "$.fotos[0].id");
+        String url = JsonPath.read(perfil, "$.fotos[0].url");
+
+        byte[] galeria = http.perform(get(url))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"))
+                .andReturn().getResponse().getContentAsByteArray();
+        assertThat(ImagenesDePrueba.leer(galeria).getHeight()).as("enderezada: queda vertical").isEqualTo(1280);
+        http.perform(get("/ofertas/b0000000000000000000000a"))
+                .andExpect(jsonPath("$.perfilPrestador.nombreComercial").value("Aves de Minca"))
+                .andExpect(jsonPath("$.perfilPrestador.fotos[0].urlMiniatura")
+                        .value("/fotos/" + fotoId + "/miniatura"));
+
+        http.perform(comoGuia(delete("/prestador/perfil/fotos/" + fotoId))).andExpect(status().isNoContent());
+        http.perform(get(url)).andExpect(status().isNotFound());
+        http.perform(comoGuia(get("/prestador/perfil"))).andExpect(jsonPath("$.fotos", hasSize(0)));
+    }
+
+    private static MockHttpServletRequestBuilder comoGuia(MockHttpServletRequestBuilder peticion) {
+        return peticion.header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
+                .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE");
     }
 
     @Test

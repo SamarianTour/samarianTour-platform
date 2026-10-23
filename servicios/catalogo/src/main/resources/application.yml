@@ -17,9 +17,17 @@ spring:
     # Errores en formato RFC 7807 (application/problem+json).
     problemdetails:
       enabled: true
+  servlet:
+    multipart:
+      # Una foto pesa como máximo 5 MB (DC-39); el resto de la petición son unos pocos bytes.
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   port: 8080
+  tomcat:
+    # Tomcat lee hasta este tamaño una subida que rechaza, para poder responder el 400 en vez de cortar la conexión.
+    max-swallow-size: 10MB
   servlet:
     # Nginx reenvía /api/catalogo/** sin reescribir la ruta; los controladores se mapean sin el prefijo.
     context-path: /api/catalogo

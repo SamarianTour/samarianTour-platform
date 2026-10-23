@@ -19,6 +19,26 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Almacenamiento de las fotos (DC-39). Sin puertos publicados: solo el catálogo lo usa, y el navegador pide las
+  # fotos al catálogo por Nginx.
+  minio:
+    # MinIO ya no publica imágenes en Docker Hub ni en Quay. Esta la compila Chainguard desde el código de MinIO,
+    # corre sin root y se actualiza a diario; su plan gratuito solo ofrece la etiqueta latest (DC-39).
+    image: cgr.dev/chainguard/minio:latest
+    command: ["server", "/data"]
+    environment:
+      # Credenciales del piloto; en un despliegue real se pasan como variables de entorno.
+      MINIO_ROOT_USER: ${MINIO_USUARIO:-samarian}
+      MINIO_ROOT_PASSWORD: ${MINIO_CLAVE:-samarian-fotos-piloto}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   catalogo:
     build:
       context: ..
@@ -26,12 +46,18 @@ services:
     image: samarian-tour/catalogo:latest
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/catalogo_db
+      CATALOGO_MINIO_URL: http://minio:9000
+      CATALOGO_MINIO_USUARIO: ${MINIO_USUARIO:-samarian}
+      CATALOGO_MINIO_CLAVE: ${MINIO_CLAVE:-samarian-fotos-piloto}
       # mongo: los datos viven en MongoDB y las réplicas comparten el estado.
+      # minio: las fotos viven en MinIO, compartido por las réplicas (DC-39).
       # demo: headers que sustituyen al token del prestador y carga de los datos de demostración
       # si las colecciones están vacías. El perfil demo es solo para la demostración.
-      SPRING_PROFILES_ACTIVE: mongo,demo
+      SPRING_PROFILES_ACTIVE: mongo,minio,demo
     depends_on:
       mongo:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/catalogo/actuator/health"]
@@ -61,3 +87,4 @@ services:
 
 volumes:
   mongo-data:
+  minio-data:

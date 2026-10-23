@@ -29,6 +29,21 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <dependency>
+            <!-- Almacenamiento de las fotos con el perfil minio (FileStoragePort, DC-39) -->
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Lectura de WebP con ImageIO, que de fábrica solo lee JPG y PNG -->
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Orientación EXIF de las fotos de celular, para enderezarlas antes de quitar los metadatos -->
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -43,6 +58,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>mongodb</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>minio</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

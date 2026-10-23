@@ -132,6 +132,164 @@ paths:
                 items:
                   $ref: '#/components/schemas/Zona'
 
+  /fotos/{fotoId}/{tamano}:
+    get:
+      tags: [Catálogo público]
+      operationId: consultarFoto
+      summary: Una foto en un tamaño (DC-39)
+      description: |
+        Siempre es un JPG generado por el catálogo, sin los metadatos del archivo original. Una foto nunca cambia,
+        así que se puede guardar en caché un año (`Cache-Control: public, max-age=31536000, immutable`).
+      parameters:
+        - name: fotoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tamano
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [galeria, miniatura]
+      responses:
+        '200':
+          description: La foto.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/FotoNoEncontrada'
+
+  /prestador/perfil:
+    get:
+      tags: [Prestador]
+      operationId: consultarPerfilPropio
+      summary: El perfil público del prestador (RF-64)
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      responses:
+        '200':
+          description: El perfil, tal como lo ve el turista.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilPublico'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/PerfilNoEncontrado'
+    put:
+      tags: [Prestador]
+      operationId: guardarPerfilPropio
+      summary: Crear o actualizar el perfil público (RF-64, RF-72)
+      description: |
+        Crea el perfil la primera vez y después reemplaza sus datos; las fotos que ya tiene se conservan. Se publica
+        de inmediato, sin moderación (DC-39). Solo la descripción es obligatoria (DC-26).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerfilRequest'
+      responses:
+        '200':
+          description: El perfil guardado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilPublico'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '409':
+          $ref: '#/components/responses/ConflictoConcurrencia'
+
+  /prestador/perfil/fotos:
+    post:
+      tags: [Prestador]
+      operationId: agregarFotoPerfil
+      summary: Subir una foto al perfil (RF-64, RF-72)
+      description: |
+        JPG, PNG o WebP de hasta 5 MB; el perfil tiene como máximo 6 fotos. El formato se reconoce por el contenido
+        del archivo. El catálogo guarda una versión nueva de la foto, enderezada y sin metadatos (por ejemplo, sin la
+        ubicación GPS), en dos tamaños (DC-39). Hay que crear el perfil antes de subir fotos.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [foto]
+              properties:
+                foto:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: El perfil con la foto nueva al final.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilPublico'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/PerfilNoEncontrado'
+        '409':
+          $ref: '#/components/responses/ConflictoConcurrencia'
+
+  /prestador/perfil/fotos/{fotoId}:
+    delete:
+      tags: [Prestador]
+      operationId: quitarFotoPerfil
+      summary: Quitar una foto del perfil (RF-64)
+      description: |
+        La quita del perfil y la borra del almacenamiento. Si el perfil no tiene esa foto no hace nada: quitarla dos
+        veces no es un error.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+        - name: fotoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: La foto ya no está en el perfil.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/PerfilNoEncontrado'
+        '409':
+          $ref: '#/components/responses/ConflictoConcurrencia'
+
   /prestador/ofertas:
     get:
       tags: [Prestador]
@@ -770,6 +928,32 @@ components:
             detail: No existe la oferta no-existe
             instance: /api/catalogo/ofertas/no-existe
             codigo: OFERTA_NO_ENCONTRADA
+    PerfilNoEncontrado:
+      description: El prestador todavía no tiene perfil público; hay que crearlo antes de subir fotos.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: El prestador 20000000-0000-0000-0000-000000000002 todavía no tiene perfil público
+            instance: /api/catalogo/prestador/perfil
+            codigo: PERFIL_NO_ENCONTRADO
+    FotoNoEncontrada:
+      description: No hay una foto con ese identificador, o el tamaño no existe.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: No existe la foto 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+            instance: /api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/galeria
+            codigo: FOTO_NO_ENCONTRADA
     Conflicto:
       description: |
         La oferta está retirada y el retiro es definitivo (`OFERTA_NO_EDITABLE`), u otra operación la modificó al
@@ -1091,9 +1275,10 @@ components:
           type: string
         fotos:
           type: array
+          description: En el orden en que el prestador las subió; como máximo 6 (DC-39).
+          maxItems: 6
           items:
-            type: string
-            format: uri
+            $ref: '#/components/schemas/Foto'
         horariosAtencion:
           type: string
         sitioWeb:
@@ -1104,6 +1289,49 @@ components:
           items:
             type: string
             format: uri
+
+    PerfilRequest:
+      type: object
+      description: Los datos del perfil público que escribe el prestador (RF-64). Las fotos se suben aparte.
+      required: [descripcion]
+      properties:
+        nombreComercial:
+          type: string
+          description: Opcional (DC-26).
+        descripcion:
+          type: string
+          description: Obligatoria, sin límite de palabras.
+        horariosAtencion:
+          type: string
+        sitioWeb:
+          type: string
+          format: uri
+          description: URL http o https.
+        redesSociales:
+          type: array
+          items:
+            type: string
+            format: uri
+            description: URL http o https.
+
+    Foto:
+      type: object
+      description: |
+        Una foto con la dirección de cada tamaño (DC-39). Las direcciones son rutas del catálogo y nunca cambian.
+      required: [id, url, urlMiniatura]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador de la foto; es el que se usa para quitarla.
+        url:
+          type: string
+          description: La foto para la galería, JPG de hasta 1280 px por lado.
+          example: /api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/galeria
+        urlMiniatura:
+          type: string
+          description: La foto para las tarjetas, JPG de hasta 400 px por lado.
+          example: /api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/miniatura
 
     OfertaRequest:
       type: object
@@ -1787,3 +2015,5 @@ components:
             - OPINION_NO_HABILITADA
             - OPINION_DUPLICADA
             - OPINION_NO_ENCONTRADA
+            - PERFIL_NO_ENCONTRADO
+            - FOTO_NO_ENCONTRADA

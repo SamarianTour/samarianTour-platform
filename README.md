@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, que por ahora es solo por la API, y la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -40,7 +40,8 @@ co.edu.unimagdalena.samariantour.catalogo
 │       ├── entrada/rest/       controladores, dto/, mapper/
 │       ├── salida/memoria/     adaptadores en memoria (perfil memoria)
 │       ├── salida/demo/        datos de demostración de Santa Marta
-│       └── salida/persistencia/ adaptadores MongoDB (perfil mongo), document/ y mapper/
+│       ├── salida/persistencia/ adaptadores MongoDB (perfil mongo), document/ y mapper/
+│       └── salida/almacenamiento/ fotos en MinIO (perfil minio) o en una carpeta local
 └── opiniones/                  módulo (fuera del alcance del prototipo)
 ```
 
@@ -64,7 +65,7 @@ Java 21, Maven 3.9 y Docker (las pruebas de integración usan Testcontainers). P
 
 ```bash
 mvn test      # unitarias, controladores, contrato y ArchUnit (no necesita Docker)
-mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
+mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testcontainers
 ```
 
 `ContratoCatalogoTest` compara las rutas de los controladores y los campos de los DTO con `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
@@ -75,6 +76,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB en Testcontainers
 |---|---|---|
 | `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, sin Docker |
 | `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Docker Compose y pruebas de integración (`mvn verify`) |
+| `minio` | Las fotos en MinIO (DC-39); sin él, en una carpeta local (`catalogo.fotos.carpeta`, por defecto en la carpeta temporal) | Docker Compose |
 | `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 
 **Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
@@ -87,9 +89,9 @@ docker compose -f infra/docker-compose.yml up --build -d
 
 Nginx queda en `http://localhost:8080`: sirve el frontend en `/` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
 
-Compose activa los perfiles `mongo` y `demo`: los datos viven en MongoDB y las dos réplicas comparten el estado. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
+Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
 
-Para volver a los datos iniciales hay que borrar el volumen de MongoDB:
+Para volver a los datos iniciales hay que borrar los volúmenes de MongoDB y MinIO. También hace falta con una base creada antes del perfil con fotos (DC-39):
 
 ```bash
 docker compose -f infra/docker-compose.yml down -v
@@ -144,7 +146,7 @@ Con el piloto levantado, abre `http://localhost:8080`.
 
 8. **Leer opiniones.** La ficha de "Caminata a Cabo San Juan del Guía" muestra el promedio (4,7), el total y las opiniones aprobadas, de la más reciente a la más antigua; la rechazada de la precarga no aparece.
 9. **Opinar.** En **Usuario demo** elige a **Laura**, que ya pagó el snorkel en Playa Cristal. En su ficha, en "Dejar una opinión", elige las estrellas, escribe el comentario y envíalo: aparece "Tu opinión quedó en moderación". En "Mis opiniones" la opinión está "En moderación". Si Laura intenta opinar sobre una oferta que no pagó, la ficha responde "Solo puedes opinar sobre ofertas que hayas pagado"; si vuelve a opinar sobre la misma, "Ya opinaste sobre esta oferta".
-10. **Aprobar la opinión por consola.** Como con las ofertas, la decisión es del núcleo y se envía como aviso; los comandos están en el paso 7 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
+10. **Aprobar la opinión por consola.** Como con las ofertas, la decisión es del núcleo y se envía como aviso; los comandos están en el paso 8 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
 
 La identidad es provisional: el selector "Usuario demo" de la cabecera, con dos turistas y cinco prestadores, sustituye al inicio de sesión mientras no exista el JWT del núcleo.
 
@@ -298,7 +300,29 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
 ```
 
-### 7. Opiniones
+### 7. Perfil público con fotos
+
+El guía completa su perfil y sube una foto. Se publica de inmediato, sin moderación. El catálogo guarda una versión nueva de la foto, enderezada y sin metadatos, en dos tamaños (DC-39):
+
+```bash
+GUIA=(-H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE")
+
+curl -s -X PUT "$BASE/prestador/perfil" "${GUIA[@]}" -H "Content-Type: application/json" \
+  -d '{"nombreComercial":"Aves de Minca","descripcion":"Guía independiente de Minca, especializado en aves"}'
+
+# Cualquier foto JPG, PNG o WebP de hasta 5 MB; responde 201 con la dirección de cada tamaño
+curl -s -X POST "$BASE/prestador/perfil/fotos" "${GUIA[@]}" -F "foto=@mi-foto.jpg"
+
+# La foto aparece en la ficha de las ofertas del guía, y el navegador la descarga del catálogo
+curl -s "$BASE/ofertas/b0000000000000000000000a"
+curl -s -o miniatura.jpg -D - "$BASE/fotos/<id>/miniatura"     # Cache-Control: max-age=31536000, immutable
+
+curl -s -o /dev/null -w '%{http_code}\n' -X DELETE "$BASE/prestador/perfil/fotos/<id>" "${GUIA[@]}"   # 204
+```
+
+Un archivo que no es una imagen, aunque se llame `.jpg`, responde 400 `DATO_INVALIDO`; también la séptima foto.
+
+### 8. Opiniones
 
 Andrés es un turista de la demostración. Todavía no pagó el recorrido por el Centro Histórico, así que no puede opinar sobre él:
 
@@ -371,7 +395,8 @@ curl -s "$BASE/turista/opiniones" -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA
 
 La precarga trae 9 opiniones aprobadas en cuatro ofertas (por ejemplo `curl -s "$BASE/ofertas/b00000000000000000000001/opiniones"`), 2 en moderación y 1 rechazada. Laura (`70000000-0000-0000-0000-000000000007`) ya pagó el snorkel en Playa Cristal y el avistamiento de aves en Minca, así que puede opinar sobre ellos sin habilitarla por consola.
 
-### 8. Rutas que no se exponen
+
+### 9. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404

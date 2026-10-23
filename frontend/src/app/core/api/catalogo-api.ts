@@ -60,6 +60,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/fotos/{fotoId}/{tamano}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Una foto en un tamaño (DC-39)
+         * @description Siempre es un JPG generado por el catálogo, sin los metadatos del archivo original. Una foto nunca cambia,
+         *     así que se puede guardar en caché un año (`Cache-Control: public, max-age=31536000, immutable`).
+         */
+        get: operations["consultarFoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prestador/perfil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** El perfil público del prestador (RF-64) */
+        get: operations["consultarPerfilPropio"];
+        /**
+         * Crear o actualizar el perfil público (RF-64, RF-72)
+         * @description Crea el perfil la primera vez y después reemplaza sus datos; las fotos que ya tiene se conservan. Se publica
+         *     de inmediato, sin moderación (DC-39). Solo la descripción es obligatoria (DC-26).
+         */
+        put: operations["guardarPerfilPropio"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prestador/perfil/fotos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subir una foto al perfil (RF-64, RF-72)
+         * @description JPG, PNG o WebP de hasta 5 MB; el perfil tiene como máximo 6 fotos. El formato se reconoce por el contenido
+         *     del archivo. El catálogo guarda una versión nueva de la foto, enderezada y sin metadatos (por ejemplo, sin la
+         *     ubicación GPS), en dos tamaños (DC-39). Hay que crear el perfil antes de subir fotos.
+         */
+        post: operations["agregarFotoPerfil"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prestador/perfil/fotos/{fotoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar una foto del perfil (RF-64)
+         * @description La quita del perfil y la borra del almacenamiento. Si el perfil no tiene esa foto no hace nada: quitarla dos
+         *     veces no es un error.
+         */
+        delete: operations["quitarFotoPerfil"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/prestador/ofertas": {
         parameters: {
             query?: never;
@@ -483,11 +569,44 @@ export interface components {
              */
             nombreComercial?: string;
             descripcion: string;
-            fotos: string[];
+            /** @description En el orden en que el prestador las subió; como máximo 6 (DC-39). */
+            fotos: components["schemas"]["Foto"][];
             horariosAtencion?: string;
             /** Format: uri */
             sitioWeb?: string;
             redesSociales: string[];
+        };
+        /** @description Los datos del perfil público que escribe el prestador (RF-64). Las fotos se suben aparte. */
+        PerfilRequest: {
+            /** @description Opcional (DC-26). */
+            nombreComercial?: string;
+            /** @description Obligatoria, sin límite de palabras. */
+            descripcion: string;
+            horariosAtencion?: string;
+            /**
+             * Format: uri
+             * @description URL http o https.
+             */
+            sitioWeb?: string;
+            redesSociales?: string[];
+        };
+        /** @description Una foto con la dirección de cada tamaño (DC-39). Las direcciones son rutas del catálogo y nunca cambian. */
+        Foto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la foto; es el que se usa para quitarla.
+             */
+            id: string;
+            /**
+             * @description La foto para la galería, JPG de hasta 1280 px por lado.
+             * @example /api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/galeria
+             */
+            url: string;
+            /**
+             * @description La foto para las tarjetas, JPG de hasta 400 px por lado.
+             * @example /api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/miniatura
+             */
+            urlMiniatura: string;
         };
         /**
          * @description Contenido completo de la oferta. `tipo` decide qué campos aplican; los que no corresponden a ese tipo
@@ -877,7 +996,7 @@ export interface components {
              * @description Motivo estable del error (DC-15).
              * @enum {string}
              */
-            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA" | "OPINION_NO_HABILITADA" | "OPINION_DUPLICADA" | "OPINION_NO_ENCONTRADA";
+            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA" | "OPINION_NO_HABILITADA" | "OPINION_DUPLICADA" | "OPINION_NO_ENCONTRADA" | "PERFIL_NO_ENCONTRADO" | "FOTO_NO_ENCONTRADA";
         };
     };
     responses: {
@@ -986,6 +1105,44 @@ export interface components {
                  *       "detail": "No existe la oferta no-existe",
                  *       "instance": "/api/catalogo/ofertas/no-existe",
                  *       "codigo": "OFERTA_NO_ENCONTRADA"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
+        /** @description El prestador todavía no tiene perfil público; hay que crearlo antes de subir fotos. */
+        PerfilNoEncontrado: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Not Found",
+                 *       "status": 404,
+                 *       "detail": "El prestador 20000000-0000-0000-0000-000000000002 todavía no tiene perfil público",
+                 *       "instance": "/api/catalogo/prestador/perfil",
+                 *       "codigo": "PERFIL_NO_ENCONTRADO"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
+        /** @description No hay una foto con ese identificador, o el tamaño no existe. */
+        FotoNoEncontrada: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Not Found",
+                 *       "status": 404,
+                 *       "detail": "No existe la foto 3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+                 *       "instance": "/api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/galeria",
+                 *       "codigo": "FOTO_NO_ENCONTRADA"
                  *     }
                  */
                 "application/problem+json": components["schemas"]["Problema"];
@@ -1204,6 +1361,201 @@ export interface operations {
                     "application/json": components["schemas"]["Zona"][];
                 };
             };
+        };
+    };
+    consultarFoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fotoId: string;
+                tamano: "galeria" | "miniatura";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La foto. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            404: components["responses"]["FotoNoEncontrada"];
+        };
+    };
+    consultarPerfilPropio: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
+                "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El perfil, tal como lo ve el turista. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerfilPublico"];
+                };
+            };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+            404: components["responses"]["PerfilNoEncontrado"];
+        };
+    };
+    guardarPerfilPropio: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
+                "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerfilRequest"];
+            };
+        };
+        responses: {
+            /** @description El perfil guardado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerfilPublico"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+            409: components["responses"]["ConflictoConcurrencia"];
+        };
+    };
+    agregarFotoPerfil: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
+                "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    foto: string;
+                };
+            };
+        };
+        responses: {
+            /** @description El perfil con la foto nueva al final. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerfilPublico"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+            404: components["responses"]["PerfilNoEncontrado"];
+            409: components["responses"]["ConflictoConcurrencia"];
+        };
+    };
+    quitarFotoPerfil: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
+                "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
+            };
+            path: {
+                fotoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La foto ya no está en el perfil. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+            404: components["responses"]["PerfilNoEncontrado"];
+            409: components["responses"]["ConflictoConcurrencia"];
         };
     };
     listarOfertasPropias: {
@@ -1753,6 +2105,7 @@ type ReadonlyArray<T> = [
 ] extends [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
+export const pathsFotosFotoIdTamanoGetParametersPathTamanoValues: ReadonlyArray<FlattenedDeepRequired<paths>["/fotos/{fotoId}/{tamano}"]["get"]["parameters"]["path"]["tamano"]> = ["galeria", "miniatura"];
 export const tipoOfertaValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TipoOferta"]> = ["ACTIVIDAD", "PAQUETE", "ALOJAMIENTO", "RESTAURANTE"];
 export const tipoPrestadorValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TipoPrestador"]> = ["ALOJAMIENTO", "RESTAURANTE", "AGENCIA_OPERADORA", "GUIA_INDEPENDIENTE"];
 export const tipoActividadValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TipoActividad"]> = ["SENDERISMO", "BUCEO_SNORKEL", "DEPORTES_ACUATICOS", "NAUTICO", "AVISTAMIENTO_FAUNA", "CULTURAL_HISTORICO", "ETNOTURISMO", "GASTRONOMICO", "CICLISMO", "AVENTURA", "PLAYA_RELAX", "OTRO"];
@@ -1771,5 +2124,5 @@ export const avisoHabilitacionOpinionTipoValues: ReadonlyArray<FlattenedDeepRequ
 export const avisoModeracionOpinionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracionOpinion"]["tipo"]> = ["MODERACION_OPINION"];
 export const avisoModeracionOpinionDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracionOpinion"]["decision"]> = ["APROBAR", "RECHAZAR"];
 export const avisoSupresionTuristaTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoSupresionTurista"]["tipo"]> = ["SUPRESION_TURISTA"];
-export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA", "OPINION_NO_HABILITADA", "OPINION_DUPLICADA", "OPINION_NO_ENCONTRADA"];
+export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA", "OPINION_NO_HABILITADA", "OPINION_DUPLICADA", "OPINION_NO_ENCONTRADA", "PERFIL_NO_ENCONTRADO", "FOTO_NO_ENCONTRADA"];
 export const componentsParametersRolValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["Rol"]> = ["TURISTA", "PRESTADOR", "ADMINISTRADOR"];
