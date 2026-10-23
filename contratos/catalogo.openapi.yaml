@@ -4,9 +4,9 @@ info:
   version: 0.1.0
   description: |
     API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
-    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias), las opiniones de los
-    turistas, la moderación, los avisos internos del núcleo y las consultas internas del núcleo y de la
-    recomendación.
+    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias) y sus fotos, su perfil
+    público, las opiniones de los turistas, la moderación, los avisos internos del núcleo y las consultas
+    internas del núcleo y de la recomendación.
 
     - Las rutas no incluyen el prefijo `/api/catalogo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
@@ -290,6 +290,45 @@ paths:
         '409':
           $ref: '#/components/responses/ConflictoConcurrencia'
 
+  /prestador/fotos:
+    post:
+      tags: [Prestador]
+      operationId: subirFotoOferta
+      summary: Subir una foto para las ofertas (RF-65)
+      description: |
+        JPG, PNG o WebP de hasta 5 MB, reprocesada igual que las del perfil (DC-39). La foto queda suelta: se pone
+        en una oferta enviando su `id` en `fotos` al publicarla o editarla, y puede ir en varias ofertas del mismo
+        prestador. Si en 24 horas no la usa ninguna oferta, se borra (DC-47). No exige el RNT activo: subir una foto
+        no publica nada.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [foto]
+              properties:
+                foto:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: La foto guardada, con la dirección de cada tamaño.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foto'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
   /prestador/ofertas:
     get:
       tags: [Prestador]
@@ -323,6 +362,7 @@ paths:
       summary: Publicar una oferta (RF-65, RF-67)
       description: |
         La oferta nace con su versión 1 en moderación y no es visible hasta que el núcleo avise su aprobación.
+        Lleva de 1 a 6 fotos que el prestador subió antes con `POST /prestador/fotos` (DC-47).
       parameters:
         - $ref: '#/components/parameters/UsuarioId'
         - $ref: '#/components/parameters/Rol'
@@ -340,6 +380,7 @@ paths:
               precioReferencia: 70000
               zonaId: a00000000000000000000007
               capacidadMaxima: 8
+              fotos: [3f2504e0-4f89-11d3-9a0c-0305e82c3301]
               tipoActividad: SENDERISMO
               nivelEsfuerzo: MODERADO
               horariosSalida: ['08:00']
@@ -369,6 +410,7 @@ paths:
       description: |
         Crea una versión pendiente con número nuevo, que reemplaza a la pendiente anterior. La versión publicada
         sigue visible hasta que se apruebe la nueva. El cuerpo trae el contenido completo y el tipo no puede cambiar.
+        Cambiar las fotos también es una edición: pasa por moderación (DC-47).
       parameters:
         - $ref: '#/components/parameters/OfertaId'
         - $ref: '#/components/parameters/UsuarioId'
@@ -1089,7 +1131,7 @@ components:
     OfertaResumen:
       type: object
       description: Una oferta en los resultados de la búsqueda; el detalle está en la ficha.
-      required: [id, tipo, nombre, descripcion, precioReferencia, unidadPrecio, zonaId]
+      required: [id, tipo, nombre, descripcion, precioReferencia, unidadPrecio, zonaId, portada]
       properties:
         id:
           type: string
@@ -1108,6 +1150,13 @@ components:
           enum: [por persona, por noche y unidad, promedio por persona]
         zonaId:
           type: string
+        portada:
+          description: |
+            La primera foto de la versión publicada, para la tarjeta. `null` si la versión es anterior a las fotos
+            de las ofertas (DC-47) y no tiene.
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Foto'
 
     PaginaOfertas:
       type: object
@@ -1134,7 +1183,8 @@ components:
       description: |
         Según `tipo`, trae uno de los detalles `actividad`, `paquete` o `alojamiento`; el restaurante no tiene
         datos propios. Los campos sin valor no se envían.
-      required: [id, tipo, nombre, descripcion, precioReferencia, unidadPrecio, capacidadMaxima, accesibleSillaRuedas]
+      required: [id, tipo, nombre, descripcion, precioReferencia, unidadPrecio, capacidadMaxima, fotos,
+                 accesibleSillaRuedas]
       properties:
         id:
           type: string
@@ -1158,6 +1208,14 @@ components:
         capacidadMaxima:
           type: integer
           description: Máximo de personas por solicitud.
+        fotos:
+          type: array
+          description: |
+            La galería, en orden; la primera es la portada. Vacía si la versión es anterior a las fotos de las
+            ofertas (DC-47).
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/Foto'
         accesibleSillaRuedas:
           type: boolean
           description: El de un paquete es `true` solo si todas sus actividades lo son (RF-17).
@@ -1317,13 +1375,14 @@ components:
     Foto:
       type: object
       description: |
-        Una foto con la dirección de cada tamaño (DC-39). Las direcciones son rutas del catálogo y nunca cambian.
+        Una foto con la dirección de cada tamaño (DC-39, DC-47). Las direcciones son rutas del catálogo y nunca
+        cambian.
       required: [id, url, urlMiniatura]
       properties:
         id:
           type: string
           format: uuid
-          description: Identificador de la foto; es el que se usa para quitarla.
+          description: Identificador de la foto; es el que se usa para quitarla del perfil o ponerla en una oferta.
         url:
           type: string
           description: La foto para la galería, JPG de hasta 1280 px por lado.
@@ -1345,7 +1404,7 @@ components:
         | PAQUETE | `actividadIds`, `duracionMinutos` y `horariosSalida` (obligatorios) |
         | ALOJAMIENTO | `tipoUnidad`, `accesibleSillaRuedas` |
         | RESTAURANTE | `accesibleSillaRuedas` |
-      required: [tipo, nombre, descripcion, precioReferencia, zonaId, capacidadMaxima]
+      required: [tipo, nombre, descripcion, precioReferencia, zonaId, capacidadMaxima, fotos]
       properties:
         tipo:
           $ref: '#/components/schemas/TipoOferta'
@@ -1368,6 +1427,18 @@ components:
         capacidadMaxima:
           type: integer
           minimum: 1
+        fotos:
+          type: array
+          description: |
+            Identificadores de fotos que el prestador subió para sus ofertas (`POST /prestador/fotos`), en el orden
+            en que se muestran; la primera es la portada (DC-47). Una foto de otro prestador, del perfil o que ya se
+            borró responde 400 `DATO_INVALIDO`.
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
         tipoActividad:
           $ref: '#/components/schemas/TipoActividad'
         nivelEsfuerzo:
@@ -1461,6 +1532,8 @@ components:
           type: string
         precioReferencia:
           type: number
+        portada:
+          $ref: '#/components/schemas/Foto'
 
     Aviso:
       oneOf:
@@ -1600,7 +1673,7 @@ components:
       description: |
         El contenido de una versión tal como lo envió el prestador, con los campos de `OfertaRequest` más la unidad
         del precio. Los campos que no corresponden al tipo de la oferta se omiten.
-      required: [nombre, descripcion, precioReferencia, unidadPrecio, zonaId, capacidadMaxima]
+      required: [nombre, descripcion, precioReferencia, unidadPrecio, zonaId, capacidadMaxima, fotos]
       properties:
         nombre:
           type: string
@@ -1621,6 +1694,12 @@ components:
           type: string
         capacidadMaxima:
           type: integer
+        fotos:
+          type: array
+          description: En orden; vacía si la versión es anterior a las fotos de las ofertas (DC-47).
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/Foto'
         tipoActividad:
           $ref: '#/components/schemas/TipoActividad'
         nivelEsfuerzo:
