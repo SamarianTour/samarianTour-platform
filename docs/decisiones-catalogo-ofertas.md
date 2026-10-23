@@ -56,6 +56,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-44 | Moderación de opiniones: el catálogo lista, el núcleo decide | ✅ RF-80, DC-38 |
 | DC-45 | Supresión de las opiniones de un turista | ✅ Ley 1581, bandeja de salida |
 | DC-46 | Persistencia de opiniones | 🆕 RF-61, DC-30, DC-33 |
+| DC-47 | Las ofertas llevan de 1 a 6 fotos moderadas; las que nadie usa se borran | 🆕 RF-65, RF-66 |
 
 ## Identidad y habilitación del prestador
 
@@ -337,7 +338,7 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 - **Fotos:** JPG, PNG o WebP de hasta 5 MB, como máximo 6 por perfil (el mismo límite tendrán las ofertas). El formato se reconoce por el contenido del archivo, no por su extensión. Nunca se guarda el archivo subido: `ProcesadorImagenes` lo decodifica ya reducido (para que la memoria no dependa de los megapíxeles de la cámara), lo endereza según su orientación EXIF y guarda dos JPG nuevos, sin metadatos (sin la ubicación GPS del celular): `galeria`, de hasta 1280 px por lado, y `miniatura`, de hasta 400 px, para la red móvil (QAS-07, RT-03). Se rechaza una imagen que dice tener más de 100 megapíxeles, sin decodificarla.
 - **Identificadores:** cada foto es un UUID aleatorio (`Foto`), nunca el nombre del archivo subido; el catálogo guarda solo ese id en el perfil, y la API arma las rutas. Así no se pueden adivinar ni salirse de la carpeta.
 - **Entrega:** `GET /api/catalogo/fotos/{fotoId}/{galeria|miniatura}`, pública. MinIO no se expone hacia afuera: el catálogo es la única puerta. Una foto nunca cambia (cambiarla es subir otra), así que se entrega con `Cache-Control: public, max-age=31536000, immutable` y `X-Content-Type-Options: nosniff`.
-- **Consistencia:** el perfil tiene revisión y bloqueo optimista con reintento, como las ofertas (ADR-05): dos fotos subidas a la vez no se pisan. La foto se guarda en el almacenamiento antes que en el perfil; si el perfil no se puede guardar, se borra para no dejarla huérfana. Quitar una foto la saca primero del perfil y después del almacenamiento; quitarla dos veces no es un error.
+- **Consistencia:** el perfil tiene revisión y bloqueo optimista con reintento, como las ofertas (ADR-05): dos fotos subidas a la vez no se pisan. La foto se guarda en el almacenamiento antes que en el perfil; si el perfil no se puede guardar, se borra para no dejarla huérfana. Quitar una foto la saca primero del perfil y después del almacenamiento; quitarla dos veces no es un error. Desde DC-47 cada foto del perfil también queda en el registro de fotos.
 - **Adaptadores:** `MinioStorageAdapter` con el perfil `minio` (Docker Compose), que crea el bucket al arrancar; sin él, `ArchivoLocalStorageAdapter` guarda en una carpeta local (`catalogo.fotos.carpeta`), útil para correr sin Docker con una sola réplica. Los dos cumplen el mismo contrato de pruebas.
 - **Imagen de MinIO:** MinIO dejó de publicar imágenes en Docker Hub y en Quay. Se usa la que compila Chainguard desde el código de MinIO (`cgr.dev/chainguard/minio`), que corre sin root; su plan gratuito solo ofrece la etiqueta `latest`.
 - **Límites de subida:** Spring acepta archivos de hasta 5 MB, Tomcat lee hasta 10 MB de una subida rechazada para poder responder el 400, y Nginx acepta cuerpos de hasta 6 MB (por defecto acepta 1 MB). Si el cuerpo pasa de 6 MB, responde Nginx con el mismo 400 `DATO_INVALIDO` del catálogo, en lugar de su página HTML 413.
@@ -385,6 +386,28 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 - **Pruebas:** `ContratoOpinionRepository` son las mismas pruebas para los adaptadores en memoria y de MongoDB, con los datos de demostración.
 - **Datos de demostración** (`DatosOpiniones`): 9 opiniones aprobadas en 4 ofertas visibles, 2 en moderación y 1 rechazada, cada una con su habilitación. Los turistas demo Laura (`70000000-…-000000000007`) y Andrés (`80000000-…-000000000008`) se eligen en el frontend; Laura además pagó dos ofertas que no ha calificado. Se cargan en MongoDB con las mismas reglas de DC-27.
 
+## Fotos de las ofertas
+
+**DC-47. Las ofertas llevan de 1 a 6 fotos, que pasan por moderación; las que nadie usa se borran.** El SRS solo pide fotos en el perfil (RF-64, RF-72); el equipo decidió que las ofertas también las tengan, con los mismos límites del perfil (DC-39).
+- **Parte de la versión:** las fotos están en `ContenidoComun`, en orden; la primera es la portada. Cambiarlas es editar la oferta: pasa por moderación y, mientras tanto, el turista sigue viendo las aprobadas (RF-66). El administrador las ve en la lista de moderación, las nuevas junto a las publicadas (DC-38).
+- **Cantidad:** de 1 a 6 por versión, sin repetir. La foto obligatoria se exige al publicar y al editar, no al leer: una versión guardada antes de esta decisión, sin fotos, se sigue leyendo y mostrando.
+- **Subida:** `POST /api/catalogo/prestador/fotos` (multipart, parte `foto`, rol PRESTADOR) con el mismo procesamiento de DC-39; responde 201 con el id y las direcciones. Al publicar o editar, `OfertaRequest.fotos` lleva los ids. Subir no exige el RNT activo, porque no publica nada; publicar y editar sí (DC-11).
+- **Varias ofertas:** una foto puede ir en varias ofertas del mismo prestador; por ejemplo, la de una actividad en el paquete que la incluye.
+- **Registro de fotos** (`FotoSubidaRepositoryPort`, colección `fotos`): de cada foto guarda el prestador, el destino (`PERFIL` u `OFERTAS`) y su último uso. Una oferta solo acepta fotos que su prestador subió para sus ofertas; una de otro prestador, una del perfil o una que ya se borró responde 400 `DATO_INVALIDO` en `fotos`. Las fotos del perfil no sirven en las ofertas: así, quitar una del perfil la borra en seguida sin el riesgo de que una oferta la esté usando.
+- **Limpieza** (`LimpiarFotosSinUsoUseCase`): una tarea programada (`LimpiezaFotosProgramada`) corre cada hora, en el minuto 17 (`catalogo.fotos.limpieza.cron`). Borra las fotos cuyo último uso pasó hace más de 24 horas y que no tiene ninguna oferta no retirada, ni en la versión publicada ni en la pendiente, ni ningún perfil:
+  - las que se subieron y nunca se pusieron en una oferta;
+  - las de versiones reemplazadas por una edición o por una aprobación;
+  - las de ofertas retiradas: el retiro es definitivo (RF-65) y nadie las vuelve a ver (decisión del equipo).
+
+  Una foto que sigue en uso se marca como vista en uso, para no revisarla otra vez hasta que pasen otras 24 horas. Recorre el registro en lotes de 100, como máximo 50 por ejecución.
+- **Plazo para usar una foto:** quien sube una foto tiene 24 horas para ponerla en una oferta; después puede ya no existir y hay que subirla de nuevo.
+- **Sin carreras entre asignar y borrar:** asignar marca el uso antes de comprobar que la foto sigue registrada, y borrar solo borra el registro si el uso no cambió desde que lo leyó (un borrado condicionado). Si la limpieza la borra primero, la oferta no la encuentra y responde 400; si la oferta la marca primero, la limpieza no la borra.
+- **Una sola réplica limpia:** con el perfil `mongo` las réplicas comparten los datos, así que la tarea toma un candado de ShedLock en MongoDB (colección `shedLock`). Lo mantiene al menos 5 minutos, para que la otra réplica no la repita si su reloj va unos segundos atrasado, y como mucho 30, por si la réplica se cae. Con el perfil `memoria` cada réplica tiene sus datos y no hay candado. Se usa ShedLock 6.10, la última versión para Spring Boot 3.5; la 7 exige Spring Boot 4.
+- **Orden de escritura:** el registro se crea antes que el archivo y se borra antes que él. Si algo falla en medio, queda un registro sin uso, que la limpieza borra, o un archivo sin registro, que no ve nadie y queda anotado en el log.
+- **Entrega:** la ficha trae la galería (`fotos`), y la búsqueda y la lista del prestador traen la portada (`portada`), con la miniatura para las tarjetas (QAS-07). Las fotos de una versión en moderación se entregan igual que las demás, por su id, que no se puede adivinar. Restringirlas no protegería nada, porque el perfil, que no tiene moderación, ya publica fotos sin revisión.
+- **Datos de demostración:** cada oferta demo tiene una foto, con un id que sale de su nombre, registrada a nombre de su prestador; así un prestador puede editar su oferta demo y conservar la foto. Con el perfil `demo`, `CargaFotosDemo` guarda en el almacenamiento las que falten, desde `src/main/resources/demo/fotos`; si falta una imagen, el servicio arranca igual y esa foto responde 404.
+- **Base del piloto creada antes de DC-47:** sus ofertas, sin fotos, siguen funcionando, pero no tienen las fotos de demostración. Para tenerlas hay que recrear la base con `docker compose down -v`.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -410,7 +433,11 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 8. **Diagrama de paquetes:** agregar `catalogo.api.ConsultaOfertaApi` y la dependencia `opiniones → catalogo.api` (DC-40).
 9. **Vista general, bandeja de salida del núcleo:** agregar los avisos `HABILITACION_OPINION` (solicitud pagada), `MODERACION_OPINION` y `SUPRESION_TURISTA` hacia el catálogo (DC-41, DC-44, DC-45).
 10. **SRS, RF-85 y RF-88:** cambiar "tipo de actividad" por "tipo de oferta", como ya lo hizo el CU-09 del Entregable 2; la solicitud no guarda el tipo de actividad (DC-35).
+11. **SRS, RF-65 y RF-20:** agregar las fotos de la oferta: de 1 a 6, moderadas con la versión, y la galería en la ficha (DC-47).
+12. **Diagrama de clases y diccionario:** agregar `fotos : List<Foto>` en `VersionOferta` (en el código, en `ContenidoComun`) y las clases `Foto`, `FotoSubida` y `DestinoFoto` (DC-39, DC-47).
+13. **Diagrama del módulo catálogo:** agregar el puerto de salida `FotoSubidaRepositoryPort` con `FotoSubidaMongoAdapter`, los casos de uso `SubirFotoUseCase` y `LimpiarFotosSinUsoUseCase`, y el adaptador de entrada programado `LimpiezaFotosProgramada` (DC-47).
+14. **Modelo documental (MongoDB):** agregar la colección `fotos` (`_id` texto, `prestadorId`, `destino`, `ultimoUso`), el campo `fotos` (ids en texto) en las versiones de `ofertas`, la colección `shedLock` y los índices `fotos_publicadas`, `fotos_pendientes`, `fotos_del_perfil` y `fotos_por_ultimo_uso` (DC-47).
 
 ## Fuera del alcance del prototipo
 
-La pantalla de moderación del administrador, que vive en el núcleo; gestión de zonas; fotos de las ofertas (paso siguiente, sobre DC-39); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).
+La pantalla de moderación del administrador, que vive en el núcleo; gestión de zonas; JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).

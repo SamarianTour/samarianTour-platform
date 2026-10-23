@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, que por ahora es solo por la API, y la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil y la subida de fotos de las ofertas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -38,8 +38,9 @@ co.edu.unimagdalena.samariantour.catalogo
 │   └── infraestructura/
 │       ├── config/             crea los servicios de aplicación y los conecta con los adaptadores
 │       ├── entrada/rest/       controladores, dto/, mapper/
+│       ├── entrada/programada/ tareas programadas: la limpieza de fotos sin uso
 │       ├── salida/memoria/     adaptadores en memoria (perfil memoria)
-│       ├── salida/demo/        datos de demostración de Santa Marta
+│       ├── salida/demo/        datos y fotos de demostración de Santa Marta
 │       ├── salida/persistencia/ adaptadores MongoDB (perfil mongo), document/ y mapper/
 │       └── salida/almacenamiento/ fotos en MinIO (perfil minio) o en una carpeta local
 └── opiniones/                  módulo (fuera del alcance del prototipo)
@@ -89,9 +90,9 @@ docker compose -f infra/docker-compose.yml up --build -d
 
 Nginx queda en `http://localhost:8080`: sirve el frontend en `/` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
 
-Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`).
+Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
 
-Para volver a los datos iniciales hay que borrar los volúmenes de MongoDB y MinIO. También hace falta con una base creada antes del perfil con fotos (DC-39):
+Para volver a los datos iniciales hay que borrar los volúmenes de MongoDB y MinIO. También hace falta con una base creada antes del perfil con fotos (DC-39) o de las fotos de las ofertas (DC-47):
 
 ```bash
 docker compose -f infra/docker-compose.yml down -v
@@ -198,14 +199,16 @@ curl -s "$BASE/zonas"
 
 Los datos están en MongoDB, así que el flujo funciona con las dos réplicas: lo que escribe una lo ve la otra.
 
-Publicar una actividad como el guía independiente de la demostración:
+Publicar una actividad como el guía independiente de la demostración. Primero sube su foto: una oferta lleva de 1 a 6 (DC-47).
 
 ```bash
-ID=$(curl -s -X POST "$BASE/prestador/ofertas" \
+GUIA=(-H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE")
+
+# Cualquier foto JPG, PNG o WebP de hasta 5 MB; responde 201 con su id y la dirección de cada tamaño
+FOTO=$(curl -s -X POST "$BASE/prestador/fotos" "${GUIA[@]}" -F "foto=@mi-foto.jpg" | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+
+ID=$(curl -s -X POST "$BASE/prestador/ofertas" "${GUIA[@]}" \
   -H "Content-Type: application/json" \
-  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
-  -H "X-Rol: PRESTADOR" \
-  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE" \
   -d '{
         "tipo": "ACTIVIDAD",
         "nombre": "Caminata nocturna en Minca",
@@ -213,6 +216,7 @@ ID=$(curl -s -X POST "$BASE/prestador/ofertas" \
         "precioReferencia": 75000,
         "zonaId": "a00000000000000000000007",
         "capacidadMaxima": 6,
+        "fotos": ["'"$FOTO"'"],
         "tipoActividad": "AVISTAMIENTO_FAUNA",
         "nivelEsfuerzo": "BAJO",
         "horariosSalida": ["18:30"],
@@ -395,8 +399,36 @@ curl -s "$BASE/turista/opiniones" -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA
 
 La precarga trae 9 opiniones aprobadas en cuatro ofertas (por ejemplo `curl -s "$BASE/ofertas/b00000000000000000000001/opiniones"`), 2 en moderación y 1 rechazada. Laura (`70000000-0000-0000-0000-000000000007`) ya pagó el snorkel en Playa Cristal y el avistamiento de aves en Minca, así que puede opinar sobre ellos sin habilitarla por consola.
 
+### 9. Fotos de las ofertas
 
-### 9. Rutas que no se exponen
+Las fotos son parte de la versión: cambiarlas es editar la oferta y pasa por moderación (DC-47). Con la oferta de la sección 3 ya aprobada:
+
+```bash
+# La ficha trae la galería y la búsqueda trae la portada, con la miniatura para la tarjeta
+curl -s "$BASE/ofertas/$ID"
+curl -s "$BASE/ofertas?zonaId=a00000000000000000000007"
+
+# Cambiar la foto crea una versión pendiente; el turista sigue viendo la aprobada
+OTRA=$(curl -s -X POST "$BASE/prestador/fotos" "${GUIA[@]}" -F "foto=@otra-foto.jpg" | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+curl -s -X PUT "$BASE/prestador/ofertas/$ID" "${GUIA[@]}" -H "Content-Type: application/json" -d '{
+        "tipo": "ACTIVIDAD", "nombre": "Caminata nocturna en Minca",
+        "descripcion": "Recorrido para observar ranas e insectos al caer la noche", "precioReferencia": 75000,
+        "zonaId": "a00000000000000000000007", "capacidadMaxima": 6, "fotos": ["'"$OTRA"'", "'"$FOTO"'"],
+        "tipoActividad": "AVISTAMIENTO_FAUNA", "nivelEsfuerzo": "BAJO", "horariosSalida": ["18:30"],
+        "puntoEncuentro": "Plaza principal de Minca", "duracionMinutos": 120, "modalidad": "CAMINATA",
+        "idiomasAtencion": ["es", "en"]}'
+
+# La foto de otro prestador no sirve: 400 DATO_INVALIDO en "fotos". Tampoco una oferta sin fotos
+AGENCIA=(-H "X-Usuario-Id: 10000000-0000-0000-0000-000000000001" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: AGENCIA_OPERADORA")
+curl -s -X PUT "$BASE/prestador/ofertas/b00000000000000000000001" "${AGENCIA[@]}" -H "Content-Type: application/json" \
+  -d '{"tipo": "ACTIVIDAD", "nombre": "Caminata", "descripcion": "Sendero", "precioReferencia": 150000,
+       "zonaId": "a00000000000000000000005", "capacidadMaxima": 12, "fotos": ["'"$FOTO"'"],
+       "tipoActividad": "SENDERISMO", "nivelEsfuerzo": "MODERADO", "horariosSalida": ["07:00"]}'
+```
+
+Una foto que nadie usa durante 24 horas se borra: las que se subieron y no se pusieron en una oferta, las de versiones reemplazadas y las de ofertas retiradas. La limpieza corre cada hora, en el minuto 17; para verla antes, se arranca con otra programación, por ejemplo `FOTOS_LIMPIEZA_CRON="0 * * * * *" docker compose -f infra/docker-compose.yml up -d` (cada minuto). La limpieza solo borra fotos con más de 24 horas sin uso.
+
+### 10. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
