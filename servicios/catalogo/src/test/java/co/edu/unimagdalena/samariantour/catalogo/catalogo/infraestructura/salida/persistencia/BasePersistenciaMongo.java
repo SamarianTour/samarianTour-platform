@@ -18,7 +18,8 @@ import static com.mongodb.client.model.Filters.eq;
  */
 @DataMongoTest
 @Import({MongoConfig.class, IndicesMongo.class, OfertaMongoAdapter.class, ZonaMongoAdapter.class,
-        PerfilMongoAdapter.class, PrestadorMongoAdapter.class, AvisoProcesadoMongoAdapter.class})
+        PerfilMongoAdapter.class, PrestadorMongoAdapter.class, AvisoProcesadoMongoAdapter.class,
+        FotoSubidaMongoAdapter.class})
 @ActiveProfiles("mongo")
 abstract class BasePersistenciaMongo extends IntegracionMongoBase {
 

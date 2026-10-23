@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ContenidoComun;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coordenada;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ModalidadRecorrido;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
@@ -87,18 +88,10 @@ public interface ContratoOfertaRepository {
     }
 
     @Test
-    @DisplayName("guarda una oferta nueva con todos sus campos opcionales, incluida la ubicación")
+    @DisplayName("guarda una oferta nueva con todos sus campos opcionales, incluida la ubicación y sus fotos en orden")
     default void ofertaNuevaCompleta() {
-        Zona tayrona = DatosSantaMarta.zonas().stream().filter(zona -> zona.id().equals(TAYRONA)).findFirst()
-                .orElseThrow();
-        ContenidoComun contenido = new ContenidoComun("Snorkel en La Piscina", "Arrecife de aguas tranquilas",
-                new BigDecimal("95000.50"), "Todos los días", TAYRONA, new Coordenada(11.3301, -74.0389),
-                "Desde Cañaveral, 40 minutos a pie", 8);
-        VersionActividad actividad = new VersionActividad(contenido, TipoActividad.BUCEO_SNORKEL,
-                NivelEsfuerzo.BAJO, true, List.of(LocalTime.of(8, 30), LocalTime.of(13, 0)), "Entrada de Cañaveral",
-                240, ModalidadRecorrido.CAMINATA, List.of("es", "en"));
-        Oferta nueva = Oferta.publicar(ofertas().nuevoId(), new PrestadorCatalogo(GUIA, true, 4),
-                TipoPrestador.GUIA_INDEPENDIENTE, actividad, tayrona, Instant.parse("2026-10-06T12:00:00Z"));
+        Oferta nueva = Oferta.publicar(ofertas().nuevoId(), GUIA_HABILITADO, TipoPrestador.GUIA_INDEPENDIENTE,
+                snorkelDelGuia(Foto.nueva(), Foto.nueva()), tayrona(), Instant.parse("2026-10-06T12:00:00Z"));
 
         ofertas().guardar(nueva);
 
@@ -106,6 +99,29 @@ public interface ContratoOfertaRepository {
                 .usingRecursiveComparison()
                 .ignoringFields("revision")
                 .isEqualTo(nueva);
+    }
+
+    @Test
+    @DisplayName("sabe qué fotos usan las ofertas no retiradas, en la versión publicada o en la pendiente (DC-47)")
+    default void fotosEnUso() {
+        Foto publicada = Foto.nueva();
+        Foto pendiente = Foto.nueva();
+        Foto sinUso = Foto.nueva();
+        Instant ahora = Instant.parse("2026-10-06T12:00:00Z");
+        Oferta oferta = Oferta.publicar(ofertas().nuevoId(), GUIA_HABILITADO, TipoPrestador.GUIA_INDEPENDIENTE,
+                snorkelDelGuia(publicada), tayrona(), ahora);
+        oferta.aprobar(1, GUIA_HABILITADO, ahora);
+        oferta.editar(GUIA_HABILITADO, TipoPrestador.GUIA_INDEPENDIENTE, snorkelDelGuia(pendiente), tayrona(), ahora);
+        ofertas().guardar(oferta);
+
+        assertThat(ofertas().fotosEnUso(List.of(publicada, pendiente, sinUso)))
+                .containsExactlyInAnyOrder(publicada, pendiente);
+
+        Oferta retirada = ofertas().buscarPorId(oferta.id()).orElseThrow();
+        retirada.retirar(GUIA);
+        ofertas().guardar(retirada);
+
+        assertThat(ofertas().fotosEnUso(List.of(publicada, pendiente))).isEmpty();
     }
 
     @Test
@@ -412,5 +428,21 @@ public interface ContratoOfertaRepository {
 
     private static List<String> ids(Pagina<Oferta> pagina) {
         return pagina.contenido().stream().map(Oferta::id).toList();
+    }
+
+    PrestadorCatalogo GUIA_HABILITADO = new PrestadorCatalogo(GUIA, true, 4);
+
+    private static Zona tayrona() {
+        return DatosSantaMarta.zonas().stream().filter(zona -> zona.id().equals(TAYRONA)).findFirst().orElseThrow();
+    }
+
+    /** Una actividad del guía con todos sus campos opcionales y esas fotos. */
+    private static VersionActividad snorkelDelGuia(Foto... fotos) {
+        ContenidoComun contenido = new ContenidoComun("Snorkel en La Piscina", "Arrecife de aguas tranquilas",
+                new BigDecimal("95000.50"), "Todos los días", TAYRONA, new Coordenada(11.3301, -74.0389),
+                "Desde Cañaveral, 40 minutos a pie", 8, List.of(fotos));
+        return new VersionActividad(contenido, TipoActividad.BUCEO_SNORKEL, NivelEsfuerzo.BAJO, true,
+                List.of(LocalTime.of(8, 30), LocalTime.of(13, 0)), "Entrada de Cañaveral", 240,
+                ModalidadRecorrido.CAMINATA, List.of("es", "en"));
     }
 }

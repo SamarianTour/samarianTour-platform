@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ContenidoComun;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coordenada;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ModalidadRecorrido;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
@@ -29,6 +30,10 @@ public final class DatosDePrueba {
     public static final Instant DESPUES = AHORA.plusSeconds(3600);
     public static final String ZONA_ACTIVA = "parque-tayrona";
     public static final String ZONA_INACTIVA = "zona-cerrada";
+    /** Foto que el PRESTADOR subió y que usan las ofertas de prueba; la aplicación la registra como suya. */
+    public static final Foto FOTO = new Foto("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
+    /** Foto que subió el OTRO_PRESTADOR para sus ofertas. */
+    public static final Foto FOTO_OTRO_PRESTADOR = new Foto("3f2504e0-4f89-11d3-9a0c-0305e82c3302");
 
     private DatosDePrueba() {
     }
@@ -47,8 +52,13 @@ public final class DatosDePrueba {
     }
 
     public static ContenidoComun contenido(String nombre, String zonaId) {
+        return contenido(nombre, zonaId, FOTO);
+    }
+
+    public static ContenidoComun contenido(String nombre, String zonaId, Foto foto) {
         return new ContenidoComun(nombre, "Recorrido guiado por senderos del parque", new BigDecimal("120000"),
-                "Martes a domingo", zonaId, new Coordenada(11.31, -74.06), "Desde la entrada El Zaino", 12);
+                "Martes a domingo", zonaId, new Coordenada(11.31, -74.06), "Desde la entrada El Zaino", 12,
+                List.of(foto));
     }
 
     public static VersionActividad actividad() {

@@ -6,12 +6,14 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Pres
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.TipoOfertaNoPermitidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.GuardarPerfilCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.Solicitante;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
@@ -19,10 +21,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.AGENCIA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.OTRA_AGENCIA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.actividad;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.AHORA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO_OTRO_PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.OTRO_PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
@@ -106,7 +112,8 @@ class GestionarOfertaServiceTest {
         void paqueteConActividadAjena() {
             Oferta caminata = escenario.ofertaPublicada("Caminata", "50000", ZONA_ACTIVA);
             escenario.habilitar(OTRO_PRESTADOR, true, 1);
-            Oferta ajena = escenario.publicar(OTRA_AGENCIA, actividad("De otro", "70000", ZONA_ACTIVA));
+            Oferta ajena = escenario.publicar(OTRA_AGENCIA,
+                    actividad("De otro", "70000", ZONA_ACTIVA, FOTO_OTRO_PRESTADOR));
             int totalAntes = escenario.ofertas.total();
 
             assertThatThrownBy(() -> escenario.publicar(AGENCIA, paquete(caminata.id(), "no-existe")))
@@ -197,7 +204,7 @@ class GestionarOfertaServiceTest {
             Oferta publicada = escenario.ofertaPublicada("Publicada", "50000", ZONA_ACTIVA);
             Oferta enModeracion = escenario.publicar(AGENCIA, actividad("En moderación", "60000", ZONA_ACTIVA));
             escenario.habilitar(OTRO_PRESTADOR, true, 1);
-            escenario.publicar(OTRA_AGENCIA, actividad("De otro", "70000", ZONA_ACTIVA));
+            escenario.publicar(OTRA_AGENCIA, actividad("De otro", "70000", ZONA_ACTIVA, FOTO_OTRO_PRESTADOR));
 
             Pagina<Oferta> mias = servicio.listarMias(PRESTADOR, Paginacion.de(null, null));
 
@@ -260,6 +267,65 @@ class GestionarOfertaServiceTest {
             servicio.retirar(new RetirarOfertaCommand(oferta.id(), PRESTADOR));
 
             assertThat(escenario.guardada(oferta.id()).retirada()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("Fotos (DC-47)")
+    class Fotos {
+
+        private static final byte[] IMAGEN = {1, 2, 3};
+
+        @Test
+        @DisplayName("publicar con una foto que el prestador subió la marca como usada en ese momento")
+        void marcaEnUso() {
+            escenario.habilitar(PRESTADOR, true, 1);
+            Foto subida = escenario.subirFoto.subir(PRESTADOR, IMAGEN);
+            escenario.reloj.adelantar(Duration.ofHours(23));
+
+            Oferta oferta = escenario.publicar(AGENCIA, actividad("Tour", "50000", ZONA_ACTIVA, subida));
+
+            assertThat(oferta.pendiente().orElseThrow().contenido().fotos()).containsExactly(subida);
+            assertThat(escenario.registroFotos.de(subida).orElseThrow().ultimoUso())
+                    .isEqualTo(AHORA.plus(Duration.ofHours(23)));
+        }
+
+        @Test
+        @DisplayName("una foto de otro prestador, una que no existe o una del perfil no sirven, y no se guarda nada")
+        void fotosQueNoSirven() {
+            escenario.habilitar(PRESTADOR, true, 1);
+            escenario.perfilPublico.guardar(new GuardarPerfilCommand(PRESTADOR, null, "Guías", null, null, null));
+            Foto delPerfil = escenario.perfilPublico.agregarFoto(PRESTADOR, IMAGEN).fotos().getFirst();
+
+            for (Foto foto : new Foto[]{FOTO_OTRO_PRESTADOR, Foto.nueva(), delPerfil}) {
+                assertThatThrownBy(() -> escenario.publicar(AGENCIA, actividad("Tour", "50000", ZONA_ACTIVA, foto)))
+                        .isInstanceOf(DatoInvalidoException.class)
+                        .hasMessageContaining("fotos: incluye una foto que no existe o no es tuya");
+            }
+            assertThat(escenario.ofertas.total()).isZero();
+        }
+
+        @Test
+        @DisplayName("editar también comprueba que las fotos sean del prestador")
+        void editarConFotoAjena() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+
+            assertThatThrownBy(() -> servicio.editar(new EditarOfertaCommand(oferta.id(), AGENCIA,
+                    actividad("Tour editado", "60000", ZONA_ACTIVA, FOTO_OTRO_PRESTADOR))))
+                    .isInstanceOf(DatoInvalidoException.class);
+            assertThat(escenario.guardada(oferta.id()).pendiente()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("una misma foto puede ir en varias ofertas del prestador")
+        void variasOfertas() {
+            Oferta primera = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+
+            Oferta segunda = escenario.publicar(AGENCIA, actividad("Otro tour", "60000", ZONA_ACTIVA, FOTO));
+
+            assertThat(primera.pendiente().or(primera::publicada).orElseThrow().contenido().fotos())
+                    .containsExactly(FOTO);
+            assertThat(segunda.pendiente().orElseThrow().contenido().fotos()).containsExactly(FOTO);
         }
     }
 }

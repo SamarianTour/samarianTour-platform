@@ -32,6 +32,7 @@ const PETICION: OfertaRequest = {
   precioReferencia: 45000,
   zonaId: 'a00000000000000000000002',
   capacidadMaxima: 8,
+  fotos: ['3f2504e0-4f89-11d3-9a0c-0305e82c3301'],
   accesibleSillaRuedas: true,
 };
 

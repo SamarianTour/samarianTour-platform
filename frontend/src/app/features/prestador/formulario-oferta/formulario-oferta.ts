@@ -145,6 +145,11 @@ export class FormularioOferta {
   protected readonly zonas = signal<readonly Zona[]>([]);
   protected readonly actividades = signal<readonly ActividadPropia[]>([]);
   protected readonly ubicacion = signal<Coordenada | null>(null);
+  /**
+   * [SUPUESTO] El formulario todavía no sube fotos (DC-47): al editar se conservan las de la versión publicada, y una
+   * oferta nueva se envía sin fotos, así que la API la rechaza hasta que exista la pantalla de fotos.
+   */
+  private readonly fotos = signal<string[]>([]);
   protected readonly conCambiosEnRevision = signal(false);
   protected readonly guardando = signal(false);
   protected readonly errorGeneral = signal<string | null>(null);
@@ -234,7 +239,7 @@ export class FormularioOferta {
     }
 
     const id = this.id();
-    const peticion = aPeticion(this.formulario.getRawValue(), this.ubicacion());
+    const peticion = aPeticion(this.formulario.getRawValue(), this.ubicacion(), this.fotos());
     this.guardando.set(true);
     (id ? this.servicio.editar(id, peticion) : this.servicio.publicar(peticion)).subscribe({
       next: (oferta) => {
@@ -306,13 +311,14 @@ export class FormularioOferta {
         })),
     );
     if (carga.ficha) {
-      const { valores, ubicacion } = valoresDeFicha(carga.ficha);
+      const { valores, ubicacion, fotos } = valoresDeFicha(carga.ficha);
       const disponibles = new Set(this.actividades().map((actividad) => actividad.id));
       this.formulario.setValue({
         ...valores,
         actividadIds: valores.actividadIds.filter((actividadId) => disponibles.has(actividadId)),
       });
       this.ubicacion.set(ubicacion);
+      this.fotos.set(fotos);
     }
     this.conCambiosEnRevision.set(carga.conCambiosEnRevision ?? false);
     this.estado.set({ tipo: 'lista' });

@@ -158,6 +158,19 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
             assertThat(plan.toJson()).contains("en_moderacion").doesNotContain("COLLSCAN");
         }
 
+        @Test
+        @DisplayName("saber si una foto está en uso consulta cada versión con su índice de fotos (DC-47)")
+        void fotosEnUso() {
+            for (String campo : List.of(OfertaMongoAdapter.PUBLICADA_FOTOS, OfertaMongoAdapter.PENDIENTE_FOTOS)) {
+                Document plan = mongo.getCollection(OfertaDocument.COLECCION)
+                        .find(new Document(campo, new Document("$in", List.of("3f2504e0-4f89-11d3-9a0c-0305e82c3301")))
+                                .append("retirada", false))
+                        .explain();
+
+                assertThat(plan.toJson()).contains("IXSCAN").doesNotContain("COLLSCAN");
+            }
+        }
+
         private String planDe(CriteriosBusqueda criterios) {
             ObjectId zonaId = criterios.zonaId() == null ? null : new ObjectId(criterios.zonaId());
             return mongo.getCollection(OfertaDocument.COLECCION)

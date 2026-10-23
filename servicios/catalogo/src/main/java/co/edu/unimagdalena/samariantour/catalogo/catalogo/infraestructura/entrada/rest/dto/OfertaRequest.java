@@ -9,6 +9,8 @@ import java.util.List;
  * para que un valor desconocido responda DATO_INVALIDO con los valores permitidos.
  *
  * @param tipo                 ACTIVIDAD, PAQUETE, ALOJAMIENTO o RESTAURANTE
+ * @param fotos                identificadores de fotos que el prestador subió para sus ofertas, de 1 a 6, en el orden
+ *                             en que se muestran; la primera es la portada (DC-47)
  * @param tipoActividad        solo ACTIVIDAD
  * @param nivelEsfuerzo        solo ACTIVIDAD
  * @param accesibleSillaRuedas ACTIVIDAD, ALOJAMIENTO y RESTAURANTE; si falta, se toma como false
@@ -30,6 +32,7 @@ public record OfertaRequest(
         CoordenadaDto ubicacion,
         String comoLlegar,
         Integer capacidadMaxima,
+        List<String> fotos,
         String tipoActividad,
         String nivelEsfuerzo,
         Boolean accesibleSillaRuedas,

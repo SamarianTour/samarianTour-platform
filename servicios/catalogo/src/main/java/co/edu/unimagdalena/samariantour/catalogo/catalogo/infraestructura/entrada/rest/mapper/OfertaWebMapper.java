@@ -42,7 +42,8 @@ public final class OfertaWebMapper {
         ContenidoComun contenido = new ContenidoComun(peticion.nombre(), peticion.descripcion(),
                 peticion.precioReferencia(), peticion.horarios(), peticion.zonaId(),
                 Conversiones.coordenada(peticion.ubicacion()), peticion.comoLlegar(),
-                Validaciones.presente(peticion.capacidadMaxima(), "capacidadMaxima"));
+                Validaciones.presente(peticion.capacidadMaxima(), "capacidadMaxima"),
+                FotoWebMapper.aFotos(peticion.fotos()));
         return switch (tipo) {
             case ACTIVIDAD -> new VersionActividad(contenido,
                     Conversiones.enumeradoOpcional(peticion.tipoActividad(), "tipoActividad", TipoActividad.class),
@@ -75,7 +76,7 @@ public final class OfertaWebMapper {
         return new FichaOfertaResponse(oferta.id(), oferta.tipo(), contenido.nombre(), contenido.descripcion(),
                 contenido.precioReferencia(), version.unidadPrecio(), contenido.horarios(),
                 Conversiones.coordenada(contenido.ubicacion()), contenido.comoLlegar(), contenido.capacidadMaxima(),
-                esAccesible(version, ficha.actividades()),
+                FotoWebMapper.aRespuestas(contenido.fotos()), esAccesible(version, ficha.actividades()),
                 version instanceof VersionActividad actividad ? detalle(actividad) : null,
                 version instanceof VersionPaquete paquete ? detalle(paquete, ficha.actividades()) : null,
                 version instanceof VersionAlojamiento alojamiento
@@ -99,7 +100,8 @@ public final class OfertaWebMapper {
         VersionOferta version = oferta.publicada().orElseThrow();
         ContenidoComun contenido = version.contenido();
         return new OfertaResumenResponse(oferta.id(), oferta.tipo(), contenido.nombre(), contenido.descripcion(),
-                contenido.precioReferencia(), version.unidadPrecio(), contenido.zonaId());
+                contenido.precioReferencia(), version.unidadPrecio(), contenido.zonaId(),
+                FotoWebMapper.portada(contenido.fotos()));
     }
 
     private static DetalleActividad detalle(VersionActividad actividad) {
@@ -138,6 +140,6 @@ public final class OfertaWebMapper {
         return new VersionResponse(version.numero(), version.estadoModeracion(),
                 version.moderacion().motivoRechazo(), version.moderacion().enviadaEn(),
                 version.moderacion().revisadaEn(), version.contenido().nombre(),
-                version.contenido().precioReferencia());
+                version.contenido().precioReferencia(), FotoWebMapper.portada(version.contenido().fotos()));
     }
 }

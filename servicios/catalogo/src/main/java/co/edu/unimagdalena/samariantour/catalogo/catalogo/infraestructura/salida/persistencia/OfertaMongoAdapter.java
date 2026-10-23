@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
@@ -23,12 +24,16 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.PENDIENTE;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.PRESTADOR_ID;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.PUBLICADA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.RETIRADA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.REVISION;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.RNT_PRESTADOR_ACTIVO;
@@ -160,6 +165,22 @@ public class OfertaMongoAdapter implements OfertaRepositoryPort {
         mongo.updateMulti(query(where(PRESTADOR_ID).is(prestadorId).and(VERSION_HABILITACION).lt(version)),
                 new Update().set(RNT_PRESTADOR_ACTIVO, rntActivo).set(VERSION_HABILITACION, version).inc(REVISION, 1),
                 OfertaDocument.class);
+    }
+
+    /** Fotos de la versión publicada y de la pendiente; cada campo tiene su índice. */
+    static final String PUBLICADA_FOTOS = PUBLICADA + "." + VersionDocument.FOTOS;
+    static final String PENDIENTE_FOTOS = PENDIENTE + "." + VersionDocument.FOTOS;
+
+    /** Una consulta por versión, cada una sobre su índice; {@code findDistinct} devuelve los ids sin leer la oferta. */
+    @Override
+    public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
+        List<String> ids = fotos.stream().map(Foto::id).toList();
+        Set<String> enUso = new HashSet<>();
+        for (String campo : List.of(PUBLICADA_FOTOS, PENDIENTE_FOTOS)) {
+            enUso.addAll(mongo.findDistinct(query(where(campo).in(ids).and(RETIRADA).is(false)), campo,
+                    OfertaDocument.class, String.class));
+        }
+        return fotos.stream().filter(foto -> enUso.contains(foto.id())).collect(Collectors.toSet());
     }
 
     private void insertar(Oferta oferta) {

@@ -47,6 +47,7 @@ public final class ModeracionWebMapper {
         return new ContenidoVersionResponse(contenido.nombre(), contenido.descripcion(),
                 contenido.precioReferencia(), version.unidadPrecio(), contenido.horarios(), contenido.zonaId(),
                 Conversiones.coordenada(contenido.ubicacion()), contenido.comoLlegar(), contenido.capacidadMaxima(),
+                FotoWebMapper.aRespuestas(contenido.fotos()),
                 actividad == null ? null : actividad.tipoActividad(),
                 actividad == null ? null : actividad.nivelEsfuerzo(),
                 accesible(version),

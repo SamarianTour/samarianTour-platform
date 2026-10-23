@@ -26,8 +26,8 @@ public interface GestionarPerfilPublicoUseCase {
     PerfilPublico agregarFoto(UUID prestadorId, byte[] imagen);
 
     /**
-     * Quita la foto del perfil y la borra del almacenamiento. Si el perfil no la tiene, no hace nada: borrar dos veces
-     * no es un error.
+     * Quita la foto del perfil y la borra del almacenamiento, salvo que una oferta también la use (DC-47). Si el perfil
+     * no la tiene, no hace nada: borrar dos veces no es un error.
      *
      * @throws co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PerfilNoEncontradoException si todavía no creó el perfil
      */

@@ -2,6 +2,9 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ContenidoComun;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coordenada;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.DestinoFoto;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.FotoSubida;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.ModalidadRecorrido;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
@@ -17,16 +20,22 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Version
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Datos de demostración del prototipo: las zonas de la precarga (DC-18), cinco prestadores y sus ofertas.
@@ -133,6 +142,41 @@ public final class DatosSantaMarta {
                 new PerfilPublico(RESTAURANTE, "Fogón del Caribe", "Cocina del Caribe con pesca del día", List.of(),
                         "Todos los días, de 12:00 a 22:00", null,
                         List.of("https://www.example.com/redes/restaurante")));
+    }
+
+    /**
+     * Foto de demostración de la oferta con ese nombre (DC-47). Su identificador sale del nombre, así que es el mismo
+     * en todas las réplicas, y una edición que conserva el nombre conserva la foto.
+     */
+    public static Foto fotoDe(String nombreOferta) {
+        byte[] nombre = ("samarian-tour/demo/" + nombreOferta).getBytes(StandardCharsets.UTF_8);
+        return new Foto(UUID.nameUUIDFromBytes(nombre).toString());
+    }
+
+    /**
+     * Registro de las fotos de las ofertas: cada una es del dueño de su oferta, subida para sus ofertas al cargar los
+     * datos.
+     */
+    public static List<FotoSubida> fotos() {
+        return ofertas().stream()
+                .flatMap(oferta -> versiones(oferta)
+                        .flatMap(version -> version.contenido().fotos().stream())
+                        .map(foto -> new FotoSubida(foto, oferta.prestadorId(), DestinoFoto.OFERTAS, CARGA)))
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * Archivo de cada foto, dentro del classpath: {@code demo/fotos/} y el nombre de la oferta en minúsculas, sin tildes
+     * y con guiones; por ejemplo, {@code demo/fotos/snorkel-en-playa-cristal.jpg}.
+     */
+    public static Map<Foto, String> archivosDeFotos() {
+        Map<Foto, String> archivos = new LinkedHashMap<>();
+        ofertas().stream()
+                .flatMap(DatosSantaMarta::versiones)
+                .map(version -> version.contenido().nombre())
+                .forEach(nombre -> archivos.putIfAbsent(fotoDe(nombre), "demo/fotos/" + enGuiones(nombre) + ".jpg"));
+        return archivos;
     }
 
     public static List<Oferta> ofertas() {
@@ -306,14 +350,27 @@ public final class DatosSantaMarta {
         return oferta;
     }
 
+    private static Stream<VersionOferta> versiones(Oferta oferta) {
+        return Stream.of(oferta.publicada(), oferta.pendiente()).flatMap(Optional::stream);
+    }
+
+    private static String enGuiones(String nombre) {
+        return Normalizer.normalize(nombre, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+    }
+
     private static PrestadorCatalogo habilitado(UUID prestadorId) {
         return new PrestadorCatalogo(prestadorId, true, 1);
     }
 
+    /** Cada oferta tiene una foto, la de su nombre ({@link #fotoDe}). */
     private static ContenidoComun contenido(String nombre, String descripcion, String precio, String horarios,
                                             String zonaId, Coordenada ubicacion, int capacidadMaxima) {
         return new ContenidoComun(nombre, descripcion, new BigDecimal(precio), horarios, zonaId, ubicacion, null,
-                capacidadMaxima);
+                capacidadMaxima, List.of(fotoDe(nombre)));
     }
 
     /** [SUPUESTO] Ubicación aproximada de la oferta, dentro de su zona; no es la de ningún prestador real. */

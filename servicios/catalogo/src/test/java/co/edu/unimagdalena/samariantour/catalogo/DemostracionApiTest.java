@@ -43,6 +43,7 @@ class DemostracionApiTest {
 
     private static final String GUIA = "20000000-0000-0000-0000-000000000002";
 
+    /** Una actividad del guía con una foto; {@code %s} es el identificador de la foto, que se sube antes. */
     private static final String NUEVA_ACTIVIDAD = """
             {
               "tipo": "ACTIVIDAD",
@@ -51,6 +52,7 @@ class DemostracionApiTest {
               "precioReferencia": 75000,
               "zonaId": "a00000000000000000000007",
               "capacidadMaxima": 6,
+              "fotos": ["%s"],
               "tipoActividad": "AVISTAMIENTO_FAUNA",
               "nivelEsfuerzo": "BAJO",
               "horariosSalida": ["18:30"],
@@ -79,14 +81,17 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.ubicacion.latitud").value(11.2785))
                 .andExpect(jsonPath("$.ubicacion.longitud").value(-73.9255))
                 .andExpect(jsonPath("$.perfilPrestador.nombreComercial").value("Mar y Selva Expediciones"))
-                .andExpect(jsonPath("$.perfilPrestador.descripcion").exists());
+                .andExpect(jsonPath("$.perfilPrestador.descripcion").exists())
+                .andExpect(jsonPath("$.fotos", hasSize(1)));
 
+        String fotoId = subirFoto(GUIA, "GUIA_INDEPENDIENTE");
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
                         .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
-                        .content(NUEVA_ACTIVIDAD))
+                        .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.pendiente.numero").value(1))
+                .andExpect(jsonPath("$.pendiente.portada.id").value(fotoId))
                 .andExpect(jsonPath("$.pendiente.estadoModeracion").value("EN_MODERACION"))
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(creada, "$.id");
@@ -105,16 +110,19 @@ class DemostracionApiTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("DUPLICADO"));
 
         http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007"))
-                .andExpect(jsonPath("$.contenido[*].id", hasItem(id)));
+                .andExpect(jsonPath("$.contenido[*].id", hasItem(id)))
+                .andExpect(jsonPath("$.contenido[?(@.id == '%s')].portada.urlMiniatura".formatted(id),
+                        contains("/fotos/" + fotoId + "/miniatura")));
         http.perform(get("/ofertas/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.precioReferencia").value(75000))
-                .andExpect(jsonPath("$.actividad.horariosSalida[0]").value("18:30"));
+                .andExpect(jsonPath("$.actividad.horariosSalida[0]").value("18:30"))
+                .andExpect(jsonPath("$.fotos[0].url").value("/fotos/" + fotoId + "/galeria"));
 
         http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
                         .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
-                        .content(NUEVA_ACTIVIDAD.replace("75000", "82000")))
+                        .content(NUEVA_ACTIVIDAD.formatted(fotoId).replace("75000", "82000")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.publicada.numero").value(1))
                 .andExpect(jsonPath("$.pendiente.numero").value(2));
@@ -125,10 +133,11 @@ class DemostracionApiTest {
     @DisplayName("[Demostración] retirar una oferta aprobada: sale de la búsqueda, sigue en la lista del prestador "
             + "como retirada y ya no se puede editar")
     void retiro() throws Exception {
+        String fotoId = subirFoto(GUIA, "GUIA_INDEPENDIENTE");
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
                         .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
-                        .content(NUEVA_ACTIVIDAD))
+                        .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(creada, "$.id");
@@ -160,7 +169,7 @@ class DemostracionApiTest {
         http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
                         .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
-                        .content(NUEVA_ACTIVIDAD))
+                        .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_EDITABLE"));
     }
@@ -168,10 +177,13 @@ class DemostracionApiTest {
     @Test
     @DisplayName("un prestador con el RNT inactivo no puede publicar: 403 RNT_INACTIVO")
     void prestadorConRntInactivo() throws Exception {
+        String sinRnt = "50000000-0000-0000-0000-000000000005";
+        // Subir una foto no publica nada, así que no exige el RNT; publicar sí.
+        String fotoId = subirFoto(sinRnt, "AGENCIA_OPERADORA");
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", "50000000-0000-0000-0000-000000000005").header("X-Rol", "PRESTADOR")
+                        .header("X-Usuario-Id", sinRnt).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "AGENCIA_OPERADORA")
-                        .content(NUEVA_ACTIVIDAD))
+                        .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("RNT_INACTIVO"));
     }
@@ -360,6 +372,32 @@ class DemostracionApiTest {
         http.perform(comoGuia(delete("/prestador/perfil/fotos/" + fotoId))).andExpect(status().isNoContent());
         http.perform(get(url)).andExpect(status().isNotFound());
         http.perform(comoGuia(get("/prestador/perfil"))).andExpect(jsonPath("$.fotos", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("una oferta sin fotos, o con la foto de otro prestador, no se publica: 400 DATO_INVALIDO (DC-47)")
+    void ofertaSinFotosPropias() throws Exception {
+        String deOtro = subirFoto("10000000-0000-0000-0000-000000000001", "AGENCIA_OPERADORA");
+
+        http.perform(comoGuia(post("/prestador/ofertas")).contentType(MediaType.APPLICATION_JSON)
+                        .content(NUEVA_ACTIVIDAD.replace("\"fotos\": [\"%s\"],", "")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("fotos: debe tener al menos una foto"));
+        http.perform(comoGuia(post("/prestador/ofertas")).contentType(MediaType.APPLICATION_JSON)
+                        .content(NUEVA_ACTIVIDAD.formatted(deOtro)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
+    }
+
+    /** Sube una foto para las ofertas del prestador y devuelve su identificador. */
+    private String subirFoto(String prestadorId, String tipoPrestador) throws Exception {
+        String foto = http.perform(multipart("/prestador/fotos")
+                        .file(new MockMultipartFile("foto", "foto.jpg", "image/jpeg", ImagenesDePrueba.jpg(800, 600)))
+                        .header("X-Usuario-Id", prestadorId).header("X-Rol", "PRESTADOR")
+                        .header("X-Tipo-Prestador", tipoPrestador))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(foto, "$.id");
     }
 
     private static MockHttpServletRequestBuilder comoGuia(MockHttpServletRequestBuilder peticion) {

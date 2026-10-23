@@ -3,10 +3,12 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.FotoSubidaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.PerfilDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.PrestadorDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.ZonaDocument;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.FotoSubidaMongoMapper;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.OfertaMongoMapper;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.PerfilMongoMapper;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.PrestadorMongoMapper;
@@ -60,8 +62,10 @@ public class CargaDemoMongo implements ApplicationRunner {
         int ofertas = cargar(OfertaDocument.class, DatosSantaMarta.ofertas().stream()
                 .map(oferta -> OfertaMongoMapper.aDocumento(oferta, Oferta.REVISION_NUEVA + 1))
                 .toList());
+        int fotos = cargar(FotoSubidaDocument.class,
+                DatosSantaMarta.fotos().stream().map(FotoSubidaMongoMapper::aDocumento).toList());
         LOG.info("Datos de demostración insertados por esta réplica: {} zonas, {} prestadores, {} perfiles, "
-                + "{} ofertas", zonas, prestadores, perfiles, ofertas);
+                + "{} ofertas, {} fotos", zonas, prestadores, perfiles, ofertas, fotos);
     }
 
     /** @return cuántos documentos insertó esta réplica */

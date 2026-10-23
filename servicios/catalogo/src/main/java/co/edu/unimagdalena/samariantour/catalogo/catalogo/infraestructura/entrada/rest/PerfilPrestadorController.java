@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarPerfilPublicoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilRequest;
@@ -21,8 +20,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.UUID;
 
 /**
@@ -53,7 +50,7 @@ public class PerfilPrestadorController {
     @PostMapping(path = "/fotos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public PerfilPublicoResponse agregarFoto(@RequestPart("foto") MultipartFile foto, HttpServletRequest peticion) {
-        return PerfilWebMapper.aRespuesta(perfiles.agregarFoto(prestador(peticion), contenido(foto)));
+        return PerfilWebMapper.aRespuesta(perfiles.agregarFoto(prestador(peticion), ArchivoSubido.contenido(foto)));
     }
 
     @DeleteMapping("/fotos/{fotoId}")
@@ -64,16 +61,5 @@ public class PerfilPrestadorController {
 
     private static UUID prestador(HttpServletRequest peticion) {
         return Identidad.de(peticion).usuarioId();
-    }
-
-    private static byte[] contenido(MultipartFile foto) {
-        if (foto.isEmpty()) {
-            throw new DatoInvalidoException("foto", "no llegó ninguna imagen");
-        }
-        try {
-            return foto.getBytes();
-        } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo leer la foto recibida", e);
-        }
     }
 }

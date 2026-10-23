@@ -10,7 +10,9 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOf
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarZonasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarOfertaService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarPerfilPublicoService;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.LimpiarFotosSinUsoService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ListarPendientesModeracionService;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.SubirFotoService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.AplicarAvisoNucleoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.BuscarOfertasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarFichaOfertaUseCase;
@@ -21,9 +23,12 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarPerfilPublicoUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.LimpiarFotosSinUsoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ListarPendientesModeracionUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.SubirFotoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.AvisoProcesadoPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.FileStoragePort;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.FotoSubidaRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PerfilRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PrestadorCatalogoRepositoryPort;
@@ -68,9 +73,23 @@ public class CatalogoConfig {
     }
 
     @Bean
-    GestionarPerfilPublicoUseCase gestionarPerfilPublico(PerfilRepositoryPort perfiles, FileStoragePort fotos,
+    GestionarPerfilPublicoUseCase gestionarPerfilPublico(PerfilRepositoryPort perfiles,
+                                                         FotoSubidaRepositoryPort registroFotos,
+                                                         FileStoragePort fotos, Clock reloj,
                                                          EjecutorConReintento reintento) {
-        return new GestionarPerfilPublicoService(perfiles, fotos, reintento);
+        return new GestionarPerfilPublicoService(perfiles, registroFotos, fotos, reloj, reintento);
+    }
+
+    @Bean
+    SubirFotoUseCase subirFoto(FotoSubidaRepositoryPort registroFotos, FileStoragePort fotos, Clock reloj) {
+        return new SubirFotoService(registroFotos, fotos, reloj);
+    }
+
+    @Bean
+    LimpiarFotosSinUsoUseCase limpiarFotosSinUso(FotoSubidaRepositoryPort registroFotos, FileStoragePort fotos,
+                                                 OfertaRepositoryPort ofertas, PerfilRepositoryPort perfiles,
+                                                 Clock reloj) {
+        return new LimpiarFotosSinUsoService(registroFotos, fotos, ofertas, perfiles, reloj);
     }
 
     @Bean
@@ -90,9 +109,10 @@ public class CatalogoConfig {
 
     @Bean
     GestionarOfertaUseCase gestionarOferta(OfertaRepositoryPort ofertas, ZonaRepositoryPort zonas,
-                                           PrestadorCatalogoRepositoryPort prestadores, Clock reloj,
+                                           PrestadorCatalogoRepositoryPort prestadores,
+                                           FotoSubidaRepositoryPort registroFotos, Clock reloj,
                                            EjecutorConReintento reintento) {
-        return new GestionarOfertaService(ofertas, zonas, prestadores, reloj, reintento);
+        return new GestionarOfertaService(ofertas, zonas, prestadores, registroFotos, reloj, reintento);
     }
 
     @Bean

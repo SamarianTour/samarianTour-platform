@@ -146,6 +146,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/prestador/fotos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subir una foto para las ofertas (RF-65)
+         * @description JPG, PNG o WebP de hasta 5 MB, reprocesada igual que las del perfil (DC-39). La foto queda suelta: se pone
+         *     en una oferta enviando su `id` en `fotos` al publicarla o editarla, y puede ir en varias ofertas del mismo
+         *     prestador. Si en 24 horas no la usa ninguna oferta, se borra (DC-47). No exige el RNT activo: subir una foto
+         *     no publica nada.
+         */
+        post: operations["subirFotoOferta"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/prestador/ofertas": {
         parameters: {
             query?: never;
@@ -163,6 +186,7 @@ export interface paths {
         /**
          * Publicar una oferta (RF-65, RF-67)
          * @description La oferta nace con su versión 1 en moderación y no es visible hasta que el núcleo avise su aprobación.
+         *     Lleva de 1 a 6 fotos que el prestador subió antes con `POST /prestador/fotos` (DC-47).
          */
         post: operations["publicarOferta"];
         delete?: never;
@@ -183,6 +207,7 @@ export interface paths {
          * Editar una oferta (RF-66)
          * @description Crea una versión pendiente con número nuevo, que reemplaza a la pendiente anterior. La versión publicada
          *     sigue visible hasta que se apruebe la nueva. El cuerpo trae el contenido completo y el tipo no puede cambiar.
+         *     Cambiar las fotos también es una edición: pasa por moderación (DC-47).
          */
         put: operations["editarOferta"];
         post?: never;
@@ -487,6 +512,11 @@ export interface components {
              */
             unidadPrecio: "por persona" | "por noche y unidad" | "promedio por persona";
             zonaId: string;
+            /**
+             * @description La primera foto de la versión publicada, para la tarjeta. `null` si la versión es anterior a las fotos
+             *     de las ofertas (DC-47) y no tiene.
+             */
+            portada: components["schemas"]["Foto"] | null;
         };
         PaginaOfertas: {
             contenido: components["schemas"]["OfertaResumen"][];
@@ -515,6 +545,11 @@ export interface components {
             comoLlegar?: string;
             /** @description Máximo de personas por solicitud. */
             capacidadMaxima: number;
+            /**
+             * @description La galería, en orden; la primera es la portada. Vacía si la versión es anterior a las fotos de las
+             *     ofertas (DC-47).
+             */
+            fotos: components["schemas"]["Foto"][];
             /** @description El de un paquete es `true` solo si todas sus actividades lo son (RF-17). */
             accesibleSillaRuedas: boolean;
             actividad?: components["schemas"]["DetalleActividad"];
@@ -590,11 +625,14 @@ export interface components {
             sitioWeb?: string;
             redesSociales?: string[];
         };
-        /** @description Una foto con la dirección de cada tamaño (DC-39). Las direcciones son rutas del catálogo y nunca cambian. */
+        /**
+         * @description Una foto con la dirección de cada tamaño (DC-39, DC-47). Las direcciones son rutas del catálogo y nunca
+         *     cambian.
+         */
         Foto: {
             /**
              * Format: uuid
-             * @description Identificador de la foto; es el que se usa para quitarla.
+             * @description Identificador de la foto; es el que se usa para quitarla del perfil o ponerla en una oferta.
              */
             id: string;
             /**
@@ -630,6 +668,12 @@ export interface components {
             ubicacion?: components["schemas"]["Coordenada"];
             comoLlegar?: string;
             capacidadMaxima: number;
+            /**
+             * @description Identificadores de fotos que el prestador subió para sus ofertas (`POST /prestador/fotos`), en el orden
+             *     en que se muestran; la primera es la portada (DC-47). Una foto de otro prestador, del perfil o que ya se
+             *     borró responde 400 `DATO_INVALIDO`.
+             */
+            fotos: string[];
             tipoActividad?: components["schemas"]["TipoActividad"];
             nivelEsfuerzo?: components["schemas"]["NivelEsfuerzo"];
             /** @default false */
@@ -676,6 +720,7 @@ export interface components {
             revisadaEn?: string;
             nombre: string;
             precioReferencia: number;
+            portada?: components["schemas"]["Foto"];
         };
         Aviso: components["schemas"]["AvisoModeracion"] | components["schemas"]["AvisoHabilitacion"];
         /** @description Decisión del Administrador sobre una versión de una oferta (RF-79). */
@@ -773,6 +818,8 @@ export interface components {
             ubicacion?: components["schemas"]["Coordenada"];
             comoLlegar?: string;
             capacidadMaxima: number;
+            /** @description En orden; vacía si la versión es anterior a las fotos de las ofertas (DC-47). */
+            fotos: components["schemas"]["Foto"][];
             tipoActividad?: components["schemas"]["TipoActividad"];
             nivelEsfuerzo?: components["schemas"]["NivelEsfuerzo"];
             /** @description Actividad, alojamiento y restaurante; la de un paquete se calcula con sus actividades. */
@@ -1558,6 +1605,52 @@ export interface operations {
             409: components["responses"]["ConflictoConcurrencia"];
         };
     };
+    subirFotoOferta: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
+                "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    foto: string;
+                };
+            };
+        };
+        responses: {
+            /** @description La foto guardada, con la dirección de cada tamaño. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Foto"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+        };
+    };
     listarOfertasPropias: {
         parameters: {
             query?: {
@@ -1634,6 +1727,9 @@ export interface operations {
                  *       "precioReferencia": 70000,
                  *       "zonaId": "a00000000000000000000007",
                  *       "capacidadMaxima": 8,
+                 *       "fotos": [
+                 *         "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+                 *       ],
                  *       "tipoActividad": "SENDERISMO",
                  *       "nivelEsfuerzo": "MODERADO",
                  *       "horariosSalida": [

@@ -9,7 +9,8 @@ import java.time.Instant;
 /**
  * Estado de moderación de una versión de la oferta, como lo ve su prestador.
  *
- * @param numero número de la versión; es el que nombra el aviso de moderación (DC-05)
+ * @param numero  número de la versión; es el que nombra el aviso de moderación (DC-05)
+ * @param portada la primera foto de la versión; se omite si es anterior a DC-47 y no tiene
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record VersionResponse(
@@ -19,5 +20,6 @@ public record VersionResponse(
         Instant enviadaEn,
         Instant revisadaEn,
         String nombre,
-        BigDecimal precioReferencia) {
+        BigDecimal precioReferencia,
+        FotoResponse portada) {
 }

@@ -12,6 +12,7 @@ import java.util.List;
  * El contenido de una versión tal como lo envió el prestador, con los mismos campos que {@link OfertaRequest}, para
  * que el administrador lo revise (RF-79). Los campos que no corresponden al tipo de la oferta se omiten.
  *
+ * @param fotos                en el orden en que se muestran; vacía si la versión es anterior a DC-47
  * @param accesibleSillaRuedas ACTIVIDAD, ALOJAMIENTO y RESTAURANTE; el de un paquete se calcula con sus actividades
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -25,6 +26,7 @@ public record ContenidoVersionResponse(
         CoordenadaDto ubicacion,
         String comoLlegar,
         int capacidadMaxima,
+        List<FotoResponse> fotos,
         TipoActividad tipoActividad,
         NivelEsfuerzo nivelEsfuerzo,
         Boolean accesibleSillaRuedas,

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividad;
@@ -78,10 +79,12 @@ class VersionOfertaTest {
     @Test
     @DisplayName("el nombre y la descripción son obligatorios")
     void nombreObligatorio() {
-        assertThatThrownBy(() -> new ContenidoComun(" ", "Descripción", BigDecimal.TEN, null, ZONA_ACTIVA, null, null, 5))
+        assertThatThrownBy(() -> new ContenidoComun(" ", "Descripción", BigDecimal.TEN, null, ZONA_ACTIVA, null, null,
+                5, List.of()))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("nombre");
-        assertThatThrownBy(() -> new ContenidoComun("Nombre", null, BigDecimal.TEN, null, ZONA_ACTIVA, null, null, 5))
+        assertThatThrownBy(() -> new ContenidoComun("Nombre", null, BigDecimal.TEN, null, ZONA_ACTIVA, null, null, 5,
+                List.of()))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("descripcion");
     }
@@ -89,16 +92,18 @@ class VersionOfertaTest {
     @Test
     @DisplayName("el precio de referencia es obligatorio y no puede ser negativo")
     void precio() {
-        assertThatThrownBy(() -> new ContenidoComun("N", "D", null, null, ZONA_ACTIVA, null, null, 5))
+        assertThatThrownBy(() -> new ContenidoComun("N", "D", null, null, ZONA_ACTIVA, null, null, 5, List.of()))
                 .isInstanceOf(DatoInvalidoException.class);
-        assertThatThrownBy(() -> new ContenidoComun("N", "D", new BigDecimal("-1"), null, ZONA_ACTIVA, null, null, 5))
+        assertThatThrownBy(() -> new ContenidoComun("N", "D", new BigDecimal("-1"), null, ZONA_ACTIVA, null, null, 5,
+                List.of()))
                 .isInstanceOf(DatoInvalidoException.class);
     }
 
     @Test
     @DisplayName("la capacidad máxima debe ser mayor que cero")
     void capacidad() {
-        assertThatThrownBy(() -> new ContenidoComun("N", "D", BigDecimal.TEN, null, ZONA_ACTIVA, null, null, 0))
+        assertThatThrownBy(() -> new ContenidoComun("N", "D", BigDecimal.TEN, null, ZONA_ACTIVA, null, null, 0,
+                List.of()))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("capacidadMaxima");
     }
@@ -106,10 +111,41 @@ class VersionOfertaTest {
     @Test
     @DisplayName("los textos opcionales en blanco se tratan como ausentes")
     void textosOpcionales() {
-        ContenidoComun contenido = new ContenidoComun("N", "D", BigDecimal.ZERO, "  ", ZONA_ACTIVA, null, "", 1);
+        ContenidoComun contenido = new ContenidoComun("N", "D", BigDecimal.ZERO, "  ", ZONA_ACTIVA, null, "", 1,
+                List.of());
 
         assertThat(contenido.horarios()).isNull();
         assertThat(contenido.comoLlegar()).isNull();
+    }
+
+    @Test
+    @DisplayName("las fotos conservan su orden, la primera es la portada, y sin fotos queda una lista vacía")
+    void fotosEnOrden() {
+        Foto primera = Foto.nueva();
+        Foto segunda = Foto.nueva();
+
+        assertThat(contenidoConFotos(List.of(primera, segunda)).fotos()).containsExactly(primera, segunda);
+        assertThat(contenidoConFotos(null).fotos()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("una oferta tiene como máximo 6 fotos, sin repetir ninguna (DC-47)")
+    void limiteDeFotos() {
+        List<Foto> seis = Stream.generate(Foto::nueva).limit(ContenidoComun.MAXIMO_FOTOS).toList();
+        List<Foto> siete = Stream.concat(seis.stream(), Stream.of(Foto.nueva())).toList();
+        Foto repetida = Foto.nueva();
+
+        assertThat(contenidoConFotos(seis).fotos()).hasSize(6);
+        assertThatThrownBy(() -> contenidoConFotos(siete))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("fotos: una oferta tiene como máximo 6 fotos");
+        assertThatThrownBy(() -> contenidoConFotos(List.of(repetida, repetida)))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("fotos: no puede repetir una foto");
+    }
+
+    private static ContenidoComun contenidoConFotos(List<Foto> fotos) {
+        return new ContenidoComun("N", "D", BigDecimal.TEN, null, ZONA_ACTIVA, null, null, 1, fotos);
     }
 
     @Test

@@ -92,6 +92,15 @@ class OfertaTest {
         }
 
         @Test
+        @DisplayName("una oferta sin fotos no se publica: necesita al menos una (DC-47)")
+        void sinFotos() {
+            assertThatThrownBy(() -> Oferta.publicar("o", habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    actividadConFotos(List.of()), zonaActiva(), AHORA))
+                    .isInstanceOf(DatoInvalidoException.class)
+                    .hasMessageContaining("fotos: debe tener al menos una foto");
+        }
+
+        @Test
         @DisplayName("un prestador de alojamiento publica un alojamiento")
         void prestadorDeAlojamientoPublicaAlojamiento() {
             Oferta oferta = Oferta.publicar("o", habilitado(), TipoPrestador.ALOJAMIENTO, alojamiento(),
@@ -201,6 +210,41 @@ class OfertaTest {
                     zonaActiva(), DESPUES))
                     .isInstanceOf(DatoInvalidoException.class);
         }
+
+        @Test
+        @DisplayName("cambiar las fotos es una edición: pasa por moderación y el turista sigue viendo las aprobadas")
+        void cambiarFotosEsEditar() {
+            Oferta oferta = ofertaPublicada();
+            List<Foto> aprobadas = oferta.publicada().orElseThrow().contenido().fotos();
+            Foto nueva = Foto.nueva();
+
+            oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividadConFotos(List.of(nueva)),
+                    zonaActiva(), DESPUES);
+
+            assertThat(oferta.pendiente()).hasValueSatisfying(pendiente ->
+                    assertThat(pendiente.contenido().fotos()).containsExactly(nueva));
+            assertThat(oferta.publicada()).hasValueSatisfying(publicada ->
+                    assertThat(publicada.contenido().fotos()).isEqualTo(aprobadas));
+        }
+
+        @Test
+        @DisplayName("editar también exige al menos una foto")
+        void editarSinFotos() {
+            Oferta oferta = ofertaPublicada();
+
+            assertThatThrownBy(() -> oferta.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA,
+                    actividadConFotos(List.of()), zonaActiva(), DESPUES))
+                    .isInstanceOf(DatoInvalidoException.class)
+                    .hasMessageContaining("fotos");
+        }
+    }
+
+    private static VersionActividad actividadConFotos(List<Foto> fotos) {
+        ContenidoComun base = contenido("Caminata con fotos");
+        ContenidoComun conFotos = new ContenidoComun(base.nombre(), base.descripcion(), base.precioReferencia(),
+                base.horarios(), base.zonaId(), base.ubicacion(), base.comoLlegar(), base.capacidadMaxima(), fotos);
+        return new VersionActividad(conFotos, TipoActividad.CULTURAL_HISTORICO, NivelEsfuerzo.BAJO, false,
+                actividad().horariosSalida(), null, null, null, null);
     }
 
     @Nested
