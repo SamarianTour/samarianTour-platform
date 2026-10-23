@@ -43,8 +43,10 @@ export function aLista(texto: string): string[] {
 /**
  * Arma el cuerpo de POST y PUT /prestador/ofertas. Solo viajan los campos del tipo elegido y los opcionales
  * que tienen valor; así lo que se escribió para otro tipo no llega a la API.
+ *
+ * @param fotos identificadores de las fotos de la oferta (DC-47)
  */
-export function aPeticion(valores: ValoresOferta, ubicacion: Coordenada | null): OfertaRequest {
+export function aPeticion(valores: ValoresOferta, ubicacion: Coordenada | null, fotos: string[]): OfertaRequest {
   const horarios = valores.horarios.trim();
   const comoLlegar = valores.comoLlegar.trim();
   const comun: OfertaRequest = {
@@ -54,6 +56,7 @@ export function aPeticion(valores: ValoresOferta, ubicacion: Coordenada | null):
     precioReferencia: valores.precioReferencia ?? 0,
     zonaId: valores.zonaId,
     capacidadMaxima: valores.capacidadMaxima ?? 0,
+    fotos,
     // La accesibilidad de un paquete no se envía: sale de sus actividades (RF-17).
     accesibleSillaRuedas: valores.tipo !== 'PAQUETE' && valores.accesibleSillaRuedas,
     ...(horarios && { horarios }),
@@ -96,7 +99,11 @@ export function aPeticion(valores: ValoresOferta, ubicacion: Coordenada | null):
  * Valores del formulario a partir de la ficha pública, para editar.
  * [SUPUESTO] La API no devuelve el contenido completo de una oferta propia: se usa su versión publicada.
  */
-export function valoresDeFicha(ficha: FichaOferta): { valores: ValoresOferta; ubicacion: Coordenada | null } {
+export function valoresDeFicha(ficha: FichaOferta): {
+  valores: ValoresOferta;
+  ubicacion: Coordenada | null;
+  fotos: string[];
+} {
   const horas = ficha.actividad?.horariosSalida ?? ficha.paquete?.horariosSalida ?? [];
   return {
     valores: {
@@ -121,5 +128,6 @@ export function valoresDeFicha(ficha: FichaOferta): { valores: ValoresOferta; ub
       tipoUnidad: ficha.alojamiento?.tipoUnidad ?? '',
     },
     ubicacion: ficha.ubicacion ?? null,
+    fotos: ficha.fotos.map((foto) => foto.id),
   };
 }

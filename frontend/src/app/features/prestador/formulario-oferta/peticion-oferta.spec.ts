@@ -51,6 +51,7 @@ describe('aPeticion', () => {
         actividadIds: ['b00000000000000000000001'],
       },
       null,
+      ['3f2504e0-4f89-11d3-9a0c-0305e82c3301'],
     );
 
     expect(peticion).toEqual({
@@ -60,6 +61,7 @@ describe('aPeticion', () => {
       precioReferencia: 80000,
       zonaId: 'a00000000000000000000007',
       capacidadMaxima: 10,
+      fotos: ['3f2504e0-4f89-11d3-9a0c-0305e82c3301'],
       accesibleSillaRuedas: true,
       tipoActividad: 'SENDERISMO',
       nivelEsfuerzo: 'MODERADO',
@@ -81,6 +83,7 @@ describe('aPeticion', () => {
         comoLlegar: 'Bus desde el mercado',
       },
       { latitud: 11.14309, longitud: -74.11675 },
+      [],
     );
 
     expect(peticion.puntoEncuentro).toBe('Parque de Minca');
@@ -103,6 +106,7 @@ describe('aPeticion', () => {
         tipoActividad: 'SENDERISMO',
       },
       null,
+      [],
     );
 
     expect(peticion.actividadIds).toEqual(['b00000000000000000000001', 'b00000000000000000000002']);
@@ -113,8 +117,12 @@ describe('aPeticion', () => {
   });
 
   it('arma un alojamiento con su tipo de unidad y un restaurante solo con lo común', () => {
-    const alojamiento = aPeticion({ ...COMUN, tipo: 'ALOJAMIENTO', tipoUnidad: ' cabaña ' }, null);
-    const restaurante = aPeticion({ ...COMUN, tipo: 'RESTAURANTE', tipoUnidad: 'cabaña', horariosSalida: '07:00' }, null);
+    const alojamiento = aPeticion({ ...COMUN, tipo: 'ALOJAMIENTO', tipoUnidad: ' cabaña ' }, null, []);
+    const restaurante = aPeticion(
+      { ...COMUN, tipo: 'RESTAURANTE', tipoUnidad: 'cabaña', horariosSalida: '07:00' },
+      null,
+      [],
+    );
 
     expect(alojamiento.tipoUnidad).toBe('cabaña');
     expect(restaurante.tipoUnidad).toBeUndefined();
@@ -132,6 +140,13 @@ describe('valoresDeFicha', () => {
       precioReferencia: 80000,
       unidadPrecio: 'por persona',
       capacidadMaxima: 10,
+      fotos: [
+        {
+          id: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+          url: '/api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/galeria',
+          urlMiniatura: '/api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/miniatura',
+        },
+      ],
       accesibleSillaRuedas: false,
       ubicacion: { latitud: 11.14309, longitud: -74.11675 },
       actividad: {
@@ -149,8 +164,9 @@ describe('valoresDeFicha', () => {
       },
     };
 
-    const { valores, ubicacion } = valoresDeFicha(ficha);
+    const { valores, ubicacion, fotos } = valoresDeFicha(ficha);
 
+    expect(fotos).toEqual(['3f2504e0-4f89-11d3-9a0c-0305e82c3301']);
     expect(valores.zonaId).toBe('a00000000000000000000007');
     expect(valores.horariosSalida).toBe('07:30, 14:00');
     expect(valores.idiomasAtencion).toBe('es, en');
@@ -167,6 +183,7 @@ describe('valoresDeFicha', () => {
       precioReferencia: 350000,
       unidadPrecio: 'por persona',
       capacidadMaxima: 6,
+      fotos: [],
       accesibleSillaRuedas: true,
       paquete: {
         actividades: [
