@@ -30,7 +30,7 @@ Son **tres servicios** independientes, cada uno en su propio contenedor Docker, 
                     │          │ moderación)│
                     ▼          └─────┬──────┘
                 MongoDB              ▼
-          (ofertas, zonas)       PostgreSQL
+     (ofertas, zonas, opiniones) PostgreSQL
 ```
 
 | Servicio | De qué se encarga | Base de datos | Estado |
@@ -41,7 +41,7 @@ Son **tres servicios** independientes, cada uno en su propio contenedor Docker, 
 
 **¿Por qué separarlos?** En temporada alta casi todo el tráfico es gente mirando el catálogo. Al separarlo, se levantan varias copias del catálogo (2 réplicas) sin tocar el núcleo, donde está el dinero (ADR-02).
 
-**¿Cómo se hablan?** Cada servicio es dueño de sus datos y nadie lee la base de otro. El núcleo le cuenta cosas al catálogo ("el administrador aprobó esta oferta", "este prestador perdió el RNT") con **avisos** HTTP a una ruta interna (`/internal/avisos`) que Nginx no expone hacia afuera.
+**¿Cómo se hablan?** Cada servicio es dueño de sus datos y nadie lee la base de otro. El núcleo le cuenta cosas al catálogo ("el administrador aprobó esta oferta", "este prestador perdió el RNT") con **avisos** HTTP a rutas internas (`/internal/avisos` para las ofertas y `/internal/opiniones/avisos` para las opiniones) que Nginx no expone hacia afuera.
 
 ## 3. Cómo está organizado un servicio por dentro (hexagonal)
 
@@ -106,7 +106,7 @@ En la versión final, el token JWT del núcleo trae id, rol y tipo de prestador.
 
 ## 5. Flujo completo, paso a paso
 
-Personajes: **Laura**, guía independiente de Minca, y **Pedro**, turista.
+Personajes: **Laura**, guía independiente de Minca, y **Pedro**, turista. Los pasos 8 a 11 son del módulo de opiniones.
 
 ### Paso 0: el núcleo habilita a Laura
 
@@ -207,6 +207,53 @@ Con un aviso posterior (`version: 3`, `true`) todo vuelve a ser visible.
 
 `PATCH /api/catalogo/prestador/ofertas/{id}/retiro` → 204, sin cuerpo. Se marca `retirada = true`, no se borra (las solicitudes en curso siguen apuntando a ella). Es definitivo: la oferta sale de la búsqueda, ya no se puede editar (409 OFERTA_NO_EDITABLE) y sigue apareciendo como retirada en `GET /api/catalogo/prestador/ofertas`, la lista de ofertas propias.
 
+### Paso 8: Pedro paga y queda habilitado para opinar
+
+Pedro reservó y pagó el avistamiento de aves en el núcleo. El catálogo no le pregunta al núcleo quién pagó: el núcleo se lo avisa.
+
+```
+POST /api/catalogo/internal/opiniones/avisos
+{ idAviso: "o-1", tipo: HABILITACION_OPINION, turistaId: Pedro, ofertaId: ... }
+```
+
+`AvisoOpinionesController` llama a `AplicarAvisoOpinionUseCase`, que implementa `AplicarAvisoOpinionService`: si `o-1` no fue procesado y la oferta existe, guarda la **habilitación** (Pedro, oferta) y marca el aviso.
+
+### Paso 9: Pedro opina
+
+```
+POST /api/catalogo/turista/opiniones
+Headers: X-Usuario-Id: Pedro, X-Rol: TURISTA
+Cuerpo: { ofertaId: ..., calificacion: 5, comentario: "Vimos tucanes desde el primer mirador." }
+```
+
+```
+OpinionTuristaController
+   ▼
+PublicarOpinionService
+   1. Valida calificación (1 a 5) y comentario (10 a 1000)   no → 400 DATO_INVALIDO
+   2. ¿La oferta existe?  (OfertaCatalogoPort → catalogo.api)  no → 404 OFERTA_NO_ENCONTRADA
+   3. ¿Pedro está habilitado?                                  no → 403 OPINION_NO_HABILITADA
+   4. ¿Ya opinó sobre esta oferta? (RF-61)                     sí → 409 OPINION_DUPLICADA
+   ▼
+Opinion.enviar → estado EN_MODERACION
+   ▼
+201 Created; en la ficha todavía no aparece
+```
+
+El módulo `opiniones` no conoce las clases del catálogo: le pregunta por la oferta a la interfaz `catalogo.api.ConsultaOfertaApi` (DC-39).
+
+### Paso 10: el administrador la aprueba
+
+1. El administrador ve la opinión en `GET /api/catalogo/admin/moderacion/opiniones`, con el nombre de la oferta.
+2. El núcleo consulta `GET /api/catalogo/internal/moderacion/opiniones/{id}` para saber a qué turista notificar.
+3. La decisión llega como aviso `{ o-2, MODERACION_OPINION, opinionId, decision: "APROBAR" }`. `Opinion.aprobar` la pasa a **APROBADA**; si ya no estaba en moderación, el aviso se ignora.
+
+Ahora `GET /api/catalogo/ofertas/{id}/opiniones` la muestra, con el resumen: total de opiniones aprobadas y promedio con un decimal. Pedro ve su opinión y su estado en `GET /api/catalogo/turista/opiniones`; si la hubieran rechazado, vería el motivo y no podría enviar otra.
+
+### Paso 11: Pedro pide suprimir sus datos
+
+Por la Ley 1581, Pedro puede pedir al núcleo que borre sus datos. El núcleo avisa `{ o-3, SUPRESION_TURISTA, turistaId: Pedro }` y el catálogo **borra** sus opiniones y sus habilitaciones. El resumen de la oferta se recalcula solo, porque se calcula al leer.
+
 ## 6. Dónde está cada cosa
 
 Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalogo/`
@@ -229,6 +276,10 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Carga de los datos de demostración en MongoDB | `infraestructura/salida/persistencia/CargaDemoMongo` |
 | MongoDB | `infraestructura/salida/persistencia/` (adaptadores), `document/` y `mapper/` |
 | Datos de demostración | `infraestructura/salida/demo/` |
+| Lo que otros módulos pueden pedirle al catálogo | `catalogo/api/ConsultaOfertaApi`, implementada en `catalogo/infraestructura/entrada/modulos/` |
+| Opiniones: reglas y estados | `opiniones/dominio/modelo/Opinion.java`, `HabilitacionOpinion`, `ResumenCalificaciones` |
+| Opiniones: casos de uso | `opiniones/aplicacion/`: `PublicarOpinionService`, `LeerOpinionesOfertaService`, `ListarOpinionesTuristaService`, `ListarOpinionesPendientesService`, `AplicarAvisoOpinionService` |
+| Opiniones: controladores, MongoDB y datos de demostración | `opiniones/infraestructura/entrada/rest/`, `opiniones/infraestructura/salida/persistencia/`, `opiniones/infraestructura/salida/demo/DatosOpiniones` |
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
 | Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |

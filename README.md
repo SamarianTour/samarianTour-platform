@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador; el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -125,21 +125,28 @@ Con el piloto levantado, abre `http://localhost:8080`.
 
 1. **Catálogo.** La página inicial lista las ofertas visibles. Filtra por tipo, zona, tipo de actividad, precio, esfuerzo físico máximo ("hasta el nivel") y accesibilidad. Los filtros quedan en la URL: `http://localhost:8080/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005` abre las actividades del Parque Tayrona. Si nada coincide aparece "Limpiar filtros".
 2. **Ficha.** Entra a "Tayrona: mar y selva" (un paquete): muestra sus actividades con enlace, el esfuerzo calculado, la zona con sus buenas prácticas, el perfil del prestador y el mapa con el enlace "Cómo llegar". Una oferta que no es visible, como `http://localhost:8080/ofertas/b00000000000000000000016`, muestra "Esta oferta ya no está disponible".
-3. **Publicar.** En "Soy prestador" elige el prestador demo **Guía** y entra a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
+3. **Publicar.** En el selector **Usuario demo** de la cabecera elige **Guía**, entra a "Soy prestador" y luego a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
 4. **Aprobar por consola.** La moderación es del núcleo, que todavía no existe: el aviso se envía a mano desde dentro de la red de Docker. El identificador de la oferta está en la URL de "Ver detalle" (`/prestador/ofertas/<id>`):
 
    ```bash
    ID=<id de la oferta>
-   docker compose -f infra/docker-compose.yml exec -T nginx \n     curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \n     -H "Content-Type: application/json" \n     -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
+   docker compose -f infra/docker-compose.yml exec -T nginx \
+     curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \
+     -H "Content-Type: application/json" \
+     -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
    # {"resultado":"APLICADO"}
    ```
 
    Al recargar "Mis ofertas" la oferta está "Publicada" y ya aparece en el catálogo. Para mostrar un rechazo, usa `\"decision\":\"RECHAZAR\",\"motivo\":\"Falta el punto de encuentro\"`: la oferta queda "Rechazada" con su motivo.
 5. **Editar.** En "Mis ofertas", "Editar" abre el formulario con los datos publicados. Cambia el precio y guarda: la oferta pasa a "Publicada con cambios en revisión" y en "Ver detalle" se ven lado a lado la versión publicada (1) y la pendiente (2). El turista sigue viendo la versión 1 hasta que se apruebe la 2 con otro aviso (`numeroVersion: 2` y otro `idAviso`).
 6. **Retirar.** "Retirar" pide confirmación en un diálogo propio. Al confirmar, la oferta queda "Retirada", sin "Editar", y su ficha pública responde "Esta oferta ya no está disponible".
-7. **Errores.** Con el prestador demo **Agencia sin RNT**, publicar muestra que el RNT no está activo. Con **Hotel** o **Restaurante** el formulario solo ofrece el tipo de oferta que ese prestador puede publicar.
+7. **Errores.** Con el usuario demo **Agencia sin RNT**, publicar muestra que el RNT no está activo. Con **Hotel** o **Restaurante** el formulario solo ofrece el tipo de oferta que ese prestador puede publicar.
 
-La identidad del prestador es provisional: el selector "Prestador demo" sustituye al inicio de sesión mientras no exista el JWT del núcleo.
+8. **Leer opiniones.** La ficha de "Caminata a Cabo San Juan del Guía" muestra el promedio (4,7), el total y las opiniones aprobadas, de la más reciente a la más antigua; la rechazada de la precarga no aparece.
+9. **Opinar.** En **Usuario demo** elige a **Laura**, que ya pagó el snorkel en Playa Cristal. En su ficha, en "Dejar una opinión", elige las estrellas, escribe el comentario y envíalo: aparece "Tu opinión quedó en moderación". En "Mis opiniones" la opinión está "En moderación". Si Laura intenta opinar sobre una oferta que no pagó, la ficha responde "Solo puedes opinar sobre ofertas que hayas pagado"; si vuelve a opinar sobre la misma, "Ya opinaste sobre esta oferta".
+10. **Aprobar la opinión por consola.** Como con las ofertas, la decisión es del núcleo y se envía como aviso; los comandos están en el paso 7 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
+
+La identidad es provisional: el selector "Usuario demo" de la cabecera, con dos turistas y cinco prestadores, sustituye al inicio de sesión mientras no exista el JWT del núcleo.
 
 ## Demostración paso a paso por consola
 
@@ -291,12 +298,86 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
 ```
 
-### 7. Rutas que no se exponen
+### 7. Opiniones
+
+Andrés es un turista de la demostración. Todavía no pagó el recorrido por el Centro Histórico, así que no puede opinar sobre él:
+
+```bash
+TURISTA=80000000-0000-0000-0000-000000000008
+OFERTA=b00000000000000000000006
+OPINION='{"ofertaId":"b00000000000000000000006","calificacion":5,"comentario":"Caminamos por el centro con calma y nos explicaron la historia de cada plaza."}'
+
+curl -s -X POST "$BASE/turista/opiniones" -H "Content-Type: application/json" \
+  -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA" -d "$OPINION"
+# 403 OPINION_NO_HABILITADA
+```
+
+Cuando una solicitud queda pagada, el núcleo habilita al turista con un aviso. Mientras el núcleo no exista, se envía a mano desde la red de Docker:
+
+```bash
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s -X POST http://catalogo:8080/api/catalogo/internal/opiniones/avisos \
+  -H "Content-Type: application/json" \
+  -d "{\"idAviso\":\"pago-$TURISTA-$OFERTA\",\"tipo\":\"HABILITACION_OPINION\",\"turistaId\":\"$TURISTA\",\"ofertaId\":\"$OFERTA\"}"
+# {"resultado":"APLICADO"}
+```
+
+Ahora sí puede opinar. La opinión queda en moderación y todavía no se ve en la ficha; una segunda opinión sobre la misma oferta responde 409 `OPINION_DUPLICADA`:
+
+```bash
+OPINION_ID=$(curl -s -X POST "$BASE/turista/opiniones" -H "Content-Type: application/json" \
+  -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA" -d "$OPINION" | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+echo "$OPINION_ID"
+
+curl -s "$BASE/ofertas/$OFERTA/opiniones"                 # sin opiniones aprobadas todavía
+curl -s "$BASE/turista/opiniones" -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA"   # EN_MODERACION
+```
+
+El administrador la ve en su cola, con el nombre de la oferta, y el núcleo consulta a quién notificar antes de decidir:
+
+```bash
+curl -s "$BASE/admin/moderacion/opiniones" \
+  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR"
+
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s "http://catalogo:8080/api/catalogo/internal/moderacion/opiniones/$OPINION_ID"
+```
+
+La decisión llega como aviso. Al aprobarla aparece en la ficha, con el resumen de calificaciones:
+
+```bash
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s -X POST http://catalogo:8080/api/catalogo/internal/opiniones/avisos \
+  -H "Content-Type: application/json" \
+  -d "{\"idAviso\":\"moderacion-$OPINION_ID\",\"tipo\":\"MODERACION_OPINION\",\"opinionId\":\"$OPINION_ID\",\"decision\":\"APROBAR\"}"
+# {"resultado":"APLICADO"}; para rechazar: "decision":"RECHAZAR","motivo":"..."
+
+curl -s "$BASE/ofertas/$OFERTA/opiniones"
+# {"resumen":{"totalOpiniones":1,"promedioCalificacion":5.0},"contenido":[...]}
+```
+
+Cuando el núcleo ejecuta la supresión de los datos de un turista (Ley 1581), el catálogo borra sus opiniones y sus habilitaciones:
+
+```bash
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s -X POST http://catalogo:8080/api/catalogo/internal/opiniones/avisos \
+  -H "Content-Type: application/json" \
+  -d "{\"idAviso\":\"supresion-$TURISTA\",\"tipo\":\"SUPRESION_TURISTA\",\"turistaId\":\"$TURISTA\"}"
+# {"resultado":"APLICADO"}
+
+curl -s "$BASE/ofertas/$OFERTA/opiniones"                 # totalOpiniones: 0
+curl -s "$BASE/turista/opiniones" -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA"   # totalElementos: 0
+```
+
+La precarga trae 9 opiniones aprobadas en cuatro ofertas (por ejemplo `curl -s "$BASE/ofertas/b00000000000000000000001/opiniones"`), 2 en moderación y 1 rechazada. Laura (`70000000-0000-0000-0000-000000000007`) ya pagó el snorkel en Playa Cristal y el avistamiento de aves en Minca, así que puede opinar sobre ellos sin habilitarla por consola.
+
+### 8. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/ofertas"             # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/moderacion/ofertas/b00000000000000000000017"  # 404
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/opiniones/avisos"  # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 ```
@@ -304,7 +385,7 @@ curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 
 Otros casos que se pueden mostrar:
 
 - **Sin identidad:** el mismo `POST` sin los headers responde 401 `NO_AUTENTICADO`.
-- **Rol equivocado:** el mismo `POST` con `X-Rol: TURISTA` responde 403 `ACCESO_DENEGADO`.
+- **Rol equivocado:** el mismo `POST` con `X-Rol: TURISTA` responde 403 `ACCESO_DENEGADO`; un prestador que pide `/turista/opiniones` recibe lo mismo.
 - **RNT inactivo:** con `X-Usuario-Id: 50000000-0000-0000-0000-000000000005`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
 - **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
 - **Edición:** antes de retirarla, un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
