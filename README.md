@@ -14,7 +14,7 @@ Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven mul
 | `libs/seguridad-jwt` | Validación del JWT RS256 y roles, compartida por los tres servicios. Pendiente. |
 | `contratos/` | Contratos OpenAPI (API first). Está el del catálogo: `catalogo.openapi.yaml`. |
 | `frontend/` | Aplicación Angular: catálogo y ficha para el turista, y panel del prestador. Ver [frontend/README.md](frontend/README.md). |
-| `infra/` | Docker Compose, Nginx y precarga de MongoDB. |
+| `infra/` | Docker Compose, Nginx, precarga de MongoDB y la prueba de carga de la búsqueda (`infra/carga`). |
 | `docs/` | Documento de diseño, diagramas, [decisiones del prototipo](docs/decisiones-catalogo-ofertas.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
 
 ## Estructura de paquetes de un servicio
@@ -40,7 +40,7 @@ co.edu.unimagdalena.samariantour.catalogo
 │       ├── entrada/rest/       controladores, dto/, mapper/
 │       ├── entrada/programada/ tareas programadas: la limpieza de fotos sin uso
 │       ├── salida/memoria/     adaptadores en memoria (perfil memoria)
-│       ├── salida/demo/        datos y fotos de demostración de Santa Marta
+│       ├── salida/demo/        datos y fotos de demostración de Santa Marta, y el catálogo sintético de carga
 │       ├── salida/persistencia/ adaptadores MongoDB (perfil mongo), document/ y mapper/
 │       └── salida/almacenamiento/ fotos en MinIO (perfil minio) o en una carpeta local
 └── opiniones/                  módulo (fuera del alcance del prototipo)
@@ -79,6 +79,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 | `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Docker Compose y pruebas de integración (`mvn verify`) |
 | `minio` | Las fotos en MinIO (DC-39); sin él, en una carpeta local (`catalogo.fotos.carpeta`, por defecto en la carpeta temporal) | Docker Compose |
 | `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
+| `carga` | Junto con `mongo`, agrega 5.000 ofertas sintéticas después de los datos de demostración (`catalogo.carga.ofertas`, DC-48) | Solo en la prueba de carga |
 
 **Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
 
@@ -109,6 +110,23 @@ Actualizar solo el frontend:
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build --no-deps nginx
 ```
+
+## Prueba de carga de la búsqueda (QAS-07)
+
+500 usuarios buscan durante 10 minutos con filtros de tipo, zona y precio sobre 5.000 ofertas, y k6 compara el resultado con QAS-07 (p95 ≤ 2 s en el servidor) y con la parte de QAS-02 que le toca al catálogo (menos de 1 % de errores, al menos 50 búsquedas por segundo). Corre como un proyecto aparte, `samarian-carga`, con sus propios volúmenes: no toca los datos del piloto. Los dos publican el puerto 8080, así que hay que detener el piloto antes (`docker compose -f infra/docker-compose.yml stop`). El método y los resultados están en DC-48.
+
+```bash
+# Levanta el piloto con el catálogo sintético
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.carga.yml up -d --build --wait
+
+# Corre la prueba: unos 12 minutos. Para una prueba corta: USUARIOS=20 DURACION=30s
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.carga.yml run --rm k6
+
+# Borra todo, incluidos sus volúmenes
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.carga.yml down -v
+```
+
+Al final k6 imprime las búsquedas por segundo, los errores, el p95 en el cliente y, con las métricas de las dos réplicas, qué parte de las búsquedas respondió en 2 s o menos en el servidor; cada umbral sale como `CUMPLE` o `NO CUMPLE`. El resumen completo queda en `infra/carga/resultados/resumen.json`, que no se versiona.
 
 ## Frontend en desarrollo
 
@@ -437,6 +455,7 @@ curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/moderacion/ofertas/b000
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/opiniones/avisos"  # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/prometheus"          # 404: las métricas solo dentro de Docker
 ```
 
 Otros casos que se pueden mostrar:

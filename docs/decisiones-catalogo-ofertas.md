@@ -57,6 +57,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-45 | Supresión de las opiniones de un turista | ✅ Ley 1581, bandeja de salida |
 | DC-46 | Persistencia de opiniones | 🆕 RF-61, DC-30, DC-33 |
 | DC-47 | Las ofertas llevan de 1 a 6 fotos moderadas; las que nadie usa se borran | 🆕 RF-65, RF-66 |
+| DC-48 | Evidencia de QAS-07: métricas en el servidor y prueba de carga de la búsqueda | ✅ QAS-07, QAS-02; RNF-13 en parte |
 
 ## Identidad y habilitación del prestador
 
@@ -408,6 +409,26 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 - **Datos de demostración:** cada oferta demo tiene una foto, con un id que sale de su nombre, registrada a nombre de su prestador; así un prestador puede editar su oferta demo y conservar la foto. Con el perfil `demo`, `CargaFotosDemo` guarda en el almacenamiento las que falten, desde `src/main/resources/demo/fotos`; si falta una imagen, el servicio arranca igual y esa foto responde 404.
 - **Base del piloto creada antes de DC-47:** sus ofertas, sin fotos, siguen funcionando, pero no tienen las fotos de demostración. Para tenerlas hay que recrear la base con `docker compose down -v`.
 
+## Rendimiento
+
+**DC-48. Evidencia de QAS-07: métricas en el servidor y prueba de carga de la búsqueda.** QAS-07 pide p95 ≤ 2 s medido en el servidor, con 500 usuarios concurrentes que buscan por tipo, zona y precio. QAS-02 pide, con la misma carga, menos de 1 % de errores y al menos 50 peticiones por segundo durante 10 minutos. La prueba cubre la parte de los dos que le toca al catálogo: la búsqueda.
+- **Métricas en el servidor** (Micrometer con `micrometer-registry-prometheus`): `/actuator/prometheus` publica `http_server_requests_seconds` por ruta, con umbrales de 50 ms a 3 s. Cada umbral cuenta, desde el arranque, cuántas peticiones respondieron en ese tiempo; los contadores se suman entre réplicas, y "p95 ≤ 2 s" se cumple si al menos el 95 % de las búsquedas cae en el umbral de 2 s. No se publica el percentil que calcula cada réplica: el formato de Prometheus no lo admite junto a los umbrales, y no se puede sumar entre réplicas.
+- **Solo dentro de Docker:** Nginx ya bloquea `/actuator/**`, así que las métricas no se exponen al público. No se agregaron Prometheus ni Grafana (decisión del equipo): RNF-13 pide además alertas y retención de 30 días, que quedan pendientes.
+- **Datos** (`DatosDeCarga`, perfil `carga`, `CargaVolumenMongo`): 5.000 ofertas sintéticas de 200 prestadores inventados, 25 cada uno, en las 7 zonas, construidas con las operaciones del dominio como las de la demostración. La mezcla imita un catálogo en uso para que los índices parciales de DC-17 trabajen: cerca del 7 % sin aprobar, el 5 % retiradas, el 8 % de las actividades con una edición en moderación y 10 prestadores sin RNT. Quedan visibles 4.044 de las 5.000, más las 21 de la demostración. Los identificadores empiezan por `d`, salen de una semilla fija y la carga es idempotente entre réplicas, como DC-27; corre después de la carga de demostración.
+- **Carga** (`infra/carga/busqueda-catalogo.js`, k6 1.8.1): 500 usuarios virtuales, un minuto de subida y 10 minutos sostenidos. Cada uno busca con tipo, zona y rango de precio al azar, a veces con texto (20 %) o en la segunda página (15 %), y espera de 1 a 3 s antes de la siguiente búsqueda. Pasa por Nginx a las dos réplicas, de 512 MB cada una. Al empezar y al terminar, k6 lee las métricas de cada réplica y calcula el resultado del servidor solo con las búsquedas de la prueba.
+- **Entorno:** `infra/docker-compose.carga.yml`, un proyecto aparte (`samarian-carga`) con sus propios volúmenes, para que las ofertas sintéticas no lleguen a la base de la demostración. Todo corre en un portátil: AMD Ryzen 3 7320U (4 núcleos, 8 hilos), 13,7 GB de RAM, Docker Desktop con 8 CPU y 6,6 GB. k6 corre en la misma máquina y le quita CPU al catálogo, así que el resultado es conservador.
+- **Resultado** (2026-10-23):
+
+  | Medida | Resultado | Meta |
+  |---|---|---|
+  | Búsquedas | 158.845, a 248,6 por segundo | ≥ 50 por segundo (QAS-02) |
+  | Errores | 0 (0,00 %) | < 1 % (QAS-02) |
+  | Servidor, dos réplicas | 158.840 de 158.847 en 2 s o menos (99,996 %); el 98,9 % en 50 ms o menos, así que el p95 está por debajo de 50 ms | p95 ≤ 2 s (QAS-07) |
+  | Cliente, pasando por Nginx | p95 29 ms, p99 95 ms, máximo 2,8 s | — |
+
+- **Sin ajustes:** con los índices parciales (DC-17), el tope de la paginación (DC-14) y la copia del RNT en cada oferta (DC-03) no hizo falta cambiar el código ni la configuración. Nginx, con sus 512 conexiones por defecto, no dio errores.
+- **Límites:** no es la nube del piloto, sino un portátil. Solo mide la búsqueda: ni la ficha, ni las miniaturas de las tarjetas, ni el envío de solicitudes, que es del núcleo y QAS-02 también incluye. El p95 de 3 s de extremo a extremo en red móvil se mide cuando exista el frontend. k6 registró una duración negativa (−1,2 s): un salto del reloj de la máquina virtual de Docker Desktop, que quizá explica también el máximo; no cambia los percentiles.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -438,6 +459,9 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 13. **Diagrama del módulo catálogo:** agregar el puerto de salida `FotoSubidaRepositoryPort` con `FotoSubidaMongoAdapter`, los casos de uso `SubirFotoUseCase` y `LimpiarFotosSinUsoUseCase`, y el adaptador de entrada programado `LimpiezaFotosProgramada` (DC-47).
 14. **Modelo documental (MongoDB):** agregar la colección `fotos` (`_id` texto, `prestadorId`, `destino`, `ultimoUso`), el campo `fotos` (ids en texto) en las versiones de `ofertas`, la colección `shedLock` y los índices `fotos_publicadas`, `fotos_pendientes`, `fotos_del_perfil` y `fotos_por_ultimo_uso` (DC-47).
 
+15. **SRS, RF-60 y RF-61 (desviación conocida):** RF-60 permite opinar "sin exigir una solicitud previa ni confirmación de asistencia", como decidió el equipo en la HU-ADM-03 del Entregable 1, y RF-61 permite editar y reenviar una opinión rechazada. El código exige una solicitud pagada (DC-41) y no permite editar la opinión rechazada (DC-42). El equipo decidió dejar el código como está: hay que cambiar los RF o el módulo de opiniones.
+16. **Documento de diseño, verificación de QAS-07 y QAS-02:** citar la prueba de carga de la búsqueda como evidencia de la parte del catálogo, con su entorno y sus límites (DC-48).
+
 ## Fuera del alcance del prototipo
 
-La pantalla de moderación del administrador, que vive en el núcleo; gestión de zonas; JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).
+La pantalla de moderación del administrador, que vive en el núcleo; gestión de zonas; JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.
