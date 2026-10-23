@@ -64,6 +64,10 @@
   font-size: 0.875rem;
 }
 
+nav {
+  margin-left: auto;
+}
+
 .navegacion {
   display: flex;
   gap: 0.5rem;
@@ -129,5 +133,12 @@ main {
 @media (max-width: 30rem) {
   .cabecera__interior {
     padding-inline: 1rem;
+  }
+}
+
+/* En pantallas angostas el usuario demo baja a su propia línea. */
+@media (max-width: 52rem) {
+  .cabecera__usuario {
+    flex-basis: 100%;
   }
 }

@@ -242,6 +242,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ofertas/{id}/opiniones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Opiniones aprobadas de una oferta, con su resumen (RF-59)
+         * @description Solo las aprobadas, de la más reciente a la más antigua y luego por id (DC-42). El resumen cuenta todas las
+         *     aprobadas y da el promedio de su calificación con un decimal. No se muestra quién escribió cada opinión.
+         *     Va aparte de la ficha porque el catálogo no depende del módulo de opiniones (DC-39). Si la oferta no es
+         *     visible, responde 404 igual que la ficha.
+         */
+        get: operations["leerOpinionesOferta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/turista/opiniones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Opiniones propias en cualquier estado
+         * @description De la más reciente a la más antigua, con el nombre de la oferta y, si fue rechazada, el motivo (DC-41).
+         */
+        get: operations["listarMisOpiniones"];
+        put?: never;
+        /**
+         * Dejar una opinión sobre una oferta pagada (RF-60, RF-61)
+         * @description Exige que el núcleo haya avisado que el turista tiene una solicitud pagada de la oferta (DC-40) y que la
+         *     oferta exista. Solo se admite una opinión por turista y oferta. La opinión queda en moderación: se publica
+         *     cuando el administrador la aprueba.
+         */
+        post: operations["publicarOpinion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderacion/opiniones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Opiniones que esperan la decisión del administrador (RF-80)
+         * @description De la enviada hace más tiempo a la más reciente y luego por id, con el nombre de la oferta (DC-43). Como con
+         *     las ofertas (DC-38), el administrador decide en el núcleo, que envía la decisión como aviso.
+         */
+        get: operations["listarOpinionesEnModeracion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/moderacion/opiniones/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Opinión en moderación que el núcleo va a aprobar o rechazar (RF-80)
+         * @description El núcleo la consulta antes de decidir, para saber a qué turista notificar (DC-43). Si la opinión no existe
+         *     o ya no está en moderación, responde 404.
+         */
+        get: operations["consultarOpinionEnModeracion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/opiniones/avisos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aviso del núcleo sobre opiniones (RF-60, RF-80, Ley 1581)
+         * @description Llegan por la misma bandeja de salida que los avisos de ofertas y con las mismas reglas (DC-04): cada aviso
+         *     trae un `idAviso`, un aviso repetido no se vuelve a aplicar y los tres resultados responden 200. El registro
+         *     de avisos procesados es propio del módulo (DC-45).
+         *     - `HABILITACION_OPINION`: una solicitud del turista quedó pagada y puede opinar sobre su oferta (DC-40).
+         *     - `MODERACION_OPINION`: decisión del administrador; una opinión que ya se moderó o no existe lo ignora (DC-43).
+         *     - `SUPRESION_TURISTA`: el núcleo ejecutó la supresión de los datos del turista; se borran sus opiniones y
+         *       sus habilitaciones (DC-44).
+         */
+        post: operations["recibirAvisoOpinion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -596,6 +713,159 @@ export interface components {
             /** Format: int64 */
             totalPaginas: number;
         };
+        /** @enum {string} */
+        EstadoOpinion: "EN_MODERACION" | "APROBADA" | "RECHAZADA";
+        /** @description La opinión que envía el turista (RF-60). El turista es el de la identidad, no va en el cuerpo. */
+        OpinionRequest: {
+            ofertaId: string;
+            calificacion: number;
+            /** @description Sin contar los espacios de los extremos (DC-41). */
+            comentario: string;
+        };
+        /** @description Una opinión como la ve su autor, en cualquier estado. Los campos sin valor no se envían. */
+        MiOpinion: {
+            id: string;
+            ofertaId: string;
+            /** @description El de la oferta en el catálogo, para dar contexto. */
+            nombreOferta?: string;
+            calificacion: number;
+            comentario: string;
+            /**
+             * Format: date-time
+             * @description Cuándo el turista la envió.
+             */
+            fecha: string;
+            estado: components["schemas"]["EstadoOpinion"];
+            /** @description Solo si fue rechazada. */
+            motivoRechazo?: string;
+            /**
+             * Format: date-time
+             * @description Solo si ya se moderó.
+             */
+            revisadaEn?: string;
+        };
+        PaginaMisOpiniones: {
+            contenido: components["schemas"]["MiOpinion"][];
+            /** @description La primera es la 0. */
+            pagina: number;
+            tamano: number;
+            /** Format: int64 */
+            totalElementos: number;
+            /** Format: int64 */
+            totalPaginas: number;
+        };
+        /** @description Una opinión aprobada (RF-59). No dice quién la escribió (DC-42). */
+        OpinionPublica: {
+            id: string;
+            calificacion: number;
+            comentario: string;
+            /** Format: date-time */
+            fecha: string;
+        };
+        ResumenOpiniones: {
+            /**
+             * Format: int64
+             * @description Opiniones aprobadas de la oferta.
+             */
+            totalOpiniones: number;
+            /**
+             * @description Con un decimal, redondeado hacia arriba desde la mitad; no se envía si no hay opiniones aprobadas.
+             * @example 4.7
+             */
+            promedioCalificacion?: number;
+        };
+        /** @description El resumen de las opiniones aprobadas de una oferta y una página de ellas (DC-14). */
+        OpinionesOferta: {
+            resumen: components["schemas"]["ResumenOpiniones"];
+            contenido: components["schemas"]["OpinionPublica"][];
+            /** @description La primera es la 0. */
+            pagina: number;
+            tamano: number;
+            /** Format: int64 */
+            totalElementos: number;
+            /** Format: int64 */
+            totalPaginas: number;
+        };
+        /**
+         * @description Una opinión que espera la decisión del administrador (RF-80), con el nombre de la oferta. No lleva el turista:
+         *     el administrador no lo necesita para decidir.
+         */
+        OpinionPendiente: {
+            id: string;
+            ofertaId: string;
+            nombreOferta?: string;
+            calificacion: number;
+            comentario: string;
+            /** Format: date-time */
+            fecha: string;
+        };
+        PaginaOpinionesPendientes: {
+            contenido: components["schemas"]["OpinionPendiente"][];
+            /** @description La primera es la 0. */
+            pagina: number;
+            tamano: number;
+            /** Format: int64 */
+            totalElementos: number;
+            /** Format: int64 */
+            totalPaginas: number;
+        };
+        /** @description Lo que el núcleo necesita de una opinión antes de decidir (DC-43). */
+        OpinionEnModeracion: {
+            id: string;
+            ofertaId: string;
+            /**
+             * Format: uuid
+             * @description Para notificarle la decisión.
+             */
+            turistaId: string;
+            estado: components["schemas"]["EstadoOpinion"];
+            /** Format: date-time */
+            fecha: string;
+        };
+        AvisoOpinion: components["schemas"]["AvisoHabilitacionOpinion"] | components["schemas"]["AvisoModeracionOpinion"] | components["schemas"]["AvisoSupresionTurista"];
+        /**
+         * @description Una solicitud del turista quedó pagada (RF-60, DC-40). Una habilitación que ya existe, o de una oferta que
+         *     el catálogo no tiene, se ignora.
+         */
+        AvisoHabilitacionOpinion: {
+            idAviso: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "HABILITACION_OPINION";
+            /** Format: uuid */
+            turistaId: string;
+            ofertaId: string;
+        };
+        /** @description Decisión del administrador sobre una opinión (RF-80, DC-43). */
+        AvisoModeracionOpinion: {
+            idAviso: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "MODERACION_OPINION";
+            opinionId: string;
+            /** @enum {string} */
+            decision: "APROBAR" | "RECHAZAR";
+            /** @description Obligatorio al rechazar; el turista lo ve en sus opiniones. */
+            motivo?: string;
+        };
+        /**
+         * @description El núcleo ejecutó la supresión de los datos del turista (Ley 1581 de 2012): se borran sus opiniones y sus
+         *     habilitaciones (DC-44). Si no tenía ninguna, el aviso se ignora.
+         */
+        AvisoSupresionTurista: {
+            idAviso: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "SUPRESION_TURISTA";
+            /** Format: uuid */
+            turistaId: string;
+        };
         /** @description ProblemDetail (RFC 7807) con la propiedad `codigo`. */
         Problema: {
             type?: string;
@@ -607,7 +877,7 @@ export interface components {
              * @description Motivo estable del error (DC-15).
              * @enum {string}
              */
-            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA";
+            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA" | "OPINION_NO_HABILITADA" | "OPINION_DUPLICADA" | "OPINION_NO_ENCONTRADA";
         };
     };
     responses: {
@@ -755,8 +1025,70 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problema"];
             };
         };
+        /**
+         * @description El turista no tiene una solicitud pagada de la oferta (`OPINION_NO_HABILITADA`, DC-40), o su rol no es
+         *     TURISTA (`ACCESO_DENEGADO`).
+         */
+        OpinionNoHabilitada: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Forbidden",
+                 *       "status": 403,
+                 *       "detail": "El turista 80000000-0000-0000-0000-000000000008 no tiene una solicitud pagada de la oferta b00000000000000000000006",
+                 *       "instance": "/api/catalogo/turista/opiniones",
+                 *       "codigo": "OPINION_NO_HABILITADA"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
+        /** @description El turista ya opinó sobre la oferta (`OPINION_DUPLICADA`, RF-61). */
+        OpinionDuplicada: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Conflict",
+                 *       "status": 409,
+                 *       "detail": "El turista 70000000-0000-0000-0000-000000000007 ya opinó sobre la oferta b00000000000000000000001",
+                 *       "instance": "/api/catalogo/turista/opiniones",
+                 *       "codigo": "OPINION_DUPLICADA"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
+        /** @description La opinión no existe o ya no está en moderación (`OPINION_NO_ENCONTRADA`). */
+        OpinionNoEncontrada: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Not Found",
+                 *       "status": 404,
+                 *       "detail": "No existe la opinión d00000000000000000000001",
+                 *       "instance": "/api/catalogo/internal/moderacion/opiniones/d00000000000000000000001",
+                 *       "codigo": "OPINION_NO_ENCONTRADA"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
     };
     parameters: {
+        /** @example d0000000000000000000000b */
+        OpinionId: string;
         /** @example b00000000000000000000001 */
         OfertaId: string;
         /**
@@ -1210,6 +1542,208 @@ export interface operations {
             404: components["responses"]["OfertaNoEncontrada"];
         };
     };
+    leerOpinionesOferta: {
+        parameters: {
+            query?: {
+                /** @description Página pedida; la primera es la 0 (DC-14). */
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path: {
+                /** @example b00000000000000000000001 */
+                id: components["parameters"]["OfertaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen y página de opiniones aprobadas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpinionesOferta"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            404: components["responses"]["OfertaNoEncontrada"];
+        };
+    };
+    listarMisOpiniones: {
+        parameters: {
+            query?: {
+                /** @description Página pedida; la primera es la 0 (DC-14). */
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de opiniones del turista. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaMisOpiniones"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+        };
+    };
+    publicarOpinion: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "ofertaId": "b00000000000000000000002",
+                 *       "calificacion": 5,
+                 *       "comentario": "El arrecife estaba en buen estado y el guía explicó cómo cuidarlo."
+                 *     }
+                 */
+                "application/json": components["schemas"]["OpinionRequest"];
+            };
+        };
+        responses: {
+            /** @description Opinión enviada a moderación. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MiOpinion"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["OpinionNoHabilitada"];
+            404: components["responses"]["OfertaNoEncontrada"];
+            409: components["responses"]["OpinionDuplicada"];
+        };
+    };
+    listarOpinionesEnModeracion: {
+        parameters: {
+            query?: {
+                /** @description Página pedida; la primera es la 0 (DC-14). */
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de opiniones en moderación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaOpinionesPendientes"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+        };
+    };
+    consultarOpinionEnModeracion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example d0000000000000000000000b */
+                id: components["parameters"]["OpinionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La opinión en moderación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpinionEnModeracion"];
+                };
+            };
+            404: components["responses"]["OpinionNoEncontrada"];
+        };
+    };
+    recibirAvisoOpinion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvisoOpinion"];
+            };
+        };
+        responses: {
+            /** @description Aviso recibido. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvisoResultado"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            409: components["responses"]["ConflictoConcurrencia"];
+        };
+    };
 }
 type FlattenedDeepRequired<T> = {
     [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
@@ -1232,5 +1766,10 @@ export const avisoHabilitacionTipoValues: ReadonlyArray<FlattenedDeepRequired<co
 export const avisoResultadoResultadoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoResultado"]["resultado"]> = ["APLICADO", "IGNORADO", "DUPLICADO"];
 export const ofertaVisibleUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OfertaVisible"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];
 export const contenidoVersionUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ContenidoVersion"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];
-export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA"];
+export const estadoOpinionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EstadoOpinion"]> = ["EN_MODERACION", "APROBADA", "RECHAZADA"];
+export const avisoHabilitacionOpinionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoHabilitacionOpinion"]["tipo"]> = ["HABILITACION_OPINION"];
+export const avisoModeracionOpinionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracionOpinion"]["tipo"]> = ["MODERACION_OPINION"];
+export const avisoModeracionOpinionDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracionOpinion"]["decision"]> = ["APROBAR", "RECHAZAR"];
+export const avisoSupresionTuristaTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoSupresionTurista"]["tipo"]> = ["SUPRESION_TURISTA"];
+export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA", "OPINION_NO_HABILITADA", "OPINION_DUPLICADA", "OPINION_NO_ENCONTRADA"];
 export const componentsParametersRolValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["Rol"]> = ["TURISTA", "PRESTADOR", "ADMINISTRADOR"];

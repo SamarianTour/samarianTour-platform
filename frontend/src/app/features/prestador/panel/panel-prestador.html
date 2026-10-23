@@ -1,24 +1,15 @@
 <aside class="lateral">
-  <div class="identidad">
-    <span class="identidad__avatar" aria-hidden="true">{{ inicial() }}</span>
-    <div class="identidad__datos">
-      <p class="rotulo">Prestador</p>
-      <p class="identidad__nombre">{{ prestador().nombre }}</p>
-      <p class="identidad__tipo">{{ etiquetaTipo[prestador().tipo] }}</p>
+  @if (prestador(); as actual) {
+    <div class="identidad">
+      <span class="identidad__avatar" aria-hidden="true">{{ actual.nombre.charAt(0).toUpperCase() }}</span>
+      <div class="identidad__datos">
+        <p class="rotulo">Prestador</p>
+        <p class="identidad__nombre">{{ actual.nombre }}</p>
+        <p class="identidad__tipo">{{ etiquetaTipo[actual.tipo] }}</p>
+      </div>
     </div>
-  </div>
-
-  <div class="campo">
-    <label for="prestador-demo">Prestador demo</label>
-    <select id="prestador-demo" aria-describedby="prestador-demo-ayuda" #selector (change)="elegir(selector.value)">
-      @for (opcion of prestadores; track opcion.id) {
-        <option [value]="opcion.id" [selected]="opcion.id === prestador().id">
-          {{ opcion.nombre }} · {{ etiquetaTipo[opcion.tipo] }}
-        </option>
-      }
-    </select>
-    <p class="campo__ayuda" id="prestador-demo-ayuda">Identidad de demostración: todavía no hay inicio de sesión.</p>
-  </div>
+    <p class="campo__ayuda">Para entrar como otro prestador, cámbialo en «Usuario demo», arriba.</p>
+  }
 
   <nav aria-labelledby="panel-titulo">
     <p class="rotulo" id="panel-titulo">Panel de control</p>
@@ -44,5 +35,14 @@
 </aside>
 
 <div class="contenido">
-  <router-outlet />
+  @if (prestador()) {
+    <router-outlet />
+  } @else {
+    <section class="pagina">
+      <div class="tarjeta vacio">
+        <h1>El panel es para prestadores</h1>
+        <p class="texto-suave">Elige un prestador en «Usuario demo», en la cabecera, para ver y publicar sus ofertas.</p>
+      </div>
+    </section>
+  }
 </div>

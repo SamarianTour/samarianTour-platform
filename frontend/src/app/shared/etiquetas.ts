@@ -1,5 +1,6 @@
 import {
   EstadoModeracion,
+  EstadoOpinion,
   ModalidadRecorrido,
   NivelEsfuerzo,
   TipoActividad,
@@ -77,4 +78,20 @@ export const TIPOS_QUE_PUBLICA: Record<TipoPrestador, readonly TipoOferta[]> = {
   GUIA_INDEPENDIENTE: ['ACTIVIDAD', 'PAQUETE'],
   ALOJAMIENTO: ['ALOJAMIENTO'],
   RESTAURANTE: ['RESTAURANTE'],
+};
+
+/** Estado de una opinión como lo ve su autor. */
+export const ESTADO_OPINION: Record<EstadoOpinion, string> = {
+  EN_MODERACION: 'En moderación',
+  APROBADA: 'Publicada',
+  RECHAZADA: 'Rechazada',
+};
+
+/** Qué significa cada calificación, para leerla junto a las estrellas. */
+export const CALIFICACION: Record<number, string> = {
+  1: 'Malo',
+  2: 'Regular',
+  3: 'Bueno',
+  4: 'Muy bueno',
+  5: 'Excelente',
 };

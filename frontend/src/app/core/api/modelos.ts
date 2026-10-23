@@ -22,6 +22,13 @@ export type OfertaRequest = Esquemas['OfertaRequest'];
 export type OfertaPrestador = Esquemas['OfertaPrestador'];
 export type PaginaOfertasPrestador = Esquemas['PaginaOfertasPrestador'];
 export type VersionOferta = Esquemas['Version'];
+export type EstadoOpinion = Esquemas['EstadoOpinion'];
+export type OpinionRequest = Esquemas['OpinionRequest'];
+export type MiOpinion = Esquemas['MiOpinion'];
+export type PaginaMisOpiniones = Esquemas['PaginaMisOpiniones'];
+export type OpinionPublica = Esquemas['OpinionPublica'];
+export type ResumenOpiniones = Esquemas['ResumenOpiniones'];
+export type OpinionesOferta = Esquemas['OpinionesOferta'];
 export type Problema = Esquemas['Problema'];
 export type CodigoError = Problema['codigo'];
 

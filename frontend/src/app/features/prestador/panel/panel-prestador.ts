@@ -9,8 +9,9 @@ import { Icono } from '../../../shared/icono/icono';
 const RUTA_NUEVA = '/prestador/ofertas/nueva';
 
 /**
- * Panel del prestador: barra lateral con su identidad y la navegación, y a su lado la pantalla de la ruta.
- * El selector "Prestador demo" es IDENTIDAD PROVISIONAL mientras no exista el inicio de sesión con JWT.
+ * Panel del prestador: barra lateral con su identidad y la navegación, y a su lado la pantalla de la ruta. El
+ * prestador se elige en el selector "Usuario demo" de la cabecera (IDENTIDAD PROVISIONAL mientras no exista el JWT);
+ * con un turista elegido, el panel no muestra sus pantallas.
  */
 @Component({
   selector: 'app-panel-prestador',
@@ -19,13 +20,10 @@ const RUTA_NUEVA = '/prestador/ofertas/nueva';
   styleUrl: './panel-prestador.css',
 })
 export class PanelPrestador {
-  private readonly identidad = inject(IdentidadService);
   private readonly router = inject(Router);
 
-  protected readonly prestadores = this.identidad.prestadores;
-  protected readonly prestador = this.identidad.prestador;
+  protected readonly prestador = inject(IdentidadService).prestador;
   protected readonly etiquetaTipo = TIPO_PRESTADOR;
-  protected readonly inicial = computed(() => this.prestador().nombre.charAt(0).toUpperCase());
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -36,10 +34,4 @@ export class PanelPrestador {
   );
   /** "Publicar oferta" solo se marca en su ruta; el resto del panel pertenece a "Mis ofertas". */
   protected readonly enPublicar = computed(() => this.url().split('?')[0] === RUTA_NUEVA);
-
-  /** Al cambiar de prestador se vuelve a "Mis ofertas": lo que había en pantalla era del anterior. */
-  protected elegir(id: string): void {
-    this.identidad.elegir(id);
-    void this.router.navigate(['/prestador/ofertas']);
-  }
 }

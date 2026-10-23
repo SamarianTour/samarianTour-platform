@@ -1,0 +1,127 @@
+<section class="tarjeta opiniones" aria-labelledby="opiniones-titulo">
+  <h2 id="opiniones-titulo">Opiniones</h2>
+
+  @if (errorDeLectura(); as mensaje) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ mensaje }}</span>
+    </p>
+  }
+
+  @if (opiniones(); as lectura) {
+    @if (lectura.resumen.promedioCalificacion; as promedio) {
+      <div class="resumen-opiniones">
+        <p class="resumen-opiniones__promedio">{{ promedio.toLocaleString('es-CO', { minimumFractionDigits: 1 }) }}</p>
+        <div>
+          <app-estrellas [valor]="promedio" />
+          <p class="texto-suave">
+            {{ lectura.resumen.totalOpiniones }}
+            {{ lectura.resumen.totalOpiniones === 1 ? 'opinión' : 'opiniones' }} de turistas que la pagaron
+          </p>
+        </div>
+      </div>
+
+      <ul class="lista-opiniones">
+        @for (opinion of lectura.contenido; track opinion.id) {
+          <li class="opinion">
+            <div class="opinion__cabecera">
+              <p class="opinion__autor">Turista</p>
+              <app-estrellas [valor]="opinion.calificacion" />
+              <p class="opinion__fecha texto-suave">{{ opinion.fecha | date: 'd MMM y' }}</p>
+            </div>
+            <p class="opinion__comentario">{{ opinion.comentario }}</p>
+          </li>
+        }
+      </ul>
+      <app-paginacion [pagina]="lectura.pagina" [totalPaginas]="lectura.totalPaginas" (cambiar)="irAPagina($event)" />
+    } @else {
+      <p class="texto-suave">Todavía no hay opiniones publicadas de esta oferta.</p>
+    }
+  }
+
+  <hr class="separador" />
+
+  @if (turista(); as actual) {
+    <form class="dejar-opinion" [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+      <h3 class="dejar-opinion__titulo">Dejar una opinión como {{ actual.nombre }}</h3>
+      <p class="campo__ayuda">
+        Solo puedes opinar sobre ofertas que hayas pagado. Un administrador revisa cada opinión antes de publicarla.
+      </p>
+
+      <fieldset
+        class="grupo calificacion"
+        id="calificacion"
+        tabindex="-1"
+        [attr.aria-invalid]="errorDe('calificacion') ? 'true' : null"
+        [attr.aria-describedby]="errorDe('calificacion') ? 'calificacion-error' : 'calificacion-texto'"
+      >
+        <legend>Calificación <span class="requerido" aria-hidden="true">*</span></legend>
+        <div class="calificacion__estrellas">
+          @for (valor of calificaciones; track valor) {
+            <label class="calificacion__opcion" [class.calificacion__opcion--llena]="valor <= (calificacionElegida() ?? 0)">
+              <input type="radio" name="calificacion" formControlName="calificacion" [value]="valor" />
+              <app-icono nombre="estrella" />
+              <span class="solo-lectores">{{ valor }} {{ valor === 1 ? 'estrella' : 'estrellas' }}</span>
+            </label>
+          }
+          <span class="calificacion__texto" id="calificacion-texto" aria-live="polite">
+            @if (calificacionElegida(); as elegida) {
+              {{ elegida }} de 5 estrellas ({{ textoCalificacion[elegida] }})
+            } @else {
+              Sin calificar
+            }
+          </span>
+        </div>
+        @if (errorDe('calificacion'); as mensaje) {
+          <p class="campo__error" id="calificacion-error">{{ mensaje }}</p>
+        }
+      </fieldset>
+
+      <div class="campo">
+        <label for="comentario">Tu comentario <span class="requerido" aria-hidden="true">*</span></label>
+        <textarea
+          id="comentario"
+          formControlName="comentario"
+          [attr.maxlength]="comentarioMaximo"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('comentario') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('comentario') ? 'comentario-error comentario-ayuda' : 'comentario-ayuda'"
+        ></textarea>
+        <p class="campo__ayuda" id="comentario-ayuda">
+          De 10 a 1000 caracteres ({{ largoComentario() }}). Cuenta tu experiencia; no incluyas teléfonos, correos ni
+          enlaces.
+        </p>
+        @if (errorDe('comentario'); as mensaje) {
+          <p class="campo__error" id="comentario-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      @if (errorDeEnvio(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje }}</span>
+        </p>
+      }
+      @if (enviada()) {
+        <p class="alerta alerta--exito" role="status">
+          <app-icono nombre="hoja" />
+          <span>
+            Tu opinión quedó en moderación. La verás publicada cuando el administrador la apruebe; mientras tanto puedes
+            seguirla en <a routerLink="/mis-opiniones">Mis opiniones</a>.
+          </span>
+        </p>
+      }
+
+      <div>
+        <button type="submit" class="boton" [disabled]="enviando()">
+          {{ enviando() ? 'Enviando…' : 'Enviar opinión' }}
+        </button>
+      </div>
+    </form>
+  } @else {
+    <p class="alerta alerta--info">
+      <app-icono nombre="info" />
+      <span>Para dejar una opinión, elige un turista en «Usuario demo», en la cabecera.</span>
+    </p>
+  }
+</section>

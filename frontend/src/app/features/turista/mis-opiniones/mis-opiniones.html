@@ -1,0 +1,57 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>Mis opiniones</h1>
+    <p class="texto-suave">Cada opinión pasa por moderación antes de publicarse en la ficha de la oferta.</p>
+  </header>
+
+  @if (!turista()) {
+    <div class="tarjeta vacio">
+      <h2>Elige un turista</h2>
+      <p class="texto-suave">Para ver opiniones, elige un turista en «Usuario demo», en la cabecera.</p>
+    </div>
+  } @else {
+    @if (error(); as mensaje) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensaje }}</span>
+      </p>
+    }
+
+    <div aria-live="polite" [attr.aria-busy]="cargando()">
+      @if (opiniones(); as resultado) {
+        @if (resultado.contenido.length > 0) {
+          <ul class="mis-opiniones">
+            @for (opinion of resultado.contenido; track opinion.id) {
+              <li class="tarjeta mi-opinion">
+                <div class="mi-opinion__cabecera">
+                  <span class="etiqueta" [class]="claseDeEstado[opinion.estado]">{{ etiquetaEstado[opinion.estado] }}</span>
+                  <p class="texto-suave mi-opinion__fecha">Enviada el {{ opinion.fecha | date: 'd MMM y' }}</p>
+                </div>
+                <h2 class="mi-opinion__oferta">
+                  <a [routerLink]="['/ofertas', opinion.ofertaId]">{{ opinion.nombreOferta ?? 'Oferta' }}</a>
+                </h2>
+                <app-estrellas [valor]="opinion.calificacion" />
+                <p class="mi-opinion__comentario">{{ opinion.comentario }}</p>
+                @if (opinion.motivoRechazo) {
+                  <p class="alerta alerta--error">
+                    <app-icono nombre="alerta" />
+                    <span><strong>Motivo del rechazo:</strong> {{ opinion.motivoRechazo }}</span>
+                  </p>
+                }
+              </li>
+            }
+          </ul>
+          <app-paginacion [pagina]="resultado.pagina" [totalPaginas]="resultado.totalPaginas" (cambiar)="irAPagina($event)" />
+        } @else {
+          <div class="tarjeta vacio">
+            <h2>Todavía no tienes opiniones</h2>
+            <p class="texto-suave">Abre la ficha de una oferta que hayas pagado y cuéntale a otros turistas cómo te fue.</p>
+            <a class="boton" routerLink="/">Ir al catálogo</a>
+          </div>
+        }
+      } @else if (cargando()) {
+        <p class="texto-suave">Cargando tus opiniones…</p>
+      }
+    </div>
+  }
+</section>

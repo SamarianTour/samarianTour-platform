@@ -10,7 +10,8 @@ export interface PrestadorDemo {
 /**
  * IDENTIDAD PROVISIONAL: no hay login. Estos son los prestadores de los datos de demostración del backend
  * (DatosSantaMarta); el último tiene el RNT inactivo y sirve para mostrar el rechazo al publicar.
- * Cuando exista el JWT del núcleo, esta lista y el selector desaparecen.
+ * Se eligen en el selector "Usuario demo" de la cabecera, junto con los turistas demo. Cuando exista el JWT del
+ * núcleo, esta lista y el selector desaparecen.
  */
 export const PRESTADORES_DEMO: readonly PrestadorDemo[] = [
   { id: '10000000-0000-0000-0000-000000000001', nombre: 'Agencia', tipo: 'AGENCIA_OPERADORA' },
