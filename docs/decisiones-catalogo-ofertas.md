@@ -46,6 +46,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-34 | El sello RNT se muestra sin el número de registro | 🆕 desvía RF-24 |
 | DC-35 | Consulta interna de una oferta para el núcleo | ✅ RF-30, modelo relacional |
 | DC-36 | Ofertas visibles para la recomendación, sin datos que sesguen | ✅ RF-26, RF-29, RET-02 |
+| DC-37 | Búsqueda por texto con expresiones regulares, sin índice de texto | 🆕 RF-14, QAS-07 |
 
 ## Identidad y habilitación del prestador
 
@@ -292,6 +293,14 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - **No** van calificaciones, opiniones, comisión ni el tamaño del prestador: así la recomendación no puede favorecer a nadie por esos datos (RET-02). El catálogo no prioriza a ningún prestador; la rotación entre ofertas de igual afinidad es de la recomendación (`PoliticaRotacion`).
 
 Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y la autenticación entre servicios llega con el JWT.
+
+## Búsqueda por texto
+
+**DC-37. Búsqueda por texto sin índice de texto.** `GET /api/catalogo/ofertas?texto=...` (RF-14), combinable con los demás filtros.
+- **Reglas:** cada palabra del texto debe aparecer en el nombre o en la descripción de la versión publicada, aunque sea incompleta ("buce" encuentra "buceo"), sin distinguir mayúsculas ni tildes, en los dos sentidos ("cafe" encuentra "café" y "río" encuentra "rio"). En un paquete se buscan su nombre y su descripción, no los de sus actividades. Sin los espacios de los extremos, el texto tiene entre 2 y 100 caracteres; si no, 400 `DATO_INVALIDO`. El orden sigue siendo por precio y luego por id.
+- **Dónde vive:** `TextoBusqueda`, en el dominio, normaliza el texto y arma una expresión regular por palabra: cada vocal, la `n` y la `c` aceptan sus variantes con tilde, en minúscula y mayúscula, y los caracteres especiales se escapan. El adaptador en memoria evalúa esas expresiones con `java.util.regex` y el de MongoDB las envía como `$regex` en la primera etapa de la agregación de DC-31, así que los dos dan los mismos resultados; el contrato común de los repositorios lo verifica.
+- **Por qué no `$text`:** el índice de texto de MongoDB solo encuentra palabras completas (no sirve mientras el turista escribe), ordena por relevancia en lugar de por precio y MongoDB admite uno solo por colección. La expresión regular no exige campos nuevos ni recrear la base del piloto.
+- **Costo:** la expresión regular no usa un índice; se evalúa sobre las ofertas que ya dejaron pasar el índice parcial de DC-17 y los filtros de tipo, zona y precio. Con el catálogo del piloto no pesa; la prueba de carga de QAS-07 lo confirma, y si no alcanza se cambia a un índice de texto solo en el adaptador de MongoDB, sin tocar el dominio.
 
 ## Cambios pendientes en los documentos de diseño
 

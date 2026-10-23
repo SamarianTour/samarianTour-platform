@@ -155,6 +155,10 @@ BASE=http://localhost:8080/api/catalogo
 # El header X-Instancia muestra qué réplica respondió: Nginx reparte las peticiones entre las dos, sin un orden fijo
 for i in 1 2 3 4 5 6 7 8; do curl -s -o /dev/null -D - "$BASE/ofertas" | grep -i '^x-instancia'; done
 
+# Búsqueda por texto: sin mayúsculas ni tildes y con palabras incompletas ("cafe" encuentra "café")
+curl -s "$BASE/ofertas?texto=cafe"
+curl -s "$BASE/ofertas?texto=buce"
+
 # Actividades en el Parque Tayrona
 curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=a00000000000000000000005"
 
