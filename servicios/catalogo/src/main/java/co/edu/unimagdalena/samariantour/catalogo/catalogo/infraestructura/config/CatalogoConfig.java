@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.AplicarAvis
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.BuscarOfertasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarFichaOfertaService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertaInternaService;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertaParaModulosService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertasVisiblesService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarZonasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarOfertaService;
@@ -12,6 +13,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.BuscarOfertasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarFichaOfertaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaInternaUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaParaModulosUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertasVisiblesUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
@@ -48,6 +50,11 @@ public class CatalogoConfig {
     @Bean
     ConsultarOfertaInternaUseCase consultarOfertaInterna(OfertaRepositoryPort ofertas) {
         return new ConsultarOfertaInternaService(ofertas);
+    }
+
+    @Bean
+    ConsultarOfertaParaModulosUseCase consultarOfertaParaModulos(OfertaRepositoryPort ofertas) {
+        return new ConsultarOfertaParaModulosService(ofertas);
     }
 
     @Bean
