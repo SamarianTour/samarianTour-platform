@@ -62,6 +62,7 @@ class OfertaPublicaControllerTest {
         when(buscarOfertas.buscar(any())).thenReturn(new Pagina<>(List.of(ofertaPublicada()), new Paginacion(0, 5), 1));
 
         http.perform(get("/ofertas")
+                        .param("texto", " Café Tayrona ")
                         .param("tipo", "ACTIVIDAD").param("zonaId", ZONA_ACTIVA)
                         .param("precioMin", "50000").param("precioMax", "200000")
                         .param("tipoActividad", "SENDERISMO").param("nivelEsfuerzoMaximo", "MODERADO")
@@ -80,6 +81,7 @@ class OfertaPublicaControllerTest {
 
         ArgumentCaptor<CriteriosBusqueda> criterios = ArgumentCaptor.forClass(CriteriosBusqueda.class);
         verify(buscarOfertas).buscar(criterios.capture());
+        assertThat(criterios.getValue().texto().palabras()).containsExactly("cafe", "tayrona");
         assertThat(criterios.getValue().tipo()).isEqualTo(TipoOferta.ACTIVIDAD);
         assertThat(criterios.getValue().zonaId()).isEqualTo(ZONA_ACTIVA);
         assertThat(criterios.getValue().precioMin()).isEqualByComparingTo("50000");
@@ -100,7 +102,8 @@ class OfertaPublicaControllerTest {
         ArgumentCaptor<CriteriosBusqueda> criterios = ArgumentCaptor.forClass(CriteriosBusqueda.class);
         verify(buscarOfertas).buscar(criterios.capture());
         assertThat(criterios.getValue())
-                .isEqualTo(new CriteriosBusqueda(null, null, null, null, null, null, false, new Paginacion(0, 20)));
+                .isEqualTo(new CriteriosBusqueda(null, null, null, null, null, null, null, false,
+                        new Paginacion(0, 20)));
     }
 
     @Test
@@ -114,8 +117,13 @@ class OfertaPublicaControllerTest {
     }
 
     @Test
-    @DisplayName("un precio que no es un número y un tamaño fuera de rango responden 400 DATO_INVALIDO")
+    @DisplayName("un precio que no es un número, un tamaño fuera de rango y un texto muy corto responden 400 "
+            + "DATO_INVALIDO")
     void parametrosMalFormados() throws Exception {
+        http.perform(get("/ofertas").param("texto", " a "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"))
+                .andExpect(jsonPath("$.detail", containsString("texto")));
         http.perform(get("/ofertas").param("precioMin", "barato"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"))

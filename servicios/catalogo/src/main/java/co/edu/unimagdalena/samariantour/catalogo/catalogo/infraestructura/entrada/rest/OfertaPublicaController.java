@@ -32,6 +32,7 @@ public class OfertaPublicaController {
 
     @GetMapping
     public PaginaResponse<OfertaResumenResponse> buscar(
+            @RequestParam(required = false) String texto,
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String zonaId,
             @RequestParam(required = false) BigDecimal precioMin,
@@ -41,8 +42,8 @@ public class OfertaPublicaController {
             @RequestParam(required = false) Boolean accesibleSillaRuedas,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
-        return OfertaWebMapper.aPagina(buscarOfertas.buscar(BusquedaWebMapper.aCriterios(tipo, zonaId, precioMin,
-                precioMax, tipoActividad, nivelEsfuerzoMaximo, accesibleSillaRuedas, page, size)));
+        return OfertaWebMapper.aPagina(buscarOfertas.buscar(BusquedaWebMapper.aCriterios(texto, tipo, zonaId,
+                precioMin, precioMax, tipoActividad, nivelEsfuerzoMaximo, accesibleSillaRuedas, page, size)));
     }
 
     @GetMapping("/{id}")

@@ -40,7 +40,7 @@ class BuscarOfertasServiceTest {
         escenario.ofertaPublicada("En Taganga", "50000", ZONA_TAGANGA);
         escenario.publicar(AGENCIA, actividad("Sin aprobar", "45000", ZONA_ACTIVA));
 
-        Pagina<Oferta> resultado = servicio.buscar(new CriteriosBusqueda(TipoOferta.ACTIVIDAD, ZONA_ACTIVA,
+        Pagina<Oferta> resultado = servicio.buscar(new CriteriosBusqueda(null, TipoOferta.ACTIVIDAD, ZONA_ACTIVA,
                 new BigDecimal("30000"), new BigDecimal("100000"), null, null, false, Paginacion.de(null, null)));
 
         assertThat(resultado.contenido()).extracting(Oferta::id).containsExactly(barata.id(), cara.id());
@@ -54,7 +54,7 @@ class BuscarOfertasServiceTest {
             escenario.ofertaPublicada("Oferta " + i, String.valueOf(i * 10000), ZONA_ACTIVA);
         }
 
-        Pagina<Oferta> segunda = servicio.buscar(new CriteriosBusqueda(null, null, null, null, null, null, false,
+        Pagina<Oferta> segunda = servicio.buscar(new CriteriosBusqueda(null, null, null, null, null, null, null, false,
                 Paginacion.de(1, 2)));
 
         assertThat(segunda.contenido()).extracting(EscenarioAplicacion::nombrePublicado)
@@ -126,8 +126,8 @@ class BuscarOfertasServiceTest {
 
         private List<String> buscar(TipoActividad tipoActividad, NivelEsfuerzo nivelEsfuerzoMaximo,
                                     boolean soloAccesibles) {
-            return servicio.buscar(new CriteriosBusqueda(null, null, null, null, tipoActividad, nivelEsfuerzoMaximo,
-                            soloAccesibles, Paginacion.de(null, null)))
+            return servicio.buscar(new CriteriosBusqueda(null, null, null, null, null, tipoActividad,
+                            nivelEsfuerzoMaximo, soloAccesibles, Paginacion.de(null, null)))
                     .contenido().stream().map(Oferta::id).toList();
         }
 

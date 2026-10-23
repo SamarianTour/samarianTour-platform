@@ -121,8 +121,8 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
         @Test
         @DisplayName("la búsqueda por tipo, zona y precio usa un índice y no recorre la colección")
         void busquedaConFiltros() {
-            CriteriosBusqueda criterios = new CriteriosBusqueda(TipoOferta.ACTIVIDAD, TAYRONA, new BigDecimal("50000"),
-                    new BigDecimal("200000"), null, null, false, Paginacion.de(null, null));
+            CriteriosBusqueda criterios = new CriteriosBusqueda(null, TipoOferta.ACTIVIDAD, TAYRONA,
+                    new BigDecimal("50000"), new BigDecimal("200000"), null, null, false, Paginacion.de(null, null));
 
             assertThat(planDe(criterios)).contains("IXSCAN").doesNotContain("COLLSCAN");
         }
@@ -130,7 +130,7 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
         @Test
         @DisplayName("la búsqueda sin filtros, que incluye paquetes, también usa un índice")
         void busquedaSinFiltros() {
-            CriteriosBusqueda criterios = new CriteriosBusqueda(null, null, null, null, null, null, false,
+            CriteriosBusqueda criterios = new CriteriosBusqueda(null, null, null, null, null, null, null, false,
                     Paginacion.de(null, null));
 
             assertThat(planDe(criterios)).contains("IXSCAN").doesNotContain("COLLSCAN");

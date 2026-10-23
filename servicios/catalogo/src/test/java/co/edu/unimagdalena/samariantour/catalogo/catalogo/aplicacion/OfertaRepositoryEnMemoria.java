@@ -74,6 +74,10 @@ class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
     @Override
     public Pagina<Oferta> buscarVisibles(CriteriosBusqueda criterios) {
         Predicate<Oferta> cumple = this::esVisible;
+        if (criterios.texto() != null) {
+            cumple = cumple.and(oferta -> criterios.texto().coincideCon(publicada(oferta).contenido().nombre(),
+                    publicada(oferta).contenido().descripcion()));
+        }
         if (criterios.tipo() != null) {
             cumple = cumple.and(oferta -> oferta.tipo() == criterios.tipo());
         }

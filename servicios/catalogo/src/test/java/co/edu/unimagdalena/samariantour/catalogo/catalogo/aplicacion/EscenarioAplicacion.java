@@ -95,7 +95,7 @@ class EscenarioAplicacion {
     }
 
     Pagina<Oferta> buscarTodas() {
-        return busqueda.buscar(new CriteriosBusqueda(null, null, null, null, null, null, false,
+        return busqueda.buscar(new CriteriosBusqueda(null, null, null, null, null, null, null, false,
                 Paginacion.de(null, null)));
     }
 
