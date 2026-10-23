@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TextoBusqueda;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.VersionDocument;
@@ -25,7 +26,8 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
  *
  * <ol>
  *   <li>{@code $match} con las condiciones del filtro parcial de los índices de QAS-07 (DC-17), el tipo, la zona
- *       y el rango de precio: lo resuelve un índice.</li>
+ *       y el rango de precio, que resuelve un índice, y el texto (DC-37), que se evalúa sobre lo que el índice
+ *       dejó pasar.</li>
  *   <li>{@code $sort} por precio y luego por id, el orden estable de DC-14. Va antes del {@code $lookup} para que
  *       también lo resuelva el índice; las etapas siguientes conservan el orden.</li>
  *   <li>Si el resultado puede incluir paquetes, {@code $lookup} trae las actividades visibles de cada paquete, y un
@@ -46,6 +48,8 @@ final class BusquedaOfertasMongo {
     private static final String NIVEL_ESFUERZO = PUBLICADA + "." + VersionDocument.NIVEL_ESFUERZO;
     private static final String ACCESIBLE = PUBLICADA + "." + VersionDocument.ACCESIBLE_SILLA_RUEDAS;
     private static final String ACTIVIDAD_IDS = PUBLICADA + "." + VersionDocument.ACTIVIDAD_IDS;
+    private static final String NOMBRE = PUBLICADA + "." + VersionDocument.NOMBRE;
+    private static final String DESCRIPCION = PUBLICADA + "." + VersionDocument.DESCRIPCION;
     static final String ZONA_ID = PUBLICADA + "." + VersionDocument.ZONA_ID;
     static final String PRECIO = PUBLICADA + "." + VersionDocument.PRECIO_REFERENCIA;
 
@@ -104,7 +108,23 @@ final class BusquedaOfertasMongo {
         if (!precio.isEmpty()) {
             filtro.append(PRECIO, precio);
         }
+        if (criterios.texto() != null) {
+            filtro.append("$and", porTexto(criterios.texto()));
+        }
         return filtro;
+    }
+
+    /**
+     * Cada palabra en el nombre o en la descripción (DC-37). Las expresiones vienen de TextoBusqueda, las mismas que
+     * evalúa el adaptador en memoria. No las resuelve un índice: se evalúan sobre las ofertas que ya dejó pasar el
+     * resto del filtro.
+     */
+    private static List<Document> porTexto(TextoBusqueda texto) {
+        return texto.expresiones().stream()
+                .map(expresion -> new Document("$or", List.of(
+                        new Document(NOMBRE, new Document("$regex", expresion).append("$options", "i")),
+                        new Document(DESCRIPCION, new Document("$regex", expresion).append("$options", "i")))))
+                .toList();
     }
 
     private static boolean puedeIncluirPaquetes(CriteriosBusqueda criterios) {

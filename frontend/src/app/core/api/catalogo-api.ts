@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Buscar ofertas visibles (RF-14 a RF-17)
+         * Buscar ofertas visibles por texto y filtros (RF-14 a RF-17)
          * @description Devuelve solo ofertas visibles: con versión publicada, no retiradas y de un prestador con el RNT activo.
          *     Un paquete además exige que todas sus actividades sean visibles (RF-22). Todos los filtros son opcionales.
          *     El orden es por precio de referencia y luego por id, para que la paginación sea estable.
@@ -129,6 +129,28 @@ export interface paths {
         patch: operations["retirarOferta"];
         trace?: never;
     };
+    "/admin/moderacion/ofertas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ofertas que esperan la decisión del administrador (RF-79)
+         * @description Ofertas no retiradas cuya versión pendiente está en moderación, nuevas o ediciones, de la enviada hace más
+         *     tiempo a la más reciente (DC-38). Las rechazadas no aparecen: esperan a que el prestador edite (DC-06).
+         *     El administrador decide en el núcleo, que envía la decisión al catálogo como aviso de moderación.
+         */
+        get: operations["listarOfertasEnModeracion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/avisos": {
         parameters: {
             query?: never;
@@ -190,6 +212,28 @@ export interface paths {
          *     visible responden 404. El precio no va: lo registra el operador al atender la solicitud (RF-37).
          */
         get: operations["consultarOfertaInterna"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/moderacion/ofertas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Oferta en moderación que el núcleo va a aprobar o rechazar (RF-79)
+         * @description El núcleo la consulta antes de decidir (DC-38): con el prestador aplica sus reglas de aprobación y notifica
+         *     el rechazo, y con el número de versión arma el aviso de moderación (DC-05). Si la oferta no existe, está
+         *     retirada o no tiene una versión en moderación, responde 404.
+         */
+        get: operations["consultarOfertaEnModeracion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -478,6 +522,70 @@ export interface components {
             /** @description Un paquete es accesible solo si todas sus actividades lo son (RF-17). */
             accesibleSillaRuedas: boolean;
         };
+        /**
+         * @description El contenido de una versión tal como lo envió el prestador, con los campos de `OfertaRequest` más la unidad
+         *     del precio. Los campos que no corresponden al tipo de la oferta se omiten.
+         */
+        ContenidoVersion: {
+            nombre: string;
+            descripcion: string;
+            precioReferencia: number;
+            /** @enum {string} */
+            unidadPrecio: "por persona" | "por noche y unidad" | "promedio por persona";
+            horarios?: string;
+            zonaId: string;
+            ubicacion?: components["schemas"]["Coordenada"];
+            comoLlegar?: string;
+            capacidadMaxima: number;
+            tipoActividad?: components["schemas"]["TipoActividad"];
+            nivelEsfuerzo?: components["schemas"]["NivelEsfuerzo"];
+            /** @description Actividad, alojamiento y restaurante; la de un paquete se calcula con sus actividades. */
+            accesibleSillaRuedas?: boolean;
+            horariosSalida?: components["schemas"]["Hora"][];
+            puntoEncuentro?: string;
+            duracionMinutos?: number;
+            modalidad?: components["schemas"]["ModalidadRecorrido"];
+            idiomasAtencion?: string[];
+            actividadIds?: string[];
+            tipoUnidad?: string;
+        };
+        /** @description Una oferta que espera la decisión del administrador (RF-79, DC-38). */
+        OfertaPendiente: {
+            id: string;
+            tipo: components["schemas"]["TipoOferta"];
+            /** Format: uuid */
+            prestadorId: string;
+            /** @description Copia de la habilitación del prestador; el núcleo no aprueba si no está activa. */
+            rntPrestadorActivo: boolean;
+            /** @description Número de la versión en moderación; es el que nombra la decisión (DC-05). */
+            numeroVersion: number;
+            /** Format: date-time */
+            enviadaEn: string;
+            pendiente: components["schemas"]["ContenidoVersion"];
+            publicada?: components["schemas"]["ContenidoVersion"];
+        };
+        PaginaOfertasPendientes: {
+            contenido: components["schemas"]["OfertaPendiente"][];
+            /** @description La primera es la 0. */
+            pagina: number;
+            tamano: number;
+            /** Format: int64 */
+            totalElementos: number;
+            /** Format: int64 */
+            totalPaginas: number;
+        };
+        /** @description Lo que el núcleo necesita de una oferta en moderación para decidir (DC-38). */
+        OfertaEnModeracion: {
+            id: string;
+            tipo: components["schemas"]["TipoOferta"];
+            /** @description Nombre de la versión en moderación, para el mensaje al prestador. */
+            nombre: string;
+            /** Format: uuid */
+            prestadorId: string;
+            numeroVersion: number;
+            /** Format: date-time */
+            enviadaEn: string;
+        };
         PaginaOfertasVisibles: {
             contenido: components["schemas"]["OfertaVisible"][];
             /** @description La primera es la 0. */
@@ -679,6 +787,13 @@ export interface operations {
     buscarOfertas: {
         parameters: {
             query?: {
+                /**
+                 * @description Texto libre (DC-37). Cada palabra debe aparecer en el nombre o en la descripción de la versión publicada,
+                 *     aunque sea incompleta ("buce" encuentra "buceo"), sin distinguir mayúsculas ni tildes. En un paquete se
+                 *     buscan su nombre y su descripción, no los de sus actividades. Se ignoran los espacios de los extremos.
+                 * @example cafe minca
+                 */
+                texto?: string;
                 tipo?: components["schemas"]["TipoOferta"];
                 /** @example a00000000000000000000005 */
                 zonaId?: string;
@@ -955,6 +1070,44 @@ export interface operations {
             409: components["responses"]["ConflictoConcurrencia"];
         };
     };
+    listarOfertasEnModeracion: {
+        parameters: {
+            query?: {
+                /** @description Página pedida; la primera es la 0 (DC-14). */
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de ofertas en moderación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaOfertasPendientes"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+        };
+    };
     recibirAviso: {
         parameters: {
             query?: never;
@@ -1033,6 +1186,30 @@ export interface operations {
             404: components["responses"]["OfertaNoEncontrada"];
         };
     };
+    consultarOfertaEnModeracion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example b00000000000000000000001 */
+                id: components["parameters"]["OfertaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La oferta y su versión en moderación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfertaEnModeracion"];
+                };
+            };
+            404: components["responses"]["OfertaNoEncontrada"];
+        };
+    };
 }
 type FlattenedDeepRequired<T> = {
     [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
@@ -1054,5 +1231,6 @@ export const avisoModeracionDecisionValues: ReadonlyArray<FlattenedDeepRequired<
 export const avisoHabilitacionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoHabilitacion"]["tipo"]> = ["HABILITACION"];
 export const avisoResultadoResultadoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoResultado"]["resultado"]> = ["APLICADO", "IGNORADO", "DUPLICADO"];
 export const ofertaVisibleUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OfertaVisible"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];
+export const contenidoVersionUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ContenidoVersion"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];
 export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA"];
 export const componentsParametersRolValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["Rol"]> = ["TURISTA", "PRESTADOR", "ADMINISTRADOR"];

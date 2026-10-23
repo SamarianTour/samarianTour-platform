@@ -155,6 +155,10 @@ BASE=http://localhost:8080/api/catalogo
 # El header X-Instancia muestra qué réplica respondió: Nginx reparte las peticiones entre las dos, sin un orden fijo
 for i in 1 2 3 4 5 6 7 8; do curl -s -o /dev/null -D - "$BASE/ofertas" | grep -i '^x-instancia'; done
 
+# Búsqueda por texto: sin mayúsculas ni tildes y con palabras incompletas ("cafe" encuentra "café")
+curl -s "$BASE/ofertas?texto=cafe"
+curl -s "$BASE/ofertas?texto=buce"
+
 # Actividades en el Parque Tayrona
 curl -s "$BASE/ofertas?tipo=ACTIVIDAD&zonaId=a00000000000000000000005"
 
@@ -273,11 +277,26 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s "http://catalogo:8080/api/catalogo/internal/ofertas?zonaId=a00000000000000000000005&tipo=PAQUETE"
 ```
 
-### 6. Rutas que no se exponen
+### 6. Moderación
+
+El administrador ve lo que espera su decisión: primero el paseo en lancha, que es nuevo, y después la edición de la caminata a Cabo San Juan, con la versión publicada al lado para comparar. La decisión la toma en el núcleo; mientras el núcleo no exista, se envía el aviso como en el paso 3.
+
+```bash
+curl -s "$BASE/admin/moderacion/ofertas" \
+  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" \
+  -H "X-Rol: ADMINISTRADOR"
+
+# El núcleo consulta la oferta que va a decidir, desde la red de Docker
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
+```
+
+### 7. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/ofertas"             # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/moderacion/ofertas/b00000000000000000000017"  # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 ```

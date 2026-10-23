@@ -35,4 +35,5 @@ public record OfertaDocument(
     public static final String VERSION_HABILITACION = "versionHabilitacion";
     public static final String REVISION = "revision";
     public static final String PUBLICADA = "publicada";
+    public static final String PENDIENTE = "pendiente";
 }

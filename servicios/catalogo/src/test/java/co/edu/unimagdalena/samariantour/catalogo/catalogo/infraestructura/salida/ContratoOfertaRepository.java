@@ -9,6 +9,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PrestadorCatalogo;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TextoBusqueda;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
@@ -31,6 +32,7 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.APARTAMENTO_POZOS_COLORADOS;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.AVISTAMIENTO_AVES_MINCA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.BAUTIZO_BUCEO_TAGANGA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CABANA_FRENTE_AL_MAR_BURITACA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CAMINATA_CABO_SAN_JUAN;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.CAMINATA_POZO_AZUL_MARINKA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.COCINA_CARIBE_CENTRO_HISTORICO;
@@ -50,6 +52,7 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.SNORKEL_PLAYA_CRISTAL;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAGANGA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TAYRONA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta.TUBING_RIO_BURITACA;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -162,12 +165,12 @@ public interface ContratoOfertaRepository {
         assertThat(ids(buscar(TipoOferta.RESTAURANTE, TAGANGA, null, null, false, 100)))
                 .containsExactly(PESCADOS_FRENTE_AL_MAR_TAGANGA);
 
-        CriteriosBusqueda hastaCienMil = new CriteriosBusqueda(TipoOferta.ACTIVIDAD, MINCA, null,
+        CriteriosBusqueda hastaCienMil = new CriteriosBusqueda(null, TipoOferta.ACTIVIDAD, MINCA, null,
                 new BigDecimal("100000"), null, null, false, Paginacion.de(null, null));
         assertThat(ids(ofertas().buscarVisibles(hastaCienMil)))
                 .containsExactly(RUTA_CAFE_CACAO_MINCA, CAMINATA_POZO_AZUL_MARINKA);
 
-        CriteriosBusqueda desdeCienMil = new CriteriosBusqueda(null, TAYRONA, new BigDecimal("100000"), null, null,
+        CriteriosBusqueda desdeCienMil = new CriteriosBusqueda(null, null, TAYRONA, new BigDecimal("100000"), null, null,
                 null, false, Paginacion.de(null, null));
         assertThat(ofertas().buscarVisibles(desdeCienMil).contenido())
                 .isNotEmpty()
@@ -326,6 +329,74 @@ public interface ContratoOfertaRepository {
         assertThat(segunda.totalElementos()).isEqualTo(5);
     }
 
+    @Test
+    @DisplayName("el texto no distingue mayúsculas ni tildes, en ninguno de los dos sentidos (DC-37)")
+    default void textoSinMayusculasNiTildes() {
+        assertThat(buscarTexto("CAFE", null)).containsExactly(RUTA_CAFE_CACAO_MINCA, PAQUETE_MINCA_AVES_Y_CAFE);
+        assertThat(buscarTexto("río", null)).containsExactly(TUBING_RIO_BURITACA, CABANA_FRENTE_AL_MAR_BURITACA);
+        assertThat(buscarTexto("RIO", null)).containsExactly(TUBING_RIO_BURITACA, CABANA_FRENTE_AL_MAR_BURITACA);
+    }
+
+    @Test
+    @DisplayName("el texto busca palabras incompletas en el nombre y en la descripción, incluida la de un paquete")
+    default void textoIncompletoEnNombreYDescripcion() {
+        assertThat(buscarTexto("buce", null)).containsExactly(BAUTIZO_BUCEO_TAGANGA, PAQUETE_TAGANGA_BAJO_EL_AGUA);
+    }
+
+    @Test
+    @DisplayName("con varias palabras deben aparecer todas, aunque unas estén en el nombre y otras en la descripción")
+    default void textoConVariasPalabras() {
+        assertThat(buscarTexto("kayak manana", null)).containsExactly(PAQUETE_TAGANGA_BAJO_EL_AGUA);
+        assertThat(buscarTexto("Taganga   arroz", null)).containsExactly(PESCADOS_FRENTE_AL_MAR_TAGANGA);
+    }
+
+    @Test
+    @DisplayName("el texto se combina con los demás filtros y nunca trae ofertas que no son visibles")
+    default void textoConFiltrosYVisibilidad() {
+        assertThat(buscarTexto("caminata", TipoOferta.PAQUETE)).containsExactly(PAQUETE_TAYRONA_MAR_Y_SELVA);
+        // El paseo a Playa Blanca también dice "traslado", pero no tiene versión aprobada.
+        assertThat(buscarTexto("traslado", null)).containsExactly(SNORKEL_PLAYA_CRISTAL);
+        assertThat(buscarTexto("Ciudad Perdida", null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("los caracteres especiales del texto se buscan tal cual, sin romper la consulta")
+    default void textoConCaracteresEspeciales() {
+        assertThat(buscarTexto("(c++ [mar]", null)).isEmpty();
+        assertThat(buscarTexto(".*", null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("lista las ofertas en moderación de la enviada hace más tiempo a la más reciente, nuevas y ediciones")
+    default void enModeracion() {
+        Pagina<Oferta> pendientes = ofertas().buscarEnModeracion(new Paginacion(0, 20));
+
+        // El paseo en lancha es nuevo y se envió con la carga; la edición de la caminata, un día después.
+        assertThat(ids(pendientes)).containsExactly(PASEO_LANCHA_PLAYA_BLANCA, CAMINATA_CABO_SAN_JUAN);
+        assertThat(pendientes.totalElementos()).isEqualTo(2);
+        Pagina<Oferta> segunda = ofertas().buscarEnModeracion(new Paginacion(1, 1));
+        assertThat(ids(segunda)).containsExactly(CAMINATA_CABO_SAN_JUAN);
+        assertThat(segunda.totalElementos()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("una oferta retirada o con su versión ya revisada deja de estar en moderación")
+    default void fueraDeModeracion() {
+        Oferta lancha = ofertas().buscarPorId(PASEO_LANCHA_PLAYA_BLANCA).orElseThrow();
+        lancha.retirar(AGENCIA);
+        ofertas().guardar(lancha);
+        Oferta caminata = ofertas().buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow();
+        caminata.rechazar(2, "Las fotos no corresponden al sendero", Instant.parse("2026-10-05T10:00:00Z"));
+        ofertas().guardar(caminata);
+
+        assertThat(ofertas().buscarEnModeracion(new Paginacion(0, 20)).contenido()).isEmpty();
+    }
+
+    private List<String> buscarTexto(String texto, TipoOferta tipo) {
+        return ids(ofertas().buscarVisibles(new CriteriosBusqueda(TextoBusqueda.de(texto), tipo, null, null, null,
+                null, null, false, new Paginacion(0, 100))));
+    }
+
     private Pagina<Oferta> buscar(TipoOferta tipo, String zonaId, TipoActividad tipoActividad,
                                   NivelEsfuerzo nivelEsfuerzoMaximo, boolean soloAccesibles, int tamano) {
         return ofertas().buscarVisibles(criterios(tipo, zonaId, tipoActividad, nivelEsfuerzoMaximo, soloAccesibles,
@@ -335,8 +406,8 @@ public interface ContratoOfertaRepository {
     private static CriteriosBusqueda criterios(TipoOferta tipo, String zonaId, TipoActividad tipoActividad,
                                                NivelEsfuerzo nivelEsfuerzoMaximo, boolean soloAccesibles,
                                                Paginacion paginacion) {
-        return new CriteriosBusqueda(tipo, zonaId, null, null, tipoActividad, nivelEsfuerzoMaximo, soloAccesibles,
-                paginacion);
+        return new CriteriosBusqueda(null, tipo, zonaId, null, null, tipoActividad, nivelEsfuerzoMaximo,
+                soloAccesibles, paginacion);
     }
 
     private static List<String> ids(Pagina<Oferta> pagina) {

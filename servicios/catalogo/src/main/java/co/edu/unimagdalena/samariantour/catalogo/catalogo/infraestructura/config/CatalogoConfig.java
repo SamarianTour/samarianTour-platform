@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOf
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertasVisiblesService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarZonasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarOfertaService;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ListarPendientesModeracionService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.AplicarAvisoNucleoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.BuscarOfertasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarFichaOfertaUseCase;
@@ -14,6 +15,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertasVisiblesUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ListarPendientesModeracionUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.AvisoProcesadoPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PerfilRepositoryPort;
@@ -51,6 +53,11 @@ public class CatalogoConfig {
     @Bean
     ConsultarOfertasVisiblesUseCase consultarOfertasVisibles(OfertaRepositoryPort ofertas, ZonaRepositoryPort zonas) {
         return new ConsultarOfertasVisiblesService(ofertas, zonas);
+    }
+
+    @Bean
+    ListarPendientesModeracionUseCase listarPendientesModeracion(OfertaRepositoryPort ofertas) {
+        return new ListarPendientesModeracionService(ofertas);
     }
 
     @Bean

@@ -9,6 +9,8 @@ import java.util.Objects;
  * Filtros de la búsqueda pública de ofertas (RF-14 a RF-17). Todos son opcionales; la búsqueda devuelve solo
  * ofertas visibles, ordenadas por precio de referencia y luego por id para que la paginación sea estable.
  *
+ * @param texto                    solo ofertas con todas sus palabras en el nombre o la descripción de la versión
+ *                                 publicada (DC-37); en un paquete, los suyos, no los de sus actividades
  * @param tipoActividad            solo actividades de esa categoría y paquetes que incluyen al menos una (DC-24)
  * @param nivelEsfuerzoMaximo      solo actividades y paquetes con ese nivel de esfuerzo o uno menor; el del paquete
  *                                 es el mayor de sus actividades (RF-17, DC-25)
@@ -16,6 +18,7 @@ import java.util.Objects;
  *                                 sus actividades lo son (RF-17)
  */
 public record CriteriosBusqueda(
+        TextoBusqueda texto,
         TipoOferta tipo,
         String zonaId,
         BigDecimal precioMin,

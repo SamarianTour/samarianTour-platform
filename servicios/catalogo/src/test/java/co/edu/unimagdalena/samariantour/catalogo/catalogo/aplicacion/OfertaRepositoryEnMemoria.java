@@ -74,6 +74,10 @@ class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
     @Override
     public Pagina<Oferta> buscarVisibles(CriteriosBusqueda criterios) {
         Predicate<Oferta> cumple = this::esVisible;
+        if (criterios.texto() != null) {
+            cumple = cumple.and(oferta -> criterios.texto().coincideCon(publicada(oferta).contenido().nombre(),
+                    publicada(oferta).contenido().descripcion()));
+        }
         if (criterios.tipo() != null) {
             cumple = cumple.and(oferta -> oferta.tipo() == criterios.tipo());
         }
@@ -110,6 +114,16 @@ class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
         List<Oferta> resultado = ofertas.values().stream()
                 .filter(oferta -> oferta.esDe(prestadorId))
                 .sorted(Comparator.comparing(Oferta::id))
+                .toList();
+        return paginar(resultado, paginacion);
+    }
+
+    @Override
+    public Pagina<Oferta> buscarEnModeracion(Paginacion paginacion) {
+        List<Oferta> resultado = ofertas.values().stream()
+                .filter(Oferta::estaEnModeracion)
+                .sorted(Comparator.comparing((Oferta oferta) -> oferta.pendiente().orElseThrow().moderacion().enviadaEn())
+                        .thenComparing(Oferta::id))
                 .toList();
         return paginar(resultado, paginacion);
     }

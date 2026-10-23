@@ -20,6 +20,8 @@ tags:
     description: Búsqueda y consulta; no exige identidad.
   - name: Prestador
     description: Ofertas del prestador. Exige la identidad con el rol PRESTADOR.
+  - name: Administrador
+    description: Moderación. Exige la identidad con el rol ADMINISTRADOR.
   - name: Interno
     description: |
       Avisos del núcleo y consultas del núcleo y de la recomendación. Nginx no expone estas rutas hacia afuera.
@@ -29,12 +31,23 @@ paths:
     get:
       tags: [Catálogo público]
       operationId: buscarOfertas
-      summary: Buscar ofertas visibles (RF-14 a RF-17)
+      summary: Buscar ofertas visibles por texto y filtros (RF-14 a RF-17)
       description: |
         Devuelve solo ofertas visibles: con versión publicada, no retiradas y de un prestador con el RNT activo.
         Un paquete además exige que todas sus actividades sean visibles (RF-22). Todos los filtros son opcionales.
         El orden es por precio de referencia y luego por id, para que la paginación sea estable.
       parameters:
+        - name: texto
+          in: query
+          description: |
+            Texto libre (DC-37). Cada palabra debe aparecer en el nombre o en la descripción de la versión publicada,
+            aunque sea incompleta ("buce" encuentra "buceo"), sin distinguir mayúsculas ni tildes. En un paquete se
+            buscan su nombre y su descripción, no los de sus actividades. Se ignoran los espacios de los extremos.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+          example: cafe minca
         - name: tipo
           in: query
           schema:
@@ -251,6 +264,34 @@ paths:
         '409':
           $ref: '#/components/responses/ConflictoConcurrencia'
 
+  /admin/moderacion/ofertas:
+    get:
+      tags: [Administrador]
+      operationId: listarOfertasEnModeracion
+      summary: Ofertas que esperan la decisión del administrador (RF-79)
+      description: |
+        Ofertas no retiradas cuya versión pendiente está en moderación, nuevas o ediciones, de la enviada hace más
+        tiempo a la más reciente (DC-38). Las rechazadas no aparecen: esperan a que el prestador edite (DC-06).
+        El administrador decide en el núcleo, que envía la decisión al catálogo como aviso de moderación.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Página de ofertas en moderación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaOfertasPendientes'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
   /internal/avisos:
     post:
       tags: [Interno]
@@ -356,6 +397,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfertaInterna'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+
+  /internal/moderacion/ofertas/{id}:
+    get:
+      tags: [Interno]
+      operationId: consultarOfertaEnModeracion
+      summary: Oferta en moderación que el núcleo va a aprobar o rechazar (RF-79)
+      description: |
+        El núcleo la consulta antes de decidir (DC-38): con el prestador aplica sus reglas de aprobación y notifica
+        el rechazo, y con el número de versión arma el aviso de moderación (DC-05). Si la oferta no existe, está
+        retirada o no tiene una versión en moderación, responde 404.
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+      responses:
+        '200':
+          description: La oferta y su versión en moderación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfertaEnModeracion'
         '404':
           $ref: '#/components/responses/OfertaNoEncontrada'
 
@@ -1061,6 +1123,127 @@ components:
         accesibleSillaRuedas:
           type: boolean
           description: Un paquete es accesible solo si todas sus actividades lo son (RF-17).
+
+    ContenidoVersion:
+      type: object
+      description: |
+        El contenido de una versión tal como lo envió el prestador, con los campos de `OfertaRequest` más la unidad
+        del precio. Los campos que no corresponden al tipo de la oferta se omiten.
+      required: [nombre, descripcion, precioReferencia, unidadPrecio, zonaId, capacidadMaxima]
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precioReferencia:
+          type: number
+        unidadPrecio:
+          type: string
+          enum: [por persona, por noche y unidad, promedio por persona]
+        horarios:
+          type: string
+        zonaId:
+          type: string
+        ubicacion:
+          $ref: '#/components/schemas/Coordenada'
+        comoLlegar:
+          type: string
+        capacidadMaxima:
+          type: integer
+        tipoActividad:
+          $ref: '#/components/schemas/TipoActividad'
+        nivelEsfuerzo:
+          $ref: '#/components/schemas/NivelEsfuerzo'
+        accesibleSillaRuedas:
+          type: boolean
+          description: Actividad, alojamiento y restaurante; la de un paquete se calcula con sus actividades.
+        horariosSalida:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hora'
+        puntoEncuentro:
+          type: string
+        duracionMinutos:
+          type: integer
+        modalidad:
+          $ref: '#/components/schemas/ModalidadRecorrido'
+        idiomasAtencion:
+          type: array
+          items:
+            type: string
+        actividadIds:
+          type: array
+          items:
+            type: string
+        tipoUnidad:
+          type: string
+
+    OfertaPendiente:
+      type: object
+      description: Una oferta que espera la decisión del administrador (RF-79, DC-38).
+      required: [id, tipo, prestadorId, rntPrestadorActivo, numeroVersion, enviadaEn, pendiente]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        prestadorId:
+          type: string
+          format: uuid
+        rntPrestadorActivo:
+          type: boolean
+          description: Copia de la habilitación del prestador; el núcleo no aprueba si no está activa.
+        numeroVersion:
+          type: integer
+          description: Número de la versión en moderación; es el que nombra la decisión (DC-05).
+        enviadaEn:
+          type: string
+          format: date-time
+        pendiente:
+          $ref: '#/components/schemas/ContenidoVersion'
+        publicada:
+          $ref: '#/components/schemas/ContenidoVersion'
+
+    PaginaOfertasPendientes:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfertaPendiente'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
+
+    OfertaEnModeracion:
+      type: object
+      description: Lo que el núcleo necesita de una oferta en moderación para decidir (DC-38).
+      required: [id, tipo, nombre, prestadorId, numeroVersion, enviadaEn]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+          description: Nombre de la versión en moderación, para el mensaje al prestador.
+        prestadorId:
+          type: string
+          format: uuid
+        numeroVersion:
+          type: integer
+        enviadaEn:
+          type: string
+          format: date-time
 
     PaginaOfertasVisibles:
       type: object

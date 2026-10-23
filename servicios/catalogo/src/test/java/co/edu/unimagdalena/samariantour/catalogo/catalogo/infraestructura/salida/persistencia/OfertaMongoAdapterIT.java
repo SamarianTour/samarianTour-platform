@@ -121,8 +121,8 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
         @Test
         @DisplayName("la búsqueda por tipo, zona y precio usa un índice y no recorre la colección")
         void busquedaConFiltros() {
-            CriteriosBusqueda criterios = new CriteriosBusqueda(TipoOferta.ACTIVIDAD, TAYRONA, new BigDecimal("50000"),
-                    new BigDecimal("200000"), null, null, false, Paginacion.de(null, null));
+            CriteriosBusqueda criterios = new CriteriosBusqueda(null, TipoOferta.ACTIVIDAD, TAYRONA,
+                    new BigDecimal("50000"), new BigDecimal("200000"), null, null, false, Paginacion.de(null, null));
 
             assertThat(planDe(criterios)).contains("IXSCAN").doesNotContain("COLLSCAN");
         }
@@ -130,7 +130,7 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
         @Test
         @DisplayName("la búsqueda sin filtros, que incluye paquetes, también usa un índice")
         void busquedaSinFiltros() {
-            CriteriosBusqueda criterios = new CriteriosBusqueda(null, null, null, null, null, null, false,
+            CriteriosBusqueda criterios = new CriteriosBusqueda(null, null, null, null, null, null, null, false,
                     Paginacion.de(null, null));
 
             assertThat(planDe(criterios)).contains("IXSCAN").doesNotContain("COLLSCAN");
@@ -145,6 +145,17 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
                     .explain();
 
             assertThat(plan.toJson()).contains("ofertas_del_prestador").doesNotContain("COLLSCAN");
+        }
+
+        @Test
+        @DisplayName("listar las ofertas en moderación usa el índice parcial en_moderacion (DC-38)")
+        void ofertasEnModeracion() {
+            Document plan = mongo.getCollection(OfertaDocument.COLECCION)
+                    .find(OfertaMongoAdapter.enModeracion())
+                    .sort(new Document(OfertaMongoAdapter.PENDIENTE_ENVIADA_EN, 1).append("_id", 1))
+                    .explain();
+
+            assertThat(plan.toJson()).contains("en_moderacion").doesNotContain("COLLSCAN");
         }
 
         private String planDe(CriteriosBusqueda criterios) {

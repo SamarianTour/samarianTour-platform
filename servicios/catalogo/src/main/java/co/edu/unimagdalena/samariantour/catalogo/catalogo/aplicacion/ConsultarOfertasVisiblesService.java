@@ -36,7 +36,7 @@ public class ConsultarOfertasVisiblesService implements ConsultarOfertasVisibles
     @Override
     public Pagina<OfertaVisible> consultar(TipoOferta tipo, String zonaId, Paginacion paginacion) {
         Pagina<Oferta> pagina = ofertas.buscarVisibles(
-                new CriteriosBusqueda(tipo, zonaId, null, null, null, null, false, paginacion));
+                new CriteriosBusqueda(null, tipo, zonaId, null, null, null, null, false, paginacion));
         Map<String, List<Oferta>> incluidas = actividades.de(pagina.contenido());
         Map<String, Boolean> altaAfluencia = altaAfluenciaPorZona(pagina.contenido());
         return pagina.map(oferta -> new OfertaVisible(oferta,

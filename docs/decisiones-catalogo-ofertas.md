@@ -46,6 +46,8 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-34 | El sello RNT se muestra sin el número de registro | 🆕 desvía RF-24 |
 | DC-35 | Consulta interna de una oferta para el núcleo | ✅ RF-30, modelo relacional |
 | DC-36 | Ofertas visibles para la recomendación, sin datos que sesguen | ✅ RF-26, RF-29, RET-02 |
+| DC-37 | Búsqueda por texto con expresiones regulares, sin índice de texto | 🆕 RF-14, QAS-07 |
+| DC-38 | El catálogo lista lo que espera moderación; el núcleo decide | ✅ RF-79, diagrama del núcleo |
 
 ## Identidad y habilitación del prestador
 
@@ -292,6 +294,23 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - **No** van calificaciones, opiniones, comisión ni el tamaño del prestador: así la recomendación no puede favorecer a nadie por esos datos (RET-02). El catálogo no prioriza a ningún prestador; la rotación entre ofertas de igual afinidad es de la recomendación (`PoliticaRotacion`).
 
 Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y la autenticación entre servicios llega con el JWT.
+
+## Búsqueda por texto
+
+**DC-37. Búsqueda por texto sin índice de texto.** `GET /api/catalogo/ofertas?texto=...` (RF-14), combinable con los demás filtros.
+- **Reglas:** cada palabra del texto debe aparecer en el nombre o en la descripción de la versión publicada, aunque sea incompleta ("buce" encuentra "buceo"), sin distinguir mayúsculas ni tildes, en los dos sentidos ("cafe" encuentra "café" y "río" encuentra "rio"). En un paquete se buscan su nombre y su descripción, no los de sus actividades. Sin los espacios de los extremos, el texto tiene entre 2 y 100 caracteres; si no, 400 `DATO_INVALIDO`. El orden sigue siendo por precio y luego por id.
+- **Dónde vive:** `TextoBusqueda`, en el dominio, normaliza el texto y arma una expresión regular por palabra: cada vocal, la `n` y la `c` aceptan sus variantes con tilde, en minúscula y mayúscula, y los caracteres especiales se escapan. El adaptador en memoria evalúa esas expresiones con `java.util.regex` y el de MongoDB las envía como `$regex` en la primera etapa de la agregación de DC-31, así que los dos dan los mismos resultados; el contrato común de los repositorios lo verifica.
+- **Por qué no `$text`:** el índice de texto de MongoDB solo encuentra palabras completas (no sirve mientras el turista escribe), ordena por relevancia en lugar de por precio y MongoDB admite uno solo por colección. La expresión regular no exige campos nuevos ni recrear la base del piloto.
+- **Costo:** la expresión regular no usa un índice; se evalúa sobre las ofertas que ya dejaron pasar el índice parcial de DC-17 y los filtros de tipo, zona y precio. Con el catálogo del piloto no pesa; la prueba de carga de QAS-07 lo confirma, y si no alcanza se cambia a un índice de texto solo en el adaptador de MongoDB, sin tocar el dominio.
+
+## Moderación
+
+**DC-38. El catálogo muestra lo que espera moderación; el núcleo decide.** Como en el diagrama del módulo de administración del núcleo, el administrador lee lo pendiente en el catálogo, decide en el núcleo (`ModerarOfertaUseCase`, RF-79) y la decisión vuelve al catálogo como aviso de moderación por la bandeja de salida (DC-04). El catálogo no tiene una ruta para aprobar o rechazar.
+- **`GET /api/catalogo/admin/moderacion/ofertas`** (`ModeracionController`, `ListarPendientesModeracionUseCase`), con el rol ADMINISTRADOR (DC-13). Lista las ofertas no retiradas cuya versión pendiente está en moderación (`Oferta.estaEnModeracion`), nuevas o ediciones, de la enviada hace más tiempo a la más reciente y luego por id, paginadas. Las rechazadas no aparecen: esperan a que el prestador edite (DC-06).
+- Cada una trae el contenido de la versión en moderación tal como lo envió el prestador, la versión publicada si es una edición, para comparar (RF-66), el número de versión que nombra la decisión (DC-05) y la copia del RNT del prestador, porque el núcleo no aprueba si no está activo.
+- **`GET /api/catalogo/internal/moderacion/ofertas/{id}`** es para el núcleo: antes de decidir necesita el prestador (para sus reglas de aprobación y para notificar el rechazo), el nombre de la versión en moderación y su número. La consulta interna de DC-35 no sirve, porque una oferta nueva en moderación no es visible. Responde 404 si la oferta no existe, está retirada o no tiene una versión en moderación.
+- En MongoDB, el índice parcial `en_moderacion` (`{pendiente.enviadaEn, _id}`, solo con las ofertas en moderación) resuelve la lista sin recorrer la colección.
+- Las opiniones pendientes (RF-80) las lista el módulo de opiniones, con la misma forma: `GET /api/catalogo/admin/moderacion/opiniones`.
 
 ## Cambios pendientes en los documentos de diseño
 

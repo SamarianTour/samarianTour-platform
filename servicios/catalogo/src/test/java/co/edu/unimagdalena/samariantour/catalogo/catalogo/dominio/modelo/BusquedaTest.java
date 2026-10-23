@@ -38,7 +38,7 @@ class BusquedaTest {
     @Test
     @DisplayName("el precio mínimo no puede ser mayor que el máximo")
     void rangoDePrecio() {
-        assertThatThrownBy(() -> new CriteriosBusqueda(null, null, new BigDecimal("100"), new BigDecimal("50"),
+        assertThatThrownBy(() -> new CriteriosBusqueda(null, null, null, new BigDecimal("100"), new BigDecimal("50"),
                 null, null, false, Paginacion.de(null, null)))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("precioMin");
