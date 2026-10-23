@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Buscar ofertas visibles (RF-14 a RF-17)
+         * Buscar ofertas visibles por texto y filtros (RF-14 a RF-17)
          * @description Devuelve solo ofertas visibles: con versión publicada, no retiradas y de un prestador con el RNT activo.
          *     Un paquete además exige que todas sus actividades sean visibles (RF-22). Todos los filtros son opcionales.
          *     El orden es por precio de referencia y luego por id, para que la paginación sea estable.
@@ -679,6 +679,13 @@ export interface operations {
     buscarOfertas: {
         parameters: {
             query?: {
+                /**
+                 * @description Texto libre (DC-37). Cada palabra debe aparecer en el nombre o en la descripción de la versión publicada,
+                 *     aunque sea incompleta ("buce" encuentra "buceo"), sin distinguir mayúsculas ni tildes. En un paquete se
+                 *     buscan su nombre y su descripción, no los de sus actividades. Se ignoran los espacios de los extremos.
+                 * @example cafe minca
+                 */
+                texto?: string;
                 tipo?: components["schemas"]["TipoOferta"];
                 /** @example a00000000000000000000005 */
                 zonaId?: string;
