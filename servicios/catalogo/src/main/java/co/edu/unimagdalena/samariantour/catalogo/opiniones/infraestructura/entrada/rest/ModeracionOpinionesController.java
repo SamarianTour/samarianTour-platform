@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Lo que espera la decisión del administrador (RF-80, DC-43), con la misma forma que las ofertas en moderación
+ * Lo que espera la decisión del administrador (RF-80, DC-44), con la misma forma que las ofertas en moderación
  * (DC-38). El administrador lo lee aquí, con el rol ADMINISTRADOR (DC-13), y decide en el núcleo; el núcleo consulta
  * la opinión por la ruta interna y envía la decisión como aviso.
  */

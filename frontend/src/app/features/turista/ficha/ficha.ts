@@ -20,7 +20,7 @@ type Estado =
 
 /**
  * Ficha pública de una oferta, con su zona, el perfil del prestador, el mapa (RF-20, RF-24, RF-25) y sus opiniones
- * (RF-59), que se piden a su propia ruta porque el catálogo no depende del módulo de opiniones (DC-39).
+ * (RF-59), que se piden a su propia ruta porque el catálogo no depende del módulo de opiniones (DC-40).
  */
 @Component({
   selector: 'app-ficha',

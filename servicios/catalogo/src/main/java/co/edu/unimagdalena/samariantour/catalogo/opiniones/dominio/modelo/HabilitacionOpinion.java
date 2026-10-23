@@ -5,7 +5,7 @@ import java.util.UUID;
 
 /**
  * El turista puede opinar sobre la oferta porque tiene una solicitud pagada de ella (RF-60). El dato es del núcleo,
- * que lo avisa al catálogo cuando la solicitud queda pagada (DC-40).
+ * que lo avisa al catálogo cuando la solicitud queda pagada (DC-41).
  */
 public record HabilitacionOpinion(UUID turistaId, String ofertaId) {
 

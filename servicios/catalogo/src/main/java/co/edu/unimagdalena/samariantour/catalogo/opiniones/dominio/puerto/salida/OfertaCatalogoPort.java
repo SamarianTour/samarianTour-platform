@@ -5,7 +5,7 @@ import java.util.Map;
 
 /**
  * Lo que el módulo de opiniones necesita saber de las ofertas, que son del módulo catálogo. El adaptador lo pregunta
- * por {@code catalogo.api}, la única parte del catálogo que este módulo puede usar (DC-39).
+ * por {@code catalogo.api}, la única parte del catálogo que este módulo puede usar (DC-40).
  */
 public interface OfertaCatalogoPort {
 

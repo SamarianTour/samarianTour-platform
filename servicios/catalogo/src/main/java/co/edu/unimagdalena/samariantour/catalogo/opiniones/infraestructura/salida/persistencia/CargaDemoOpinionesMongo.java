@@ -21,7 +21,7 @@ import java.util.List;
  * Carga las opiniones y habilitaciones de demostración en MongoDB al arrancar, con los perfiles {@code mongo} y
  * {@code demo}, con las mismas reglas que {@code CargaDemoMongo} del catálogo (DC-27): una colección solo se carga si
  * está vacía, y cada documento se inserta por separado ignorando los duplicados, para que dos réplicas puedan cargar
- * a la vez. Es del módulo porque el catálogo no puede depender de opiniones (DC-39).
+ * a la vez. Es del módulo porque el catálogo no puede depender de opiniones (DC-40).
  */
 @Component
 @Profile("mongo & demo")

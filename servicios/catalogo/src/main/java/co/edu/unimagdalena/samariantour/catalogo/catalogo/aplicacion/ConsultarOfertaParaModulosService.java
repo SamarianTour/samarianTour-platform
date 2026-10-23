@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Consultas de los otros módulos sobre las ofertas (DC-39). La visibilidad es la misma de la ficha y de la consulta
+ * Consultas de los otros módulos sobre las ofertas (DC-40). La visibilidad es la misma de la ficha y de la consulta
  * interna del núcleo (DC-35).
  */
 public class ConsultarOfertaParaModulosService implements ConsultarOfertaParaModulosUseCase {

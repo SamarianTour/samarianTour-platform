@@ -175,7 +175,7 @@ public interface ContratoOpinionRepository {
     }
 
     @Test
-    @DisplayName("borra todas las opiniones de un turista y solo las suyas (DC-44)")
+    @DisplayName("borra todas las opiniones de un turista y solo las suyas (DC-45)")
     default void eliminarDelTurista() {
         assertThat(opiniones().eliminarDelTurista(ANDRES)).isEqualTo(2);
 
@@ -186,7 +186,7 @@ public interface ContratoOpinionRepository {
     }
 
     @Test
-    @DisplayName("una habilitación se registra una sola vez; repetirla no falla (DC-40)")
+    @DisplayName("una habilitación se registra una sola vez; repetirla no falla (DC-41)")
     default void registrarHabilitacion() {
         HabilitacionOpinion nueva = new HabilitacionOpinion(ANDRES, RECORRIDO_CENTRO_HISTORICO);
 
@@ -207,7 +207,7 @@ public interface ContratoOpinionRepository {
     }
 
     @Test
-    @DisplayName("borra todas las habilitaciones de un turista y solo las suyas (DC-44)")
+    @DisplayName("borra todas las habilitaciones de un turista y solo las suyas (DC-45)")
     default void eliminarHabilitaciones() {
         assertThat(habilitaciones().eliminarDelTurista(LAURA)).isEqualTo(3);
 

@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Los adaptadores de opiniones contra un MongoDB real: cumplen el mismo contrato que los adaptadores en memoria y,
- * además, guardan el formato del modelo documental (DC-30) y resuelven sus lecturas con índices (DC-45).
+ * además, guardan el formato del modelo documental (DC-30) y resuelven sus lecturas con índices (DC-46).
  */
 class OpinionMongoAdapterIT extends BasePersistenciaOpinionesMongo implements ContratoOpinionRepository {
 
@@ -78,7 +78,7 @@ class OpinionMongoAdapterIT extends BasePersistenciaOpinionesMongo implements Co
     }
 
     @Nested
-    @DisplayName("Índices (DC-45)")
+    @DisplayName("Índices (DC-46)")
     class Indices {
 
         @Test

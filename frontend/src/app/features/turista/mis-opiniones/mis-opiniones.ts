@@ -25,7 +25,7 @@ const CLASE_DE_ESTADO: Record<EstadoOpinion, string> = {
 type Resultado = { pagina: PaginaMisOpiniones } | { error: ErrorApi };
 
 /**
- * "Mis opiniones": las del turista demo elegido en cualquier estado, con el motivo si fue rechazada (DC-41). Se
+ * "Mis opiniones": las del turista demo elegido en cualquier estado, con el motivo si fue rechazada (DC-42). Se
  * recarga al cambiar de turista.
  */
 @Component({

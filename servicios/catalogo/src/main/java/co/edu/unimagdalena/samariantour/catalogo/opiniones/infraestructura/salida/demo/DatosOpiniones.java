@@ -16,7 +16,7 @@ import java.util.UUID;
  * eligen en el frontend; los demás solo existen para que las ofertas tengan varias opiniones. Cada opinión tiene su
  * habilitación (el turista pagó la oferta), y Laura además puede opinar sobre dos ofertas en las que aún no lo hizo.
  *
- * <p>Las ofertas se nombran por su id: este módulo no puede importar los datos del catálogo (DC-39).
+ * <p>Las ofertas se nombran por su id: este módulo no puede importar los datos del catálogo (DC-40).
  */
 public final class DatosOpiniones {
 

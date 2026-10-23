@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Una opinión de la colección {@code opiniones} (DC-45). {@code ofertaId} es una referencia {@code ObjectId} a la
+ * Una opinión de la colección {@code opiniones} (DC-46). {@code ofertaId} es una referencia {@code ObjectId} a la
  * oferta (DC-30) y {@code turistaId} el UUID que emite el núcleo.
  *
  * @param motivoRechazo solo si fue rechazada

@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Lo que el núcleo necesita de una opinión antes de decidir (DC-43): el turista, para notificarle la decisión, y la
+ * Lo que el núcleo necesita de una opinión antes de decidir (DC-44): el turista, para notificarle la decisión, y la
  * oferta.
  */
 public record OpinionEnModeracionResponse(

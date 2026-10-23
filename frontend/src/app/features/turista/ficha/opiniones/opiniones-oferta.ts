@@ -21,7 +21,7 @@ const COMENTARIO_MAXIMO = 1000;
 
 type Lectura = { opiniones: OpinionesOferta } | { error: ErrorApi };
 
-/** El comentario cuenta sin los espacios de los extremos, como en el backend (DC-41). */
+/** El comentario cuenta sin los espacios de los extremos, como en el backend (DC-42). */
 const largoDelComentario: ValidatorFn = (control) => {
   const largo = String(control.value ?? '').trim().length;
   if (largo === 0) {

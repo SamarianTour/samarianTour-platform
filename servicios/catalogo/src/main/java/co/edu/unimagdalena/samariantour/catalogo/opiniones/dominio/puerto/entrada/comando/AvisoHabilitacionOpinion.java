@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Una solicitud del turista quedó pagada, así que puede opinar sobre su oferta (RF-60, DC-40).
+ * Una solicitud del turista quedó pagada, así que puede opinar sobre su oferta (RF-60, DC-41).
  */
 public record AvisoHabilitacionOpinion(String idAviso, UUID turistaId, String ofertaId)
         implements AvisoOpinionCommand {

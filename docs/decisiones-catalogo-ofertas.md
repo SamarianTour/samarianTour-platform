@@ -48,13 +48,13 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-36 | Ofertas visibles para la recomendación, sin datos que sesguen | ✅ RF-26, RF-29, RET-02 |
 | DC-37 | Búsqueda por texto con expresiones regulares, sin índice de texto | 🆕 RF-14, QAS-07 |
 | DC-38 | El catálogo lista lo que espera moderación; el núcleo decide | ✅ RF-79, diagrama del núcleo |
-| DC-39 | El módulo `opiniones` consulta las ofertas solo por `catalogo.api` | ✅ reglas de arquitectura |
-| DC-40 | La elegibilidad para opinar llega del núcleo por aviso | 🆕 RF-60 [SUPUESTO] |
-| DC-41 | Validaciones y estados de la opinión | 🆕 RF-61 [SUPUESTO] |
-| DC-42 | Lectura pública de las opiniones | ✅ RF-59 |
-| DC-43 | Moderación de opiniones: el catálogo lista, el núcleo decide | ✅ RF-80, DC-38 |
-| DC-44 | Supresión de las opiniones de un turista | ✅ Ley 1581, bandeja de salida |
-| DC-45 | Persistencia de opiniones | 🆕 RF-61, DC-30, DC-33 |
+| DC-40 | El módulo `opiniones` consulta las ofertas solo por `catalogo.api` | ✅ reglas de arquitectura |
+| DC-41 | La elegibilidad para opinar llega del núcleo por aviso | 🆕 RF-60 [SUPUESTO] |
+| DC-42 | Validaciones y estados de la opinión | 🆕 RF-61 [SUPUESTO] |
+| DC-43 | Lectura pública de las opiniones | ✅ RF-59 |
+| DC-44 | Moderación de opiniones: el catálogo lista, el núcleo decide | ✅ RF-80, DC-38 |
+| DC-45 | Supresión de las opiniones de un turista | ✅ Ley 1581, bandeja de salida |
+| DC-46 | Persistencia de opiniones | 🆕 RF-61, DC-30, DC-33 |
 
 ## Identidad y habilitación del prestador
 
@@ -146,9 +146,9 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | `OFERTA_NO_EDITABLE` | 409 | La oferta está retirada |
 | `NO_AUTENTICADO` | 401 | Falta la identidad del usuario, o llegan los headers de demostración sin el perfil `demo` (DC-01) |
 | `ACCESO_DENEGADO` | 403 | El rol del usuario no es el que exige el prefijo de la ruta (DC-13) |
-| `OPINION_NO_HABILITADA` | 403 | El turista no tiene una solicitud pagada de la oferta (DC-40) |
+| `OPINION_NO_HABILITADA` | 403 | El turista no tiene una solicitud pagada de la oferta (DC-41) |
 | `OPINION_DUPLICADA` | 409 | El turista ya opinó sobre la oferta (RF-61) |
-| `OPINION_NO_ENCONTRADA` | 404 | La opinión no existe o ya no está en moderación (DC-43) |
+| `OPINION_NO_ENCONTRADA` | 404 | La opinión no existe o ya no está en moderación (DC-44) |
 | `CONFLICTO_CONCURRENCIA` | 409 | Otra operación modificó la misma oferta, habilitación u opinión al mismo tiempo y los reintentos no alcanzaron (ADR-05) |
 
 Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un precio que no es un número, también responde 400 `DATO_INVALIDO`.
@@ -159,7 +159,7 @@ Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un pr
 - El discriminador `tipo` va en la raíz, porque no cambia, y cada versión guarda solo los campos de su tipo.
 - El precio se guarda como `Decimal128`. Por defecto Spring lo guardaría como texto y la búsqueda por rango de precio fallaría.
 - Se desactiva el campo `_class` de Spring.
-- Otras colecciones: `zonas`, `prestadores` (réplica de DC-02), `perfiles` (un perfil público por prestador, con `nombreComercial` opcional, DC-26) y `avisos_procesados` (`_id = idAviso`). Las del módulo de opiniones están en DC-45.
+- Otras colecciones: `zonas`, `prestadores` (réplica de DC-02), `perfiles` (un perfil público por prestador, con `nombreComercial` opcional, DC-26) y `avisos_procesados` (`_id = idAviso`). Las del módulo de opiniones están en DC-46.
 
 **DC-17. Índices parciales para la búsqueda (evidencia de QAS-07).**
 
@@ -330,40 +330,40 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 
 ## Opiniones
 
-**DC-39. El módulo `opiniones` consulta las ofertas solo por `catalogo.api`.** Las reglas 4 y 5 de `ArquitecturaTest` permiten que un módulo use de otro solo su paquete `api`, sin ciclos.
+**DC-40. El módulo `opiniones` consulta las ofertas solo por `catalogo.api`.** Las reglas 4 y 5 de `ArquitecturaTest` permiten que un módulo use de otro solo su paquete `api`, sin ciclos.
 - **La API:** `catalogo.api.ConsultaOfertaApi` responde si una oferta existe, si es visible y su nombre. La implementa `ConsultaOfertaApiAdapter`, un adaptador de entrada del catálogo (`infraestructura/entrada/modulos`) que llama al caso de uso `ConsultarOfertaParaModulosUseCase`; la visibilidad es la misma de la ficha y de la consulta del núcleo (DC-35).
 - **Del lado de opiniones:** la capa de aplicación solo puede depender del dominio (regla 2), así que el módulo usa su puerto de salida `OfertaCatalogoPort` y su adaptador `OfertaCatalogoAdapter`, el único que importa `catalogo.api`. Si el catálogo se separa en otro servicio, solo cambia ese adaptador.
 - **El catálogo no depende de opiniones:** la ficha (`GET /ofertas/{id}`) no trae las opiniones; el frontend las pide a `GET /ofertas/{id}/opiniones`.
 - **Lo que el módulo tiene propio** por la misma regla: `Pagina`, `Paginacion`, las excepciones, `ResultadoAviso`, el registro de avisos procesados, los índices (`IndicesOpinionesMongo`), los datos de demostración (`DatosOpiniones`) y su carga (`CargaDemoOpinionesMongo`). Tienen la misma forma que los del catálogo, pero `IndicesMongo`, `DatosSantaMarta` y `CargaDemoMongo` no pueden incluir opiniones sin que el catálogo dependa de ellas. Los errores los traduce `ManejadorErroresOpiniones` con los códigos de DC-15; el JSON ilegible lo sigue respondiendo el manejador del catálogo, que vale para todo el servicio.
 
-**DC-40. La elegibilidad para opinar llega del núcleo por aviso** ([SUPUESTO], RF-60). "Tener una solicitud pagada de la oferta" es un dato del núcleo. Cuando una solicitud queda Pagada, el núcleo envía por la bandeja de salida de DC-04 el aviso `HABILITACION_OPINION {idAviso, turistaId, ofertaId}` a `POST /api/catalogo/internal/opiniones/avisos`, y el módulo guarda la habilitación en `habilitaciones_opinion`, una por turista y oferta.
+**DC-41. La elegibilidad para opinar llega del núcleo por aviso** ([SUPUESTO], RF-60). "Tener una solicitud pagada de la oferta" es un dato del núcleo. Cuando una solicitud queda Pagada, el núcleo envía por la bandeja de salida de DC-04 el aviso `HABILITACION_OPINION {idAviso, turistaId, ofertaId}` a `POST /api/catalogo/internal/opiniones/avisos`, y el módulo guarda la habilitación en `habilitaciones_opinion`, una por turista y oferta.
 - Sin habilitación, crear la opinión responde 403 `OPINION_NO_HABILITADA`. No hay llamadas síncronas al núcleo: el catálogo sigue respondiendo aunque el núcleo no esté (ADR-04).
 - Una habilitación repetida, o de una oferta que el catálogo no tiene, se ignora (`IGNORADO`).
-- Una oferta que se retira después del pago se puede seguir calificando, porque existe; sus opiniones no se leen en público mientras no sea visible (DC-42).
+- Una oferta que se retira después del pago se puede seguir calificando, porque existe; sus opiniones no se leen en público mientras no sea visible (DC-43).
 
-**DC-41. Validaciones y estados de la opinión** ([SUPUESTO] hasta cerrar el SRS).
+**DC-42. Validaciones y estados de la opinión** ([SUPUESTO] hasta cerrar el SRS).
 - La calificación es un entero de 1 a 5 y es obligatoria. El comentario es obligatorio y tiene de 10 a 1000 caracteres sin los espacios de los extremos. Si no, 400 `DATO_INVALIDO` con el campo.
 - La opinión nace `EN_MODERACION`. Se aprueba o se rechaza solo desde ese estado; en otro, la decisión se ignora, como DC-08. Rechazar exige motivo.
 - Una opinión rechazada **no se edita** en esta versión: el turista la ve con su motivo en "Mis opiniones" y, como solo hay una por turista y oferta (RF-61), no puede enviar otra. `TODO` para el SRS: ¿el turista puede corregir una opinión rechazada?
 
-**DC-42. Lectura pública de las opiniones** (RF-59). `GET /api/catalogo/ofertas/{id}/opiniones`:
+**DC-43. Lectura pública de las opiniones** (RF-59). `GET /api/catalogo/ofertas/{id}/opiniones`:
 - Solo las aprobadas, de la más reciente a la más antigua y luego por id, con la paginación de DC-14.
 - Trae un resumen de todas las aprobadas: el total y el promedio de la calificación con un decimal, redondeado hacia arriba desde la mitad. El promedio lo calcula `ResumenCalificaciones` en el dominio; la base solo cuenta y suma, así que los dos adaptadores redondean igual. Sin opiniones aprobadas no se envía el promedio.
 - No devuelve el turista ([SUPUESTO]): el catálogo no tiene su nombre y su id no le sirve a otro turista. El frontend muestra "Turista".
 - Si la oferta no es visible, responde 404 `OFERTA_NO_ENCONTRADA`, igual que la ficha.
 - El turista ve las suyas en `GET /api/catalogo/turista/opiniones`, en cualquier estado, con el nombre de la oferta y el motivo si fue rechazada.
 
-**DC-43. Moderación de opiniones: el catálogo lista, el núcleo decide** (RF-80), como las ofertas en DC-38.
+**DC-44. Moderación de opiniones: el catálogo lista, el núcleo decide** (RF-80), como las ofertas en DC-38.
 - **`GET /api/catalogo/admin/moderacion/opiniones`** (`ModeracionOpinionesController`), con el rol ADMINISTRADOR: las opiniones en moderación, de la enviada hace más tiempo a la más reciente y luego por id, con el nombre de la oferta (una consulta a `catalogo.api` por página). No trae el turista: el administrador no lo necesita para decidir.
 - **`GET /api/catalogo/internal/moderacion/opiniones/{id}`** es para el núcleo: antes de decidir necesita el turista para notificarle. Responde 404 `OPINION_NO_ENCONTRADA` si la opinión no existe o ya no está en moderación.
-- La decisión llega como aviso `MODERACION_OPINION {idAviso, opinionId, decision, motivo}`. No lleva número de versión porque una opinión no se edita (DC-41). Es idempotente y usa el bloqueo optimista del ADR-05: si otra escritura se cruza, el aviso completo se reintenta.
+- La decisión llega como aviso `MODERACION_OPINION {idAviso, opinionId, decision, motivo}`. No lleva número de versión porque una opinión no se edita (DC-42). Es idempotente y usa el bloqueo optimista del ADR-05: si otra escritura se cruza, el aviso completo se reintenta.
 
-**DC-44. Supresión de las opiniones de un turista** (derechos del titular, Ley 1581 de 2012). Cuando el núcleo ejecuta la supresión de un turista, envía `SUPRESION_TURISTA {idAviso, turistaId}` por la bandeja de salida.
+**DC-45. Supresión de las opiniones de un turista** (derechos del titular, Ley 1581 de 2012). Cuando el núcleo ejecuta la supresión de un turista, envía `SUPRESION_TURISTA {idAviso, turistaId}` por la bandeja de salida.
 - El módulo **borra** sus opiniones y sus habilitaciones; no las anonimiza ([SUPUESTO]: el derecho de supresión pide eliminar el dato). El resumen de cada oferta se ajusta solo, porque se calcula al leer.
 - Responde `APLICADO` si borró algo e `IGNORADO` si el turista no tenía nada; una decisión de moderación que llegue después encuentra la opinión borrada y se ignora.
 - Límite: un aviso de habilitación del mismo turista que llegue después de la supresión volvería a crear la habilitación. El núcleo no debe emitirlo, porque el turista suprimido ya no tiene solicitudes.
 
-**DC-45. Persistencia de opiniones.**
+**DC-46. Persistencia de opiniones.**
 - **Colecciones:** `opiniones {_id, ofertaId, turistaId, calificacion, comentario, fecha, estado, motivoRechazo?, revisadaEn?, revision}`, con `ofertaId` como `ObjectId` y `turistaId` como UUID (DC-30); `habilitaciones_opinion {_id, turistaId, ofertaId}`; y `avisos_opiniones_procesados {_id = idAviso}`, separada de la de ofertas para que cada módulo lleve su propio registro.
 - **Índices** (`IndicesOpinionesMongo`): `opinion_unica`, único `{ofertaId, turistaId}` (RF-61), que rechaza la segunda opinión aunque llegue a otra réplica; `opiniones_aprobadas`, parcial con `estado: APROBADA`, `{ofertaId, fecha desc, _id}`, para la lectura pública y el resumen; `opiniones_en_moderacion`, parcial con `estado: EN_MODERACION`, `{fecha, _id}`, para la cola del administrador; `opiniones_del_turista`, `{turistaId, fecha desc, _id}`, para "Mis opiniones" y la supresión; y `habilitacion_unica`, único `{turistaId, ofertaId}`. `OpinionMongoAdapterIT` verifica con `explain()` que cada lectura usa su índice.
 - **Concurrencia:** revisión explícita como en DC-33: una opinión nueva se inserta con la revisión 1 y una moderada se reemplaza con el filtro `{_id, revision}`.
@@ -387,13 +387,13 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
    - marcar `ubicacion` y `tipoUnidad` como opcionales mientras el SRS no diga lo contrario (DC-19);
    - agregar `nombreComercial` (texto, opcional) en la colección `perfiles` (DC-26);
    - agregar los índices: los dos parciales de búsqueda y `{prestadorId, _id}` en `ofertas` (DC-17), único en `perfiles.prestadorId` y único en `{ofertaId, turistaId}` de `opiniones` (RF-61);
-   - agregar en `opiniones` los campos `estado`, `motivoRechazo`, `revisadaEn` y `revision`, sus índices parciales y el de `turistaId`, y las colecciones `habilitaciones_opinion` y `avisos_opiniones_procesados` (DC-45);
+   - agregar en `opiniones` los campos `estado`, `motivoRechazo`, `revisadaEn` y `revision`, sus índices parciales y el de `turistaId`, y las colecciones `habilitaciones_opinion` y `avisos_opiniones_procesados` (DC-46);
    - usar el mismo nombre de base que el diagrama de despliegue y Docker Compose: `catalogo_db`.
 5. **Diagrama del módulo catálogo:** agregar el puerto de salida `PrestadorCatalogoRepositoryPort` (réplica de DC-02) con su adaptador `PrestadorMongoAdapter`.
 6. **Agrupaciones técnicas del código** que no cambian el modelo, por si el docente compara: `ContenidoComun` agrupa los atributos comunes de `VersionOferta`, `RegistroModeracion` agrupa número, estado, motivo y fechas de moderación de cada versión, y `OfertaVisible` reúne una oferta con lo que la recomendación necesita de ella (DC-36).
-7. **Diagrama de clases, módulo de opiniones:** si la clase `Opinion` no los tiene, agregar `estado : EstadoOpinion` (EN_MODERACION, APROBADA, RECHAZADA), `motivoRechazo` y `revisadaEn`, ambos opcionales, y aclarar que `fecha` es la de envío. Agregar `HabilitacionOpinion {turistaId, ofertaId}`, la réplica de las solicitudes pagadas (DC-40). `revision` es técnica (ADR-05) y `ResumenCalificaciones` agrupa el total y la suma de las calificaciones (DC-42); no cambian el modelo.
-8. **Diagrama de paquetes:** agregar `catalogo.api.ConsultaOfertaApi` y la dependencia `opiniones → catalogo.api` (DC-39).
-9. **Vista general, bandeja de salida del núcleo:** agregar los avisos `HABILITACION_OPINION` (solicitud pagada), `MODERACION_OPINION` y `SUPRESION_TURISTA` hacia el catálogo (DC-40, DC-43, DC-44).
+7. **Diagrama de clases, módulo de opiniones:** si la clase `Opinion` no los tiene, agregar `estado : EstadoOpinion` (EN_MODERACION, APROBADA, RECHAZADA), `motivoRechazo` y `revisadaEn`, ambos opcionales, y aclarar que `fecha` es la de envío. Agregar `HabilitacionOpinion {turistaId, ofertaId}`, la réplica de las solicitudes pagadas (DC-41). `revision` es técnica (ADR-05) y `ResumenCalificaciones` agrupa el total y la suma de las calificaciones (DC-43); no cambian el modelo.
+8. **Diagrama de paquetes:** agregar `catalogo.api.ConsultaOfertaApi` y la dependencia `opiniones → catalogo.api` (DC-40).
+9. **Vista general, bandeja de salida del núcleo:** agregar los avisos `HABILITACION_OPINION` (solicitud pagada), `MODERACION_OPINION` y `SUPRESION_TURISTA` hacia el catálogo (DC-41, DC-44, DC-45).
 10. **SRS, RF-85 y RF-88:** cambiar "tipo de actividad" por "tipo de oferta", como ya lo hizo el CU-09 del Entregable 2; la solicitud no guarda el tipo de actividad (DC-35).
 
 ## Fuera del alcance del prototipo

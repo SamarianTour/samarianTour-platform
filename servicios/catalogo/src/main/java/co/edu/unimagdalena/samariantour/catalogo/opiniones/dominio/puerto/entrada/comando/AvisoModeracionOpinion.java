@@ -6,8 +6,8 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.modelo.Valida
 import java.util.Objects;
 
 /**
- * Decisión del administrador sobre una opinión (RF-80, DC-43). No lleva número de versión: una opinión no se edita
- * (DC-41), así que solo puede haber una decisión que aplicar.
+ * Decisión del administrador sobre una opinión (RF-80, DC-44). No lleva número de versión: una opinión no se edita
+ * (DC-42), así que solo puede haber una decisión que aplicar.
  *
  * @param motivo obligatorio al rechazar; el turista lo ve en "Mis opiniones"
  */

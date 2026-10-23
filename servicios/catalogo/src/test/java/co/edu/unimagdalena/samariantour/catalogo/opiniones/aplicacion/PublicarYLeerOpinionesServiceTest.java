@@ -77,7 +77,7 @@ class PublicarYLeerOpinionesServiceTest {
         }
 
         @Test
-        @DisplayName("sin una solicitud pagada de la oferta no se puede opinar: 403 OPINION_NO_HABILITADA (DC-40)")
+        @DisplayName("sin una solicitud pagada de la oferta no se puede opinar: 403 OPINION_NO_HABILITADA (DC-41)")
         void sinHabilitacion() {
             assertThatThrownBy(() -> opinar(ANDRES, KAYAK, 4))
                     .isInstanceOf(OpinionNoHabilitadaException.class)
@@ -146,7 +146,7 @@ class PublicarYLeerOpinionesServiceTest {
         }
 
         @Test
-        @DisplayName("una oferta que no es visible no muestra sus opiniones: 404, igual que la ficha (DC-42)")
+        @DisplayName("una oferta que no es visible no muestra sus opiniones: 404, igual que la ficha (DC-43)")
         void ofertaNoVisible() {
             assertThatThrownBy(() -> leer.leer(RETIRADA, Paginacion.de(null, null)))
                     .isInstanceOf(OfertaNoEncontradaException.class);

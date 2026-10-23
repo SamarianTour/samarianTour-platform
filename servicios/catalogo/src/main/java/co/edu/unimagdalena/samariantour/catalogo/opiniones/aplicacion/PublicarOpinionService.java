@@ -20,7 +20,7 @@ import java.util.List;
  * El turista deja su opinión sobre una oferta que pagó (RF-60). Queda en moderación (RF-61).
  *
  * <p>Orden de las reglas: primero los datos (400), luego que la oferta exista (404), que el turista la haya pagado
- * (403, DC-40) y que no haya opinado ya (409, RF-61). La última la respalda además el índice único de la base, por si
+ * (403, DC-41) y que no haya opinado ya (409, RF-61). La última la respalda además el índice único de la base, por si
  * dos peticiones del mismo turista se cruzan.
  */
 public class PublicarOpinionService implements PublicarOpinionUseCase {

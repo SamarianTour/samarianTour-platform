@@ -17,7 +17,7 @@ import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
 
 /**
- * Habilitaciones para opinar en la colección {@code habilitaciones_opinion} (DC-40). El índice único
+ * Habilitaciones para opinar en la colección {@code habilitaciones_opinion} (DC-41). El índice único
  * {@code {turistaId, ofertaId}} hace que registrar la misma habilitación dos veces, desde cualquier réplica, deje una.
  */
 @Component

@@ -5,7 +5,7 @@ import java.util.Map;
 
 /**
  * Lo que otro módulo puede preguntar de una oferta sin conocer el modelo del catálogo. Hoy la usa el módulo de
- * opiniones (DC-39).
+ * opiniones (DC-40).
  */
 public interface ConsultaOfertaApi {
 

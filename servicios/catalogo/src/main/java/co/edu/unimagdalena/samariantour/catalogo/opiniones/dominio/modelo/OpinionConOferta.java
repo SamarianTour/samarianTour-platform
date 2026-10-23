@@ -4,7 +4,7 @@ import java.util.Objects;
 
 /**
  * Una opinión con el nombre de su oferta, que da contexto al turista en "Mis opiniones" y al administrador en la
- * moderación. El nombre lo da el catálogo (DC-39).
+ * moderación. El nombre lo da el catálogo (DC-40).
  *
  * @param nombreOferta null si el catálogo ya no tiene la oferta
  */

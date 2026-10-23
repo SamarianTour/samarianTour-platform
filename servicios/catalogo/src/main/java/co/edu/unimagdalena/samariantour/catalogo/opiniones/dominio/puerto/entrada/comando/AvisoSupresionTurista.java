@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * El núcleo ejecutó la supresión de los datos de un turista (derechos del titular, Ley 1581 de 2012): el catálogo
- * borra sus opiniones y sus habilitaciones (DC-44).
+ * borra sus opiniones y sus habilitaciones (DC-45).
  */
 public record AvisoSupresionTurista(String idAviso, UUID turistaId) implements AvisoOpinionCommand {
 

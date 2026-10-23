@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.UUID;
 
 /**
- * Una habilitación para opinar, colección {@code habilitaciones_opinion} (DC-40). El índice único
+ * Una habilitación para opinar, colección {@code habilitaciones_opinion} (DC-41). El índice único
  * {@code {turistaId, ofertaId}} garantiza una por turista y oferta, también entre réplicas.
  */
 @Document(HabilitacionOpinionDocument.COLECCION)

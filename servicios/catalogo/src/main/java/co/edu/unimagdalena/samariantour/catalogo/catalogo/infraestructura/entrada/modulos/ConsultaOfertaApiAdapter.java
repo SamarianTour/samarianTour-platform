@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * Implementa {@link ConsultaOfertaApi} con el caso de uso del catálogo. Los otros módulos dependen solo de la
- * interfaz; este adaptador queda dentro del catálogo (DC-39).
+ * interfaz; este adaptador queda dentro del catálogo (DC-40).
  */
 @Component
 public class ConsultaOfertaApiAdapter implements ConsultaOfertaApi {

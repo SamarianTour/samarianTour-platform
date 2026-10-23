@@ -9,7 +9,7 @@ import java.util.UUID;
 /**
  * Opinión de un turista sobre una oferta que pagó (RF-60): una calificación de 1 a 5 y un comentario. Nace en
  * moderación y solo se publica cuando el administrador la aprueba (RF-61, RF-80). Una rechazada queda con su motivo y
- * no se edita (DC-41).
+ * no se edita (DC-42).
  *
  * <p>La moderación es idempotente, como la de las ofertas (DC-08): aprobar o rechazar una opinión que ya no está en
  * moderación no cambia nada, para que el aviso repetido o atrasado del núcleo se ignore sin error.

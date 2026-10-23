@@ -7,7 +7,7 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.modelo.Pagina
 
 /**
  * Lo que espera la decisión del administrador (RF-80). Como con las ofertas (DC-38), el administrador lo lee aquí y
- * decide en el núcleo, que envía la decisión al catálogo como aviso (DC-43).
+ * decide en el núcleo, que envía la decisión al catálogo como aviso (DC-44).
  */
 public interface ListarOpinionesPendientesUseCase {
 

@@ -251,9 +251,9 @@ export interface paths {
         };
         /**
          * Opiniones aprobadas de una oferta, con su resumen (RF-59)
-         * @description Solo las aprobadas, de la más reciente a la más antigua y luego por id (DC-42). El resumen cuenta todas las
+         * @description Solo las aprobadas, de la más reciente a la más antigua y luego por id (DC-43). El resumen cuenta todas las
          *     aprobadas y da el promedio de su calificación con un decimal. No se muestra quién escribió cada opinión.
-         *     Va aparte de la ficha porque el catálogo no depende del módulo de opiniones (DC-39). Si la oferta no es
+         *     Va aparte de la ficha porque el catálogo no depende del módulo de opiniones (DC-40). Si la oferta no es
          *     visible, responde 404 igual que la ficha.
          */
         get: operations["leerOpinionesOferta"];
@@ -274,13 +274,13 @@ export interface paths {
         };
         /**
          * Opiniones propias en cualquier estado
-         * @description De la más reciente a la más antigua, con el nombre de la oferta y, si fue rechazada, el motivo (DC-41).
+         * @description De la más reciente a la más antigua, con el nombre de la oferta y, si fue rechazada, el motivo (DC-42).
          */
         get: operations["listarMisOpiniones"];
         put?: never;
         /**
          * Dejar una opinión sobre una oferta pagada (RF-60, RF-61)
-         * @description Exige que el núcleo haya avisado que el turista tiene una solicitud pagada de la oferta (DC-40) y que la
+         * @description Exige que el núcleo haya avisado que el turista tiene una solicitud pagada de la oferta (DC-41) y que la
          *     oferta exista. Solo se admite una opinión por turista y oferta. La opinión queda en moderación: se publica
          *     cuando el administrador la aprueba.
          */
@@ -300,7 +300,7 @@ export interface paths {
         };
         /**
          * Opiniones que esperan la decisión del administrador (RF-80)
-         * @description De la enviada hace más tiempo a la más reciente y luego por id, con el nombre de la oferta (DC-43). Como con
+         * @description De la enviada hace más tiempo a la más reciente y luego por id, con el nombre de la oferta (DC-44). Como con
          *     las ofertas (DC-38), el administrador decide en el núcleo, que envía la decisión como aviso.
          */
         get: operations["listarOpinionesEnModeracion"];
@@ -321,7 +321,7 @@ export interface paths {
         };
         /**
          * Opinión en moderación que el núcleo va a aprobar o rechazar (RF-80)
-         * @description El núcleo la consulta antes de decidir, para saber a qué turista notificar (DC-43). Si la opinión no existe
+         * @description El núcleo la consulta antes de decidir, para saber a qué turista notificar (DC-44). Si la opinión no existe
          *     o ya no está en moderación, responde 404.
          */
         get: operations["consultarOpinionEnModeracion"];
@@ -346,11 +346,11 @@ export interface paths {
          * Aviso del núcleo sobre opiniones (RF-60, RF-80, Ley 1581)
          * @description Llegan por la misma bandeja de salida que los avisos de ofertas y con las mismas reglas (DC-04): cada aviso
          *     trae un `idAviso`, un aviso repetido no se vuelve a aplicar y los tres resultados responden 200. El registro
-         *     de avisos procesados es propio del módulo (DC-45).
-         *     - `HABILITACION_OPINION`: una solicitud del turista quedó pagada y puede opinar sobre su oferta (DC-40).
-         *     - `MODERACION_OPINION`: decisión del administrador; una opinión que ya se moderó o no existe lo ignora (DC-43).
+         *     de avisos procesados es propio del módulo (DC-46).
+         *     - `HABILITACION_OPINION`: una solicitud del turista quedó pagada y puede opinar sobre su oferta (DC-41).
+         *     - `MODERACION_OPINION`: decisión del administrador; una opinión que ya se moderó o no existe lo ignora (DC-44).
          *     - `SUPRESION_TURISTA`: el núcleo ejecutó la supresión de los datos del turista; se borran sus opiniones y
-         *       sus habilitaciones (DC-44).
+         *       sus habilitaciones (DC-45).
          */
         post: operations["recibirAvisoOpinion"];
         delete?: never;
@@ -719,7 +719,7 @@ export interface components {
         OpinionRequest: {
             ofertaId: string;
             calificacion: number;
-            /** @description Sin contar los espacios de los extremos (DC-41). */
+            /** @description Sin contar los espacios de los extremos (DC-42). */
             comentario: string;
         };
         /** @description Una opinión como la ve su autor, en cualquier estado. Los campos sin valor no se envían. */
@@ -754,7 +754,7 @@ export interface components {
             /** Format: int64 */
             totalPaginas: number;
         };
-        /** @description Una opinión aprobada (RF-59). No dice quién la escribió (DC-42). */
+        /** @description Una opinión aprobada (RF-59). No dice quién la escribió (DC-43). */
         OpinionPublica: {
             id: string;
             calificacion: number;
@@ -809,7 +809,7 @@ export interface components {
             /** Format: int64 */
             totalPaginas: number;
         };
-        /** @description Lo que el núcleo necesita de una opinión antes de decidir (DC-43). */
+        /** @description Lo que el núcleo necesita de una opinión antes de decidir (DC-44). */
         OpinionEnModeracion: {
             id: string;
             ofertaId: string;
@@ -824,7 +824,7 @@ export interface components {
         };
         AvisoOpinion: components["schemas"]["AvisoHabilitacionOpinion"] | components["schemas"]["AvisoModeracionOpinion"] | components["schemas"]["AvisoSupresionTurista"];
         /**
-         * @description Una solicitud del turista quedó pagada (RF-60, DC-40). Una habilitación que ya existe, o de una oferta que
+         * @description Una solicitud del turista quedó pagada (RF-60, DC-41). Una habilitación que ya existe, o de una oferta que
          *     el catálogo no tiene, se ignora.
          */
         AvisoHabilitacionOpinion: {
@@ -838,7 +838,7 @@ export interface components {
             turistaId: string;
             ofertaId: string;
         };
-        /** @description Decisión del administrador sobre una opinión (RF-80, DC-43). */
+        /** @description Decisión del administrador sobre una opinión (RF-80, DC-44). */
         AvisoModeracionOpinion: {
             idAviso: string;
             /**
@@ -854,7 +854,7 @@ export interface components {
         };
         /**
          * @description El núcleo ejecutó la supresión de los datos del turista (Ley 1581 de 2012): se borran sus opiniones y sus
-         *     habilitaciones (DC-44). Si no tenía ninguna, el aviso se ignora.
+         *     habilitaciones (DC-45). Si no tenía ninguna, el aviso se ignora.
          */
         AvisoSupresionTurista: {
             idAviso: string;
@@ -1026,7 +1026,7 @@ export interface components {
             };
         };
         /**
-         * @description El turista no tiene una solicitud pagada de la oferta (`OPINION_NO_HABILITADA`, DC-40), o su rol no es
+         * @description El turista no tiene una solicitud pagada de la oferta (`OPINION_NO_HABILITADA`, DC-41), o su rol no es
          *     TURISTA (`ACCESO_DENEGADO`).
          */
         OpinionNoHabilitada: {

@@ -5,7 +5,7 @@ import java.util.function.Function;
 
 /**
  * Una página de resultados y el total de elementos que cumplen el criterio. Es la misma forma que la del catálogo,
- * pero propia del módulo: un módulo solo usa el paquete {@code api} de otro (DC-39).
+ * pero propia del módulo: un módulo solo usa el paquete {@code api} de otro (DC-40).
  */
 public record Pagina<T>(List<T> contenido, Paginacion paginacion, long totalElementos) {
 

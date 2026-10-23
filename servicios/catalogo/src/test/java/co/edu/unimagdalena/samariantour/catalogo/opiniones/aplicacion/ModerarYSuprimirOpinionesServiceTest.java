@@ -78,7 +78,7 @@ class ModerarYSuprimirOpinionesServiceTest {
     }
 
     @Nested
-    @DisplayName("Habilitación (DC-40)")
+    @DisplayName("Habilitación (DC-41)")
     class Habilitacion {
 
         @Test
@@ -103,7 +103,7 @@ class ModerarYSuprimirOpinionesServiceTest {
     }
 
     @Nested
-    @DisplayName("Moderación (DC-43)")
+    @DisplayName("Moderación (DC-44)")
     class Moderacion {
 
         @Test
@@ -178,7 +178,7 @@ class ModerarYSuprimirOpinionesServiceTest {
     }
 
     @Nested
-    @DisplayName("Supresión (DC-44)")
+    @DisplayName("Supresión (DC-45)")
     class Supresion {
 
         @Test

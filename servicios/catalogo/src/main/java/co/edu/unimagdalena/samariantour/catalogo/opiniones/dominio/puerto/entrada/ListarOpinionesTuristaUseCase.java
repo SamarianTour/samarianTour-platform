@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * Las opiniones propias del turista en cualquier estado, de la más reciente a la más antigua, con el motivo si fue
- * rechazada (DC-41).
+ * rechazada (DC-42).
  */
 public interface ListarOpinionesTuristaUseCase {
 

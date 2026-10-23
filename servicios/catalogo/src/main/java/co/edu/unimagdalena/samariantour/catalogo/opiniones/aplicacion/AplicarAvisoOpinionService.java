@@ -20,8 +20,8 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * Aplica los avisos del núcleo sobre opiniones, que llegan por la misma bandeja de salida que los de ofertas (DC-04):
- * la habilitación cuando una solicitud queda pagada (DC-40), la decisión del administrador (DC-43) y la supresión de
- * un turista (DC-44).
+ * la habilitación cuando una solicitud queda pagada (DC-41), la decisión del administrador (DC-44) y la supresión de
+ * un turista (DC-45).
  *
  * <p>Es idempotente como el aviso de ofertas: el aviso se marca como procesado al final, así que si el proceso se cae
  * a mitad, el reintento del núcleo deja todo correcto. Si otra escritura se cruza con la moderación, el aviso completo
@@ -94,7 +94,7 @@ public class AplicarAvisoOpinionService implements AplicarAvisoOpinionUseCase {
     }
 
     /**
-     * Borra las opiniones y las habilitaciones del turista (Ley 1581, DC-44). Repetirla no cambia nada: el segundo
+     * Borra las opiniones y las habilitaciones del turista (Ley 1581, DC-45). Repetirla no cambia nada: el segundo
      * aviso no encuentra qué borrar y se ignora.
      */
     private ResultadoAviso suprimir(AvisoSupresionTurista aviso) {

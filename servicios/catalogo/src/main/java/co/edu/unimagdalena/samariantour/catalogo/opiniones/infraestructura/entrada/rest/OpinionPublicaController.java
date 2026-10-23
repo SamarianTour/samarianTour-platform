@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Lectura pública de las opiniones de una oferta (RF-59, DC-42). Va aparte de la ficha: el catálogo no depende de
- * opiniones, así que el frontend pide las opiniones a esta ruta (DC-39).
+ * Lectura pública de las opiniones de una oferta (RF-59, DC-43). Va aparte de la ficha: el catálogo no depende de
+ * opiniones, así que el frontend pide las opiniones a esta ruta (DC-40).
  */
 @RestController
 public class OpinionPublicaController {

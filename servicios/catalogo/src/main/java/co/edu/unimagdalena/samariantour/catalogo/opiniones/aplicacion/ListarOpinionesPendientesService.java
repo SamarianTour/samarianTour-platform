@@ -10,7 +10,7 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.salida
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.salida.OpinionRepositoryPort;
 
 /**
- * Opiniones que esperan la decisión del administrador (RF-80, DC-43). Solo lee: la decisión llega como aviso del
+ * Opiniones que esperan la decisión del administrador (RF-80, DC-44). Solo lee: la decisión llega como aviso del
  * núcleo.
  */
 public class ListarOpinionesPendientesService implements ListarOpinionesPendientesUseCase {

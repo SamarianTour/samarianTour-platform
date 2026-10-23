@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * El módulo de opiniones pregunta al catálogo real, con los datos de demostración, solo a través de
- * {@link ConsultaOfertaApi} (DC-39).
+ * {@link ConsultaOfertaApi} (DC-40).
  */
 class OfertaCatalogoAdapterTest {
 

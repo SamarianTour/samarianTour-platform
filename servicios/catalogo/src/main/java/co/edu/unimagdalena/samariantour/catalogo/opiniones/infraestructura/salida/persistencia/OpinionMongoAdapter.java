@@ -33,7 +33,7 @@ import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
 
 /**
- * Opiniones en la colección {@code opiniones} de MongoDB (DC-45).
+ * Opiniones en la colección {@code opiniones} de MongoDB (DC-46).
  *
  * <p>Una opinión nueva se inserta con la revisión 1; el índice único {@code {ofertaId, turistaId}} rechaza la segunda
  * opinión del mismo turista sobre la misma oferta aunque llegue a otra réplica (RF-61). Una opinión leída se reemplaza

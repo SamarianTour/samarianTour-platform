@@ -4,8 +4,8 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.ResultadoAviso;
 
 /**
- * Aplica los avisos del núcleo sobre opiniones: habilitación por solicitud pagada (DC-40), decisión de moderación
- * (DC-43) y supresión de un turista (DC-44). Es idempotente: un aviso repetido o que ya no aplica no cambia nada.
+ * Aplica los avisos del núcleo sobre opiniones: habilitación por solicitud pagada (DC-41), decisión de moderación
+ * (DC-44) y supresión de un turista (DC-45). Es idempotente: un aviso repetido o que ya no aplica no cambia nada.
  */
 public interface AplicarAvisoOpinionUseCase {
 

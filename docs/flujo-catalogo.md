@@ -240,7 +240,7 @@ Opinion.enviar → estado EN_MODERACION
 201 Created; en la ficha todavía no aparece
 ```
 
-El módulo `opiniones` no conoce las clases del catálogo: le pregunta por la oferta a la interfaz `catalogo.api.ConsultaOfertaApi` (DC-39).
+El módulo `opiniones` no conoce las clases del catálogo: le pregunta por la oferta a la interfaz `catalogo.api.ConsultaOfertaApi` (DC-40).
 
 ### Paso 10: el administrador la aprueba
 

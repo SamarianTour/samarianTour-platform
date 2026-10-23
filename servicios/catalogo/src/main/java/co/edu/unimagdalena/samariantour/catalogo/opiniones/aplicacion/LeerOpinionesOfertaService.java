@@ -8,7 +8,7 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.salida
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.salida.OpinionRepositoryPort;
 
 /**
- * Lectura pública de las opiniones de una oferta (RF-59, DC-42): solo las aprobadas, con el resumen de todas ellas.
+ * Lectura pública de las opiniones de una oferta (RF-59, DC-43): solo las aprobadas, con el resumen de todas ellas.
  * Una oferta que el turista no puede ver en el catálogo tampoco muestra sus opiniones.
  */
 public class LeerOpinionesOfertaService implements LeerOpinionesOfertaUseCase {

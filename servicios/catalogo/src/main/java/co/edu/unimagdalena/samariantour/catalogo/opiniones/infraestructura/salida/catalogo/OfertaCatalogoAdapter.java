@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * Pregunta al catálogo por sus ofertas a través de {@link ConsultaOfertaApi}, sin conocer su modelo (DC-39). Si el
+ * Pregunta al catálogo por sus ofertas a través de {@link ConsultaOfertaApi}, sin conocer su modelo (DC-40). Si el
  * catálogo se separa en otro servicio, solo cambia este adaptador.
  */
 @Component

@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * Consultas de los otros módulos del servicio sobre las ofertas: existencia, visibilidad y nombre (DC-39). Las
+ * Consultas de los otros módulos del servicio sobre las ofertas: existencia, visibilidad y nombre (DC-40). Las
  * expone {@code catalogo.api.ConsultaOfertaApi}.
  */
 public interface ConsultarOfertaParaModulosUseCase {

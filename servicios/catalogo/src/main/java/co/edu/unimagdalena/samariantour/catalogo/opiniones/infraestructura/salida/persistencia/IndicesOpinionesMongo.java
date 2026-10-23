@@ -16,8 +16,8 @@ import static co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructur
 import static co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.salida.persistencia.document.OpinionDocument.TURISTA_ID;
 
 /**
- * Crea los índices del módulo de opiniones al arrancar (DC-45). Son del módulo y no van en {@code IndicesMongo} del
- * catálogo, que no puede depender de opiniones (DC-39). Crear un índice que ya existe no hace nada, así que todas las
+ * Crea los índices del módulo de opiniones al arrancar (DC-46). Son del módulo y no van en {@code IndicesMongo} del
+ * catálogo, que no puede depender de opiniones (DC-40). Crear un índice que ya existe no hace nada, así que todas las
  * réplicas pueden hacerlo.
  *
  * <ul>
@@ -27,7 +27,7 @@ import static co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructur
  *   <li>{@code opiniones_en_moderacion}: parcial, solo las que esperan decisión, {@code {fecha, _id}}, para la cola
  *       del administrador (RF-80).</li>
  *   <li>{@code opiniones_del_turista}: {@code {turistaId, fecha desc, _id}}, para "Mis opiniones" y para la
- *       supresión (DC-44).</li>
+ *       supresión (DC-45).</li>
  *   <li>{@code habilitacion_unica}: único {@code {turistaId, ofertaId}} en {@code habilitaciones_opinion}; su prefijo
  *       también resuelve la supresión.</li>
  * </ul>

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.math.BigDecimal;
 
 /**
- * Resumen de las opiniones aprobadas de una oferta (RF-59, DC-42).
+ * Resumen de las opiniones aprobadas de una oferta (RF-59, DC-43).
  *
  * @param promedioCalificacion con un decimal; no se envía si la oferta no tiene opiniones aprobadas
  */

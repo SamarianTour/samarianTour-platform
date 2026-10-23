@@ -5,7 +5,7 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.modelo.Habili
 import java.util.UUID;
 
 /**
- * Turistas que pueden opinar sobre una oferta porque la pagaron (colección {@code habilitaciones_opinion}, DC-40).
+ * Turistas que pueden opinar sobre una oferta porque la pagaron (colección {@code habilitaciones_opinion}, DC-41).
  * Hay a lo sumo una habilitación por turista y oferta.
  */
 public interface HabilitacionOpinionRepositoryPort {
@@ -21,7 +21,7 @@ public interface HabilitacionOpinionRepositoryPort {
     boolean existe(UUID turistaId, String ofertaId);
 
     /**
-     * Borra todas las habilitaciones del turista (DC-44).
+     * Borra todas las habilitaciones del turista (DC-45).
      *
      * @return cuántas borró
      */

@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Opiniones de los turistas (colección {@code opiniones}, DC-45).
+ * Opiniones de los turistas (colección {@code opiniones}, DC-46).
  */
 public interface OpinionRepositoryPort {
 
@@ -44,7 +44,7 @@ public interface OpinionRepositoryPort {
     Pagina<Opinion> buscarEnModeracion(Paginacion paginacion);
 
     /**
-     * Borra todas las opiniones del turista (DC-44).
+     * Borra todas las opiniones del turista (DC-45).
      *
      * @return cuántas borró
      */
