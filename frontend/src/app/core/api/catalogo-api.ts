@@ -152,6 +152,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/ofertas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ofertas visibles para la recomendación (RF-26, RF-29, RET-02)
+         * @description Base de conocimiento cerrada de la recomendación (DC-36). Aplica la misma visibilidad, el mismo orden (por
+         *     precio de referencia y luego por id) y la misma paginación que la búsqueda pública: el catálogo no prioriza
+         *     a ningún prestador, y la rotación entre ofertas de igual afinidad le corresponde a la recomendación.
+         *     No incluye calificaciones, comisión ni tamaño del prestador.
+         */
+        get: operations["consultarOfertasVisibles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/ofertas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Oferta que el turista pide en una solicitud (RF-30)
+         * @description El núcleo la consulta al crear la solicitud, con corte de circuito de 3 s (ADR-04), y copia el nombre, el
+         *     tipo, la zona y el prestador (DC-35). Solo se puede pedir una oferta visible: con la misma regla que la ficha,
+         *     una retirada, sin versión aprobada, de un prestador con el RNT inactivo o un paquete con alguna actividad no
+         *     visible responden 404. El precio no va: lo registra el operador al atender la solicitud (RF-37).
+         */
+        get: operations["consultarOfertaInterna"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -391,6 +437,56 @@ export interface components {
              * @enum {string}
              */
             resultado: "APLICADO" | "IGNORADO" | "DUPLICADO";
+        };
+        /** @description Lo que la solicitud copia de la oferta y lo que valida al crearse (RF-30, DC-35). */
+        OfertaInterna: {
+            id: string;
+            tipo: components["schemas"]["TipoOferta"];
+            nombre: string;
+            /** Format: uuid */
+            prestadorId: string;
+            zonaId: string;
+            /** @description Horas entre las que el turista elige la de salida. Solo actividad y paquete. */
+            horariosSalida?: components["schemas"]["Hora"][];
+            /** @description Máximo de personas por solicitud. */
+            capacidadMaxima: number;
+        };
+        /**
+         * @description Una oferta visible con los datos de los criterios explícitos de la recomendación (DC-36): tipo de oferta, tipo
+         *     de actividad, zona, accesibilidad y precio. `prestadorId` sirve para el registro de exposición (RET-02).
+         */
+        OfertaVisible: {
+            id: string;
+            tipo: components["schemas"]["TipoOferta"];
+            nombre: string;
+            descripcion: string;
+            /** Format: uuid */
+            prestadorId: string;
+            zonaId: string;
+            /** @description Marca de alta afluencia de la zona (RF-29); false si la zona ya no existe. */
+            zonaAltaAfluencia: boolean;
+            /** @description Precio informativo y no vinculante, en pesos colombianos. */
+            precioReferencia: number;
+            /**
+             * @description Según el tipo de oferta (DC-22).
+             * @enum {string}
+             */
+            unidadPrecio: "por persona" | "por noche y unidad" | "promedio por persona";
+            /** @description El de una actividad, los de las actividades de un paquete (DC-24) y ninguno para alojamiento y restaurante. */
+            tiposActividad: components["schemas"]["TipoActividad"][];
+            nivelEsfuerzo?: components["schemas"]["NivelEsfuerzo"];
+            /** @description Un paquete es accesible solo si todas sus actividades lo son (RF-17). */
+            accesibleSillaRuedas: boolean;
+        };
+        PaginaOfertasVisibles: {
+            contenido: components["schemas"]["OfertaVisible"][];
+            /** @description La primera es la 0. */
+            pagina: number;
+            tamano: number;
+            /** Format: int64 */
+            totalElementos: number;
+            /** Format: int64 */
+            totalPaginas: number;
         };
         /** @description ProblemDetail (RFC 7807) con la propiedad `codigo`. */
         Problema: {
@@ -885,6 +981,58 @@ export interface operations {
             409: components["responses"]["ConflictoConcurrencia"];
         };
     };
+    consultarOfertasVisibles: {
+        parameters: {
+            query?: {
+                tipo?: components["schemas"]["TipoOferta"];
+                /** @example a00000000000000000000005 */
+                zonaId?: string;
+                /** @description Página pedida; la primera es la 0 (DC-14). */
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página de ofertas visibles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaOfertasVisibles"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+        };
+    };
+    consultarOfertaInterna: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example b00000000000000000000001 */
+                id: components["parameters"]["OfertaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La oferta, según su versión publicada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfertaInterna"];
+                };
+            };
+            404: components["responses"]["OfertaNoEncontrada"];
+        };
+    };
 }
 type FlattenedDeepRequired<T> = {
     [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
@@ -905,5 +1053,6 @@ export const avisoModeracionTipoValues: ReadonlyArray<FlattenedDeepRequired<comp
 export const avisoModeracionDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracion"]["decision"]> = ["APROBAR", "RECHAZAR"];
 export const avisoHabilitacionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoHabilitacion"]["tipo"]> = ["HABILITACION"];
 export const avisoResultadoResultadoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoResultado"]["resultado"]> = ["APLICADO", "IGNORADO", "DUPLICADO"];
+export const ofertaVisibleUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OfertaVisible"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];
 export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA"];
 export const componentsParametersRolValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["Rol"]> = ["TURISTA", "PRESTADOR", "ADMINISTRADOR"];
