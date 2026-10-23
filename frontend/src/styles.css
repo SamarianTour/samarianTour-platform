@@ -511,6 +511,13 @@ a:hover {
   margin: 0 0 0.75rem;
 }
 
+/* Estrella llena de una calificación (ver shared/estrellas y la ficha). */
+
+.estrella--llena svg,
+.calificacion__opcion--llena svg {
+  fill: currentColor;
+}
+
 /* Pin del mapa: un divIcon de Leaflet dibujado con CSS (ver shared/mapa). */
 
 .pin-mapa span {

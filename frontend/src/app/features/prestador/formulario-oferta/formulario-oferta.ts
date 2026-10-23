@@ -103,7 +103,8 @@ export class FormularioOferta {
   private readonly router = inject(Router);
   private readonly anfitrion = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  private readonly prestador = this.identidad.prestador();
+  /** El panel solo muestra el formulario con un prestador elegido. */
+  private readonly prestador = this.identidad.prestador()!;
   private readonly esGuia = this.prestador.tipo === 'GUIA_INDEPENDIENTE';
 
   protected readonly tiposPermitidos = TIPOS_QUE_PUBLICA[this.prestador.tipo];

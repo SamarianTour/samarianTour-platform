@@ -6,3 +6,6 @@ export const API_CATALOGO = '/api/catalogo';
 
 /** Rutas que exigen la identidad del prestador. */
 export const API_PRESTADOR = `${API_CATALOGO}/prestador/`;
+
+/** Rutas que exigen la identidad del turista. */
+export const API_TURISTA = `${API_CATALOGO}/turista/`;

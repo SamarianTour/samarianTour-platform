@@ -4,8 +4,9 @@ info:
   version: 0.1.0
   description: |
     API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
-    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias), los avisos internos
-    del núcleo y las consultas internas del núcleo y de la recomendación.
+    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias), las opiniones de los
+    turistas, la moderación, los avisos internos del núcleo y las consultas internas del núcleo y de la
+    recomendación.
 
     - Las rutas no incluyen el prefijo `/api/catalogo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
@@ -20,6 +21,8 @@ tags:
     description: Búsqueda y consulta; no exige identidad.
   - name: Prestador
     description: Ofertas del prestador. Exige la identidad con el rol PRESTADOR.
+  - name: Turista
+    description: Opiniones del turista. Exige la identidad con el rol TURISTA.
   - name: Administrador
     description: Moderación. Exige la identidad con el rol ADMINISTRADOR.
   - name: Interno
@@ -579,8 +582,206 @@ paths:
         '404':
           $ref: '#/components/responses/OfertaNoEncontrada'
 
+  # Opiniones (módulo opiniones, RF-59 a RF-61 y RF-80)
+
+  /ofertas/{id}/opiniones:
+    get:
+      tags: [Catálogo público]
+      operationId: leerOpinionesOferta
+      summary: Opiniones aprobadas de una oferta, con su resumen (RF-59)
+      description: |
+        Solo las aprobadas, de la más reciente a la más antigua y luego por id (DC-43). El resumen cuenta todas las
+        aprobadas y da el promedio de su calificación con un decimal. No se muestra quién escribió cada opinión.
+        Va aparte de la ficha porque el catálogo no depende del módulo de opiniones (DC-40). Si la oferta no es
+        visible, responde 404 igual que la ficha.
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Resumen y página de opiniones aprobadas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpinionesOferta'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+
+  /turista/opiniones:
+    post:
+      tags: [Turista]
+      operationId: publicarOpinion
+      summary: Dejar una opinión sobre una oferta pagada (RF-60, RF-61)
+      description: |
+        Exige que el núcleo haya avisado que el turista tiene una solicitud pagada de la oferta (DC-41) y que la
+        oferta exista. Solo se admite una opinión por turista y oferta. La opinión queda en moderación: se publica
+        cuando el administrador la aprueba.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpinionRequest'
+            example:
+              ofertaId: b00000000000000000000002
+              calificacion: 5
+              comentario: El arrecife estaba en buen estado y el guía explicó cómo cuidarlo.
+      responses:
+        '201':
+          description: Opinión enviada a moderación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiOpinion'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/OpinionNoHabilitada'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/OpinionDuplicada'
+    get:
+      tags: [Turista]
+      operationId: listarMisOpiniones
+      summary: Opiniones propias en cualquier estado
+      description: |
+        De la más reciente a la más antigua, con el nombre de la oferta y, si fue rechazada, el motivo (DC-42).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Página de opiniones del turista.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaMisOpiniones'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /admin/moderacion/opiniones:
+    get:
+      tags: [Administrador]
+      operationId: listarOpinionesEnModeracion
+      summary: Opiniones que esperan la decisión del administrador (RF-80)
+      description: |
+        De la enviada hace más tiempo a la más reciente y luego por id, con el nombre de la oferta (DC-44). Como con
+        las ofertas (DC-38), el administrador decide en el núcleo, que envía la decisión como aviso.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Página de opiniones en moderación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaOpinionesPendientes'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /internal/moderacion/opiniones/{id}:
+    get:
+      tags: [Interno]
+      operationId: consultarOpinionEnModeracion
+      summary: Opinión en moderación que el núcleo va a aprobar o rechazar (RF-80)
+      description: |
+        El núcleo la consulta antes de decidir, para saber a qué turista notificar (DC-44). Si la opinión no existe
+        o ya no está en moderación, responde 404.
+      parameters:
+        - $ref: '#/components/parameters/OpinionId'
+      responses:
+        '200':
+          description: La opinión en moderación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpinionEnModeracion'
+        '404':
+          $ref: '#/components/responses/OpinionNoEncontrada'
+
+  /internal/opiniones/avisos:
+    post:
+      tags: [Interno]
+      operationId: recibirAvisoOpinion
+      summary: Aviso del núcleo sobre opiniones (RF-60, RF-80, Ley 1581)
+      description: |
+        Llegan por la misma bandeja de salida que los avisos de ofertas y con las mismas reglas (DC-04): cada aviso
+        trae un `idAviso`, un aviso repetido no se vuelve a aplicar y los tres resultados responden 200. El registro
+        de avisos procesados es propio del módulo (DC-46).
+        - `HABILITACION_OPINION`: una solicitud del turista quedó pagada y puede opinar sobre su oferta (DC-41).
+        - `MODERACION_OPINION`: decisión del administrador; una opinión que ya se moderó o no existe lo ignora (DC-44).
+        - `SUPRESION_TURISTA`: el núcleo ejecutó la supresión de los datos del turista; se borran sus opiniones y
+          sus habilitaciones (DC-45).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvisoOpinion'
+            examples:
+              habilitar:
+                summary: La solicitud del turista quedó pagada
+                value:
+                  idAviso: aviso-0101
+                  tipo: HABILITACION_OPINION
+                  turistaId: 80000000-0000-0000-0000-000000000008
+                  ofertaId: b00000000000000000000006
+              aprobar:
+                summary: Aprobar una opinión
+                value:
+                  idAviso: aviso-0102
+                  tipo: MODERACION_OPINION
+                  opinionId: d0000000000000000000000b
+                  decision: APROBAR
+              suprimir:
+                summary: Supresión de los datos de un turista
+                value:
+                  idAviso: aviso-0103
+                  tipo: SUPRESION_TURISTA
+                  turistaId: 80000000-0000-0000-0000-000000000008
+      responses:
+        '200':
+          description: Aviso recibido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvisoResultado'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '409':
+          $ref: '#/components/responses/ConflictoConcurrencia'
+
 components:
   parameters:
+    OpinionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: d0000000000000000000000b
     OfertaId:
       name: id
       in: path
@@ -791,6 +992,48 @@ components:
             status: 409
             detail: Otra operación modificó el mismo dato al mismo tiempo; vuelve a intentarlo
             codigo: CONFLICTO_CONCURRENCIA
+
+    OpinionNoHabilitada:
+      description: |
+        El turista no tiene una solicitud pagada de la oferta (`OPINION_NO_HABILITADA`, DC-41), o su rol no es
+        TURISTA (`ACCESO_DENEGADO`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            detail: El turista 80000000-0000-0000-0000-000000000008 no tiene una solicitud pagada de la oferta b00000000000000000000006
+            instance: /api/catalogo/turista/opiniones
+            codigo: OPINION_NO_HABILITADA
+    OpinionDuplicada:
+      description: El turista ya opinó sobre la oferta (`OPINION_DUPLICADA`, RF-61).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: El turista 70000000-0000-0000-0000-000000000007 ya opinó sobre la oferta b00000000000000000000001
+            instance: /api/catalogo/turista/opiniones
+            codigo: OPINION_DUPLICADA
+    OpinionNoEncontrada:
+      description: La opinión no existe o ya no está en moderación (`OPINION_NO_ENCONTRADA`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: No existe la opinión d00000000000000000000001
+            instance: /api/catalogo/internal/moderacion/opiniones/d00000000000000000000001
+            codigo: OPINION_NO_ENCONTRADA
 
   schemas:
     TipoOferta:
@@ -1493,6 +1736,253 @@ components:
           type: integer
           format: int64
 
+    EstadoOpinion:
+      type: string
+      enum: [EN_MODERACION, APROBADA, RECHAZADA]
+
+    OpinionRequest:
+      type: object
+      description: La opinión que envía el turista (RF-60). El turista es el de la identidad, no va en el cuerpo.
+      required: [ofertaId, calificacion, comentario]
+      properties:
+        ofertaId:
+          type: string
+        calificacion:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comentario:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: Sin contar los espacios de los extremos (DC-42).
+
+    MiOpinion:
+      type: object
+      description: Una opinión como la ve su autor, en cualquier estado. Los campos sin valor no se envían.
+      required: [id, ofertaId, calificacion, comentario, fecha, estado]
+      properties:
+        id:
+          type: string
+        ofertaId:
+          type: string
+        nombreOferta:
+          type: string
+          description: El de la oferta en el catálogo, para dar contexto.
+        calificacion:
+          type: integer
+        comentario:
+          type: string
+        fecha:
+          type: string
+          format: date-time
+          description: Cuándo el turista la envió.
+        estado:
+          $ref: '#/components/schemas/EstadoOpinion'
+        motivoRechazo:
+          type: string
+          description: Solo si fue rechazada.
+        revisadaEn:
+          type: string
+          format: date-time
+          description: Solo si ya se moderó.
+
+    PaginaMisOpiniones:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/MiOpinion'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
+
+    OpinionPublica:
+      type: object
+      description: Una opinión aprobada (RF-59). No dice quién la escribió (DC-43).
+      required: [id, calificacion, comentario, fecha]
+      properties:
+        id:
+          type: string
+        calificacion:
+          type: integer
+        comentario:
+          type: string
+        fecha:
+          type: string
+          format: date-time
+
+    ResumenOpiniones:
+      type: object
+      required: [totalOpiniones]
+      properties:
+        totalOpiniones:
+          type: integer
+          format: int64
+          description: Opiniones aprobadas de la oferta.
+        promedioCalificacion:
+          type: number
+          description: Con un decimal, redondeado hacia arriba desde la mitad; no se envía si no hay opiniones aprobadas.
+          example: 4.7
+
+    OpinionesOferta:
+      type: object
+      description: El resumen de las opiniones aprobadas de una oferta y una página de ellas (DC-14).
+      required: [resumen, contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        resumen:
+          $ref: '#/components/schemas/ResumenOpiniones'
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpinionPublica'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
+
+    OpinionPendiente:
+      type: object
+      description: |
+        Una opinión que espera la decisión del administrador (RF-80), con el nombre de la oferta. No lleva el turista:
+        el administrador no lo necesita para decidir.
+      required: [id, ofertaId, calificacion, comentario, fecha]
+      properties:
+        id:
+          type: string
+        ofertaId:
+          type: string
+        nombreOferta:
+          type: string
+        calificacion:
+          type: integer
+        comentario:
+          type: string
+        fecha:
+          type: string
+          format: date-time
+
+    PaginaOpinionesPendientes:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpinionPendiente'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
+
+    OpinionEnModeracion:
+      type: object
+      description: Lo que el núcleo necesita de una opinión antes de decidir (DC-44).
+      required: [id, ofertaId, turistaId, estado, fecha]
+      properties:
+        id:
+          type: string
+        ofertaId:
+          type: string
+        turistaId:
+          type: string
+          format: uuid
+          description: Para notificarle la decisión.
+        estado:
+          $ref: '#/components/schemas/EstadoOpinion'
+        fecha:
+          type: string
+          format: date-time
+
+    AvisoOpinion:
+      oneOf:
+        - $ref: '#/components/schemas/AvisoHabilitacionOpinion'
+        - $ref: '#/components/schemas/AvisoModeracionOpinion'
+        - $ref: '#/components/schemas/AvisoSupresionTurista'
+      discriminator:
+        propertyName: tipo
+        mapping:
+          HABILITACION_OPINION: '#/components/schemas/AvisoHabilitacionOpinion'
+          MODERACION_OPINION: '#/components/schemas/AvisoModeracionOpinion'
+          SUPRESION_TURISTA: '#/components/schemas/AvisoSupresionTurista'
+
+    AvisoHabilitacionOpinion:
+      type: object
+      description: |
+        Una solicitud del turista quedó pagada (RF-60, DC-41). Una habilitación que ya existe, o de una oferta que
+        el catálogo no tiene, se ignora.
+      required: [idAviso, tipo, turistaId, ofertaId]
+      properties:
+        idAviso:
+          type: string
+        tipo:
+          type: string
+          enum: [HABILITACION_OPINION]
+        turistaId:
+          type: string
+          format: uuid
+        ofertaId:
+          type: string
+
+    AvisoModeracionOpinion:
+      type: object
+      description: Decisión del administrador sobre una opinión (RF-80, DC-44).
+      required: [idAviso, tipo, opinionId, decision]
+      properties:
+        idAviso:
+          type: string
+        tipo:
+          type: string
+          enum: [MODERACION_OPINION]
+        opinionId:
+          type: string
+        decision:
+          type: string
+          enum: [APROBAR, RECHAZAR]
+        motivo:
+          type: string
+          description: Obligatorio al rechazar; el turista lo ve en sus opiniones.
+
+    AvisoSupresionTurista:
+      type: object
+      description: |
+        El núcleo ejecutó la supresión de los datos del turista (Ley 1581 de 2012): se borran sus opiniones y sus
+        habilitaciones (DC-45). Si no tenía ninguna, el aviso se ignora.
+      required: [idAviso, tipo, turistaId]
+      properties:
+        idAviso:
+          type: string
+        tipo:
+          type: string
+          enum: [SUPRESION_TURISTA]
+        turistaId:
+          type: string
+          format: uuid
+
     Problema:
       type: object
       description: ProblemDetail (RFC 7807) con la propiedad `codigo`.
@@ -1522,5 +2012,8 @@ components:
             - OFERTA_NO_ENCONTRADA
             - OFERTA_NO_EDITABLE
             - CONFLICTO_CONCURRENCIA
+            - OPINION_NO_HABILITADA
+            - OPINION_DUPLICADA
+            - OPINION_NO_ENCONTRADA
             - PERFIL_NO_ENCONTRADO
             - FOTO_NO_ENCONTRADA

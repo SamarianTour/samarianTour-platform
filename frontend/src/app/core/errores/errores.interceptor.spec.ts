@@ -38,6 +38,9 @@ describe('erroresInterceptor', () => {
     ['OFERTA_NO_ENCONTRADA', 404],
     ['OFERTA_NO_EDITABLE', 409],
     ['CONFLICTO_CONCURRENCIA', 409],
+    ['OPINION_NO_HABILITADA', 403],
+    ['OPINION_DUPLICADA', 409],
+    ['OPINION_NO_ENCONTRADA', 404],
   ];
 
   it.each(casos)('traduce %s a un mensaje para el usuario, sin mostrar el código', (codigo, estado) => {

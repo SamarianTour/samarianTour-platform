@@ -245,6 +245,88 @@ class DemostracionApiTest {
     }
 
     @Test
+    @DisplayName("[Demostración] opiniones: el núcleo habilita al turista, el turista opina, el administrador la ve en "
+            + "moderación, el núcleo la aprueba, aparece en la ficha y la supresión del turista la borra")
+    void opiniones() throws Exception {
+        String turista = "75000000-0000-0000-0000-000000000001";
+        String oferta = "b00000000000000000000006";
+        String opinion = """
+                {"ofertaId": "%s", "calificacion": 4, "comentario": "Recorrido muy completo por el centro histórico."}
+                """.formatted(oferta);
+
+        http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Usuario-Id", turista).header("X-Rol", "TURISTA").content(opinion))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value("OPINION_NO_HABILITADA"));
+
+        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"idAviso": "pago-1", "tipo": "HABILITACION_OPINION", "turistaId": "%s", "ofertaId": "%s"}
+                        """.formatted(turista, oferta)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("APLICADO"));
+
+        String creada = http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Usuario-Id", turista).header("X-Rol", "TURISTA").content(opinion))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("EN_MODERACION"))
+                .andExpect(jsonPath("$.nombreOferta").value("Recorrido a pie por el Centro Histórico"))
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(creada, "$.id");
+        http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Usuario-Id", turista).header("X-Rol", "TURISTA").content(opinion))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("OPINION_DUPLICADA"));
+
+        http.perform(get("/ofertas/" + oferta + "/opiniones"))
+                .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
+        http.perform(get("/admin/moderacion/opiniones").param("size", "100")
+                        .header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006")
+                        .header("X-Rol", "ADMINISTRADOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[*].id", hasItem(id)));
+        http.perform(get("/internal/moderacion/opiniones/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.turistaId").value(turista));
+
+        String aprobar = """
+                {"idAviso": "moderacion-1", "tipo": "MODERACION_OPINION", "opinionId": "%s", "decision": "APROBAR"}
+                """.formatted(id);
+        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content(aprobar))
+                .andExpect(jsonPath("$.resultado").value("APLICADO"));
+        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content(aprobar))
+                .andExpect(jsonPath("$.resultado").value("DUPLICADO"));
+
+        http.perform(get("/ofertas/" + oferta + "/opiniones"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].id").value(id))
+                .andExpect(jsonPath("$.resumen.totalOpiniones").value(1))
+                .andExpect(jsonPath("$.resumen.promedioCalificacion").value(4.0));
+        http.perform(get("/turista/opiniones").header("X-Usuario-Id", turista).header("X-Rol", "TURISTA"))
+                .andExpect(jsonPath("$.contenido[0].estado").value("APROBADA"));
+
+        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"idAviso": "supresion-1", "tipo": "SUPRESION_TURISTA", "turistaId": "%s"}
+                        """.formatted(turista)))
+                .andExpect(jsonPath("$.resultado").value("APLICADO"));
+        http.perform(get("/ofertas/" + oferta + "/opiniones"))
+                .andExpect(jsonPath("$.resumen.totalOpiniones").value(0));
+        http.perform(get("/turista/opiniones").header("X-Usuario-Id", turista).header("X-Rol", "TURISTA"))
+                .andExpect(jsonPath("$.totalElementos").value(0));
+    }
+
+    @Test
+    @DisplayName("las opiniones de la precarga: 3 aprobadas en la caminata a Cabo San Juan, sin la rechazada")
+    void opinionesDeLaPrecarga() throws Exception {
+        http.perform(get("/ofertas/b00000000000000000000001/opiniones"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resumen.totalOpiniones").value(3))
+                .andExpect(jsonPath("$.resumen.promedioCalificacion").value(4.7))
+                .andExpect(jsonPath("$.contenido", hasSize(3)));
+        http.perform(get("/ofertas/b00000000000000000000016/opiniones"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
+    }
+
+    @Test
     @DisplayName("[Demostración] el guía completa su perfil, sube una foto de celular, se ve en la ficha de su oferta "
             + "y la quita")
     void perfilConFotos() throws Exception {

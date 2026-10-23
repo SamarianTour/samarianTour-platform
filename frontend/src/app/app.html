@@ -9,15 +9,33 @@
     <nav aria-label="Principal">
       <ul class="navegacion">
         <li>
-          <a routerLink="/" [class.activo]="!enPrestador()" [attr.aria-current]="enPrestador() ? null : 'page'">Catálogo</a>
+          <a routerLink="/" [class.activo]="seccion() === 'catalogo'" [attr.aria-current]="seccion() === 'catalogo' ? 'page' : null">
+            Catálogo
+          </a>
         </li>
+        @if (turista()) {
+          <li>
+            <a
+              routerLink="/mis-opiniones"
+              [class.activo]="seccion() === 'opiniones'"
+              [attr.aria-current]="seccion() === 'opiniones' ? 'page' : null"
+            >
+              Mis opiniones
+            </a>
+          </li>
+        }
         <li>
-          <a routerLink="/prestador/ofertas" [class.activo]="enPrestador()" [attr.aria-current]="enPrestador() ? 'page' : null">
+          <a
+            routerLink="/prestador/ofertas"
+            [class.activo]="seccion() === 'prestador'"
+            [attr.aria-current]="seccion() === 'prestador' ? 'page' : null"
+          >
             Soy prestador
           </a>
         </li>
       </ul>
     </nav>
+    <app-usuario-demo class="cabecera__usuario" />
   </div>
 </header>
 

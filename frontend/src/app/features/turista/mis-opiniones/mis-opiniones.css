@@ -1,0 +1,51 @@
+.mis-opiniones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mi-opinion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mi-opinion__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mi-opinion__fecha {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.mi-opinion__oferta {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.mi-opinion__oferta a {
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.mi-opinion__oferta a:hover {
+  color: var(--enlace);
+  text-decoration: underline;
+}
+
+.mi-opinion__comentario {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.mi-opinion .alerta {
+  margin: 0.25rem 0 0;
+}

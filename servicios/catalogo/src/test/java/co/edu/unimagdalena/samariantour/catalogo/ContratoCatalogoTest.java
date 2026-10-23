@@ -17,6 +17,14 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ZonaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.AvisoOpinionResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.MiOpinionResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.OpinionEnModeracionResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.OpinionPendienteResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.OpinionPublicaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.OpinionRequest;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.OpinionesOfertaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.ResumenOpinionesResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
- * API first: los controladores y los DTO del catálogo coinciden con el contrato
+ * API first: los controladores y los DTO del servicio, de los módulos catálogo y opiniones, coinciden con el contrato
  * {@code contratos/catalogo.openapi.yaml}. Si una ruta o un campo existe en un lado y no en el otro, esta prueba falla.
  */
 @SpringBootTest(properties = "spring.autoconfigure.exclude="
@@ -59,8 +67,9 @@ class ContratoCatalogoTest {
     /** La prueba corre con el módulo como directorio de trabajo; el contrato está en la raíz del repositorio. */
     private static final Path CONTRATO = Path.of("..", "..", "contratos", "catalogo.openapi.yaml");
     private static final Set<String> METODOS = Set.of("get", "post", "put", "patch", "delete");
-    private static final String PAQUETE_CONTROLADORES =
-            "co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest";
+    private static final Set<String> PAQUETES_CONTROLADORES = Set.of(
+            "co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest",
+            "co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest");
 
     @Autowired
     @Qualifier("requestMappingHandlerMapping")
@@ -99,6 +108,14 @@ class ContratoCatalogoTest {
                 arguments("ContenidoVersion", ContenidoVersionResponse.class),
                 arguments("OfertaPendiente", OfertaPendienteResponse.class),
                 arguments("OfertaEnModeracion", OfertaEnModeracionResponse.class),
+                arguments("OpinionRequest", OpinionRequest.class),
+                arguments("MiOpinion", MiOpinionResponse.class),
+                arguments("OpinionPublica", OpinionPublicaResponse.class),
+                arguments("ResumenOpiniones", ResumenOpinionesResponse.class),
+                arguments("OpinionesOferta", OpinionesOfertaResponse.class),
+                arguments("OpinionPendiente", OpinionPendienteResponse.class),
+                arguments("OpinionEnModeracion", OpinionEnModeracionResponse.class),
+                arguments("AvisoResultado", AvisoOpinionResponse.class),
                 arguments("PerfilRequest", PerfilRequest.class),
                 arguments("Foto", FotoResponse.class));
     }
@@ -106,7 +123,7 @@ class ContratoCatalogoTest {
     private Set<String> rutasDeLosControladores() {
         Set<String> resultado = new TreeSet<>();
         rutas.getHandlerMethods().forEach((RequestMappingInfo ruta, org.springframework.web.method.HandlerMethod metodo) -> {
-            if (metodo.getBeanType().getPackageName().equals(PAQUETE_CONTROLADORES)) {
+            if (PAQUETES_CONTROLADORES.contains(metodo.getBeanType().getPackageName())) {
                 ruta.getMethodsCondition().getMethods().forEach(verbo -> ruta.getPatternValues()
                         .forEach(patron -> resultado.add(verbo + " " + patron)));
             }

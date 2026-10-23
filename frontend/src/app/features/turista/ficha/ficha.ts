@@ -9,6 +9,7 @@ import { DuracionPipe } from '../../../shared/duracion.pipe';
 import { MODALIDAD, NIVEL_ESFUERZO, TIPO_ACTIVIDAD, TIPO_OFERTA } from '../../../shared/etiquetas';
 import { ICONO_DE_TIPO, Icono } from '../../../shared/icono/icono';
 import { Mapa } from '../../../shared/mapa/mapa';
+import { OpinionesDeLaOferta } from './opiniones/opiniones-oferta';
 import { PrecioPipe } from '../../../shared/precio.pipe';
 
 type Estado =
@@ -17,10 +18,13 @@ type Estado =
   | { tipo: 'no-disponible' }
   | { tipo: 'error'; mensaje: string };
 
-/** Ficha pública de una oferta, con su zona, el perfil del prestador y el mapa (RF-20, RF-24, RF-25). */
+/**
+ * Ficha pública de una oferta, con su zona, el perfil del prestador, el mapa (RF-20, RF-24, RF-25) y sus opiniones
+ * (RF-59), que se piden a su propia ruta porque el catálogo no depende del módulo de opiniones (DC-40).
+ */
 @Component({
   selector: 'app-ficha',
-  imports: [RouterLink, PrecioPipe, DuracionPipe, Mapa, Icono],
+  imports: [RouterLink, PrecioPipe, DuracionPipe, Mapa, Icono, OpinionesDeLaOferta],
   templateUrl: './ficha.html',
   styleUrl: './ficha.css',
 })

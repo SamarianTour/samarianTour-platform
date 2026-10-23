@@ -1,6 +1,6 @@
 # Frontend de Samarian Tour
 
-Aplicación Angular con las funciones del catálogo contra la API real: el turista busca ofertas y ve su ficha con mapa; el prestador publica, ve sus ofertas, las edita y las retira.
+Aplicación Angular con las funciones del catálogo contra la API real: el turista busca ofertas, ve su ficha con mapa y sus opiniones, y opina sobre las que pagó; el prestador publica, ve sus ofertas, las edita y las retira.
 
 Angular 22 con componentes standalone, signals, formularios reactivos y carga diferida por funcionalidad. El mapa usa Leaflet con OpenStreetMap, sin API key.
 
@@ -36,20 +36,21 @@ El archivo generado está versionado para que la imagen de Docker se construya s
 ```
 src/app
 ├── core/                    lo que existe una sola vez en la aplicación
-│   ├── api/                 tipos generados, servicios HTTP del catálogo y del prestador
+│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador y de opiniones
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
-│   ├── identidad/           prestador demo elegido e interceptor que lo envía a /prestador/**
+│   ├── identidad/           usuario demo elegido e interceptor que lo envía a /prestador/** o a /turista/**
 │   └── avisos/              mensajes breves de confirmación
-├── shared/                  piezas reutilizables: mapa, iconos, paginación, diálogo de confirmación, pipes y textos
+├── shared/                  piezas reutilizables: mapa, iconos, estrellas, selector del usuario demo, paginación, diálogo de confirmación, pipes y textos
 └── features/
-    ├── turista/             catálogo (/) y ficha (/ofertas/:id)
+    ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id) y mis opiniones (/mis-opiniones)
     └── prestador/           panel, mis ofertas, detalle y formulario de publicar o editar
 ```
 
 | Ruta | Pantalla |
 |---|---|
 | `/` | Catálogo con filtros en los query params y paginación de 12 |
-| `/ofertas/:id` | Ficha con zona, perfil del prestador y mapa |
+| `/ofertas/:id` | Ficha con zona, perfil del prestador, mapa y opiniones; con un turista elegido, "Dejar una opinión" |
+| `/mis-opiniones` | Opiniones del turista elegido, con su estado y el motivo si fue rechazada |
 | `/prestador/ofertas` | Mis ofertas, con su estado y las acciones |
 | `/prestador/ofertas/nueva` | Publicar una oferta |
 | `/prestador/ofertas/:id` | Detalle: versión publicada y versión pendiente |
@@ -61,7 +62,9 @@ Los colores, la tipografía y las piezas comunes (tarjetas, etiquetas, botones, 
 
 ## Identidad provisional
 
-No hay inicio de sesión. El panel del prestador tiene el selector **Prestador demo** con los cinco prestadores de los datos de demostración; el elegido se guarda en `localStorage`. Un interceptor agrega `X-Usuario-Id`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador` solo a las peticiones a `/api/catalogo/prestador/**`. Cuando exista el JWT del núcleo, se reemplazan `core/identidad` y el selector.
+No hay inicio de sesión. La cabecera tiene el selector **Usuario demo** con los dos turistas (Laura y Andrés) y los cinco prestadores de los datos de demostración; el elegido se guarda en `localStorage`. Está en la cabecera y no en el panel del prestador porque el turista lo necesita en la ficha y en "Mis opiniones".
+
+Un interceptor agrega la identidad solo a las rutas que la exigen y solo si el usuario tiene ese rol: `X-Usuario-Id`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador` a `/api/catalogo/prestador/**`, y `X-Usuario-Id` y `X-Rol: TURISTA` a `/api/catalogo/turista/**`. Con un turista elegido, el panel del prestador pide elegir un prestador; con un prestador elegido, la ficha pide elegir un turista para opinar. Cuando exista el JWT del núcleo, se reemplazan `core/identidad` y el selector.
 
 ## Errores de la API
 
