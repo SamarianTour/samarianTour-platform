@@ -4,8 +4,8 @@ info:
   version: 0.1.0
   description: |
     API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
-    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias) y los avisos internos
-    del núcleo.
+    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias), los avisos internos
+    del núcleo y las consultas internas del núcleo y de la recomendación.
 
     - Las rutas no incluyen el prefijo `/api/catalogo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
@@ -21,7 +21,8 @@ tags:
   - name: Prestador
     description: Ofertas del prestador. Exige la identidad con el rol PRESTADOR.
   - name: Interno
-    description: Avisos del núcleo. Nginx no expone estas rutas hacia afuera.
+    description: |
+      Avisos del núcleo y consultas del núcleo y de la recomendación. Nginx no expone estas rutas hacia afuera.
 
 paths:
   /ofertas:
@@ -303,6 +304,60 @@ paths:
           $ref: '#/components/responses/DatoInvalido'
         '409':
           $ref: '#/components/responses/ConflictoConcurrencia'
+
+  /internal/ofertas:
+    get:
+      tags: [Interno]
+      operationId: consultarOfertasVisibles
+      summary: Ofertas visibles para la recomendación (RF-26, RF-29, RET-02)
+      description: |
+        Base de conocimiento cerrada de la recomendación (DC-36). Aplica la misma visibilidad, el mismo orden (por
+        precio de referencia y luego por id) y la misma paginación que la búsqueda pública: el catálogo no prioriza
+        a ningún prestador, y la rotación entre ofertas de igual afinidad le corresponde a la recomendación.
+        No incluye calificaciones, comisión ni tamaño del prestador.
+      parameters:
+        - name: tipo
+          in: query
+          schema:
+            $ref: '#/components/schemas/TipoOferta'
+        - name: zonaId
+          in: query
+          schema:
+            type: string
+          example: a00000000000000000000005
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Página de ofertas visibles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaOfertasVisibles'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+
+  /internal/ofertas/{id}:
+    get:
+      tags: [Interno]
+      operationId: consultarOfertaInterna
+      summary: Oferta que el turista pide en una solicitud (RF-30)
+      description: |
+        El núcleo la consulta al crear la solicitud, con corte de circuito de 3 s (ADR-04), y copia el nombre, el
+        tipo, la zona y el prestador (DC-35). Solo se puede pedir una oferta visible: con la misma regla que la ficha,
+        una retirada, sin versión aprobada, de un prestador con el RNT inactivo o un paquete con alguna actividad no
+        visible responden 404. El precio no va: lo registra el operador al atender la solicitud (RF-37).
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+      responses:
+        '200':
+          description: La oferta, según su versión publicada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfertaInterna'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
 
 components:
   parameters:
@@ -937,6 +992,95 @@ components:
           description: |
             `APLICADO`: cambió el catálogo. `IGNORADO`: llegó tarde o ya no aplica. `DUPLICADO`: ya se había procesado.
           enum: [APLICADO, IGNORADO, DUPLICADO]
+
+    OfertaInterna:
+      type: object
+      description: Lo que la solicitud copia de la oferta y lo que valida al crearse (RF-30, DC-35).
+      required: [id, tipo, nombre, prestadorId, zonaId, capacidadMaxima]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+        prestadorId:
+          type: string
+          format: uuid
+        zonaId:
+          type: string
+        horariosSalida:
+          type: array
+          description: Horas entre las que el turista elige la de salida. Solo actividad y paquete.
+          items:
+            $ref: '#/components/schemas/Hora'
+        capacidadMaxima:
+          type: integer
+          minimum: 1
+          description: Máximo de personas por solicitud.
+
+    OfertaVisible:
+      type: object
+      description: |
+        Una oferta visible con los datos de los criterios explícitos de la recomendación (DC-36): tipo de oferta, tipo
+        de actividad, zona, accesibilidad y precio. `prestadorId` sirve para el registro de exposición (RET-02).
+      required: [id, tipo, nombre, descripcion, prestadorId, zonaId, zonaAltaAfluencia, precioReferencia,
+                 unidadPrecio, tiposActividad, accesibleSillaRuedas]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        prestadorId:
+          type: string
+          format: uuid
+        zonaId:
+          type: string
+        zonaAltaAfluencia:
+          type: boolean
+          description: Marca de alta afluencia de la zona (RF-29); false si la zona ya no existe.
+        precioReferencia:
+          type: number
+          description: Precio informativo y no vinculante, en pesos colombianos.
+        unidadPrecio:
+          type: string
+          description: Según el tipo de oferta (DC-22).
+          enum: [por persona, por noche y unidad, promedio por persona]
+        tiposActividad:
+          type: array
+          description: |
+            El de una actividad, los de las actividades de un paquete (DC-24) y ninguno para alojamiento y restaurante.
+          items:
+            $ref: '#/components/schemas/TipoActividad'
+        nivelEsfuerzo:
+          $ref: '#/components/schemas/NivelEsfuerzo'
+        accesibleSillaRuedas:
+          type: boolean
+          description: Un paquete es accesible solo si todas sus actividades lo son (RF-17).
+
+    PaginaOfertasVisibles:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfertaVisible'
+        pagina:
+          type: integer
+          description: La primera es la 0.
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int64
 
     Problema:
       type: object

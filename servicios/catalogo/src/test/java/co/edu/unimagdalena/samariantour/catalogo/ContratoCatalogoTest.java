@@ -4,9 +4,11 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.AvisoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.CoordenadaDto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.FichaOfertaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaInternaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPrestadorResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaVisibleResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ZonaResponse;
@@ -86,7 +88,9 @@ class ContratoCatalogoTest {
                 arguments("OfertaRequest", OfertaRequest.class),
                 arguments("OfertaPrestador", OfertaPrestadorResponse.class),
                 arguments("Version", VersionResponse.class),
-                arguments("AvisoResultado", AvisoResponse.class));
+                arguments("AvisoResultado", AvisoResponse.class),
+                arguments("OfertaInterna", OfertaInternaResponse.class),
+                arguments("OfertaVisible", OfertaVisibleResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {

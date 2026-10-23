@@ -168,6 +168,50 @@ class DemostracionApiTest {
     }
 
     @Test
+    @DisplayName("el núcleo consulta una oferta visible con su versión aprobada; una sin aprobar o sin RNT da 404")
+    void consultaInternaDelNucleo() throws Exception {
+        http.perform(get("/internal/ofertas/b00000000000000000000001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Caminata a Cabo San Juan del Guía"))
+                .andExpect(jsonPath("$.prestadorId").value("10000000-0000-0000-0000-000000000001"))
+                .andExpect(jsonPath("$.zonaId").value("a00000000000000000000005"))
+                .andExpect(jsonPath("$.horariosSalida", contains("07:00", "08:00")))
+                .andExpect(jsonPath("$.capacidadMaxima").value(12));
+        http.perform(get("/internal/ofertas/b00000000000000000000013"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipo").value("RESTAURANTE"))
+                .andExpect(jsonPath("$.horariosSalida").doesNotExist());
+        http.perform(get("/internal/ofertas/b00000000000000000000017"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
+        http.perform(get("/internal/ofertas/b00000000000000000000016"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("la recomendación lee las mismas ofertas que la búsqueda, con la alta afluencia de su zona (RF-29)")
+    void ofertasVisiblesParaLaRecomendacion() throws Exception {
+        String busqueda = http.perform(get("/ofertas").param("size", "100"))
+                .andReturn().getResponse().getContentAsString();
+        int visibles = JsonPath.read(busqueda, "$.totalElementos");
+        http.perform(get("/internal/ofertas").param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElementos").value(visibles))
+                .andExpect(jsonPath("$.contenido[*].id", not(hasItem("b00000000000000000000016"))));
+
+        http.perform(get("/internal/ofertas").param("zonaId", "a00000000000000000000005").param("tipo", "PAQUETE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido", hasSize(1)))
+                .andExpect(jsonPath("$.contenido[0].id").value("b00000000000000000000008"))
+                .andExpect(jsonPath("$.contenido[0].zonaAltaAfluencia").value(true))
+                .andExpect(jsonPath("$.contenido[0].tiposActividad", contains("SENDERISMO", "BUCEO_SNORKEL")))
+                .andExpect(jsonPath("$.contenido[0].nivelEsfuerzo").value("MODERADO"));
+        http.perform(get("/internal/ofertas").param("zonaId", "a00000000000000000000001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[*].zonaAltaAfluencia", not(hasItem(true))));
+    }
+
+    @Test
     @DisplayName("las zonas de la precarga se listan ordenadas por nombre")
     void zonas() throws Exception {
         http.perform(get("/zonas"))

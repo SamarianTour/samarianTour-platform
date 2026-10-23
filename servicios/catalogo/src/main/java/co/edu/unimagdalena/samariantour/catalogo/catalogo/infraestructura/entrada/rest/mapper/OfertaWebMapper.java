@@ -92,7 +92,7 @@ public final class OfertaWebMapper {
                 oferta.pendiente().map(OfertaWebMapper::aVersionResponse).orElse(null));
     }
 
-    private static <T> PaginaResponse<T> aPaginaResponse(Pagina<T> pagina) {
+    static <T> PaginaResponse<T> aPaginaResponse(Pagina<T> pagina) {
         return new PaginaResponse<>(pagina.contenido(), pagina.paginacion().pagina(), pagina.paginacion().tamano(),
                 pagina.totalElementos(), pagina.totalPaginas());
     }
