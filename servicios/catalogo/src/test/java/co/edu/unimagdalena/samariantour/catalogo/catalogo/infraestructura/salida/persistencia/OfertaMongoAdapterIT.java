@@ -147,6 +147,17 @@ class OfertaMongoAdapterIT extends BasePersistenciaMongo implements ContratoOfer
             assertThat(plan.toJson()).contains("ofertas_del_prestador").doesNotContain("COLLSCAN");
         }
 
+        @Test
+        @DisplayName("listar las ofertas en moderación usa el índice parcial en_moderacion (DC-38)")
+        void ofertasEnModeracion() {
+            Document plan = mongo.getCollection(OfertaDocument.COLECCION)
+                    .find(OfertaMongoAdapter.enModeracion())
+                    .sort(new Document(OfertaMongoAdapter.PENDIENTE_ENVIADA_EN, 1).append("_id", 1))
+                    .explain();
+
+            assertThat(plan.toJson()).contains("en_moderacion").doesNotContain("COLLSCAN");
+        }
+
         private String planDe(CriteriosBusqueda criterios) {
             ObjectId zonaId = criterios.zonaId() == null ? null : new ObjectId(criterios.zonaId());
             return mongo.getCollection(OfertaDocument.COLECCION)

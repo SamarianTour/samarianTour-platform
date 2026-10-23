@@ -23,6 +23,8 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
  *   <li>{@code busqueda_precio}: para la búsqueda que no filtra por tipo; ordena por precio sin recorrer todo.</li>
  *   <li>{@code ofertas_del_prestador}: para el {@code updateMany} del RNT y para listar las ofertas del prestador
  *       en orden de id.</li>
+ *   <li>{@code en_moderacion}: parcial, solo con las ofertas en moderación, para listarlas de la más antigua a la
+ *       más reciente (RF-79, DC-38).</li>
  *   <li>{@code perfil_por_prestador}: único, un perfil por prestador.</li>
  * </ul>
  *
@@ -62,6 +64,11 @@ public class IndicesMongo implements InitializingBean {
                 .named("ofertas_del_prestador")
                 .on(PRESTADOR_ID, Sort.Direction.ASC)
                 .on("_id", Sort.Direction.ASC));
+        ofertas.createIndex(new Index()
+                .named("en_moderacion")
+                .on(OfertaMongoAdapter.PENDIENTE_ENVIADA_EN, Sort.Direction.ASC)
+                .on("_id", Sort.Direction.ASC)
+                .partial(PartialIndexFilter.of(OfertaMongoAdapter.enModeracion())));
         mongo.indexOps(PerfilDocument.class).createIndex(new Index()
                 .named("perfil_por_prestador")
                 .on(PerfilDocument.PRESTADOR_ID, Sort.Direction.ASC)

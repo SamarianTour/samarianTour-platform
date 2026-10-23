@@ -119,6 +119,16 @@ class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
     }
 
     @Override
+    public Pagina<Oferta> buscarEnModeracion(Paginacion paginacion) {
+        List<Oferta> resultado = ofertas.values().stream()
+                .filter(Oferta::estaEnModeracion)
+                .sorted(Comparator.comparing((Oferta oferta) -> oferta.pendiente().orElseThrow().moderacion().enviadaEn())
+                        .thenComparing(Oferta::id))
+                .toList();
+        return paginar(resultado, paginacion);
+    }
+
+    @Override
     public void actualizarRntPrestador(UUID prestadorId, boolean rntActivo, long version) {
         ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId) && oferta.versionHabilitacion() < version
                 ? CopiaEnPrueba.de(oferta, rntActivo, version, oferta.revision() + 1)

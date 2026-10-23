@@ -50,6 +50,12 @@ public interface OfertaRepositoryPort {
     Pagina<Oferta> buscarPorPrestador(UUID prestadorId, Paginacion paginacion);
 
     /**
+     * Ofertas que esperan la decisión del administrador ({@link Oferta#estaEnModeracion()}, RF-79), de la versión
+     * enviada hace más tiempo a la más reciente, y luego por id.
+     */
+    Pagina<Oferta> buscarEnModeracion(Paginacion paginacion);
+
+    /**
      * Copia la habilitación RNT en las ofertas del prestador cuya versionHabilitacion es menor que {@code version},
      * y les sube la revisión. Solo avanza: una actualización atrasada no cambia nada (ADR-05).
      */

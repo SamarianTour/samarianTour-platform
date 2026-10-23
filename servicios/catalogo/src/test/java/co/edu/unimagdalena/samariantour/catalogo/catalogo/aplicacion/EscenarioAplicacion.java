@@ -61,6 +61,7 @@ class EscenarioAplicacion {
     final ConsultarOfertaInternaService consultaInterna = new ConsultarOfertaInternaService(ofertas);
     final ConsultarOfertasVisiblesService visibles = new ConsultarOfertasVisiblesService(ofertas, zonas);
     final ConsultarZonasService consultaZonas = new ConsultarZonasService(zonas);
+    final ListarPendientesModeracionService moderacion = new ListarPendientesModeracionService(ofertas);
     final AplicarAvisoNucleoService avisos = new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados,
             reloj, reintento);
 
