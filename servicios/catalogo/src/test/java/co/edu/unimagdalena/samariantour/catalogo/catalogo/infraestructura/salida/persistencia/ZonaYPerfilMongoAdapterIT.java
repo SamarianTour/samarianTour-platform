@@ -27,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Los adaptadores de solo lectura, zonas y perfiles, contra un MongoDB real con los datos de demostración.
+ * Los adaptadores de zonas y perfiles contra un MongoDB real con los datos de demostración. El guardado de los
+ * perfiles lo prueba el contrato común, en PerfilMongoAdapterIT.
  */
 class ZonaYPerfilMongoAdapterIT extends BasePersistenciaMongo {
 
@@ -47,7 +48,7 @@ class ZonaYPerfilMongoAdapterIT extends BasePersistenciaMongo {
         indices.crear();
         mongo.insertAll(DatosSantaMarta.zonas().stream().map(ZonaMongoMapper::aDocumento).toList());
         mongo.insertAll(DatosSantaMarta.perfiles().stream()
-                .map(perfil -> PerfilMongoMapper.aDocumento(new ObjectId(), perfil))
+                .map(perfil -> PerfilMongoMapper.aDocumento(new ObjectId(), perfil, 1))
                 .toList());
     }
 
@@ -98,7 +99,8 @@ class ZonaYPerfilMongoAdapterIT extends BasePersistenciaMongo {
             assertThat(perfil.sitioWeb()).isNull();
         });
         for (PerfilPublico original : DatosSantaMarta.perfiles()) {
-            assertThat(perfiles.buscarPorPrestador(original.prestadorId())).contains(original);
+            assertThat(perfiles.buscarPorPrestador(original.prestadorId())).get()
+                    .usingRecursiveComparison().ignoringFields("revision").isEqualTo(original);
         }
         assertThat(perfiles.buscarPorPrestador(UUID.randomUUID())).isEmpty();
     }
@@ -108,7 +110,7 @@ class ZonaYPerfilMongoAdapterIT extends BasePersistenciaMongo {
     void unPerfilPorPrestador() {
         PerfilPublico otro = new PerfilPublico(GUIA, null, "Otro perfil", List.of(), null, null, List.of());
 
-        assertThatThrownBy(() -> mongo.insert(PerfilMongoMapper.aDocumento(new ObjectId(), otro)))
+        assertThatThrownBy(() -> mongo.insert(PerfilMongoMapper.aDocumento(new ObjectId(), otro, 1)))
                 .isInstanceOf(DuplicateKeyException.class);
     }
 }

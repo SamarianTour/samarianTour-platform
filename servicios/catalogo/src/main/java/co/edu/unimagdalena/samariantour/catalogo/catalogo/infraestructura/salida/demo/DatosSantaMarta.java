@@ -114,12 +114,14 @@ public final class DatosSantaMarta {
                 new PrestadorCatalogo(AGENCIA_SIN_RNT, false, 2));
     }
 
+    /**
+     * Los perfiles arrancan sin fotos: el prestador las sube desde su panel y quedan en el almacenamiento de fotos
+     * (DC-39).
+     */
     public static List<PerfilPublico> perfiles() {
         return List.of(
                 new PerfilPublico(AGENCIA, "Mar y Selva Expediciones",
-                        "Agencia operadora local con salidas diarias al Tayrona y a Taganga",
-                        List.of("https://www.example.com/fotos/agencia-1.jpg",
-                                "https://www.example.com/fotos/agencia-2.jpg"),
+                        "Agencia operadora local con salidas diarias al Tayrona y a Taganga", List.of(),
                         "Lunes a sábado, de 7:00 a 18:00", "https://www.example.com/agencia",
                         List.of("https://www.example.com/redes/agencia")),
                 // El guía solo completó la descripción: los demás campos del perfil son opcionales (DC-26).
@@ -127,10 +129,8 @@ public final class DatosSantaMarta {
                         "Guía independiente de Minca, especializado en aves y cultura cafetera",
                         List.of(), null, null, List.of()),
                 new PerfilPublico(HOTEL, "Posadas Sierra y Mar", "Alojamientos familiares en la costa y en la Sierra",
-                        List.of("https://www.example.com/fotos/alojamiento-1.jpg"), "Recepción las 24 horas",
-                        "https://www.example.com/alojamientos", List.of()),
-                new PerfilPublico(RESTAURANTE, "Fogón del Caribe", "Cocina del Caribe con pesca del día",
-                        List.of("https://www.example.com/fotos/restaurante-1.jpg"),
+                        List.of(), "Recepción las 24 horas", "https://www.example.com/alojamientos", List.of()),
+                new PerfilPublico(RESTAURANTE, "Fogón del Caribe", "Cocina del Caribe con pesca del día", List.of(),
                         "Todos los días, de 12:00 a 22:00", null,
                         List.of("https://www.example.com/redes/restaurante")));
     }

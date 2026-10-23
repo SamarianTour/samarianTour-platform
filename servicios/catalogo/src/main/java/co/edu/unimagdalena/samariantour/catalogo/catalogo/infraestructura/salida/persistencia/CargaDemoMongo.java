@@ -92,7 +92,8 @@ public class CargaDemoMongo implements ApplicationRunner {
     private static List<PerfilDocument> perfiles() {
         List<PerfilDocument> documentos = new ArrayList<>();
         for (PerfilPublico perfil : DatosSantaMarta.perfiles()) {
-            documentos.add(PerfilMongoMapper.aDocumento(idDePerfil(documentos.size() + 1), perfil));
+            documentos.add(PerfilMongoMapper.aDocumento(idDePerfil(documentos.size() + 1), perfil,
+                    PerfilPublico.REVISION_NUEVA + 1));
         }
         return documentos;
     }

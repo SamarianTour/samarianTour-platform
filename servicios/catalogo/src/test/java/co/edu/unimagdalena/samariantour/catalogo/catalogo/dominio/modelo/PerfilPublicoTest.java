@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,11 +26,13 @@ class PerfilPublicoTest {
     }
 
     @Test
-    @DisplayName("la descripción es obligatoria")
+    @DisplayName("la descripción es obligatoria y no tiene límite de palabras")
     void descripcionObligatoria() {
         assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, "  ", null, null, null, null))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("descripcion");
+        String larga = "palabra ".repeat(200).strip();
+        assertThat(new PerfilPublico(PRESTADOR, null, larga, null, null, null, null).descripcion()).isEqualTo(larga);
     }
 
     @Test
@@ -43,6 +46,7 @@ class PerfilPublicoTest {
         assertThat(perfil.sitioWeb()).isNull();
         assertThat(perfil.fotos()).isEmpty();
         assertThat(perfil.redesSociales()).isEmpty();
+        assertThat(perfil.revision()).isEqualTo(PerfilPublico.REVISION_NUEVA);
     }
 
     @Test
@@ -55,14 +59,12 @@ class PerfilPublicoTest {
     }
 
     @Test
-    @DisplayName("acepta URLs http y https en el sitio web, las redes sociales y las fotos")
+    @DisplayName("acepta URLs http y https en el sitio web y las redes sociales")
     void urlsValidas() {
-        PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION,
-                List.of("https://ejemplo.co/fotos/1.jpg"), "Lunes a sábado", "http://ejemplo.co",
-                List.of("https://red-social.ejemplo.co/guias-minca"));
+        PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, "Lunes a sábado",
+                "http://ejemplo.co", List.of("https://red-social.ejemplo.co/guias-minca"));
 
         assertThat(perfil.sitioWeb()).isEqualTo("http://ejemplo.co");
-        assertThat(perfil.fotos()).containsExactly("https://ejemplo.co/fotos/1.jpg");
         assertThat(perfil.redesSociales()).containsExactly("https://red-social.ejemplo.co/guias-minca");
     }
 
@@ -73,9 +75,6 @@ class PerfilPublicoTest {
         assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, null, valor, null))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("sitioWeb");
-        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, List.of(valor), null, null, null))
-                .isInstanceOf(DatoInvalidoException.class)
-                .hasMessageContaining("fotos");
         assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, null, null, List.of(valor)))
                 .isInstanceOf(DatoInvalidoException.class)
                 .hasMessageContaining("redesSociales");
@@ -84,14 +83,60 @@ class PerfilPublicoTest {
     @Test
     @DisplayName("las listas del perfil no se pueden modificar desde fuera")
     void listasInmutables() {
-        List<String> fotos = new ArrayList<>(List.of("https://ejemplo.co/foto-1.jpg"));
+        List<Foto> fotos = new ArrayList<>(List.of(Foto.nueva()));
         PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION, fotos, null, null,
                 List.of("https://ejemplo.co/red-social"));
 
-        fotos.add("https://ejemplo.co/foto-2.jpg");
+        fotos.add(Foto.nueva());
 
-        assertThat(perfil.fotos()).containsExactly("https://ejemplo.co/foto-1.jpg");
+        assertThat(perfil.fotos()).hasSize(1);
         assertThatThrownBy(() -> perfil.redesSociales().add("https://ejemplo.co/otra"))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("agrega las fotos al final, hasta 6, y quita la que se le indica (DC-39)")
+    void fotos() {
+        PerfilPublico perfil = new PerfilPublico(PRESTADOR, null, DESCRIPCION, null, null, null, null);
+        List<Foto> subidas = IntStream.range(0, PerfilPublico.MAXIMO_FOTOS).mapToObj(i -> Foto.nueva()).toList();
+        for (Foto foto : subidas) {
+            perfil = perfil.agregarFoto(foto);
+        }
+
+        assertThat(perfil.fotos()).containsExactlyElementsOf(subidas);
+        PerfilPublico lleno = perfil;
+        assertThatThrownBy(() -> lleno.agregarFoto(Foto.nueva()))
+                .isInstanceOf(DatoInvalidoException.class)
+                .hasMessageContaining("6 fotos");
+
+        PerfilPublico sinLaSegunda = perfil.quitarFoto(subidas.get(1));
+        assertThat(sinLaSegunda.fotos()).hasSize(5).doesNotContain(subidas.get(1));
+        assertThat(sinLaSegunda.tieneFoto(subidas.get(0))).isTrue();
+        assertThat(sinLaSegunda.quitarFoto(subidas.get(1))).isEqualTo(sinLaSegunda);
+    }
+
+    @Test
+    @DisplayName("una foto no puede estar dos veces y no se aceptan más de 6 al reconstruir el perfil")
+    void fotosInvalidas() {
+        Foto foto = Foto.nueva();
+        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, List.of(foto, foto), null, null,
+                null)).isInstanceOf(IllegalArgumentException.class);
+        List<Foto> siete = IntStream.range(0, 7).mapToObj(i -> Foto.nueva()).toList();
+        assertThatThrownBy(() -> new PerfilPublico(PRESTADOR, null, DESCRIPCION, siete, null, null, null))
+                .isInstanceOf(DatoInvalidoException.class);
+    }
+
+    @Test
+    @DisplayName("cambiar los datos conserva las fotos y la revisión con que se leyó")
+    void conDatos() {
+        Foto foto = Foto.nueva();
+        PerfilPublico leido = new PerfilPublico(PRESTADOR, "Antes", DESCRIPCION, List.of(foto), null, null, null, 4);
+
+        PerfilPublico cambiado = leido.conDatos("Después", "Otra descripción", "Todos los días", null, List.of());
+
+        assertThat(cambiado.nombreComercial()).isEqualTo("Después");
+        assertThat(cambiado.descripcion()).isEqualTo("Otra descripción");
+        assertThat(cambiado.fotos()).containsExactly(foto);
+        assertThat(cambiado.revision()).isEqualTo(4);
     }
 }

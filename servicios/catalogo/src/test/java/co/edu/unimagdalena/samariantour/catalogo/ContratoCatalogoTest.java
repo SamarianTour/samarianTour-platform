@@ -5,6 +5,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ContenidoVersionResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.CoordenadaDto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.FichaOfertaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.FotoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaEnModeracionResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaInternaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPendienteResponse;
@@ -13,6 +14,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaVisibleResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ZonaResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -96,7 +98,9 @@ class ContratoCatalogoTest {
                 arguments("OfertaVisible", OfertaVisibleResponse.class),
                 arguments("ContenidoVersion", ContenidoVersionResponse.class),
                 arguments("OfertaPendiente", OfertaPendienteResponse.class),
-                arguments("OfertaEnModeracion", OfertaEnModeracionResponse.class));
+                arguments("OfertaEnModeracion", OfertaEnModeracionResponse.class),
+                arguments("PerfilRequest", PerfilRequest.class),
+                arguments("Foto", FotoResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {

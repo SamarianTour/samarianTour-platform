@@ -73,7 +73,8 @@ class CargaDemoMongoIT extends BasePersistenciaMongo {
             });
         }
         for (PerfilPublico perfil : DatosSantaMarta.perfiles()) {
-            assertThat(perfiles.buscarPorPrestador(perfil.prestadorId())).contains(perfil);
+            assertThat(perfiles.buscarPorPrestador(perfil.prestadorId())).get()
+                    .usingRecursiveComparison().ignoringFields("revision").isEqualTo(perfil);
         }
         assertThat(perfiles.buscarPorPrestador(AGENCIA)).map(PerfilPublico::nombreComercial)
                 .contains("Mar y Selva Expediciones");
