@@ -1,0 +1,30 @@
+# Prueba de carga de la búsqueda (QAS-07, DC-48). Se suma a docker-compose.yml y corre como un proyecto aparte,
+# con sus propios volúmenes: las 5.000 ofertas sintéticas nunca llegan a la base de la demostración.
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.carga.yml up -d --build --wait
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.carga.yml run --rm k6
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.carga.yml down -v
+name: samarian-carga
+
+services:
+  catalogo:
+    environment:
+      # carga: agrega el catálogo sintético después de los datos de la demostración.
+      SPRING_PROFILES_ACTIVE: mongo,minio,demo,carga
+      CATALOGO_CARGA_OFERTAS: ${CARGA_OFERTAS:-5000}
+
+  # Solo corre con "run": el perfil evita que "up" lo arranque junto con el resto.
+  k6:
+    image: grafana/k6:1.8.1
+    profiles: ["prueba"]
+    command: ["run", "/scripts/busqueda-catalogo.js"]
+    environment:
+      USUARIOS: ${USUARIOS:-500}
+      SUBIDA: ${SUBIDA:-1m}
+      DURACION: ${DURACION:-10m}
+    volumes:
+      - ./carga:/scripts:ro
+      # El resumen completo queda en infra/carga/resultados/resumen.json.
+      - ./carga/resultados:/resultados
+    depends_on:
+      nginx:
+        condition: service_started

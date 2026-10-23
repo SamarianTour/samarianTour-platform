@@ -5,3 +5,6 @@ target/
 *.iml
 .vscode/
 .DS_Store
+
+# Resultados de la prueba de carga (DC-48): se resumen en docs, no se versionan
+infra/carga/resultados/
