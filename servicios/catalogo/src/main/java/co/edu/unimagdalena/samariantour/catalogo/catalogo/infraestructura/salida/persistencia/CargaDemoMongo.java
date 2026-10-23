@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
@@ -37,6 +39,8 @@ import java.util.List;
  */
 @Component
 @Profile("mongo & demo")
+// Antes que la carga de volumen (DC-48): si esa llenara primero la colección de ofertas, esta no cargaría las demo.
+@Order(Ordered.LOWEST_PRECEDENCE - 1)
 public class CargaDemoMongo implements ApplicationRunner {
 
     private static final Logger LOG = LoggerFactory.getLogger(CargaDemoMongo.class);

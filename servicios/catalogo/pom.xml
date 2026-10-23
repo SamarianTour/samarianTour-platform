@@ -25,9 +25,14 @@
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
         </dependency>
         <dependency>
-            <!-- Solo se expone /actuator/health, para el healthcheck de Docker Compose -->
+            <!-- Solo se exponen /actuator/health, para el healthcheck de Docker Compose, y /actuator/prometheus -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Métricas de latencia y errores en formato Prometheus, para medir el p95 en el servidor (QAS-07) -->
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
             <!-- Almacenamiento de las fotos con el perfil minio (FileStoragePort, DC-39) -->
