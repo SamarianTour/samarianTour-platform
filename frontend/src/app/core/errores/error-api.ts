@@ -37,6 +37,8 @@ export const MENSAJES: Record<CodigoError, string> = {
   OFERTA_NO_ENCONTRADA: 'Esta oferta ya no está disponible.',
   OFERTA_NO_EDITABLE: 'Esta oferta está retirada y ya no se puede editar.',
   CONFLICTO_CONCURRENCIA: 'Alguien más modificó esta oferta, vuelve a intentarlo.',
+  PERFIL_NO_ENCONTRADO: 'Todavía no tienes perfil público. Guarda primero tu descripción.',
+  FOTO_NO_ENCONTRADA: 'Esta foto ya no está disponible.',
 };
 
 export const MENSAJE_SIN_CONEXION = 'No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.';

@@ -6,7 +6,6 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Modalid
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
-import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Validaciones;
@@ -25,7 +24,6 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PaginaResponse;
-import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
 
 import java.util.List;
@@ -83,7 +81,7 @@ public final class OfertaWebMapper {
                 version instanceof VersionAlojamiento alojamiento
                         ? new DetalleAlojamiento(alojamiento.tipoUnidad()) : null,
                 ficha.zona().map(ZonaWebMapper::aRespuesta).orElse(null),
-                ficha.perfil().map(OfertaWebMapper::aPerfil).orElse(null));
+                ficha.perfil().map(PerfilWebMapper::aRespuesta).orElse(null));
     }
 
     public static OfertaPrestadorResponse aRespuestaPrestador(Oferta oferta) {
@@ -134,11 +132,6 @@ public final class OfertaWebMapper {
     /** Si el prestador no dice que la oferta es accesible, no se anuncia como accesible. */
     private static boolean esAccesible(OfertaRequest peticion) {
         return Boolean.TRUE.equals(peticion.accesibleSillaRuedas());
-    }
-
-    private static PerfilPublicoResponse aPerfil(PerfilPublico perfil) {
-        return new PerfilPublicoResponse(perfil.nombreComercial(), perfil.descripcion(), perfil.fotos(),
-                perfil.horariosAtencion(), perfil.sitioWeb(), perfil.redesSociales());
     }
 
     private static VersionResponse aVersionResponse(VersionOferta version) {

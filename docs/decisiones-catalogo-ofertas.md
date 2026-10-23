@@ -48,6 +48,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-36 | Ofertas visibles para la recomendación, sin datos que sesguen | ✅ RF-26, RF-29, RET-02 |
 | DC-37 | Búsqueda por texto con expresiones regulares, sin índice de texto | 🆕 RF-14, QAS-07 |
 | DC-38 | El catálogo lista lo que espera moderación; el núcleo decide | ✅ RF-79, diagrama del núcleo |
+| DC-39 | Perfil gestionado por el prestador y fotos reprocesadas en MinIO | ✅ RF-64, RF-72, diagrama del módulo |
 
 ## Identidad y habilitación del prestador
 
@@ -223,8 +224,8 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - Los alojamientos y los restaurantes no tienen nivel de esfuerzo, así que no aparecen cuando se usa este filtro.
 
 **DC-26. Perfil público: solo la descripción es obligatoria.** El nombre comercial, las fotos, los horarios de atención, el sitio web y las redes sociales son opcionales, porque el proyecto exige incluir a los prestadores pequeños con pocos recursos tecnológicos (RS-03).
-- Si vienen, el sitio web, las redes sociales y las fotos deben ser URLs `http` o `https`; si no, se responde 400 `DATO_INVALIDO`.
-- No hay límite de cantidad de fotos: no está definido y queda como `TODO` en `PerfilPublico`.
+- Si vienen, el sitio web y las redes sociales deben ser URLs `http` o `https`; si no, se responde 400 `DATO_INVALIDO`.
+- Las fotos se suben al almacenamiento de fotos, como máximo 6 (DC-39).
 
 ## Prototipo de la API
 
@@ -312,6 +313,20 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 - En MongoDB, el índice parcial `en_moderacion` (`{pendiente.enviadaEn, _id}`, solo con las ofertas en moderación) resuelve la lista sin recorrer la colección.
 - Las opiniones pendientes (RF-80) las lista el módulo de opiniones, con la misma forma: `GET /api/catalogo/admin/moderacion/opiniones`.
 
+## Perfil público y fotos
+
+**DC-39. El prestador gestiona su perfil y sus fotos viven en MinIO.** `GestionarPerfilPublicoUseCase` (RF-64, RF-72) y `FileStoragePort` con `MinioStorageAdapter`, como en el diagrama del módulo.
+- **Rutas del prestador** (rol PRESTADOR, DC-13): `GET` y `PUT /api/catalogo/prestador/perfil`, `POST /api/catalogo/prestador/perfil/fotos` (multipart, parte `foto`) y `DELETE /api/catalogo/prestador/perfil/fotos/{fotoId}`. Siempre es el perfil del prestador de la identidad: la ruta no lleva su id, así que nadie toca el perfil de otro. Hay que crear el perfil (con su descripción) antes de subir fotos; si no existe, 404 `PERFIL_NO_ENCONTRADO`.
+- **Sin moderación:** los cambios del perfil se publican de inmediato. El SRS solo exige moderar actividades (RF-66) y opiniones (RF-80). La descripción no tiene límite de palabras.
+- **Fotos:** JPG, PNG o WebP de hasta 5 MB, como máximo 6 por perfil (el mismo límite tendrán las ofertas). El formato se reconoce por el contenido del archivo, no por su extensión. Nunca se guarda el archivo subido: `ProcesadorImagenes` lo decodifica ya reducido (para que la memoria no dependa de los megapíxeles de la cámara), lo endereza según su orientación EXIF y guarda dos JPG nuevos, sin metadatos (sin la ubicación GPS del celular): `galeria`, de hasta 1280 px por lado, y `miniatura`, de hasta 400 px, para la red móvil (QAS-07, RT-03). Se rechaza una imagen que dice tener más de 100 megapíxeles, sin decodificarla.
+- **Identificadores:** cada foto es un UUID aleatorio (`Foto`), nunca el nombre del archivo subido; el catálogo guarda solo ese id en el perfil, y la API arma las rutas. Así no se pueden adivinar ni salirse de la carpeta.
+- **Entrega:** `GET /api/catalogo/fotos/{fotoId}/{galeria|miniatura}`, pública. MinIO no se expone hacia afuera: el catálogo es la única puerta. Una foto nunca cambia (cambiarla es subir otra), así que se entrega con `Cache-Control: public, max-age=31536000, immutable` y `X-Content-Type-Options: nosniff`.
+- **Consistencia:** el perfil tiene revisión y bloqueo optimista con reintento, como las ofertas (ADR-05): dos fotos subidas a la vez no se pisan. La foto se guarda en el almacenamiento antes que en el perfil; si el perfil no se puede guardar, se borra para no dejarla huérfana. Quitar una foto la saca primero del perfil y después del almacenamiento; quitarla dos veces no es un error.
+- **Adaptadores:** `MinioStorageAdapter` con el perfil `minio` (Docker Compose), que crea el bucket al arrancar; sin él, `ArchivoLocalStorageAdapter` guarda en una carpeta local (`catalogo.fotos.carpeta`), útil para correr sin Docker con una sola réplica. Los dos cumplen el mismo contrato de pruebas.
+- **Imagen de MinIO:** MinIO dejó de publicar imágenes en Docker Hub y en Quay. Se usa la que compila Chainguard desde el código de MinIO (`cgr.dev/chainguard/minio`), que corre sin root; su plan gratuito solo ofrece la etiqueta `latest`.
+- **Límites de subida:** Spring acepta archivos de hasta 5 MB, Tomcat lee hasta 10 MB de una subida rechazada para poder responder el 400, y Nginx acepta cuerpos de hasta 6 MB (por defecto acepta 1 MB). Si el cuerpo pasa de 6 MB, responde Nginx con el mismo 400 `DATO_INVALIDO` del catálogo, en lugar de su página HTML 413.
+- **Datos de demostración:** los perfiles arrancan sin fotos, y las URLs de ejemplo que tenían se quitaron. Una base del piloto creada antes de este cambio no tiene la revisión en `perfiles`: hay que recrearla con `docker compose down -v`.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -336,4 +351,4 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 
 ## Fuera del alcance del prototipo
 
-Opiniones; la gestión del perfil público por el prestador (RF-64); gestión de zonas; imágenes (MinIO); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).
+Opiniones; gestión de zonas; fotos de las ofertas (paso siguiente, sobre DC-39); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69).

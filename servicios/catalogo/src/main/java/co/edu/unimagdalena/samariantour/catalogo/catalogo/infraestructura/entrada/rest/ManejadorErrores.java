@@ -2,8 +2,10 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entra
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ExcepcionDominio;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.FotoNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.OfertaNoEditableException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.OfertaNoEncontradaException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PerfilNoEncontradoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PrestadorNoAutorizadoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.TipoOfertaNoPermitidoException;
@@ -16,6 +18,9 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
  * Traduce las excepciones del dominio a ProblemDetail (RFC 7807) con la propiedad {@code codigo}, estable para que
@@ -43,6 +48,19 @@ public class ManejadorErrores {
         return problema(HttpStatus.BAD_REQUEST, "DATO_INVALIDO", detalle);
     }
 
+    /**
+     * Una subida de foto rechazada antes de llegar al controlador: el archivo pasa del máximo, falta la parte
+     * {@code foto} o la petición no es multipart. Es la misma regla que valida el caso de uso (DC-39).
+     */
+    @ExceptionHandler({MaxUploadSizeExceededException.class, MissingServletRequestPartException.class,
+            MultipartException.class})
+    ProblemDetail subidaInvalida(Exception excepcion) {
+        String detalle = excepcion instanceof MaxUploadSizeExceededException
+                ? "foto: pesa más de 5 MB"
+                : "foto: envía la imagen como multipart/form-data en la parte 'foto'";
+        return problema(HttpStatus.BAD_REQUEST, "DATO_INVALIDO", detalle);
+    }
+
     private static HttpStatus estadoDe(ExcepcionDominio excepcion) {
         return switch (excepcion) {
             case DatoInvalidoException e -> HttpStatus.BAD_REQUEST;
@@ -51,6 +69,8 @@ public class ManejadorErrores {
             case TipoOfertaNoPermitidoException e -> HttpStatus.FORBIDDEN;
             case RntInactivoException e -> HttpStatus.FORBIDDEN;
             case OfertaNoEncontradaException e -> HttpStatus.NOT_FOUND;
+            case PerfilNoEncontradoException e -> HttpStatus.NOT_FOUND;
+            case FotoNoEncontradaException e -> HttpStatus.NOT_FOUND;
             case OfertaNoEditableException e -> HttpStatus.CONFLICT;
             // Una excepción del dominio que aún no está en la tabla de DC-15 es una regla incumplida por el cliente.
             default -> HttpStatus.BAD_REQUEST;
