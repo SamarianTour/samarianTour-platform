@@ -58,6 +58,8 @@ public record VersionDocument(
         // ACTIVIDAD, ALOJAMIENTO y RESTAURANTE
         Boolean accesibleSillaRuedas) {
 
+    public static final String ESTADO_MODERACION = "estadoModeracion";
+    public static final String ENVIADA_EN = "enviadaEn";
     public static final String NOMBRE = "nombre";
     public static final String DESCRIPCION = "descripcion";
     public static final String ZONA_ID = "zonaId";

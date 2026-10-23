@@ -168,6 +168,14 @@ public final class Oferta {
         return ReglaVisibilidad.esVisible(this);
     }
 
+    /**
+     * Si espera la decisión del administrador (RF-79): no está retirada y su versión pendiente está en moderación.
+     * Una versión rechazada no espera nada: espera a que el prestador edite (DC-06).
+     */
+    public boolean estaEnModeracion() {
+        return !retirada && pendiente != null && pendiente.estadoModeracion() == EstadoModeracion.EN_MODERACION;
+    }
+
     public boolean esDe(UUID prestador) {
         return prestadorId.equals(prestador);
     }
@@ -202,10 +210,7 @@ public final class Oferta {
     }
 
     private boolean tienePendienteEnModeracion(int numeroVersion) {
-        return !retirada
-                && pendiente != null
-                && pendiente.numero() == numeroVersion
-                && pendiente.estadoModeracion() == EstadoModeracion.EN_MODERACION;
+        return estaEnModeracion() && pendiente.numero() == numeroVersion;
     }
 
     /** El número más alto emitido siempre sigue vivo (publicada o pendiente), así que nunca se reutiliza. */

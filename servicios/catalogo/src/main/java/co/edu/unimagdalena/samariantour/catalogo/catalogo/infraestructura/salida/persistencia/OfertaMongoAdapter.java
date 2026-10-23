@@ -1,11 +1,13 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.OfertaRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.VersionDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.ConversionesMongo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.OfertaMongoMapper;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
@@ -15,6 +17,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
@@ -24,7 +27,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.PENDIENTE;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.PRESTADOR_ID;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.RETIRADA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.REVISION;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.RNT_PRESTADOR_ACTIVO;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.VERSION_HABILITACION;
@@ -117,6 +122,32 @@ public class OfertaMongoAdapter implements OfertaRepositoryPort {
                 .map(OfertaMongoMapper::aDominio)
                 .toList();
         return new Pagina<>(contenido, paginacion, total);
+    }
+
+    /** Lo resuelve el índice parcial {@code en_moderacion}, que solo guarda estas ofertas (DC-38). */
+    @Override
+    public Pagina<Oferta> buscarEnModeracion(Paginacion paginacion) {
+        Query pendientes = new BasicQuery(enModeracion());
+        long total = mongo.count(pendientes, OfertaDocument.class);
+        List<Oferta> contenido = mongo.find(Query.of(pendientes)
+                        .with(Sort.by(PENDIENTE_ENVIADA_EN, "_id"))
+                        .skip(paginacion.desplazamiento())
+                        .limit(paginacion.tamano()), OfertaDocument.class).stream()
+                .map(OfertaMongoMapper::aDominio)
+                .toList();
+        return new Pagina<>(contenido, paginacion, total);
+    }
+
+    /** Fecha de envío de la versión pendiente: ordena las ofertas en moderación (DC-38). */
+    static final String PENDIENTE_ENVIADA_EN = PENDIENTE + "." + VersionDocument.ENVIADA_EN;
+
+    /**
+     * Condiciones de Oferta.estaEnModeracion. Son las del filtro parcial del índice {@code en_moderacion}: MongoDB
+     * solo usa un índice parcial si la consulta las incluye.
+     */
+    static Document enModeracion() {
+        return new Document(RETIRADA, false)
+                .append(PENDIENTE + "." + VersionDocument.ESTADO_MODERACION, EstadoModeracion.EN_MODERACION.name());
     }
 
     /**

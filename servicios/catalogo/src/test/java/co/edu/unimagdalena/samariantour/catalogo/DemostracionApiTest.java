@@ -212,6 +212,30 @@ class DemostracionApiTest {
     }
 
     @Test
+    @DisplayName("el administrador ve las ofertas en moderación de la precarga, primero la que lleva más tiempo, y el "
+            + "núcleo consulta la que va a decidir")
+    void moderacion() throws Exception {
+        http.perform(get("/admin/moderacion/ofertas")
+                        .header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006")
+                        .header("X-Rol", "ADMINISTRADOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].id").value("b00000000000000000000017"))
+                .andExpect(jsonPath("$.contenido[0].publicada").doesNotExist())
+                .andExpect(jsonPath("$.contenido[1].id").value("b00000000000000000000001"))
+                .andExpect(jsonPath("$.contenido[1].numeroVersion").value(2))
+                .andExpect(jsonPath("$.contenido[1].pendiente.precioReferencia").value(165000))
+                .andExpect(jsonPath("$.contenido[1].publicada.precioReferencia").value(150000));
+
+        http.perform(get("/internal/moderacion/ofertas/b00000000000000000000017"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Paseo en lancha a Playa Blanca"))
+                .andExpect(jsonPath("$.prestadorId").value("10000000-0000-0000-0000-000000000001"))
+                .andExpect(jsonPath("$.numeroVersion").value(1));
+        http.perform(get("/internal/moderacion/ofertas/b00000000000000000000013"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("las zonas de la precarga se listan ordenadas por nombre")
     void zonas() throws Exception {
         http.perform(get("/zonas"))

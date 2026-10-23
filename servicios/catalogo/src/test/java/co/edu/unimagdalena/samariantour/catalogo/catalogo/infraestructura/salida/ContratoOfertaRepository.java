@@ -366,6 +366,32 @@ public interface ContratoOfertaRepository {
         assertThat(buscarTexto(".*", null)).isEmpty();
     }
 
+    @Test
+    @DisplayName("lista las ofertas en moderación de la enviada hace más tiempo a la más reciente, nuevas y ediciones")
+    default void enModeracion() {
+        Pagina<Oferta> pendientes = ofertas().buscarEnModeracion(new Paginacion(0, 20));
+
+        // El paseo en lancha es nuevo y se envió con la carga; la edición de la caminata, un día después.
+        assertThat(ids(pendientes)).containsExactly(PASEO_LANCHA_PLAYA_BLANCA, CAMINATA_CABO_SAN_JUAN);
+        assertThat(pendientes.totalElementos()).isEqualTo(2);
+        Pagina<Oferta> segunda = ofertas().buscarEnModeracion(new Paginacion(1, 1));
+        assertThat(ids(segunda)).containsExactly(CAMINATA_CABO_SAN_JUAN);
+        assertThat(segunda.totalElementos()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("una oferta retirada o con su versión ya revisada deja de estar en moderación")
+    default void fueraDeModeracion() {
+        Oferta lancha = ofertas().buscarPorId(PASEO_LANCHA_PLAYA_BLANCA).orElseThrow();
+        lancha.retirar(AGENCIA);
+        ofertas().guardar(lancha);
+        Oferta caminata = ofertas().buscarPorId(CAMINATA_CABO_SAN_JUAN).orElseThrow();
+        caminata.rechazar(2, "Las fotos no corresponden al sendero", Instant.parse("2026-10-05T10:00:00Z"));
+        ofertas().guardar(caminata);
+
+        assertThat(ofertas().buscarEnModeracion(new Paginacion(0, 20)).contenido()).isEmpty();
+    }
+
     private List<String> buscarTexto(String texto, TipoOferta tipo) {
         return ids(ofertas().buscarVisibles(new CriteriosBusqueda(TextoBusqueda.de(texto), tipo, null, null, null,
                 null, null, false, new Paginacion(0, 100))));
