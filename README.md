@@ -277,11 +277,26 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s "http://catalogo:8080/api/catalogo/internal/ofertas?zonaId=a00000000000000000000005&tipo=PAQUETE"
 ```
 
-### 6. Rutas que no se exponen
+### 6. Moderación
+
+El administrador ve lo que espera su decisión: primero el paseo en lancha, que es nuevo, y después la edición de la caminata a Cabo San Juan, con la versión publicada al lado para comparar. La decisión la toma en el núcleo; mientras el núcleo no exista, se envía el aviso como en el paso 3.
+
+```bash
+curl -s "$BASE/admin/moderacion/ofertas" \
+  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" \
+  -H "X-Rol: ADMINISTRADOR"
+
+# El núcleo consulta la oferta que va a decidir, desde la red de Docker
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
+```
+
+### 7. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/ofertas"             # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal/moderacion/ofertas/b00000000000000000000017"  # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 ```
