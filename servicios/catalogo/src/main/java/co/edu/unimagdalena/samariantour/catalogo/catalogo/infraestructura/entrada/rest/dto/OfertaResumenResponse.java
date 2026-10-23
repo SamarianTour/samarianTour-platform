@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 
 /**
  * Una oferta en los resultados de la búsqueda. El detalle completo está en la ficha.
+ *
+ * @param portada la primera foto de la versión publicada, para la tarjeta; null si es anterior a DC-47 y no tiene
  */
 public record OfertaResumenResponse(
         String id,
@@ -14,5 +16,6 @@ public record OfertaResumenResponse(
         String descripcion,
         BigDecimal precioReferencia,
         String unidadPrecio,
-        String zonaId) {
+        String zonaId,
+        FotoResponse portada) {
 }

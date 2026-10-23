@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PerfilRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.demo.DatosSantaMarta;
@@ -9,9 +10,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 /**
  * Perfiles públicos de los prestadores en la memoria del proceso, con el mismo bloqueo optimista que el adaptador de
@@ -48,6 +51,14 @@ public class PerfilMemoriaAdapter implements PerfilRepositoryPort {
             }
             return conRevision(perfil, revisionGuardada + 1);
         });
+    }
+
+    @Override
+    public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
+        return perfiles.values().stream()
+                .flatMap(perfil -> perfil.fotos().stream())
+                .filter(fotos::contains)
+                .collect(Collectors.toSet());
     }
 
     private static PerfilPublico conRevision(PerfilPublico perfil, long revision) {

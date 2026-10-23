@@ -117,7 +117,10 @@ public final class Oferta {
         copiarHabilitacion(prestador);
     }
 
-    /** Retira la oferta del catálogo. Es definitivo (RF-65) y se permite aunque el RNT esté inactivo. */
+    /**
+     * Retira la oferta del catálogo. Es definitivo (RF-65) y se permite aunque el RNT esté inactivo. Sus fotos dejan
+     * de estar en uso, y la limpieza las borra si ninguna otra oferta ni el perfil las usa (DC-47).
+     */
     public void retirar(UUID solicitante) {
         verificarDueno(solicitante);
         retirada = true;
@@ -180,8 +183,15 @@ public final class Oferta {
         return prestadorId.equals(prestador);
     }
 
+    /**
+     * Reglas de publicar y editar. La foto obligatoria se exige aquí y no en {@link ContenidoComun}, porque las
+     * versiones guardadas antes de DC-47 no tienen fotos y se siguen leyendo.
+     */
     private static void verificarPuedePublicar(PrestadorCatalogo prestador, TipoPrestador tipoPrestador,
                                                VersionOferta contenido, Zona zona, Collection<Oferta> actividades) {
+        if (contenido.contenido().fotos().isEmpty()) {
+            throw new DatoInvalidoException("fotos", "debe tener al menos una foto");
+        }
         if (!prestador.rntActivo()) {
             throw new RntInactivoException(prestador.prestadorId());
         }

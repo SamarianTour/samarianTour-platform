@@ -38,3 +38,9 @@ management:
       exposure:
         # Solo la salud, para el healthcheck de Docker Compose.
         include: health
+
+catalogo:
+  fotos:
+    limpieza:
+      # Cada hora, en el minuto 17, borra las fotos que pasaron 24 horas sin uso (DC-47). Con "-" no corre.
+      cron: "0 17 * * * *"

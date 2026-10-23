@@ -1,6 +1,7 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
@@ -17,6 +18,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -26,6 +28,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Doble en memoria de OfertaRepositoryPort con la misma semántica que el adaptador de MongoDB: guarda y entrega
@@ -133,6 +137,16 @@ class OfertaRepositoryEnMemoria implements OfertaRepositoryPort {
         ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId) && oferta.versionHabilitacion() < version
                 ? CopiaEnPrueba.de(oferta, rntActivo, version, oferta.revision() + 1)
                 : oferta);
+    }
+
+    @Override
+    public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
+        return ofertas.values().stream()
+                .filter(oferta -> !oferta.retirada())
+                .flatMap(oferta -> Stream.of(oferta.publicada(), oferta.pendiente()).flatMap(Optional::stream))
+                .flatMap(version -> version.contenido().fotos().stream())
+                .filter(fotos::contains)
+                .collect(Collectors.toSet());
     }
 
     int vecesGuardada(String id) {

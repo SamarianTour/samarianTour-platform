@@ -14,6 +14,8 @@ import java.util.Set;
  * Ficha pública de una oferta (RF-20). Según el tipo de la oferta trae uno de los detalles {@code actividad},
  * {@code paquete} o {@code alojamiento}; el restaurante no tiene datos propios.
  *
+ * @param fotos                la galería, en orden; la primera es la portada. Vacía si la versión publicada es
+ *                             anterior a DC-47
  * @param accesibleSillaRuedas el de un paquete es true solo si todas sus actividades lo son (RF-17)
  * @param zona                 ausente si la zona ya no existe
  * @param perfilPrestador      ausente si el prestador no ha completado su perfil público (RF-24)
@@ -30,6 +32,7 @@ public record FichaOfertaResponse(
         CoordenadaDto ubicacion,
         String comoLlegar,
         int capacidadMaxima,
+        List<FotoResponse> fotos,
         boolean accesibleSillaRuedas,
         DetalleActividad actividad,
         DetallePaquete paquete,

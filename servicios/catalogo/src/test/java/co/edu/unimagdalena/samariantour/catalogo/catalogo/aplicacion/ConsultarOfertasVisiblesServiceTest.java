@@ -21,6 +21,7 @@ import java.util.List;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.AGENCIA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.ZONA_TAGANGA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.actividad;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO_OTRO_PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.OTRO_PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.contenido;
@@ -88,7 +89,7 @@ class ConsultarOfertasVisiblesServiceTest {
         actividadPublicada("Museo", TipoActividad.CULTURAL_HISTORICO, NivelEsfuerzo.BAJO, true);
         escenario.habilitar(OTRO_PRESTADOR, true, 1);
         Oferta restaurante = escenario.publicar(new Solicitante(OTRO_PRESTADOR, TipoPrestador.RESTAURANTE),
-                new VersionRestaurante(contenido("Cocina del Caribe"), true));
+                new VersionRestaurante(contenido("Cocina del Caribe", ZONA_ACTIVA, FOTO_OTRO_PRESTADOR), true));
         escenario.moderar(restaurante.id(), 1, DecisionModeracion.APROBAR);
 
         OfertaVisible museo = unica(TipoOferta.ACTIVIDAD);

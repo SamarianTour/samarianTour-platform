@@ -77,4 +77,16 @@ public interface ContratoPerfilRepository {
                 null, List.of()))).isInstanceOf(ConflictoConcurrenciaException.class);
         assertThat(perfiles().buscarPorPrestador(GUIA).orElseThrow().descripcion()).contains("Minca");
     }
+
+    @Test
+    @DisplayName("sabe qué fotos usa algún perfil (DC-47)")
+    default void fotosEnUso() {
+        Foto delPerfil = Foto.nueva();
+        Foto sinUso = Foto.nueva();
+        perfiles().guardar(new PerfilPublico(UUID.randomUUID(), null, "Con foto", List.of(delPerfil), null, null,
+                List.of()));
+
+        assertThat(perfiles().fotosEnUso(List.of(delPerfil, sinUso))).containsExactly(delPerfil);
+        assertThat(perfiles().fotosEnUso(List.of(sinUso))).isEmpty();
+    }
 }

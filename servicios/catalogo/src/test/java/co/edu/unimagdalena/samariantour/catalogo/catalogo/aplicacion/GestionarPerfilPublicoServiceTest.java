@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.FotoNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PerfilNoEncontradoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.DestinoFoto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TamanoFoto;
@@ -95,6 +96,10 @@ class GestionarPerfilPublicoServiceTest {
 
             assertThat(segunda.fotos()).hasSize(2).startsWith(primera.fotos().getFirst());
             assertThat(escenario.fotos.tiene(segunda.fotos().get(1))).isTrue();
+            assertThat(escenario.registroFotos.de(segunda.fotos().get(1))).hasValueSatisfying(subida -> {
+                assertThat(subida.prestadorId()).isEqualTo(PRESTADOR);
+                assertThat(subida.destino()).isEqualTo(DestinoFoto.PERFIL);
+            });
             assertThat(escenario.consultaFoto.consultar(segunda.fotos().get(1).id(), TamanoFoto.GALERIA))
                     .isEqualTo(IMAGEN);
         }
@@ -137,9 +142,12 @@ class GestionarPerfilPublicoServiceTest {
             servicio.guardar(datos(null, "Guías de aves"));
             escenario.perfiles.simularConflictos(10);
 
+            int registradasAntes = escenario.registroFotos.cantidad();
+
             assertThatThrownBy(() -> servicio.agregarFoto(PRESTADOR, IMAGEN))
                     .isInstanceOf(ConflictoConcurrenciaException.class);
             assertThat(escenario.fotos.cantidad()).isZero();
+            assertThat(escenario.registroFotos.cantidad()).isEqualTo(registradasAntes);
         }
 
         @Test
@@ -154,8 +162,22 @@ class GestionarPerfilPublicoServiceTest {
 
             assertThat(servicio.consultar(PRESTADOR).fotos()).isEmpty();
             assertThat(escenario.fotos.tiene(foto)).isFalse();
+            assertThat(escenario.registroFotos.de(foto)).isEmpty();
             assertThatThrownBy(() -> escenario.consultaFoto.consultar(foto.id(), TamanoFoto.GALERIA))
                     .isInstanceOf(FotoNoEncontradaException.class);
+        }
+
+        @Test
+        @DisplayName("quitar una foto subida antes de DC-47, que no tiene registro, también borra su archivo")
+        void quitarFotoSinRegistro() {
+            Foto anterior = Foto.nueva();
+            escenario.fotos.guardar(anterior, IMAGEN);
+            escenario.perfiles.guardar(new PerfilPublico(PRESTADOR, null, "Guías de aves", List.of(anterior), null,
+                    null, List.of()));
+
+            servicio.quitarFoto(PRESTADOR, anterior.id());
+
+            assertThat(escenario.fotos.tiene(anterior)).isFalse();
         }
 
         @Test

@@ -37,6 +37,8 @@ public record VersionDocument(
         GeoJsonPoint ubicacion,
         String comoLlegar,
         int capacidadMaxima,
+        // Identificadores de las fotos en el almacenamiento, en orden (DC-47); no existe en versiones anteriores
+        List<String> fotos,
 
         // ACTIVIDAD
         TipoActividad tipoActividad,
@@ -64,6 +66,7 @@ public record VersionDocument(
     public static final String DESCRIPCION = "descripcion";
     public static final String ZONA_ID = "zonaId";
     public static final String PRECIO_REFERENCIA = "precioReferencia";
+    public static final String FOTOS = "fotos";
     public static final String ACTIVIDAD_IDS = "actividadIds";
     public static final String TIPO_ACTIVIDAD = "tipoActividad";
     public static final String NIVEL_ESFUERZO = "nivelEsfuerzo";

@@ -2,14 +2,18 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PerfilNoEncontradoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.DestinoFoto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.FotoSubida;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarPerfilPublicoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.GuardarPerfilCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.FileStoragePort;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.FotoSubidaRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.PerfilRepositoryPort;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.EjecutorConReintento;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,20 +22,22 @@ import java.util.UUID;
  * optimista, reintentando si otra escritura se cruzó (ADR-05): por ejemplo, dos fotos subidas a la vez.
  *
  * <p>La foto se guarda en el almacenamiento antes que en el perfil, fuera del reintento, porque procesarla es lo más
- * costoso. Si el perfil no se puede guardar, la foto se borra para no dejarla huérfana.
+ * costoso. Si el perfil no se puede guardar, la foto se borra para no dejarla huérfana. Las fotos del perfil solo las
+ * usa el perfil ({@link DestinoFoto#PERFIL}), así que quitar una la borra de inmediato (DC-47).
  */
 public class GestionarPerfilPublicoService implements GestionarPerfilPublicoUseCase {
 
-    private static final System.Logger LOG = System.getLogger(GestionarPerfilPublicoService.class.getName());
-
     private final PerfilRepositoryPort perfiles;
-    private final FileStoragePort fotos;
+    private final FotoSubidaRepositoryPort registro;
+    private final RegistroDeFotos fotos;
     private final EjecutorConReintento reintento;
 
-    public GestionarPerfilPublicoService(PerfilRepositoryPort perfiles, FileStoragePort fotos,
+    public GestionarPerfilPublicoService(PerfilRepositoryPort perfiles, FotoSubidaRepositoryPort registro,
+                                         FileStoragePort almacenamiento, Clock reloj,
                                          EjecutorConReintento reintento) {
         this.perfiles = perfiles;
-        this.fotos = fotos;
+        this.registro = registro;
+        this.fotos = new RegistroDeFotos(registro, almacenamiento, reloj);
         this.reintento = reintento;
     }
 
@@ -56,24 +62,18 @@ public class GestionarPerfilPublicoService implements GestionarPerfilPublicoUseC
 
     @Override
     public PerfilPublico agregarFoto(UUID prestadorId, byte[] imagen) {
-        if (imagen == null || imagen.length == 0) {
-            throw new DatoInvalidoException("foto", "no llegó ninguna imagen");
-        }
-        if (imagen.length > Foto.TAMANO_MAXIMO_BYTES) {
-            throw new DatoInvalidoException("foto", "pesa más de 5 MB");
-        }
+        RegistroDeFotos.validar(imagen);
         // Falla antes de procesar la imagen si no hay perfil o ya tiene todas sus fotos.
         consultar(prestadorId).verificarCupoDeFotos();
-        Foto foto = Foto.nueva();
-        fotos.guardar(foto, imagen);
+        FotoSubida subida = fotos.subir(prestadorId, DestinoFoto.PERFIL, imagen);
         try {
             return reintento.ejecutar(() -> {
-                PerfilPublico perfil = consultar(prestadorId).agregarFoto(foto);
+                PerfilPublico perfil = consultar(prestadorId).agregarFoto(subida.foto());
                 perfiles.guardar(perfil);
                 return perfil;
             });
         } catch (RuntimeException e) {
-            fotos.eliminar(foto);
+            fotos.descartar(subida);
             throw e;
         }
     }
@@ -97,19 +97,16 @@ public class GestionarPerfilPublicoService implements GestionarPerfilPublicoUseC
             return true;
         });
         if (quitada) {
-            borrarDelAlmacenamiento(foto);
+            borrar(foto);
         }
     }
 
     /**
-     * El perfil ya no la tiene, así que el turista ya no la ve. Si el almacenamiento falla, queda una foto huérfana
-     * que no afecta a nadie; se registra para poder limpiarla.
+     * El perfil ya no la tiene, y nadie más la usa. Una foto subida antes de DC-47 no tiene registro: se borra el
+     * archivo directamente.
      */
-    private void borrarDelAlmacenamiento(Foto foto) {
-        try {
-            fotos.eliminar(foto);
-        } catch (RuntimeException e) {
-            LOG.log(System.Logger.Level.WARNING, "No se pudo borrar la foto " + foto.id() + " del almacenamiento", e);
-        }
+    private void borrar(Foto foto) {
+        registro.buscar(List.of(foto)).stream().findFirst()
+                .ifPresentOrElse(fotos::descartar, () -> fotos.borrarArchivo(foto));
     }
 }

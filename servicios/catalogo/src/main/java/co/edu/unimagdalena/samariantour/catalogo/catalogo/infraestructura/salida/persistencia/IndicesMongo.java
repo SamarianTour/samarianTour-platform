@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.FotoSubidaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.PerfilDocument;
 import org.springframework.beans.factory.InitializingBean;
@@ -26,6 +27,10 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
  *   <li>{@code en_moderacion}: parcial, solo con las ofertas en moderación, para listarlas de la más antigua a la
  *       más reciente (RF-79, DC-38).</li>
  *   <li>{@code perfil_por_prestador}: único, un perfil por prestador.</li>
+ *   <li>{@code fotos_publicadas}, {@code fotos_pendientes} y {@code fotos_del_perfil}: para saber si una foto está en
+ *       uso antes de borrarla (DC-47).</li>
+ *   <li>{@code fotos_por_ultimo_uso}: para que la limpieza recorra las fotos sin uso de la más antigua a la más
+ *       reciente (DC-47).</li>
  * </ul>
  *
  * <p>Los dos índices de búsqueda son parciales: solo guardan las ofertas visibles (ReglaVisibilidad).
@@ -69,9 +74,23 @@ public class IndicesMongo implements InitializingBean {
                 .on(OfertaMongoAdapter.PENDIENTE_ENVIADA_EN, Sort.Direction.ASC)
                 .on("_id", Sort.Direction.ASC)
                 .partial(PartialIndexFilter.of(OfertaMongoAdapter.enModeracion())));
-        mongo.indexOps(PerfilDocument.class).createIndex(new Index()
+        ofertas.createIndex(new Index()
+                .named("fotos_publicadas")
+                .on(OfertaMongoAdapter.PUBLICADA_FOTOS, Sort.Direction.ASC));
+        ofertas.createIndex(new Index()
+                .named("fotos_pendientes")
+                .on(OfertaMongoAdapter.PENDIENTE_FOTOS, Sort.Direction.ASC));
+        IndexOperations perfiles = mongo.indexOps(PerfilDocument.class);
+        perfiles.createIndex(new Index()
                 .named("perfil_por_prestador")
                 .on(PerfilDocument.PRESTADOR_ID, Sort.Direction.ASC)
                 .unique());
+        perfiles.createIndex(new Index()
+                .named("fotos_del_perfil")
+                .on(PerfilDocument.FOTOS, Sort.Direction.ASC));
+        mongo.indexOps(FotoSubidaDocument.class).createIndex(new Index()
+                .named("fotos_por_ultimo_uso")
+                .on(FotoSubidaDocument.ULTIMO_USO, Sort.Direction.ASC)
+                .on("_id", Sort.Direction.ASC));
     }
 }

@@ -1,7 +1,7 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarFotoUseCase;
-import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.mapper.PerfilWebMapper;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.mapper.FotoWebMapper;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +32,7 @@ public class FotoController {
 
     @GetMapping("/fotos/{fotoId}/{tamano}")
     public ResponseEntity<byte[]> foto(@PathVariable String fotoId, @PathVariable String tamano) {
-        byte[] jpg = fotos.consultar(fotoId, PerfilWebMapper.aTamano(fotoId, tamano));
+        byte[] jpg = fotos.consultar(fotoId, FotoWebMapper.aTamano(fotoId, tamano));
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
                 .cacheControl(UN_ANO_SIN_CAMBIOS)

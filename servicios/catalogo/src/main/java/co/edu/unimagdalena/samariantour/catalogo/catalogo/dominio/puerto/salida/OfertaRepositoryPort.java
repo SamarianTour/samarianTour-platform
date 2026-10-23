@@ -1,6 +1,7 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
@@ -8,6 +9,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginac
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -60,4 +62,10 @@ public interface OfertaRepositoryPort {
      * y les sube la revisión. Solo avanza: una actualización atrasada no cambia nada (ADR-05).
      */
     void actualizarRntPrestador(UUID prestadorId, boolean rntActivo, long version);
+
+    /**
+     * Cuáles de esas fotos usa alguna oferta no retirada, en su versión publicada o en la pendiente (DC-47). Las fotos
+     * de una oferta retirada ya no están en uso.
+     */
+    Set<Foto> fotosEnUso(Collection<Foto> fotos);
 }

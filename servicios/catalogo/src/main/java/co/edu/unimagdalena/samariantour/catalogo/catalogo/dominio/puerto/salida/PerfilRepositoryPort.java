@@ -1,8 +1,11 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 
+import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -19,4 +22,7 @@ public interface PerfilRepositoryPort {
      * tiene, lanza ConflictoConcurrenciaException y no guarda nada.
      */
     void guardar(PerfilPublico perfil);
+
+    /** Cuáles de esas fotos usa algún perfil (DC-47). */
+    Set<Foto> fotosEnUso(Collection<Foto> fotos);
 }

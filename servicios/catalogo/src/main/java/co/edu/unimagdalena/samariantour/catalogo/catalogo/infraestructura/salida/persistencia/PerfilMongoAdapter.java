@@ -13,8 +13,13 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.PerfilDocument.PRESTADOR_ID;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.PerfilDocument.REVISION;
@@ -70,6 +75,14 @@ public class PerfilMongoAdapter implements PerfilRepositoryPort {
         if (actualizados == 0) {
             throw conflicto(perfil);
         }
+    }
+
+    @Override
+    public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
+        List<String> ids = fotos.stream().map(Foto::id).toList();
+        Set<String> enUso = new HashSet<>(mongo.findDistinct(query(where(PerfilDocument.FOTOS).in(ids)),
+                PerfilDocument.FOTOS, PerfilDocument.class, String.class));
+        return fotos.stream().filter(foto -> enUso.contains(foto.id())).collect(Collectors.toSet());
     }
 
     private static ConflictoConcurrenciaException conflicto(PerfilPublico perfil) {

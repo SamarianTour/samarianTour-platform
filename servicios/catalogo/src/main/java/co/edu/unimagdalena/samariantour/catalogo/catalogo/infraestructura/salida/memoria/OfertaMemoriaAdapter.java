@@ -1,6 +1,7 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.memoria;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.CriteriosBusqueda;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
@@ -30,6 +31,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Ofertas en la memoria del proceso, para el perfil {@code memoria}: la demostración y las pruebas sin MongoDB.
@@ -146,6 +149,16 @@ public class OfertaMemoriaAdapter implements OfertaRepositoryPort {
         ofertas.replaceAll((id, oferta) -> oferta.esDe(prestadorId) && oferta.versionHabilitacion() < version
                 ? CopiaOferta.de(oferta, rntActivo, version, oferta.revision() + 1)
                 : oferta);
+    }
+
+    @Override
+    public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
+        return ofertas.values().stream()
+                .filter(oferta -> !oferta.retirada())
+                .flatMap(oferta -> Stream.of(oferta.publicada(), oferta.pendiente()).flatMap(Optional::stream))
+                .flatMap(version -> version.contenido().fotos().stream())
+                .filter(fotos::contains)
+                .collect(Collectors.toSet());
     }
 
     /** Un paquete además exige que todas sus actividades sean visibles (RF-22). */

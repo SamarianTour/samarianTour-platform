@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Pres
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.TipoOfertaNoPermitidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
@@ -35,6 +36,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.time.LocalTime;
 import java.util.List;
 
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaEnModeracion;
@@ -69,6 +71,7 @@ class OfertaPrestadorControllerTest {
               "precioReferencia": 70000,
               "zonaId": "parque-tayrona",
               "capacidadMaxima": 8,
+              "fotos": ["3f2504e0-4f89-11d3-9a0c-0305e82c3302", "3f2504e0-4f89-11d3-9a0c-0305e82c3301"],
               "tipoActividad": "SENDERISMO",
               "nivelEsfuerzo": "MODERADO",
               "horariosSalida": ["07:30", "09:00"],
@@ -109,7 +112,9 @@ class OfertaPrestadorControllerTest {
                 .andExpect(jsonPath("$.publicada").doesNotExist())
                 .andExpect(jsonPath("$.pendiente.numero").value(1))
                 .andExpect(jsonPath("$.pendiente.estadoModeracion").value("EN_MODERACION"))
-                .andExpect(jsonPath("$.pendiente.revisadaEn").doesNotExist());
+                .andExpect(jsonPath("$.pendiente.revisadaEn").doesNotExist())
+                .andExpect(jsonPath("$.pendiente.portada.urlMiniatura")
+                        .value("/fotos/" + FOTO.id() + "/miniatura"));
 
         ArgumentCaptor<PublicarOfertaCommand> comando = ArgumentCaptor.forClass(PublicarOfertaCommand.class);
         verify(gestionarOferta).publicar(comando.capture());
@@ -123,7 +128,20 @@ class OfertaPrestadorControllerTest {
             assertThat(actividad.horariosSalida()).containsExactly(LocalTime.of(7, 30), LocalTime.of(9, 0));
             assertThat(actividad.duracionMinutos()).isEqualTo(180);
             assertThat(actividad.esAccesibleSillaRuedas()).isFalse();
+            assertThat(actividad.contenido().fotos()).extracting(Foto::id).containsExactly(
+                    "3f2504e0-4f89-11d3-9a0c-0305e82c3302", "3f2504e0-4f89-11d3-9a0c-0305e82c3301");
         });
+    }
+
+    @Test
+    @DisplayName("una foto con un identificador mal formado responde 400 en el campo fotos, sin llamar al caso de uso")
+    void fotoMalFormada() throws Exception {
+        http.perform(comoAgencia(post("/prestador/ofertas"))
+                        .content(ACTIVIDAD.replace("3f2504e0-4f89-11d3-9a0c-0305e82c3302", "../secreto")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"))
+                .andExpect(jsonPath("$.detail").value("fotos: tiene un identificador que no es de una foto"));
+        verifyNoInteractions(gestionarOferta);
     }
 
     @Test
