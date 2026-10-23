@@ -49,6 +49,9 @@ services:
       CATALOGO_MINIO_URL: http://minio:9000
       CATALOGO_MINIO_USUARIO: ${MINIO_USUARIO:-samarian}
       CATALOGO_MINIO_CLAVE: ${MINIO_CLAVE:-samarian-fotos-piloto}
+      # Cuándo se borran las fotos que nadie usa (DC-47): cada hora, en el minuto 17. Para la demostración se puede
+      # adelantar, por ejemplo "0 * * * * *" (cada minuto).
+      CATALOGO_FOTOS_LIMPIEZA_CRON: ${FOTOS_LIMPIEZA_CRON:-0 17 * * * *}
       # mongo: los datos viven en MongoDB y las réplicas comparten el estado.
       # minio: las fotos viven en MinIO, compartido por las réplicas (DC-39).
       # demo: headers que sustituyen al token del prestador y carga de los datos de demostración
