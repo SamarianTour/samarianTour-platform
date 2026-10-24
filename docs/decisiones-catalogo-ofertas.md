@@ -59,6 +59,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-47 | Las ofertas llevan de 1 a 6 fotos moderadas; las que nadie usa se borran | 🆕 RF-65, RF-66 |
 | DC-48 | Evidencia de QAS-07: métricas en el servidor y prueba de carga de la búsqueda | ✅ QAS-07, QAS-02; RNF-13 en parte |
 | DC-49 | El administrador registra, edita, marca e inactiva las zonas; nunca se eliminan | ✅ HU-ADM-06, RF-84, RF-25 |
+| DC-50 | El prestador consulta su oferta completa, también la que nunca se publicó | 🆕 RF-65, RF-66, RF-79 |
 
 ## Identidad y habilitación del prestador
 
@@ -121,7 +122,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 
 | Controlador | Endpoint |
 |---|---|
-| `OfertaPrestadorController` | `POST /prestador/ofertas`, `PUT /prestador/ofertas/{id}`, `PATCH /prestador/ofertas/{id}/retiro`, `GET /prestador/ofertas` |
+| `OfertaPrestadorController` | `POST /prestador/ofertas`, `PUT /prestador/ofertas/{id}`, `PATCH /prestador/ofertas/{id}/retiro`, `GET /prestador/ofertas`, `GET /prestador/ofertas/{id}` |
 | `OfertaPublicaController` | `GET /ofertas?texto&tipo&zonaId&precioMin&precioMax&tipoActividad&nivelEsfuerzoMaximo&accesibleSillaRuedas&page&size`, `GET /ofertas/{id}` |
 | `ZonaController` | `GET /zonas`, `GET /zonas/{zonaId}` |
 | `ZonaAdminController` | `GET /admin/zonas`, `POST /admin/zonas`, `PUT /admin/zonas/{zonaId}` |
@@ -447,6 +448,13 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 - **Concurrencia:** cada guardado reemplaza el documento completo de una vez. Si dos administradores editan a la vez, queda la última edición completa; no hay estado intermedio que se pueda corromper.
 - **Alternativas por alta afluencia (RF-29, HU-TUR-17):** las calcula la recomendación, como dice el diseño (decisión del equipo); el catálogo le entrega la marca en la consulta interna (DC-36).
 
+## Oferta propia completa
+
+**DC-50. El prestador consulta su oferta completa, también la que nunca se publicó** (RF-65, RF-66, RF-79). La lista de ofertas propias solo trae el resumen de cada versión (nombre, precio, portada y estado), y la ficha pública solo existe para una oferta visible. Por eso el frontend llenaba el formulario de edición con la ficha pública, y una oferta rechazada que nunca se aprobó no se podía corregir desde la interfaz.
+- **`GET /prestador/ofertas/{id}`** (`GestionarOfertaUseCase.consultarMia`): la oferta en cualquier estado, incluida la retirada, con la versión publicada y la pendiente completas. Cada versión trae su número, estado, motivo del rechazo y fechas, y el contenido con los mismos campos que ve el administrador al moderarla (`ContenidoVersion`, DC-38): los de su tipo, las fotos y la unidad del precio.
+- **Solo su dueño:** la de otro prestador responde 403 `PRESTADOR_NO_AUTORIZADO` y una que no existe, 404 `OFERTA_NO_ENCONTRADA`, como al editarla o retirarla (DC-15).
+- **Unidad del precio en la lista:** cada versión de `GET /prestador/ofertas` trae `unidadPrecio`, como la búsqueda (DC-22); el frontend ya no tiene que deducirla del tipo.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -481,6 +489,7 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 16. **Documento de diseño, verificación de QAS-07 y QAS-02:** citar la prueba de carga de la búsqueda como evidencia de la parte del catálogo, con su entorno y sus límites (DC-48).
 17. **Diagrama del módulo catálogo:** agregar el caso de uso `GestionarZonasUseCase` con `GestionarZonasService`, `ConsultarZonasUseCase.consultar`, las operaciones de escritura de `ZonaRepositoryPort` (`guardar`, `buscarTodas`, `nuevoId`) y el adaptador de entrada `ZonaAdminController` (DC-49). `DatosZona` es una agrupación técnica como `ContenidoComun`: no cambia el modelo.
 18. **Modelo documental (MongoDB):** agregar en `zonas` el campo `nombreClave` y su índice único `zona_por_nombre` (DC-49).
+19. **Diagrama del módulo catálogo:** agregar la operación `consultarMia` a `GestionarOfertaUseCase` (DC-50).
 
 ## Fuera del alcance del prototipo
 
