@@ -1,7 +1,13 @@
 package co.edu.unimagdalena.samariantour.nucleo;
 
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionModeracionResponse;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,18 +21,22 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.lang.reflect.RecordComponent;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * El contrato del núcleo y sus controladores, como {@code ContratoCatalogoTest} en el catálogo: si una ruta existe en
- * un lado y no en el otro, falla. Es de integración porque arranca el servicio completo, con su base.
- *
- * <p>Cuando un módulo agregue sus DTO, se suma aquí la comparación de cada esquema con los campos de su DTO.
+ * un lado y no en el otro, falla, y cada esquema debe tener los mismos campos que su DTO. Es de integración porque
+ * arranca el servicio completo, con su base. Cada módulo agrega sus DTO a {@link #esquemasConSuDto()}.
  */
 @SpringBootTest(properties = "nucleo.bandeja.publicacion.cron=-")
 @ActiveProfiles("demo")
@@ -48,6 +58,20 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
         assertThat(rutasDeLosControladores()).isEqualTo(rutasDelContratoOpenApi());
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("esquemasConSuDto")
+    @DisplayName("cada esquema del contrato tiene los mismos campos que su DTO")
+    void camposDelContrato(String esquema, Class<? extends Record> dto) throws IOException {
+        assertThat(camposDe(dto)).as("campos de %s", dto.getSimpleName()).isEqualTo(camposDelEsquema(esquema));
+    }
+
+    static Stream<Arguments> esquemasConSuDto() {
+        return Stream.of(
+                arguments("DecisionOfertaRequest", DecisionOfertaRequest.class),
+                arguments("DecisionOpinionRequest", DecisionOpinionRequest.class),
+                arguments("DecisionModeracion", DecisionModeracionResponse.class));
+    }
+
     private Set<String> rutasDeLosControladores() {
         Set<String> resultado = new TreeSet<>();
         rutas.getHandlerMethods().forEach((RequestMappingInfo ruta, HandlerMethod metodo) -> {
@@ -63,12 +87,27 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
     @SuppressWarnings("unchecked")
     private static Set<String> rutasDelContratoOpenApi() throws IOException {
         Set<String> resultado = new TreeSet<>();
-        Map<String, Map<String, Object>> paths;
-        try (Reader lector = Files.newBufferedReader(CONTRATO, StandardCharsets.UTF_8)) {
-            paths = (Map<String, Map<String, Object>>) new Yaml().<Map<String, Object>>load(lector).get("paths");
-        }
-        paths.forEach((ruta, operaciones) -> operaciones.keySet().stream().filter(METODOS::contains)
-                .forEach(verbo -> resultado.add(verbo.toUpperCase() + " " + ruta)));
+        ((Map<String, Map<String, Object>>) contrato().get("paths")).forEach((ruta, operaciones) ->
+                operaciones.keySet().stream().filter(METODOS::contains)
+                        .forEach(verbo -> resultado.add(verbo.toUpperCase() + " " + ruta)));
         return resultado;
+    }
+
+    private static Set<String> camposDe(Class<? extends Record> dto) {
+        return Arrays.stream(dto.getRecordComponents()).map(RecordComponent::getName)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Set<String> camposDelEsquema(String esquema) throws IOException {
+        Map<String, Object> componentes = (Map<String, Object>) contrato().get("components");
+        Map<String, Map<String, Object>> esquemas = (Map<String, Map<String, Object>>) componentes.get("schemas");
+        return new TreeSet<>(((Map<String, Object>) esquemas.get(esquema).get("properties")).keySet());
+    }
+
+    private static Map<String, Object> contrato() throws IOException {
+        try (Reader lector = Files.newBufferedReader(CONTRATO, StandardCharsets.UTF_8)) {
+            return new Yaml().load(lector);
+        }
     }
 }

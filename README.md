@@ -2,7 +2,8 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base: PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo; sus módulos están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo) y la moderación de ofertas y opiniones; sus demás módulos están pendientes.
+
 
 ## Estructura del repositorio
 
@@ -187,25 +188,23 @@ Con el piloto levantado, abre `http://localhost:8080`.
 1. **Catálogo.** La página inicial lista las ofertas visibles. Filtra por tipo, zona, tipo de actividad, precio, esfuerzo físico máximo ("hasta el nivel") y accesibilidad. Los filtros quedan en la URL: `http://localhost:8080/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005` abre las actividades del Parque Tayrona. Si nada coincide aparece "Limpiar filtros".
 2. **Ficha.** Entra a "Tayrona: mar y selva" (un paquete): muestra sus actividades con enlace, el esfuerzo calculado, la zona con sus buenas prácticas, el perfil del prestador y el mapa con el enlace "Cómo llegar". Una oferta que no es visible, como `http://localhost:8080/ofertas/b00000000000000000000016`, muestra "Esta oferta ya no está disponible".
 3. **Publicar.** En el selector **Usuario demo** de la cabecera elige **Guía**, entra a "Soy prestador" y luego a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
-4. **Aprobar por consola.** La moderación es del núcleo, que todavía no existe: el aviso se envía a mano desde dentro de la red de Docker. El identificador de la oferta está en la URL de "Ver detalle" (`/prestador/ofertas/<id>`):
+4. **Aprobar desde el núcleo.** La interfaz del administrador todavía no existe, así que la decisión se envía con `curl` al núcleo (DN-08). El identificador de la oferta está en la URL de "Ver detalle" (`/prestador/ofertas/<id>`):
 
    ```bash
    ID=<id de la oferta>
-   docker compose -f infra/docker-compose.yml exec -T nginx \
-     curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \
-     -H "Content-Type: application/json" \
-     -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
-   # {"resultado":"APLICADO"}
+   curl -s -X POST "http://localhost:8080/api/nucleo/admin/moderacion/ofertas/$ID/decision" \
+     -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR" \
+     -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
    ```
 
-   Al recargar "Mis ofertas" la oferta está "Publicada" y ya aparece en el catálogo. Para mostrar un rechazo, usa `\"decision\":\"RECHAZAR\",\"motivo\":\"Falta el punto de encuentro\"`: la oferta queda "Rechazada" con su motivo.
-5. **Editar.** En "Mis ofertas", "Editar" abre el formulario con los datos publicados. Cambia el precio y guarda: la oferta pasa a "Publicada con cambios en revisión" y en "Ver detalle" se ven lado a lado la versión publicada (1) y la pendiente (2). El turista sigue viendo la versión 1 hasta que se apruebe la 2 con otro aviso (`numeroVersion: 2` y otro `idAviso`).
+   El núcleo guarda la decisión y su bandeja la lleva al catálogo en los siguientes 15 s: al recargar "Mis ofertas" la oferta está "Publicada" y ya aparece en el catálogo. Para mostrar un rechazo, usa `'{"numeroVersion": 1, "decision": "RECHAZAR", "motivo": "Falta el punto de encuentro"}'`: la oferta queda "Rechazada" con su motivo.
+5. **Editar.** En "Mis ofertas", "Editar" abre el formulario con los datos publicados. Cambia el precio y guarda: la oferta pasa a "Publicada con cambios en revisión" y en "Ver detalle" se ven lado a lado la versión publicada (1) y la pendiente (2). El turista sigue viendo la versión 1 hasta que el administrador apruebe la 2 (`"numeroVersion": 2`).
 6. **Retirar.** "Retirar" pide confirmación en un diálogo propio. Al confirmar, la oferta queda "Retirada", sin "Editar", y su ficha pública responde "Esta oferta ya no está disponible".
 7. **Errores.** Con el usuario demo **Agencia sin RNT**, publicar muestra que el RNT no está activo. Con **Hotel** o **Restaurante** el formulario solo ofrece el tipo de oferta que ese prestador puede publicar.
 
 8. **Leer opiniones.** La ficha de "Caminata a Cabo San Juan del Guía" muestra el promedio (4,7), el total y las opiniones aprobadas, de la más reciente a la más antigua; la rechazada de la precarga no aparece.
 9. **Opinar.** En **Usuario demo** elige a **Laura**, que ya pagó el snorkel en Playa Cristal. En su ficha, en "Dejar una opinión", elige las estrellas, escribe el comentario y envíalo: aparece "Tu opinión quedó en moderación". En "Mis opiniones" la opinión está "En moderación". Si Laura intenta opinar sobre una oferta que no pagó, la ficha responde "Solo puedes opinar sobre ofertas que hayas pagado"; si vuelve a opinar sobre la misma, "Ya opinaste sobre esta oferta".
-10. **Aprobar la opinión por consola.** Como con las ofertas, la decisión es del núcleo y se envía como aviso; los comandos están en el paso 8 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
+10. **Aprobar la opinión desde el núcleo.** Como con las ofertas, la decisión se envía con `curl` al núcleo; los comandos están en el paso 8 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
 
 La identidad es provisional: el selector "Usuario demo" de la cabecera, con dos turistas y cinco prestadores, sustituye al inicio de sesión mientras no exista el JWT del núcleo.
 
@@ -294,19 +293,18 @@ La oferta nace con su versión 1 en moderación y todavía no es visible:
 curl -s "$BASE/ofertas/$ID"                         # 404 OFERTA_NO_ENCONTRADA
 ```
 
-El núcleo avisa la aprobación por una ruta interna. Desde afuera Nginx responde 404; el aviso se envía desde dentro de la red de Docker:
+El administrador la aprueba en el núcleo (DN-08). El núcleo comprueba con el catálogo que la versión 1 sigue en moderación, guarda la decisión y deja el aviso en su bandeja, que lo envía a la ruta interna del catálogo:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
+NUCLEO=http://localhost:8080/api/nucleo
+ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
 
-docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s -X POST http://catalogo:8080/api/catalogo/internal/avisos \
-  -H "Content-Type: application/json" \
-  -d "{\"idAviso\":\"demo-$ID\",\"tipo\":\"MODERACION\",\"ofertaId\":\"$ID\",\"numeroVersion\":1,\"decision\":\"APROBAR\"}"
-# {"resultado":"APLICADO"}; si se repite el mismo aviso, {"resultado":"DUPLICADO"}, aunque llegue a la otra réplica
+curl -s -X POST "$NUCLEO/admin/moderacion/ofertas/$ID/decision" "${ADMIN[@]}" \
+  -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
+# {"tipo":"OFERTA","moderadoId":"...","numeroVersion":1,"decision":"APROBAR","administradorId":"...","decididaEn":"..."}
 ```
 
-Ahora aparece en la ficha y en la búsqueda:
+En los siguientes 15 s aparece en la ficha y en la búsqueda:
 
 ```bash
 curl -s "$BASE/ofertas/$ID"
@@ -359,7 +357,7 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
 
 ### 6. Moderación
 
-El administrador ve lo que espera su decisión: primero el paseo en lancha, que es nuevo, y después la edición de la caminata a Cabo San Juan, con la versión publicada al lado para comparar. La decisión la toma en el núcleo; mientras el núcleo no exista, se envía el aviso como en el paso 3.
+El administrador ve lo que espera su decisión: primero el paseo en lancha, que es nuevo, y después la edición de la caminata a Cabo San Juan, con la versión publicada al lado para comparar. La decisión la toma en el núcleo, como en el paso 3.
 
 ```bash
 curl -s "$BASE/admin/moderacion/ofertas" \
@@ -370,6 +368,31 @@ curl -s "$BASE/admin/moderacion/ofertas" \
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
 ```
+
+Rechazar el paseo en lancha exige motivo. El núcleo se lo notifica al prestador; por ahora la notificación solo sale en su log:
+
+```bash
+NUCLEO=http://localhost:8080/api/nucleo
+ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
+LANCHA="$NUCLEO/admin/moderacion/ofertas/b00000000000000000000017/decision"
+
+curl -s -X POST "$LANCHA" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "RECHAZAR"}'
+# 400 DATO_INVALIDO: "motivo: es obligatorio al rechazar"
+curl -s -X POST "$LANCHA" "${ADMIN[@]}" -H "Content-Type: application/json" \
+  -d '{"numeroVersion": 1, "decision": "RECHAZAR", "motivo": "Falta el punto de encuentro"}'
+docker compose -f infra/docker-compose.yml logs nucleo | grep "Notificación simulada"
+
+# Repetir el rechazo responde 200 con el registrado; aprobar después, 409 MODERACION_YA_DECIDIDA
+curl -s -X POST "$LANCHA" "${ADMIN[@]}" -H "Content-Type: application/json" \
+  -d '{"numeroVersion": 1, "decision": "RECHAZAR", "motivo": "Falta el punto de encuentro"}'
+curl -s -X POST "$LANCHA" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
+
+# La caminata a Cabo San Juan tiene en moderación la versión 2: decidir sobre la 1 responde 409 VERSION_NO_VIGENTE
+curl -s -X POST "$NUCLEO/admin/moderacion/ofertas/b00000000000000000000001/decision" "${ADMIN[@]}" \
+  -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
+```
+
+Si el catálogo no responde, el núcleo no decide nada y responde 503 `CATALOGO_NO_DISPONIBLE`.
 
 ### 7. Perfil público con fotos
 
@@ -438,14 +461,13 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s "http://catalogo:8080/api/catalogo/internal/moderacion/opiniones/$OPINION_ID"
 ```
 
-La decisión llega como aviso. Al aprobarla aparece en la ficha, con el resumen de calificaciones:
+El administrador decide en el núcleo, que se lo avisa al catálogo. Al aprobarla, en los siguientes 15 s aparece en la ficha, con el resumen de calificaciones:
 
 ```bash
-docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s -X POST http://catalogo:8080/api/catalogo/internal/opiniones/avisos \
-  -H "Content-Type: application/json" \
-  -d "{\"idAviso\":\"moderacion-$OPINION_ID\",\"tipo\":\"MODERACION_OPINION\",\"opinionId\":\"$OPINION_ID\",\"decision\":\"APROBAR\"}"
-# {"resultado":"APLICADO"}; para rechazar: "decision":"RECHAZAR","motivo":"..."
+curl -s -X POST "http://localhost:8080/api/nucleo/admin/moderacion/opiniones/$OPINION_ID/decision" \
+  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR" \
+  -H "Content-Type: application/json" -d '{"decision": "APROBAR"}'
+# para rechazar: '{"decision": "RECHAZAR", "motivo": "..."}'; el núcleo le notifica el motivo al turista
 
 curl -s "$BASE/ofertas/$OFERTA/opiniones"
 # {"resumen":{"totalOpiniones":1,"promedioCalificacion":5.0},"contenido":[...]}

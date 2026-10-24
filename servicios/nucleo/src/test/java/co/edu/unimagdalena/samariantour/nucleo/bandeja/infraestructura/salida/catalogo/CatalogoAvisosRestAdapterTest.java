@@ -1,9 +1,9 @@
 package co.edu.unimagdalena.samariantour.nucleo.bandeja.infraestructura.salida.catalogo;
 
-import co.edu.unimagdalena.samariantour.nucleo.bandeja.CatalogoSimulado;
+import co.edu.unimagdalena.samariantour.nucleo.CatalogoSimulado;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.modelo.Destino;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.modelo.ResultadoEnvio;
-import co.edu.unimagdalena.samariantour.nucleo.bandeja.infraestructura.config.BandejaConfig;
+import co.edu.unimagdalena.samariantour.nucleo.compartido.config.ClienteCatalogoConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +20,7 @@ class CatalogoAvisosRestAdapterTest {
     private static final String AVISO = "{\"idAviso\":\"a-1\",\"tipo\":\"SUPRESION_TURISTA\"}";
 
     private final CatalogoAvisosRestAdapter adaptador =
-            new CatalogoAvisosRestAdapter(BandejaConfig.clienteCatalogo(CATALOGO.url()));
+            new CatalogoAvisosRestAdapter(ClienteCatalogoConfig.crear(CATALOGO.url()));
 
     @BeforeEach
     void reiniciar() {
@@ -63,7 +63,7 @@ class CatalogoAvisosRestAdapterTest {
         CATALOGO.demorar(Duration.ofSeconds(4));
         assertThat(adaptador.enviar(Destino.OFERTAS, AVISO)).isInstanceOf(ResultadoEnvio.Fallido.class);
 
-        var apagado = new CatalogoAvisosRestAdapter(BandejaConfig.clienteCatalogo("http://localhost:1/api"));
+        var apagado = new CatalogoAvisosRestAdapter(ClienteCatalogoConfig.crear("http://localhost:1/api"));
         assertThat(apagado.enviar(Destino.OFERTAS, AVISO)).isInstanceOf(ResultadoEnvio.Fallido.class);
     }
 }

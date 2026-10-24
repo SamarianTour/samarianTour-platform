@@ -32,8 +32,8 @@ public class CatalogoAvisosRestAdapter implements CatalogoAvisosPort {
 
     private final RestClient catalogo;
 
-    public CatalogoAvisosRestAdapter(RestClient catalogoAvisos) {
-        this.catalogo = catalogoAvisos;
+    public CatalogoAvisosRestAdapter(RestClient clienteCatalogo) {
+        this.catalogo = clienteCatalogo;
     }
 
     @Override

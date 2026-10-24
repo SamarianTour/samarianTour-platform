@@ -94,7 +94,8 @@ class ArquitecturaTest {
     @DisplayName("7. los controladores solo llaman puertos de entrada; nunca repositorios ni puertos de salida")
     void entradaSoloUsaPuertosDeEntrada() {
         noClasses().that().resideInAPackage("..infraestructura.entrada..")
-                .should().dependOnClassesThat().resideInAnyPackage("..dominio.puerto.salida..", "..infraestructura.salida..")
+                .should().dependOnClassesThat()
+                .resideInAnyPackage("..dominio.puerto.salida..", "..infraestructura.salida..")
                 .allowEmptyShould(true)
                 .check(clases);
     }

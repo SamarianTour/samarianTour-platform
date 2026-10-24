@@ -31,7 +31,100 @@ tags:
   - name: Indicadores
     description: Módulo 9 (RF-85 a RF-89).
 
-paths: {}
+paths:
+  /admin/moderacion/ofertas/{ofertaId}/decision:
+    post:
+      tags: [Administración]
+      operationId: moderarOferta
+      summary: Aprobar o rechazar la versión en moderación de una oferta (RF-79)
+      description: |
+        El administrador lee la cola en el catálogo (`GET /api/catalogo/admin/moderacion/ofertas`) y decide aquí
+        (DN-08). El núcleo verifica con el catálogo que esa versión siga en moderación, guarda la decisión y envía
+        al catálogo el aviso de moderación por la bandeja de salida, que la aplica en los siguientes segundos. Un
+        rechazo se notifica al prestador con su motivo.
+
+        Repetir la misma decisión sobre la misma versión responde 200 con la decisión de entonces, aunque el catálogo
+        ya la haya aplicado; tomar la contraria responde 409 `MODERACION_YA_DECIDIDA`.
+      parameters:
+        - name: ofertaId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: b00000000000000000000017
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionOfertaRequest'
+            example:
+              numeroVersion: 1
+              decision: RECHAZAR
+              motivo: Falta el punto de encuentro
+      responses:
+        '200':
+          description: La decisión guardada, o la que ya se había tomado igual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionModeracion'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEstaEnModeracion'
+        '409':
+          $ref: '#/components/responses/ConflictoModeracion'
+        '503':
+          $ref: '#/components/responses/CatalogoNoDisponible'
+
+  /admin/moderacion/opiniones/{opinionId}/decision:
+    post:
+      tags: [Administración]
+      operationId: moderarOpinion
+      summary: Aprobar o rechazar una opinión en moderación (RF-80)
+      description: |
+        Como las ofertas, sin número de versión: una opinión no se edita (DC-42 del catálogo). Un rechazo se notifica
+        al turista con su motivo (DN-08).
+      parameters:
+        - name: opinionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionOpinionRequest'
+      responses:
+        '200':
+          description: La decisión guardada, o la que ya se había tomado igual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionModeracion'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEstaEnModeracion'
+        '409':
+          $ref: '#/components/responses/ConflictoModeracion'
+        '503':
+          $ref: '#/components/responses/CatalogoNoDisponible'
 
 components:
   parameters:
@@ -63,6 +156,57 @@ components:
         $ref: '#/components/schemas/TipoPrestador'
 
   responses:
+    DatoInvalido:
+      description: Un dato no cumple las reglas; `detail` empieza por el campo.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: "motivo: es obligatorio al rechazar"
+            codigo: DATO_INVALIDO
+    NoEstaEnModeracion:
+      description: Según el catálogo, la oferta o la opinión no existe o no tiene nada en moderación.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: La oferta b00000000000000000000099 no tiene nada en moderación
+            codigo: NO_ESTA_EN_MODERACION
+    ConflictoModeracion:
+      description: |
+        `MODERACION_YA_DECIDIDA`: ya se tomó la decisión contraria sobre esa versión u opinión.
+        `VERSION_NO_VIGENTE`: la versión en moderación es otra, porque el prestador editó la oferta; hay que volver a
+        cargar la cola.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: "La versión 1 de la oferta b00000000000000000000017 ya se decidió: APROBAR"
+            codigo: MODERACION_YA_DECIDIDA
+    CatalogoNoDisponible:
+      description: El catálogo no respondió a tiempo al verificar; no se decide sin verificar. Se puede reintentar.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            detail: "El catálogo no está disponible: no respondió a tiempo"
+            codigo: CATALOGO_NO_DISPONIBLE
     NoAutenticado:
       description: Falta la identidad del usuario, o está mal formada.
       content:
@@ -101,6 +245,57 @@ components:
             codigo: CONFLICTO_CONCURRENCIA
 
   schemas:
+    Decision:
+      type: string
+      enum: [APROBAR, RECHAZAR]
+    DecisionOfertaRequest:
+      type: object
+      required: [numeroVersion, decision]
+      properties:
+        numeroVersion:
+          type: integer
+          minimum: 1
+          description: La versión que el administrador revisó en la cola del catálogo.
+        decision:
+          $ref: '#/components/schemas/Decision'
+        motivo:
+          type: string
+          maxLength: 1000
+          description: Obligatorio al rechazar; se notifica al prestador.
+    DecisionOpinionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          $ref: '#/components/schemas/Decision'
+        motivo:
+          type: string
+          maxLength: 1000
+          description: Obligatorio al rechazar; se notifica al turista.
+    DecisionModeracion:
+      type: object
+      required: [tipo, moderadoId, decision, administradorId, decididaEn]
+      properties:
+        tipo:
+          type: string
+          enum: [OFERTA, OPINION]
+        moderadoId:
+          type: string
+          description: El identificador de la oferta o de la opinión en el catálogo.
+        numeroVersion:
+          type: integer
+          description: Solo para una oferta.
+        decision:
+          $ref: '#/components/schemas/Decision'
+        motivo:
+          type: string
+          description: Solo si se rechazó.
+        administradorId:
+          type: string
+          format: uuid
+        decididaEn:
+          type: string
+          format: date-time
     Rol:
       type: string
       description: Los roles del SRS (DN-04). El catálogo solo distingue los tres primeros.
@@ -127,6 +322,11 @@ components:
           type: string
           description: Motivo estable del error. Cada módulo agrega aquí sus códigos.
           enum:
+            - DATO_INVALIDO
             - NO_AUTENTICADO
             - ACCESO_DENEGADO
             - CONFLICTO_CONCURRENCIA
+            - NO_ESTA_EN_MODERACION
+            - VERSION_NO_VIGENTE
+            - MODERACION_YA_DECIDIDA
+            - CATALOGO_NO_DISPONIBLE
