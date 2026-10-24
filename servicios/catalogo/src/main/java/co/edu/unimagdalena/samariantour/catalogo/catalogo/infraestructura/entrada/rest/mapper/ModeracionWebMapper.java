@@ -40,7 +40,8 @@ public final class ModeracionWebMapper {
                 aContenido(pendiente), oferta.publicada().map(ModeracionWebMapper::aContenido).orElse(null));
     }
 
-    private static ContenidoVersionResponse aContenido(VersionOferta version) {
+    /** Todo el contenido de una versión; también lo usa la oferta propia (DC-50). */
+    static ContenidoVersionResponse aContenido(VersionOferta version) {
         ContenidoComun contenido = version.contenido();
         VersionActividad actividad = version instanceof VersionActividad v ? v : null;
         VersionPaquete paquete = version instanceof VersionPaquete v ? v : null;

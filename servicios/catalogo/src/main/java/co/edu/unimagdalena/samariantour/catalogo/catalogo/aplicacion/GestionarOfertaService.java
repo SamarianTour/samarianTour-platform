@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.OfertaNoEncontradaException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PrestadorNoAutorizadoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.FotoSubida;
@@ -94,6 +95,15 @@ public class GestionarOfertaService implements GestionarOfertaUseCase {
     @Override
     public Pagina<Oferta> listarMias(UUID prestadorId, Paginacion paginacion) {
         return ofertas.buscarPorPrestador(prestadorId, paginacion);
+    }
+
+    @Override
+    public Oferta consultarMia(String ofertaId, UUID prestadorId) {
+        Oferta oferta = ofertaExistente(ofertaId);
+        if (!oferta.esDe(prestadorId)) {
+            throw new PrestadorNoAutorizadoException(ofertaId);
+        }
+        return oferta;
     }
 
     private Zona zonaDe(VersionOferta contenido) {
