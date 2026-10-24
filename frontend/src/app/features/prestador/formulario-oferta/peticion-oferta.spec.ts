@@ -160,6 +160,7 @@ describe('valoresDeFicha', () => {
         nombre: 'Minca',
         areaProtegida: false,
         altaAfluencia: false,
+        activa: true,
         buenasPracticas: [],
       },
     };

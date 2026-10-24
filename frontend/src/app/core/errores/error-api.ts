@@ -42,6 +42,8 @@ export const MENSAJES: Record<CodigoError, string> = {
   OPINION_NO_ENCONTRADA: 'Esta opinión ya no está disponible.',
   PERFIL_NO_ENCONTRADO: 'Todavía no tienes perfil público. Guarda primero tu descripción.',
   FOTO_NO_ENCONTRADA: 'Esta foto ya no está disponible.',
+  ZONA_NO_ENCONTRADA: 'Esta zona ya no está disponible.',
+  ZONA_DUPLICADA: 'Ya existe una zona con ese nombre.',
 };
 
 export const MENSAJE_SIN_CONEXION = 'No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.';
