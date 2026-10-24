@@ -2,20 +2,20 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base: PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo; sus módulos y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
 | Ruta | Contenido |
 |---|---|
 | `servicios/catalogo` | Servicio de catálogo (MongoDB). Módulos `catalogo` y `opiniones`, más `compartido`. |
-| `servicios/nucleo` | Núcleo transaccional (PostgreSQL). Esqueleto. |
+| `servicios/nucleo` | Núcleo transaccional (PostgreSQL). Base del servicio y bandeja de salida hacia el catálogo; módulos pendientes. Ver [servicios/nucleo/README.md](servicios/nucleo/README.md). |
 | `servicios/recomendacion` | Recomendación (sin base de datos propia). Esqueleto. |
 | `libs/seguridad-jwt` | Validación del JWT RS256 y roles, compartida por los tres servicios. Pendiente. |
 | `contratos/` | Contratos OpenAPI (API first). Está el del catálogo: `catalogo.openapi.yaml`. |
 | `frontend/` | Aplicación Angular: catálogo y ficha para el turista, y panel del prestador. Ver [frontend/README.md](frontend/README.md). |
 | `infra/` | Docker Compose, Nginx, precarga de MongoDB y la prueba de carga de la búsqueda (`infra/carga`). |
-| `docs/` | Documento de diseño, diagramas, [decisiones del prototipo](docs/decisiones-catalogo-ofertas.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
+| `docs/` | Documento de diseño, diagramas, [decisiones del catálogo](docs/decisiones-catalogo-ofertas.md) y [del núcleo](docs/decisiones-nucleo.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
 
 ## Estructura de paquetes de un servicio
 
@@ -89,11 +89,11 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 docker compose -f infra/docker-compose.yml up --build -d
 ```
 
-Nginx queda en `http://localhost:8080`: sirve el frontend en `/` y enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `/api/catalogo/internal/**` y `/api/catalogo/actuator/**` no se exponen hacia afuera.
+Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo y `/api/nucleo/**` hacia las 2 del núcleo. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` y `actuator/**` de los dos servicios no se exponen hacia afuera.
 
-Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. Nginx arranca cuando el catálogo responde su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
+Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. El núcleo guarda sus datos en PostgreSQL, sin puertos publicados; al arrancar, Flyway crea o actualiza el esquema (DN-01), y cada 15 s el núcleo envía al catálogo los avisos de su bandeja de salida (DN-06). Nginx arranca cuando el catálogo y el núcleo responden su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
 
-Para volver a los datos iniciales hay que borrar los volúmenes de MongoDB y MinIO. También hace falta con una base creada antes del perfil con fotos (DC-39) o de las fotos de las ofertas (DC-47):
+Para volver a los datos iniciales hay que borrar los volúmenes de MongoDB, MinIO y PostgreSQL. También hace falta con una base creada antes del perfil con fotos (DC-39) o de las fotos de las ofertas (DC-47):
 
 ```bash
 docker compose -f infra/docker-compose.yml down -v
@@ -103,6 +103,12 @@ Actualizar solo el catálogo sin detener lo demás:
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build --no-deps catalogo
+```
+
+Actualizar solo el núcleo:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build --no-deps nucleo
 ```
 
 Actualizar solo el frontend:
