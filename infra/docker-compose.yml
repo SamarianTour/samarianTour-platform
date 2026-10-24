@@ -74,7 +74,40 @@ services:
     mem_limit: 512m
     restart: unless-stopped
 
-  # Nginx sirve el frontend ya compilado y reenvía /api/catalogo/ al catálogo.
+  # Recomendación (RF-26, RF-27): sin base de datos; lee las ofertas del catálogo y, si está configurado, consulta
+  # un proveedor de IA. Si la IA falla responde por reglas; si el recomendador cae, el resto sigue (ADR-04).
+  recomendacion:
+    build:
+      context: ..
+      dockerfile: servicios/recomendacion/Dockerfile
+    image: samarian-tour/recomendacion:latest
+    environment:
+      RECOMENDACION_CATALOGO_URL: http://catalogo:8080/api/catalogo
+      # Motor con IA (QAS-06, DR-01): apagado por defecto. Se enciende en infra/.env (ver infra/.env.example), sin
+      # recompilar; la key nunca se escribe en este archivo.
+      RECOMENDACION_IA_HABILITADA: ${IA_HABILITADA:-false}
+      RECOMENDACION_IA_API_KEY: ${GROQ_API_KEY:-}
+      RECOMENDACION_IA_URL: ${IA_URL:-https://api.groq.com/openai/v1}
+      RECOMENDACION_IA_MODELO: ${IA_MODELO:-openai/gpt-oss-120b}
+      # Vacío para un modelo que no razona (por ejemplo, uno de Ollama).
+      RECOMENDACION_IA_ESFUERZO_RAZONAMIENTO: ${IA_ESFUERZO_RAZONAMIENTO-low}
+    depends_on:
+      catalogo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/recomendacion/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    # Una réplica, sin puertos publicados: solo Nginx es accesible desde fuera.
+    deploy:
+      replicas: 1
+    mem_limit: 384m
+    restart: unless-stopped
+
+  # Nginx sirve el frontend ya compilado y reenvía /api/catalogo/ al catálogo y /api/recomendacion/ a la
+  # recomendación. No espera a la recomendación: si no está, solo esa sección falla (ADR-04).
   nginx:
     build:
       context: ../frontend
