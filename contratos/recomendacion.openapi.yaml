@@ -1,0 +1,258 @@
+openapi: 3.0.3
+info:
+  title: Samarian Tour · Recomendación
+  version: 0.1.0
+  description: |
+    API del servicio de recomendación (RF-26, RF-27). Recomienda de 3 a 5 ofertas visibles del catálogo, cada una
+    con la explicación del criterio usado. Responde un motor por reglas o uno con IA, que se elige por configuración
+    (QAS-06); si la IA falla, responde el de reglas sin error para el turista (QAS-03).
+
+    - Las rutas no incluyen el prefijo `/api/recomendacion`: es el context-path del servicio y va en `servers`.
+    - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
+    - Es pública: la sesión solo se exige al enviar una solicitud, en el núcleo.
+    - Nunca usa calificaciones, opiniones, comisión, tamaño ni identidad del prestador para elegir (DR-03).
+servers:
+  - url: http://localhost:8080/api/recomendacion
+    description: Piloto con Docker Compose, detrás de Nginx
+tags:
+  - name: Recomendación
+    description: Recomendaciones explicadas para el turista; no exige identidad.
+
+paths:
+  /recomendaciones:
+    post:
+      tags: [Recomendación]
+      operationId: recomendarOfertas
+      summary: Recomendar de 3 a 5 ofertas explicadas (RF-26, RF-27)
+      description: |
+        POST y no GET: el texto libre del turista va en el cuerpo, para que no quede en la URL ni en los logs de Nginx
+        (DR-09). No escribas datos personales en el texto.
+
+        - Base de conocimiento cerrada: solo ofertas visibles del catálogo (RF-26).
+        - Filtros duros: accesibilidad, precio máximo y esfuerzo máximo nunca se relajan. Si menos de 3 ofertas los
+          cumplen, devuelve las que haya (0 a 2) con el aviso `POCAS_COINCIDENCIAS`.
+        - Afinidad: tipo de oferta, tipo de actividad y zona. Entre ofertas de igual afinidad el orden rota en cada
+          consulta (RF-27).
+        - `motor` dice quién eligió, para mostrárselo al turista (transparencia).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsultaRecomendacion'
+            example:
+              texto: Quiero ver aves en la montaña, sin caminar mucho
+              idioma: es
+              tiposActividad: [AVISTAMIENTO_FAUNA]
+              nivelEsfuerzoMaximo: MODERADO
+              precioMaximo: 150000
+      responses:
+        '200':
+          description: De 3 a 5 recomendaciones explicadas, o de 0 a 2 con el aviso de pocas coincidencias.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recomendaciones'
+              example:
+                motor: REGLAS
+                recomendaciones:
+                  - posicion: 1
+                    oferta:
+                      id: b0000000000000000000000a
+                      nombre: Avistamiento de aves en Minca
+                      tipo: ACTIVIDAD
+                      zonaNombre: Minca
+                      precioReferencia: 120000
+                      unidadPrecio: por persona
+                    criterios: [TIPO_ACTIVIDAD, NIVEL_ESFUERZO, PRECIO]
+                    explicacion: 'Coincide con: avistamiento de fauna, esfuerzo bajo, precio dentro de tu presupuesto.'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '503':
+          $ref: '#/components/responses/RecomendacionNoDisponible'
+
+components:
+  responses:
+    DatoInvalido:
+      description: Sin texto ni ningún filtro, texto de más de 500 caracteres, precio no positivo, idioma no soportado o JSON ilegible.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: 'preferencias: escribe qué buscas o elige al menos un filtro'
+            instance: /api/recomendacion/recomendaciones
+            codigo: DATO_INVALIDO
+    RecomendacionNoDisponible:
+      description: |
+        El catálogo no responde y no hay ofertas en caché (DR-07). El resto de la plataforma sigue funcionando
+        (ADR-04). Una falla del proveedor de IA nunca llega aquí: responde el motor por reglas.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            detail: El catálogo no responde y no hay ofertas en caché; intenta de nuevo en unos minutos
+            instance: /api/recomendacion/recomendaciones
+            codigo: RECOMENDACION_NO_DISPONIBLE
+
+  schemas:
+    ConsultaRecomendacion:
+      type: object
+      description: |
+        Lo que busca el turista [SUPUESTO] (DR-02). Todo es opcional, pero hace falta el texto o al menos un filtro.
+        Nada identifica al turista.
+      properties:
+        texto:
+          type: string
+          maxLength: 500
+          description: Lo que busca, en sus palabras. Sin espacios en los extremos cuenta como máximo 500 caracteres.
+        idioma:
+          type: string
+          enum: [es, en]
+          description: Idioma de las explicaciones; sin él, español.
+        tiposOferta:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoOferta'
+        tiposActividad:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoActividad'
+        zonaId:
+          type: string
+          description: Una zona del catálogo (GET /api/catalogo/zonas).
+        accesibleSillaRuedas:
+          type: boolean
+          description: Filtro duro; si es true, solo ofertas accesibles en silla de ruedas. Sin él, false.
+        nivelEsfuerzoMaximo:
+          $ref: '#/components/schemas/NivelEsfuerzo'
+        precioMaximo:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          description: Filtro duro, en pesos colombianos; compara con el precio de referencia.
+
+    Recomendaciones:
+      type: object
+      required: [motor, recomendaciones]
+      properties:
+        motor:
+          $ref: '#/components/schemas/MotorRecomendacion'
+        aviso:
+          type: string
+          enum: [POCAS_COINCIDENCIAS]
+          description: Solo si menos de 3 ofertas pasan los filtros duros.
+        recomendaciones:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/Recomendacion'
+
+    Recomendacion:
+      type: object
+      required: [posicion, oferta, criterios, explicacion]
+      properties:
+        posicion:
+          type: integer
+          minimum: 1
+          maximum: 5
+        oferta:
+          $ref: '#/components/schemas/OfertaRecomendada'
+        criterios:
+          type: array
+          description: |
+            Los criterios explícitos que cumple la oferta. Vacío si no cumple ninguno: entonces la explicación lo dice.
+          items:
+            $ref: '#/components/schemas/CriterioAfinidad'
+        explicacion:
+          type: string
+          maxLength: 300
+          description: Por qué se recomienda, citando solo criterios explícitos (RF-27).
+
+    OfertaRecomendada:
+      type: object
+      description: Lo necesario para la tarjeta y el enlace a la ficha (GET /api/catalogo/ofertas/{id}). Sin el prestador.
+      required: [id, nombre, tipo, precioReferencia, unidadPrecio]
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        zonaNombre:
+          type: string
+          description: Se omite si el catálogo no lo pudo dar.
+        precioReferencia:
+          type: number
+          description: Precio informativo y no vinculante, en pesos colombianos.
+        unidadPrecio:
+          type: string
+          enum: [por persona, por noche y unidad, promedio por persona]
+
+    MotorRecomendacion:
+      type: string
+      description: Quién eligió las recomendaciones. Se le muestra al turista.
+      enum: [IA, REGLAS]
+
+    CriterioAfinidad:
+      type: string
+      description: |
+        Criterios explícitos (DR-03). Blandos, que suman afinidad: TIPO_OFERTA, TIPO_ACTIVIDAD y ZONA. Duros, que son
+        filtros si el turista los pide: ACCESIBILIDAD, NIVEL_ESFUERZO y PRECIO.
+      enum: [TIPO_OFERTA, TIPO_ACTIVIDAD, ZONA, ACCESIBILIDAD, NIVEL_ESFUERZO, PRECIO]
+
+    TipoOferta:
+      type: string
+      enum: [ACTIVIDAD, PAQUETE, ALOJAMIENTO, RESTAURANTE]
+
+    TipoActividad:
+      type: string
+      description: Los mismos valores que el contrato del catálogo.
+      enum:
+        - SENDERISMO
+        - BUCEO_SNORKEL
+        - DEPORTES_ACUATICOS
+        - NAUTICO
+        - AVISTAMIENTO_FAUNA
+        - CULTURAL_HISTORICO
+        - ETNOTURISMO
+        - GASTRONOMICO
+        - CICLISMO
+        - AVENTURA
+        - PLAYA_RELAX
+        - OTRO
+
+    NivelEsfuerzo:
+      type: string
+      description: De menor a mayor exigencia.
+      enum: [BAJO, MODERADO, ALTA_EXIGENCIA]
+
+    Problema:
+      type: object
+      description: ProblemDetail (RFC 7807) con la propiedad `codigo`.
+      required: [status, codigo]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        codigo:
+          type: string
+          description: Motivo estable del error.
+          enum:
+            - DATO_INVALIDO
+            - RECOMENDACION_NO_DISPONIBLE

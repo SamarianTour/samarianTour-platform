@@ -1,3 +1,57 @@
 spring:
   application:
     name: recomendacion
+  mvc:
+    # Errores en formato RFC 7807 (application/problem+json).
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8080
+  servlet:
+    # Nginx reenvía /api/recomendacion/** sin reescribir la ruta; el controlador se mapea sin el prefijo.
+    context-path: /api/recomendacion
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Solo la salud, para el healthcheck de Docker Compose. Nginx no deja llegar a /actuator desde fuera.
+        include: health
+
+recomendacion:
+  catalogo:
+    # En Docker Compose se sobrescribe con RECOMENDACION_CATALOGO_URL (http://catalogo:8080/api/catalogo).
+    url: http://localhost:8080/api/catalogo
+    # Corte por petición al catálogo (diagrama del módulo 09).
+    timeout: 3s
+    # Cada cuánto se vuelve a leer el catálogo [SUPUESTO] (DR-07).
+    vigencia-cache: 60s
+  ia:
+    # El proveedor de IA se cambia aquí, sin tocar código (QAS-06, DR-01). Apagado, o sin key, responde el motor por
+    # reglas.
+    habilitada: false
+    # Cualquier API compatible con la de OpenAI: Groq, Ollama (http://localhost:11434/v1), Gemini u OpenAI.
+    url: https://api.groq.com/openai/v1
+    modelo: openai/gpt-oss-120b
+    # api-key no tiene valor por defecto: llega en la variable de entorno RECOMENDACION_IA_API_KEY.
+    timeout: 6s
+    temperatura: 0.2
+    # Tamaño de la lista corta que se envía al modelo (DR-04); corta por el límite de tokens del plan gratis (DR-11).
+    candidatas: 10
+    # Solo para modelos de razonamiento como gpt-oss; vacío para un modelo que no lo acepte.
+    esfuerzo-razonamiento: low
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      # Corte de circuito del proveedor de IA (QAS-03, DR-06): tras 3 fallas seguidas, 60 s directo a reglas; luego
+      # una consulta de prueba decide si se vuelve a la IA.
+      ia:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 3
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 1
+        automatic-transition-from-open-to-half-open-enabled: false

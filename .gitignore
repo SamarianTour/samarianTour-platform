@@ -8,3 +8,8 @@ target/
 
 # Resultados de la prueba de carga (DC-48): se resumen en docs, no se versionan
 infra/carga/resultados/
+
+# Variables locales de Docker Compose, con la key del proveedor de IA (DR-01): nunca se versionan.
+# La plantilla es infra/.env.example.
+.env
+infra/.env
