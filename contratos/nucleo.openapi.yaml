@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Samarian Tour · Núcleo
+  version: 0.1.0
+  description: |
+    API del núcleo transaccional: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e
+    indicadores. Por ahora solo tiene la base del servicio; cada módulo agrega aquí sus rutas antes de escribir su
+    código (API first), y `ContratoNucleoIT` falla si una ruta existe en el contrato y no en los controladores, o al
+    revés.
+
+    - Las rutas no incluyen el prefijo `/api/nucleo`: es el context-path del servicio y va en `servers`.
+    - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
+    - Las rutas `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**` exigen la identidad del
+      usuario con el rol TURISTA, PRESTADOR, ADMINISTRADOR, OPERADOR_DISPONIBILIDAD o GESTOR_DESTINO,
+      respectivamente (DN-04, DN-05). Sin identidad responden 401 `NO_AUTENTICADO`; con otro rol, 403
+      `ACCESO_DENEGADO`. Las demás rutas son públicas, salvo `/internal/**`, que Nginx no expone.
+servers:
+  - url: http://localhost:8080/api/nucleo
+    description: Piloto con Docker Compose, detrás de Nginx
+tags:
+  - name: Cuentas
+    description: Módulo 1 (RF-01 a RF-13).
+  - name: Solicitudes
+    description: Módulo 4 (RF-30 a RF-45).
+  - name: Pagos
+    description: Módulo 5 (RF-46 a RF-58).
+  - name: Prestadores
+    description: Módulo 7 (RF-62, RF-63, RF-68 a RF-71, RF-73 a RF-75).
+  - name: Administración
+    description: Módulo 8 (RF-76 a RF-83).
+  - name: Indicadores
+    description: Módulo 9 (RF-85 a RF-89).
+
+paths: {}
+
+components:
+  parameters:
+    UsuarioId:
+      name: X-Usuario-Id
+      in: header
+      required: true
+      description: |
+        PROVISIONAL (DN-05): sustituye al identificador del usuario que traerá el JWT. Solo se acepta con el perfil
+        `demo`; sin él, la petición responde 401.
+      schema:
+        type: string
+        format: uuid
+    Rol:
+      name: X-Rol
+      in: header
+      required: true
+      description: |
+        PROVISIONAL (DN-05), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta; con otro
+        rol, la petición responde 403 `ACCESO_DENEGADO`.
+      schema:
+        $ref: '#/components/schemas/Rol'
+    TipoPrestador:
+      name: X-Tipo-Prestador
+      in: header
+      required: true
+      description: PROVISIONAL (DN-05), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR.
+      schema:
+        $ref: '#/components/schemas/TipoPrestador'
+
+  responses:
+    NoAutenticado:
+      description: Falta la identidad del usuario, o está mal formada.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: No autenticado
+            status: 401
+            detail: Falta el header X-Usuario-Id
+            codigo: NO_AUTENTICADO
+    AccesoDenegado:
+      description: El rol del usuario no es el que exige la ruta.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Acceso denegado
+            status: 403
+            detail: Esta ruta es solo para el rol TURISTA
+            codigo: ACCESO_DENEGADO
+    Conflicto:
+      description: Otra operación modificó el mismo dato al mismo tiempo y los reintentos no alcanzaron (ADR-05).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflicto de concurrencia
+            status: 409
+            detail: Otra operación modificó el mismo dato al mismo tiempo; vuelve a intentarlo
+            codigo: CONFLICTO_CONCURRENCIA
+
+  schemas:
+    Rol:
+      type: string
+      description: Los roles del SRS (DN-04). El catálogo solo distingue los tres primeros.
+      enum: [TURISTA, PRESTADOR, ADMINISTRADOR, OPERADOR_DISPONIBILIDAD, GESTOR_DESTINO]
+    TipoPrestador:
+      type: string
+      enum: [ALOJAMIENTO, RESTAURANTE, AGENCIA_OPERADORA, GUIA_INDEPENDIENTE]
+    Problema:
+      type: object
+      description: ProblemDetail (RFC 7807) con la propiedad `codigo`.
+      required: [status, codigo]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        codigo:
+          type: string
+          description: Motivo estable del error. Cada módulo agrega aquí sus códigos.
+          enum:
+            - NO_AUTENTICADO
+            - ACCESO_DENEGADO
+            - CONFLICTO_CONCURRENCIA
