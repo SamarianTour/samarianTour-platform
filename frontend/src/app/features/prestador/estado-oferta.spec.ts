@@ -8,6 +8,7 @@ function version(numero: number, estadoModeracion: EstadoModeracion, motivoRecha
     enviadaEn: '2026-10-01T10:00:00Z',
     nombre: `Versión ${numero}`,
     precioReferencia: 100000 * numero,
+    unidadPrecio: 'por persona',
     ...(motivoRechazo && { motivoRechazo }),
   };
 }
