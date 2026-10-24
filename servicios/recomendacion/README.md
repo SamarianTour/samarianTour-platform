@@ -14,7 +14,7 @@ Base: `co.edu.unimagdalena.samariantour.recomendacion`, con el módulo `recomend
 | Capa | Contenido |
 |---|---|
 | `dominio/modelo` | `Preferencias`, `OfertaCandidata`, `Recomendacion`, `Explicacion`, `CriterioAfinidad`, `MotorRecomendacion`, `PropuestaIA`, `RegistroExposicion` |
-| `dominio/politica` | `ReglaCriteriosExplicitos`, `PoliticaRotacion`, `ValidacionRespuestaIA` |
+| `dominio/politica` | `ReglaCriteriosExplicitos`, `RelevanciaTexto`, `PoliticaRotacion`, `ValidacionRespuestaIA` |
 | `dominio/puerto` | Entrada: `RecomendarOfertasUseCase`. Salida: `CatalogoConsultaPort`, `RecommendationPort`, `ExposicionPort` |
 | `aplicacion` | `RecomendacionService` |
 | `infraestructura/entrada/rest` | `RecomendacionController`, DTO y manejador de errores |
