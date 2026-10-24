@@ -27,6 +27,10 @@ jobs:
       - name: Construir imagen del núcleo
         run: docker build -f servicios/nucleo/Dockerfile -t samarian-tour/nucleo:ci .
 
+      # Sin key ni proveedor: el CI nunca llama a la IA (las pruebas usan un servidor simulado).
+      - name: Construir imagen de la recomendación
+        run: docker build -f servicios/recomendacion/Dockerfile -t samarian-tour/recomendacion:ci .
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

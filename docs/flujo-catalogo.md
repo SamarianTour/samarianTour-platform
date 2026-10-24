@@ -37,7 +37,7 @@ Son **tres servicios** independientes, cada uno en su propio contenedor Docker, 
 |---|---|---|---|
 | **Núcleo** | Cuentas, login (emite el token JWT), datos de los prestadores y su RNT, solicitudes, pagos y la decisión del administrador al moderar | PostgreSQL | Esqueleto 🔨 |
 | **Catálogo** | Zonas, ofertas, perfiles públicos y opiniones | MongoDB | En construcción |
-| **Recomendación** | Sugerencias y alertas del clima | Ninguna | Esqueleto 🔨 |
+| **Recomendación** | Recomendaciones explicadas, por reglas o con IA; las alertas del clima 🔨 | Ninguna | Prototipo de las recomendaciones |
 
 **¿Por qué separarlos?** En temporada alta casi todo el tráfico es gente mirando el catálogo. Al separarlo, se levantan varias copias del catálogo (2 réplicas) sin tocar el núcleo, donde está el dinero (ADR-02).
 
@@ -254,6 +254,33 @@ Ahora `GET /api/catalogo/ofertas/{id}/opiniones` la muestra, con el resumen: tot
 
 Por la Ley 1581, Pedro puede pedir al núcleo que borre sus datos. El núcleo avisa `{ o-3, SUPRESION_TURISTA, turistaId: Pedro }` y el catálogo **borra** sus opiniones y sus habilitaciones. El resumen de la oferta se recalcula solo, porque se calcula al leer.
 
+### Paso 12: Pedro pide recomendaciones
+
+Pedro no sabe qué buscar y le pide ideas al servicio de **recomendación**, que no tiene base de datos: su conocimiento son las ofertas visibles del catálogo (RF-26).
+
+```
+POST /api/recomendacion/recomendaciones
+Cuerpo: { texto: "quiero ver aves sin caminar mucho", tiposActividad: ["AVISTAMIENTO_FAUNA"], nivelEsfuerzoMaximo: "MODERADO" }
+```
+
+```
+RecomendacionController
+   ▼
+RecomendacionService
+   1. Ofertas visibles del catálogo        CatalogoRestClientAdapter → GET /api/catalogo/internal/ofertas
+                                           (caché de 60 s; si el catálogo cae y no hay copia → 503)
+   2. Filtros duros y afinidad             ReglaCriteriosExplicitos: accesibilidad, precio y esfuerzo
+                                           nunca se relajan; tipo, actividad y zona suman puntos
+   3. Rotación entre empates               PoliticaRotacion: ningún prestador queda siempre primero
+   4. El motor elige 3 a 5 y las explica   IA (si está configurada) o reglas
+        └─ si la IA falla o su respuesta no pasa ValidacionRespuestaIA → responde el motor por reglas
+   5. Registro de exposición               qué ofertas y prestadores se mostraron, sin datos de Pedro
+   ▼
+200 { motor: "REGLAS", recomendaciones: [ { posicion: 1, oferta: {...}, criterios: [...], explicacion: "..." } ] }
+```
+
+La respuesta dice qué motor eligió (`motor`) y, en cada recomendación, por qué (`criterios` y `explicacion`). Nunca por calificaciones, comisión ni por quién presta el servicio. Las decisiones están en [decisiones-recomendacion.md](decisiones-recomendacion.md).
+
 ## 6. Dónde está cada cosa
 
 Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalogo/`
@@ -283,6 +310,8 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
 | Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |
+
+La recomendación está en `servicios/recomendacion/` (ver su [README](../servicios/recomendacion/README.md)).
 
 Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (vacío: los datos de demostración los carga `CargaDemoMongo` al arrancar), `.github/workflows/ci.yml`.
 

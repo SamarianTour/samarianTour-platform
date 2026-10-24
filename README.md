@@ -2,7 +2,8 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo) y la moderación de ofertas y opiniones; sus demás módulos y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo) y la moderación de ofertas y opiniones; sus demás módulos están pendientes.
+
 
 ## Estructura del repositorio
 
@@ -10,12 +11,12 @@ Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven mul
 |---|---|
 | `servicios/catalogo` | Servicio de catálogo (MongoDB). Módulos `catalogo` y `opiniones`, más `compartido`. |
 | `servicios/nucleo` | Núcleo transaccional (PostgreSQL). Base del servicio y bandeja de salida hacia el catálogo; módulos pendientes. Ver [servicios/nucleo/README.md](servicios/nucleo/README.md). |
-| `servicios/recomendacion` | Recomendación (sin base de datos propia). Esqueleto. |
+| `servicios/recomendacion` | Recomendación (sin base de datos propia): ofertas explicadas, por reglas o con IA. Ver [su README](servicios/recomendacion/README.md). |
 | `libs/seguridad-jwt` | Validación del JWT RS256 y roles, compartida por los tres servicios. Pendiente. |
-| `contratos/` | Contratos OpenAPI (API first). Está el del catálogo: `catalogo.openapi.yaml`. |
+| `contratos/` | Contratos OpenAPI (API first): `catalogo.openapi.yaml`, `nucleo.openapi.yaml` y `recomendacion.openapi.yaml`. |
 | `frontend/` | Aplicación Angular: catálogo y ficha para el turista, y panel del prestador. Ver [frontend/README.md](frontend/README.md). |
 | `infra/` | Docker Compose, Nginx, precarga de MongoDB y la prueba de carga de la búsqueda (`infra/carga`). |
-| `docs/` | Documento de diseño, diagramas, [decisiones del catálogo](docs/decisiones-catalogo-ofertas.md) y [del núcleo](docs/decisiones-nucleo.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
+| `docs/` | Documento de diseño, diagramas, [decisiones del catálogo](docs/decisiones-catalogo-ofertas.md), [del núcleo](docs/decisiones-nucleo.md) y [de la recomendación](docs/decisiones-recomendacion.md), [flujo del catálogo](docs/flujo-catalogo.md) y ADR ([ADR-05](docs/adr/ADR-05-control-de-concurrencia.md)). |
 
 ## Estructura de paquetes de un servicio
 
@@ -69,7 +70,7 @@ mvn test      # unitarias, controladores, contrato y ArchUnit (no necesita Docke
 mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testcontainers
 ```
 
-`ContratoCatalogoTest` compara las rutas de los controladores y los campos de los DTO con `contratos/catalogo.openapi.yaml`: si difieren, el build falla.
+`ContratoCatalogoTest` y `ContratoRecomendacionTest` comparan las rutas de los controladores y los campos de los DTO con su contrato en `contratos/`: si difieren, el build falla. Ninguna prueba llama a un proveedor de IA ni al catálogo real.
 
 ## Perfiles del catálogo
 
@@ -89,7 +90,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 docker compose -f infra/docker-compose.yml up --build -d
 ```
 
-Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo y `/api/nucleo/**` hacia las 2 del núcleo. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` y `actuator/**` de los dos servicios no se exponen hacia afuera.
+Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo, `/api/nucleo/**` hacia las 2 del núcleo y `/api/recomendacion/**` hacia la recomendación. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` del catálogo y del núcleo y las `actuator/**` de los tres servicios no se exponen hacia afuera.
 
 Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. El núcleo guarda sus datos en PostgreSQL, sin puertos publicados; al arrancar, Flyway crea o actualiza el esquema (DN-01), y cada 15 s el núcleo envía al catálogo los avisos de su bandeja de salida (DN-06). Nginx arranca cuando el catálogo y el núcleo responden su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
 
@@ -111,10 +112,44 @@ Actualizar solo el núcleo:
 docker compose -f infra/docker-compose.yml up -d --build --no-deps nucleo
 ```
 
+Actualizar solo la recomendación:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build --no-deps recomendacion
+```
+
 Actualizar solo el frontend:
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build --no-deps nginx
+```
+
+### Motor de recomendación: reglas o IA
+
+Sin configurar nada, la recomendación responde con el **motor por reglas** (`"motor": "REGLAS"`): elige por los criterios explícitos y explica cada oferta con una plantilla (DR-01, DR-03 de [las decisiones de la recomendación](docs/decisiones-recomendacion.md)).
+
+Para usar el **motor con IA** (Groq, plan gratis), crea `infra/.env` a partir de la plantilla. Ese archivo no se versiona: la key nunca va al repositorio.
+
+```bash
+cp infra/.env.example infra/.env
+# En infra/.env: IA_HABILITADA=true y GROQ_API_KEY=<tu key de https://console.groq.com/keys>
+docker compose -f infra/docker-compose.yml up -d recomendacion
+docker compose -f infra/docker-compose.yml logs recomendacion | grep "motor de recomendacion principal"
+# ... motor de recomendacion principal: IA
+```
+
+Desde ahí las respuestas dicen `"motor": "IA"`. Si Groq tarda más de 6 s, responde 429 (límite del plan) o 5xx, o su respuesta no pasa la validación, esa consulta la responde el motor por reglas sin error para el turista; tras 3 fallas seguidas, el corte de circuito va directo a reglas por 60 s (DR-05, DR-06). El log del servicio dice el motor, la latencia y la causa de cada falla, nunca el texto del turista ni la key.
+
+**Cambiar de proveedor sin recompilar (QAS-06).** Es el mismo adaptador para cualquier API compatible con la de OpenAI: solo cambian la URL, el modelo y la key en `infra/.env`. Con Ollama en el mismo equipo:
+
+```bash
+# En infra/.env:
+#   IA_HABILITADA=true
+#   IA_URL=http://host.docker.internal:11434/v1
+#   IA_MODELO=llama3.2
+#   IA_ESFUERZO_RAZONAMIENTO=
+#   GROQ_API_KEY=ollama
+docker compose -f infra/docker-compose.yml up -d recomendacion    # recrea el contenedor con la misma imagen
 ```
 
 ## Prueba de carga de la búsqueda (QAS-07)
@@ -509,7 +544,52 @@ curl -s -X PUT "$BASE/admin/zonas/$ZONA_ID" "${ADMIN[@]}" -H "Content-Type: appl
 curl -s "$BASE/admin/zonas" "${ADMIN[@]}"
 ```
 
-### 11. Rutas que no se exponen
+### 11. Recomendaciones
+
+La recomendación es pública y va por POST: el texto del turista viaja en el cuerpo, no en la URL (DR-09). Sin `infra/.env`, responde el motor por reglas:
+
+```bash
+RECO=http://localhost:8080/api/recomendacion/recomendaciones
+
+# Avistamiento de fauna, esfuerzo hasta moderado y 150.000 de precio maximo
+curl -s -X POST "$RECO" -H "Content-Type: application/json" \
+  -d '{"tiposActividad":["AVISTAMIENTO_FAUNA"],"nivelEsfuerzoMaximo":"MODERADO","precioMaximo":150000}'
+# {"motor":"REGLAS","recomendaciones":[{"posicion":1,"oferta":{"id":"b0000000000000000000000a",
+#   "nombre":"Avistamiento de aves en Minca",...},"criterios":["TIPO_ACTIVIDAD","NIVEL_ESFUERZO","PRECIO"],
+#   "explicacion":"Coincide con: avistamiento de fauna, esfuerzo bajo, precio dentro de tu presupuesto."}, ...]}
+
+# Las explicaciones en ingles
+curl -s -X POST "$RECO" -H "Content-Type: application/json" -d '{"idioma":"en","accesibleSillaRuedas":true}'
+
+# Menos de 3 ofertas cumplen los filtros obligatorios: devuelve las que haya, con el aviso, sin relajarlos
+curl -s -X POST "$RECO" -H "Content-Type: application/json" -d '{"accesibleSillaRuedas":true,"precioMaximo":65000}'
+# {"motor":"REGLAS","aviso":"POCAS_COINCIDENCIAS","recomendaciones":[...]}
+
+# Sin texto ni filtros: 400 DATO_INVALIDO
+curl -s -X POST "$RECO" -H "Content-Type: application/json" -d '{}'
+```
+
+Entre ofertas con la misma afinidad el orden cambia en cada consulta (RF-27). Cada consulta deja una línea en el registro de exposición (RET-02), sin datos del turista:
+
+```bash
+docker compose -f infra/docker-compose.yml logs recomendacion | grep exposicion
+# ... exposicion : {"fecha":"...","motor":"REGLAS","recomendaciones":[{"ofertaId":"b0000000000000000000000a",
+#   "prestadorId":"20000000-0000-0000-0000-000000000002","posicion":1,"criterios":[...]}, ...]}
+```
+
+Con el catálogo apagado, la recomendación sigue respondiendo con su copia en caché. Sin copia (por ejemplo, recién arrancada) responde 503 `RECOMENDACION_NO_DISPONIBLE`, y el resto de la plataforma sigue funcionando (ADR-04):
+
+```bash
+docker compose -f infra/docker-compose.yml stop catalogo
+docker compose -f infra/docker-compose.yml restart recomendacion
+curl -s -X POST "$RECO" -H "Content-Type: application/json" -d '{"precioMaximo":100000}'
+# 503 RECOMENDACION_NO_DISPONIBLE
+docker compose -f infra/docker-compose.yml start catalogo
+```
+
+Para el motor con IA y el cambio de proveedor, ver "Motor de recomendación: reglas o IA" en "Levantar el piloto".
+
+### 12. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
@@ -519,6 +599,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/opiniones/aviso
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/prometheus"          # 404: las métricas solo dentro de Docker
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/api/recomendacion/actuator/health  # 404
 ```
 
 Otros casos que se pueden mostrar:
