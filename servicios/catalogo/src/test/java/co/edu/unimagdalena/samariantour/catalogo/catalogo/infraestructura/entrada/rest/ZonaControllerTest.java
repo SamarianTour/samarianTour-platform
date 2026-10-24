@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_INACTIVA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaActiva;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.when;
@@ -40,10 +42,27 @@ class ZonaControllerTest {
                 .andExpect(jsonPath("$[0].id").value(ZONA_ACTIVA))
                 .andExpect(jsonPath("$[0].areaProtegida").value(true))
                 .andExpect(jsonPath("$[0].altaAfluencia").value(true))
+                .andExpect(jsonPath("$[0].activa").value(true))
                 .andExpect(jsonPath("$[0].ubicacion.latitud").value(11.30))
                 .andExpect(jsonPath("$[0].condicionesVisita").value("Ingreso hasta las 16:00"))
                 .andExpect(jsonPath("$[1].nombre").value("Taganga"))
                 .andExpect(jsonPath("$[1].descripcion").doesNotExist())
                 .andExpect(jsonPath("$[1].ubicacion").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("la ficha de una zona trae sus buenas prácticas y si está activa; una que no existe responde 404")
+    void ficha() throws Exception {
+        when(consultarZonas.consultar(ZONA_INACTIVA)).thenReturn(new Zona(ZONA_INACTIVA, "Zona cerrada", "Cerrada",
+                null, true, false, false, List.of("No dejar residuos"), null));
+        when(consultarZonas.consultar("no-existe")).thenThrow(new ZonaNoEncontradaException("no-existe"));
+
+        http.perform(get("/zonas/" + ZONA_INACTIVA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activa").value(false))
+                .andExpect(jsonPath("$.buenasPracticas[0]").value("No dejar residuos"));
+        http.perform(get("/zonas/no-existe"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value("ZONA_NO_ENCONTRADA"));
     }
 }

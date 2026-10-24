@@ -12,7 +12,8 @@ public final class ZonaMongoMapper {
     }
 
     public static ZonaDocument aDocumento(Zona zona) {
-        return new ZonaDocument(ConversionesMongo.referencia(zona.id()), zona.nombre(), zona.descripcion(),
+        return new ZonaDocument(ConversionesMongo.referencia(zona.id()), zona.nombre(), zona.claveNombre(),
+                zona.descripcion(),
                 ConversionesMongo.punto(zona.ubicacion()), zona.areaProtegida(), zona.altaAfluencia(), zona.activa(),
                 zona.buenasPracticas(), zona.condicionesVisita());
     }

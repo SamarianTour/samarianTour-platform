@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.ZonaRepositoryPort;
@@ -7,7 +8,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.salida.
 import java.util.List;
 
 /**
- * Zonas activas (RF-14, RF-25).
+ * Zonas activas y ficha de una zona (RF-14, RF-25).
  */
 public class ConsultarZonasService implements ConsultarZonasUseCase {
 
@@ -20,5 +21,10 @@ public class ConsultarZonasService implements ConsultarZonasUseCase {
     @Override
     public List<Zona> consultarActivas() {
         return zonas.buscarActivas();
+    }
+
+    @Override
+    public Zona consultar(String zonaId) {
+        return zonas.buscarPorId(zonaId).orElseThrow(() -> new ZonaNoEncontradaException(zonaId));
     }
 }

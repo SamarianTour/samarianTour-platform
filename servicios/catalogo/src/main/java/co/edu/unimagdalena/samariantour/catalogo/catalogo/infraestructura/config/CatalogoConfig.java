@@ -8,6 +8,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOf
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertaParaModulosService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertasVisiblesService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarZonasService;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarZonasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarOfertaService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarPerfilPublicoService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.LimpiarFotosSinUsoService;
@@ -21,6 +22,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaParaModulosUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertasVisiblesUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarPerfilPublicoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.LimpiarFotosSinUsoUseCase;
@@ -105,6 +107,11 @@ public class CatalogoConfig {
     @Bean
     ConsultarZonasUseCase consultarZonas(ZonaRepositoryPort zonas) {
         return new ConsultarZonasService(zonas);
+    }
+
+    @Bean
+    GestionarZonasUseCase gestionarZonas(ZonaRepositoryPort zonas) {
+        return new GestionarZonasService(zonas);
     }
 
     @Bean
