@@ -1,3 +1,48 @@
 spring:
   application:
     name: nucleo
+  datasource:
+    # En Docker Compose se sobrescriben con SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME y
+    # SPRING_DATASOURCE_PASSWORD. El núcleo siempre usa PostgreSQL; no hay perfil en memoria (DN-03).
+    url: jdbc:postgresql://localhost:5432/nucleo_db
+    username: nucleo
+    password: nucleo-piloto
+  jpa:
+    # El esquema lo crea Flyway (DN-01); Hibernate solo comprueba que las entidades coinciden con él.
+    hibernate:
+      ddl-auto: validate
+    # Sin consultas abiertas mientras se arma la respuesta: cada caso de uso trae lo que necesita.
+    open-in-view: false
+  flyway:
+    locations: classpath:db/migration
+  mvc:
+    # Errores en formato RFC 7807 (application/problem+json).
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8080
+  servlet:
+    # Nginx reenvía /api/nucleo/** sin reescribir la ruta; los controladores se mapean sin el prefijo.
+    context-path: /api/nucleo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # La salud, para el healthcheck de Docker Compose, y las métricas. Nginx no deja llegar a /actuator desde
+        # fuera.
+        include: health,prometheus
+  metrics:
+    distribution:
+      slo:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,750ms,1s,1500ms,2s,3s
+
+nucleo:
+  catalogo:
+    # La API del catálogo por la red interna; en Docker Compose se sobrescribe con NUCLEO_CATALOGO_URL.
+    url: http://localhost:8081/api/catalogo
+  bandeja:
+    publicacion:
+      # Cada 15 s envía al catálogo los avisos pendientes (DN-06). Con "-" no corre.
+      cron: "*/15 * * * * *"
