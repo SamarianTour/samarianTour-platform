@@ -31,6 +31,21 @@ class PoliticaRotacionTest {
     }
 
     @Test
+    @DisplayName("con la misma afinidad, desempatan las palabras del texto que coinciden; el azar, solo después")
+    void desempatePorTexto() {
+        List<OfertaEvaluada> evaluadas = List.of(
+                new OfertaEvaluada(oferta("sin").crear(), Set.of(), 0),
+                new OfertaEvaluada(oferta("una").crear(), Set.of(), 0, List.of("snorkel")),
+                new OfertaEvaluada(oferta("dos").crear(), Set.of(), 0, List.of("snorkel", "playa")),
+                new OfertaEvaluada(oferta("afin").crear(), Set.of(), 1));
+
+        for (long semilla = 0; semilla < 20; semilla++) {
+            assertThat(ids(new PoliticaRotacion(new Random(semilla)).ordenar(evaluadas)))
+                    .as("semilla %d", semilla).containsExactly("afin", "dos", "una", "sin");
+        }
+    }
+
+    @Test
     @DisplayName("con la misma semilla, el mismo orden: las pruebas son deterministas")
     void determinista() {
         assertThat(ids(new PoliticaRotacion(new Random(42)).ordenar(EVALUADAS)))

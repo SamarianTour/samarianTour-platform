@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 class PlantillasExplicacion {
 
     private static final Map<Idioma, Textos> TEXTOS = new EnumMap<>(Map.of(
-            Idioma.ES, new Textos("Coincide con: ",
+            Idioma.ES, new Textos("Coincide con: ", "Relacionada con lo que escribiste: ",
                     "Sin coincidencias con tus filtros: es una de las ofertas visibles del catálogo, mostrada en "
                             + "orden aleatorio.",
                     "zona %s", "la zona que elegiste", "accesible en silla de ruedas", "esfuerzo %s",
@@ -45,7 +45,7 @@ class PlantillasExplicacion {
                             Map.entry(TipoActividad.OTRO, "otras actividades")),
                     Map.of(NivelEsfuerzo.BAJO, "bajo", NivelEsfuerzo.MODERADO, "moderado",
                             NivelEsfuerzo.ALTA_EXIGENCIA, "de alta exigencia")),
-            Idioma.EN, new Textos("Matches: ",
+            Idioma.EN, new Textos("Matches: ", "Related to what you wrote: ",
                     "No match with your filters: it is one of the catalog's visible offers, shown in random order.",
                     "%s area", "the area you chose", "wheelchair accessible", "%s effort",
                     "price within your budget",
@@ -67,12 +67,30 @@ class PlantillasExplicacion {
                     Map.of(NivelEsfuerzo.BAJO, "low", NivelEsfuerzo.MODERADO, "moderate",
                             NivelEsfuerzo.ALTA_EXIGENCIA, "high"))));
 
-    /** El texto para el turista, en su idioma y con los criterios en el orden del enum. */
+    /**
+     * El texto para el turista, en su idioma: los criterios que cumple, en el orden del enum, y las palabras de su
+     * texto que coinciden con la oferta (DR-13).
+     */
     String explicar(OfertaEvaluada evaluada, Preferencias preferencias) {
         Textos textos = TEXTOS.get(preferencias.idioma());
-        if (evaluada.criteriosCumplidos().isEmpty()) {
+        if (evaluada.criteriosCumplidos().isEmpty() && evaluada.palabrasDelTexto().isEmpty()) {
             return textos.sinCoincidencias();
         }
+        List<String> frases = new ArrayList<>();
+        if (!evaluada.criteriosCumplidos().isEmpty()) {
+            frases.add(textos.inicio() + String.join(", ", criterios(evaluada, preferencias, textos)) + ".");
+        }
+        if (!evaluada.palabrasDelTexto().isEmpty()) {
+            frases.add(textos.texto() + String.join(", ", evaluada.palabrasDelTexto()) + ".");
+        }
+        String texto = String.join(" ", frases);
+        // Con los 12 tipos de actividad o un texto muy largo no alcanza; en la práctica casi nunca se recorta.
+        return texto.length() <= Explicacion.TEXTO_MAXIMO
+                ? texto
+                : texto.substring(0, Explicacion.TEXTO_MAXIMO - 1) + "…";
+    }
+
+    private static List<String> criterios(OfertaEvaluada evaluada, Preferencias preferencias, Textos textos) {
         OfertaCandidata oferta = evaluada.oferta();
         List<String> partes = new ArrayList<>();
         for (CriterioAfinidad criterio : evaluada.criteriosCumplidos()) {
@@ -90,14 +108,10 @@ class PlantillasExplicacion {
                 case PRECIO -> textos.precio();
             });
         }
-        String texto = textos.inicio() + String.join(", ", partes) + ".";
-        // Con los 12 tipos de actividad a la vez no alcanza; en la práctica nunca se recorta.
-        return texto.length() <= Explicacion.TEXTO_MAXIMO
-                ? texto
-                : texto.substring(0, Explicacion.TEXTO_MAXIMO - 1) + "…";
+        return partes;
     }
 
-    private record Textos(String inicio, String sinCoincidencias, String zona, String zonaSinNombre,
+    private record Textos(String inicio, String texto, String sinCoincidencias, String zona, String zonaSinNombre,
                           String accesible, String esfuerzo, String precio, Map<TipoOferta, String> tiposOferta,
                           Map<TipoActividad, String> tiposActividad, Map<NivelEsfuerzo, String> niveles) {
     }

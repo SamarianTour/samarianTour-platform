@@ -114,6 +114,16 @@ class ReglaCriteriosExplicitosTest {
         }
 
         @Test
+        @DisplayName("anota las palabras del texto que coinciden con la oferta, sin sumarlas a la afinidad")
+        void palabrasDelTexto() {
+            OfertaEvaluada evaluada = regla.evaluar(List.of(oferta("1").crear()),
+                    preferencias().texto("una caminata por la Sierra Nevada").crear()).getFirst();
+            assertThat(evaluada.palabrasDelTexto()).containsExactly("caminata", "sierra", "nevada");
+            assertThat(evaluada.relevancia()).isEqualTo(3);
+            assertThat(evaluada.afinidad()).isZero();
+        }
+
+        @Test
         @DisplayName("lo que el turista no pidió no se cuenta: una oferta accesible no cumple ACCESIBILIDAD si no la pidió")
         void soloLoPedido() {
             assertThat(regla.criteriosCumplidos(oferta("1").crear(), preferencias().texto("aves").crear())).isEmpty();

@@ -80,6 +80,19 @@ class RecomendadorPorReglasAdapterTest {
     }
 
     @Test
+    @DisplayName("con palabras del texto que coinciden, lo dice; junto a los criterios, en otra frase")
+    void palabrasDelTexto() {
+        Recomendacion soloTexto = unica(oferta("o1").crear(), preferencias().texto("caminar por la sierra").crear());
+        assertThat(soloTexto.explicacion().criterios()).isEmpty();
+        assertThat(soloTexto.explicacion().texto()).isEqualTo("Relacionada con lo que escribiste: caminar, sierra.");
+
+        Recomendacion conFiltro = unica(oferta("o2").crear(),
+                preferencias().idioma(Idioma.EN).texto("hiking").precioMaximo(100_000).crear());
+        assertThat(conFiltro.explicacion().texto())
+                .isEqualTo("Matches: price within your budget. Related to what you wrote: hiking.");
+    }
+
+    @Test
     @DisplayName("si la zona no tiene nombre, dice 'la zona que elegiste'")
     void zonaSinNombre() {
         Recomendacion recomendacion = unica(oferta("o1").zona(MINCA, null).crear(), preferencias().zona(MINCA).crear());

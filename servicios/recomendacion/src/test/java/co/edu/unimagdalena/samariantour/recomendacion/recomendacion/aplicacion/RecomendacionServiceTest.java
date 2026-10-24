@@ -32,6 +32,7 @@ import static co.edu.unimagdalena.samariantour.recomendacion.recomendacion.Ofert
 import static co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.AvisoRecomendacion.POCAS_COINCIDENCIAS;
 import static co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.MotorRecomendacion.IA;
 import static co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.MotorRecomendacion.REGLAS;
+import static co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoActividad.BUCEO_SNORKEL;
 import static co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoActividad.SENDERISMO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -116,6 +117,20 @@ class RecomendacionServiceTest {
         assertThat(resultado.recomendaciones()).isEmpty();
         assertThat(resultado.aviso()).isEqualTo(POCAS_COINCIDENCIAS);
         assertThat(resultado.motor()).isEqualTo(REGLAS);
+    }
+
+    @Test
+    @DisplayName("con solo texto, primero las ofertas que coinciden con sus palabras, con cualquier semilla")
+    void soloTexto() {
+        List<OfertaCandidata> conSnorkel = new ArrayList<>(catalogo);
+        conSnorkel.add(oferta("snorkel").nombre("Snorkel en Playa Cristal").actividades(BUCEO_SNORKEL).crear());
+
+        for (long semilla = 0; semilla < 10; semilla++) {
+            ResultadoRecomendacion resultado = servicio(() -> conSnorkel, reglas, semilla)
+                    .recomendar(preferencias().texto("quiero hacer snorkeling").crear());
+            assertThat(resultado.recomendaciones().getFirst().oferta().id()).as("semilla %d", semilla)
+                    .isEqualTo("snorkel");
+        }
     }
 
     @Test

@@ -18,9 +18,13 @@ import java.util.Set;
  *   dentro del máximo (las ofertas sin nivel, como alojamientos y restaurantes, pasan).</li>
  *   <li>Afinidad: un punto por cada criterio blando que coincide (tipo de oferta, algún tipo de actividad, zona).</li>
  * </ol>
- * Nunca usa calificaciones, opiniones, comisión, tamaño ni identidad del prestador.
+ * Nunca usa calificaciones, opiniones, comisión, tamaño ni identidad del prestador. Además anota qué palabras del
+ * texto del turista coinciden con cada oferta ({@link RelevanciaTexto}, DR-13): desempatan entre ofertas de igual
+ * afinidad.
  */
 public class ReglaCriteriosExplicitos {
+
+    private final RelevanciaTexto relevancia = new RelevanciaTexto();
 
     /** Las que pasan los filtros duros, en el mismo orden en que llegaron. */
     public List<OfertaEvaluada> evaluar(List<OfertaCandidata> ofertas, Preferencias preferencias) {
@@ -29,7 +33,8 @@ public class ReglaCriteriosExplicitos {
                 .map(oferta -> {
                     Set<CriterioAfinidad> cumplidos = criteriosCumplidos(oferta, preferencias);
                     int afinidad = (int) cumplidos.stream().filter(CriterioAfinidad::esBlando).count();
-                    return new OfertaEvaluada(oferta, cumplidos, afinidad);
+                    return new OfertaEvaluada(oferta, cumplidos, afinidad,
+                            relevancia.coincidencias(preferencias.texto(), oferta));
                 })
                 .toList();
     }
