@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.nucleo.bandeja;
 
+import co.edu.unimagdalena.samariantour.nucleo.CatalogoSimulado;
 import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.api.BandejaSalidaApi;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.api.DestinoAviso;
