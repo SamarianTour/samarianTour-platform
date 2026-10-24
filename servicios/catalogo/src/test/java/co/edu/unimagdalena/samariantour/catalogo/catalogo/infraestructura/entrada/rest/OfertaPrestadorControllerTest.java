@@ -36,11 +36,15 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.time.LocalTime;
 import java.util.List;
 
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.DESPUES;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.actividad;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.habilitado;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaEnModeracion;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ofertaPublicada;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.zonaActiva;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -319,6 +323,7 @@ class OfertaPrestadorControllerTest {
                 .andExpect(jsonPath("$.contenido[0].retirada").value(false))
                 .andExpect(jsonPath("$.contenido[0].publicada").doesNotExist())
                 .andExpect(jsonPath("$.contenido[0].pendiente.estadoModeracion").value("EN_MODERACION"))
+                .andExpect(jsonPath("$.contenido[0].pendiente.unidadPrecio").value("por persona"))
                 .andExpect(jsonPath("$.contenido[1].retirada").value(true))
                 .andExpect(jsonPath("$.contenido[1].publicada.numero").value(1))
                 .andExpect(jsonPath("$.pagina").value(1))
@@ -327,6 +332,65 @@ class OfertaPrestadorControllerTest {
                 .andExpect(jsonPath("$.totalPaginas").value(2));
 
         verify(gestionarOferta).listarMias(PRESTADOR, new Paginacion(1, 2));
+    }
+
+    @Test
+    @DisplayName("consultar una oferta propia trae el contenido completo de la versión publicada y de la pendiente")
+    void consultarMia() throws Exception {
+        Oferta editada = ofertaPublicada();
+        editada.editar(habilitado(), TipoPrestador.AGENCIA_OPERADORA, actividad("Caminata al amanecer"),
+                zonaActiva(), DESPUES);
+        when(gestionarOferta.consultarMia("oferta-1", PRESTADOR)).thenReturn(editada);
+
+        http.perform(comoAgencia(get("/prestador/ofertas/oferta-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("oferta-1"))
+                .andExpect(jsonPath("$.retirada").value(false))
+                .andExpect(jsonPath("$.publicada.numero").value(1))
+                .andExpect(jsonPath("$.publicada.estadoModeracion").value("APROBADA"))
+                .andExpect(jsonPath("$.publicada.contenido.nombre").value("Caminata a Cabo San Juan"))
+                .andExpect(jsonPath("$.publicada.contenido.tipoActividad").value("SENDERISMO"))
+                .andExpect(jsonPath("$.publicada.contenido.horariosSalida[0]").value("07:00"))
+                .andExpect(jsonPath("$.publicada.contenido.unidadPrecio").value("por persona"))
+                .andExpect(jsonPath("$.publicada.contenido.fotos[0].url").exists())
+                .andExpect(jsonPath("$.pendiente.numero").value(2))
+                .andExpect(jsonPath("$.pendiente.estadoModeracion").value("EN_MODERACION"))
+                .andExpect(jsonPath("$.pendiente.revisadaEn").doesNotExist())
+                .andExpect(jsonPath("$.pendiente.contenido.nombre").value("Caminata al amanecer"));
+    }
+
+    @Test
+    @DisplayName("una oferta rechazada que nunca se publicó trae su versión pendiente con el motivo, para corregirla")
+    void consultarRechazada() throws Exception {
+        Oferta rechazada = ofertaEnModeracion();
+        rechazada.rechazar(1, "Faltan los horarios de salida", DESPUES);
+        when(gestionarOferta.consultarMia("oferta-1", PRESTADOR)).thenReturn(rechazada);
+
+        http.perform(comoAgencia(get("/prestador/ofertas/oferta-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.publicada").doesNotExist())
+                .andExpect(jsonPath("$.pendiente.estadoModeracion").value("RECHAZADA"))
+                .andExpect(jsonPath("$.pendiente.motivoRechazo").value("Faltan los horarios de salida"))
+                .andExpect(jsonPath("$.pendiente.revisadaEn").value(DESPUES.toString()))
+                .andExpect(jsonPath("$.pendiente.contenido.descripcion").exists());
+    }
+
+    @Test
+    @DisplayName("consultar traduce sus errores como editar y retirar: 404 si no existe y 403 si es de otro prestador")
+    void erroresAlConsultar() throws Exception {
+        when(gestionarOferta.consultarMia("no-existe", PRESTADOR))
+                .thenThrow(new OfertaNoEncontradaException("no-existe"));
+        when(gestionarOferta.consultarMia("ajena", PRESTADOR)).thenThrow(new PrestadorNoAutorizadoException("ajena"));
+
+        http.perform(comoAgencia(get("/prestador/ofertas/no-existe")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
+        http.perform(comoAgencia(get("/prestador/ofertas/ajena")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
+        http.perform(get("/prestador/ofertas/oferta-1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
     }
 
     @Test

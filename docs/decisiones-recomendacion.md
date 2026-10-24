@@ -17,7 +17,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `recomendacion
 | DR-05 | La respuesta de la IA se valida completa; si falla, responde el motor por reglas | ✅ QAS-03, restricción ética |
 | DR-06 | Corte de circuito del proveedor de IA | ✅ QAS-03, ADR-04 |
 | DR-07 | Caché de las ofertas del catálogo | 🆕 [SUPUESTO] QAS-03, ADR-04 |
-| DR-08 | Registro de exposición en el log hasta que exista el núcleo | ✅ RET-02 |
+| DR-08 | Registro de exposición en el log hasta que el núcleo lo reciba | ✅ RET-02 |
 | DR-09 | POST por privacidad y logs sin datos del turista | 🆕 Ley 1581 |
 | DR-10 | Mitigación de la inyección de instrucciones | 🆕 |
 | DR-11 | Límites del plan gratis de Groq | 🆕 |
@@ -108,11 +108,11 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 
 ## Exposición y privacidad
 
-**DR-08. Registro de exposición en el log hasta que exista el núcleo** (RET-02). El diagrama pone el registro en el núcleo (`ExposicionRestClientAdapter`), que todavía no existe.
+**DR-08. Registro de exposición en el log hasta que el núcleo lo reciba** (RET-02). El diagrama pone el registro en el núcleo (`ExposicionRestClientAdapter`). El núcleo ya tiene su base (PR #20: PostgreSQL, identidad provisional y bandeja de salida), pero todavía no tiene la ruta que recibe la exposición.
 - **Por ahora,** `ExposicionLogAdapter` escribe una línea JSON por consulta en el logger `exposicion`: `{"fecha", "motor", "recomendaciones": [{"ofertaId", "prestadorId", "posicion", "criterios"}]}`. Con eso se puede contar cuántas veces y en qué posición sale cada prestador.
 - **No lleva** el texto ni ningún dato del turista, ni las explicaciones.
 - **Si el registro falla,** la recomendación igual llega al turista.
-- **Cuando exista el núcleo,** se cambia por un adaptador HTTP con el mismo `RegistroExposicion`, sin tocar el dominio, y su contrato va en `contratos/internos/`.
+- **Cuando el núcleo tenga esa ruta,** se cambia por un adaptador HTTP con el mismo `RegistroExposicion`, sin tocar el dominio, y su contrato va en `contratos/internos/`.
 
 **DR-09. POST por privacidad y logs sin datos del turista.**
 - **POST y no GET:** el texto libre viaja en el cuerpo y no queda en la URL, en el historial del navegador ni en el access log de Nginx, que no registra cuerpos.
@@ -149,7 +149,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 
 1. **Diagrama del módulo 09:**
    - agregar las políticas `ValidacionRespuestaIA` (DR-05) y `RelevanciaTexto` (DR-13) en el dominio;
-   - cambiar `ExposicionRestClientAdapter` por `ExposicionLogAdapter` mientras no exista el núcleo (DR-08);
+   - cambiar `ExposicionRestClientAdapter` por `ExposicionLogAdapter` mientras el núcleo no tenga la ruta que recibe la exposición (DR-08);
    - la caché del catálogo vive dentro de `CatalogoRestClientAdapter`. El `CaffeineCacheAdapter` del diagrama queda para las alertas (RF-28);
    - el corte del proveedor de IA es de 6 s y no de 3 s: un modelo que razona tarda más que una consulta REST. El del catálogo sigue en 3 s;
    - en la nota de `ReglaCriteriosExplicitos`, agregar el nivel de esfuerzo a los criterios (tipo de oferta, tipo de actividad, zona, accesibilidad, nivel de esfuerzo y precio).

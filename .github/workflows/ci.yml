@@ -16,12 +16,16 @@ jobs:
           java-version: "21"
           cache: maven
 
-      # Compila los tres servicios y corre las pruebas: unitarias, ArchUnit e integración con Testcontainers.
+      # Compila los tres servicios y corre las pruebas: unitarias, ArchUnit e integración con Testcontainers
+      # (MongoDB para el catálogo y PostgreSQL para el núcleo).
       - name: Compilar y probar
         run: mvn -B verify
 
       - name: Construir imagen del catálogo
         run: docker build -f servicios/catalogo/Dockerfile -t samarian-tour/catalogo:ci .
+
+      - name: Construir imagen del núcleo
+        run: docker build -f servicios/nucleo/Dockerfile -t samarian-tour/nucleo:ci .
 
       # Sin key ni proveedor: el CI nunca llama a la IA (las pruebas usan un servidor simulado).
       - name: Construir imagen de la recomendación

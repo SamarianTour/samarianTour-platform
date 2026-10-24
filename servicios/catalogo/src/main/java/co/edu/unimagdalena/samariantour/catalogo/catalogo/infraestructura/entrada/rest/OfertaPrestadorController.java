@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.Solicitante;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPrestadorResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPropiaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PaginaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.mapper.OfertaWebMapper;
@@ -72,6 +73,15 @@ public class OfertaPrestadorController {
         Solicitante solicitante = solicitanteDe(peticion);
         return OfertaWebMapper.aPaginaPrestador(
                 gestionarOferta.listarMias(solicitante.prestadorId(), Paginacion.de(page, size)));
+    }
+
+    /**
+     * Una oferta propia con sus dos versiones completas, en cualquier estado. 404 si no existe y 403
+     * PRESTADOR_NO_AUTORIZADO si es de otro prestador, como al editarla o retirarla (DC-50).
+     */
+    @GetMapping("/{id}")
+    public OfertaPropiaResponse consultarMia(@PathVariable String id, HttpServletRequest peticion) {
+        return OfertaWebMapper.aOfertaPropia(gestionarOferta.consultarMia(id, solicitanteDe(peticion).prestadorId()));
     }
 
     private Solicitante solicitanteDe(HttpServletRequest peticion) {

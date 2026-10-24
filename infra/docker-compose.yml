@@ -74,6 +74,52 @@ services:
     mem_limit: 512m
     restart: unless-stopped
 
+  # Base del núcleo transaccional (DN-03). Sin puertos publicados: solo el núcleo la usa.
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: nucleo_db
+      # Credenciales del piloto; en un despliegue real se pasan como variables de entorno.
+      POSTGRES_USER: ${POSTGRES_USUARIO:-nucleo}
+      POSTGRES_PASSWORD: ${POSTGRES_CLAVE:-nucleo-piloto}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  nucleo:
+    build:
+      context: ..
+      dockerfile: servicios/nucleo/Dockerfile
+    image: samarian-tour/nucleo:latest
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nucleo_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USUARIO:-nucleo}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_CLAVE:-nucleo-piloto}
+      # La bandeja de salida envía los avisos al catálogo por la red interna (DN-06).
+      NUCLEO_CATALOGO_URL: http://catalogo:8080/api/catalogo
+      # demo: headers que sustituyen al token mientras no exista el JWT (DN-05). Solo para la demostración.
+      SPRING_PROFILES_ACTIVE: demo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/nucleo/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    # Sin puertos publicados ni container_name: solo Nginx es accesible desde fuera. Las dos réplicas aplican las
+    # migraciones a la vez sin problema: Flyway las serializa con un candado de PostgreSQL (DN-01).
+    deploy:
+      replicas: 2
+    mem_limit: 512m
+    restart: unless-stopped
+
   # Recomendación (RF-26, RF-27): sin base de datos; lee las ofertas del catálogo y, si está configurado, consulta
   # un proveedor de IA. Si la IA falla responde por reglas; si el recomendador cae, el resto sigue (ADR-04).
   recomendacion:
@@ -106,8 +152,9 @@ services:
     mem_limit: 384m
     restart: unless-stopped
 
-  # Nginx sirve el frontend ya compilado y reenvía /api/catalogo/ al catálogo y /api/recomendacion/ a la
-  # recomendación. No espera a la recomendación: si no está, solo esa sección falla (ADR-04).
+  # Nginx sirve el frontend ya compilado y reenvía /api/catalogo/ al catálogo, /api/nucleo/ al núcleo y
+  # /api/recomendacion/ a la recomendación. No espera a la recomendación: si no está, solo esa sección falla
+  # (ADR-04).
   nginx:
     build:
       context: ../frontend
@@ -119,8 +166,11 @@ services:
     depends_on:
       catalogo:
         condition: service_healthy
+      nucleo:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
   mongo-data:
   minio-data:
+  postgres-data:

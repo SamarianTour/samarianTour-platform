@@ -1,0 +1,74 @@
+package co.edu.unimagdalena.samariantour.nucleo;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * El contrato del núcleo y sus controladores, como {@code ContratoCatalogoTest} en el catálogo: si una ruta existe en
+ * un lado y no en el otro, falla. Es de integración porque arranca el servicio completo, con su base.
+ *
+ * <p>Cuando un módulo agregue sus DTO, se suma aquí la comparación de cada esquema con los campos de su DTO.
+ */
+@SpringBootTest(properties = "nucleo.bandeja.publicacion.cron=-")
+@ActiveProfiles("demo")
+class ContratoNucleoIT extends IntegracionPostgresBase {
+
+    /** La prueba corre con el módulo como directorio de trabajo; el contrato está en la raíz del repositorio. */
+    private static final Path CONTRATO = Path.of("..", "..", "contratos", "nucleo.openapi.yaml");
+    private static final Set<String> METODOS = Set.of("get", "post", "put", "patch", "delete");
+    private static final String PAQUETE_BASE = "co.edu.unimagdalena.samariantour.nucleo.";
+    private static final String CONTROLADORES = ".infraestructura.entrada.rest";
+
+    @Autowired
+    @Qualifier("requestMappingHandlerMapping")
+    private RequestMappingHandlerMapping rutas;
+
+    @Test
+    @DisplayName("los controladores implementan exactamente las rutas del contrato OpenAPI")
+    void rutasDelContrato() throws IOException {
+        assertThat(rutasDeLosControladores()).isEqualTo(rutasDelContratoOpenApi());
+    }
+
+    private Set<String> rutasDeLosControladores() {
+        Set<String> resultado = new TreeSet<>();
+        rutas.getHandlerMethods().forEach((RequestMappingInfo ruta, HandlerMethod metodo) -> {
+            String paquete = metodo.getBeanType().getPackageName();
+            if (paquete.startsWith(PAQUETE_BASE) && paquete.endsWith(CONTROLADORES)) {
+                ruta.getMethodsCondition().getMethods().forEach(verbo -> ruta.getPatternValues()
+                        .forEach(patron -> resultado.add(verbo + " " + patron)));
+            }
+        });
+        return resultado;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Set<String> rutasDelContratoOpenApi() throws IOException {
+        Set<String> resultado = new TreeSet<>();
+        Map<String, Map<String, Object>> paths;
+        try (Reader lector = Files.newBufferedReader(CONTRATO, StandardCharsets.UTF_8)) {
+            paths = (Map<String, Map<String, Object>>) new Yaml().<Map<String, Object>>load(lector).get("paths");
+        }
+        paths.forEach((ruta, operaciones) -> operaciones.keySet().stream().filter(METODOS::contains)
+                .forEach(verbo -> resultado.add(verbo.toUpperCase() + " " + ruta)));
+        return resultado;
+    }
+}

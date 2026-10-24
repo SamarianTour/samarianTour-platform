@@ -28,8 +28,6 @@
         <metadata-extractor.version>2.19.0</metadata-extractor.version>
         <!-- La 7.x exige Spring Boot 4; la 6.x es la línea para Spring Boot 3.5 -->
         <shedlock.version>6.10.0</shedlock.version>
-        <!-- La 7.x exige Spring Boot 4; la 6.x es la línea para Spring Boot 3.5 -->
-        <shedlock.version>6.10.0</shedlock.version>
         <!-- La 2.4 agrega Spring Boot 4; la 2.3 es la última solo para Spring Boot 3 -->
         <resilience4j.version>2.3.0</resilience4j.version>
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
