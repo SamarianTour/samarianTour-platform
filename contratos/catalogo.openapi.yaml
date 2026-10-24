@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
-    zonas, las ofertas del prestador (publicar, editar, retirar y listar las propias) y sus fotos, su perfil
+    zonas y su gestión por el administrador, las ofertas del prestador (publicar, editar, retirar y listar las propias) y sus fotos, su perfil
     público, las opiniones de los turistas, la moderación, los avisos internos del núcleo y las consultas
     internas del núcleo y de la recomendación.
 
@@ -24,7 +24,7 @@ tags:
   - name: Turista
     description: Opiniones del turista. Exige la identidad con el rol TURISTA.
   - name: Administrador
-    description: Moderación. Exige la identidad con el rol ADMINISTRADOR.
+    description: Moderación y gestión de zonas. Exige la identidad con el rol ADMINISTRADOR.
   - name: Interno
     description: |
       Avisos del núcleo y consultas del núcleo y de la recomendación. Nginx no expone estas rutas hacia afuera.
@@ -122,6 +122,9 @@ paths:
       tags: [Catálogo público]
       operationId: consultarZonas
       summary: Zonas activas, ordenadas por nombre (RF-14, RF-25)
+      description: |
+        Las que se pueden elegir al publicar una oferta y para filtrar la búsqueda. Una zona inactiva no aparece,
+        pero sus ofertas siguen visibles (DC-49).
       responses:
         '200':
           description: Zonas activas.
@@ -131,6 +134,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Zona'
+
+  /zonas/{zonaId}:
+    get:
+      tags: [Catálogo público]
+      operationId: consultarZona
+      summary: Ficha de la zona, con sus buenas prácticas y condiciones de visita (RF-25, HU-TUR-16)
+      description: |
+        También responde por una zona inactiva, con `activa` en false: sus ofertas siguen visibles y su ficha la
+        muestra (DC-49).
+      parameters:
+        - $ref: '#/components/parameters/ZonaId'
+      responses:
+        '200':
+          description: La zona.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zona'
+        '404':
+          $ref: '#/components/responses/ZonaNoEncontrada'
 
   /fotos/{fotoId}/{tamano}:
     get:
@@ -466,6 +489,111 @@ paths:
           $ref: '#/components/responses/OfertaNoEncontrada'
         '409':
           $ref: '#/components/responses/ConflictoConcurrencia'
+
+  /admin/zonas:
+    get:
+      tags: [Administrador]
+      operationId: listarZonasAdministrador
+      summary: Todas las zonas, activas e inactivas, ordenadas por nombre (HU-ADM-06)
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Las zonas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Zona'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+    post:
+      tags: [Administrador]
+      operationId: registrarZona
+      summary: Registra una zona, que nace activa (HU-ADM-06, RF-84)
+      description: |
+        El administrador escribe directo en el catálogo, que es el dueño de las zonas; no pasa por el núcleo (DC-49).
+        No se envía `activa`: si se envía, se ignora. Una zona nunca se elimina: se inactiva.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZonaRequest'
+            example:
+              nombre: Isla de Salamanca
+              descripcion: Vía Parque entre Barranquilla y Ciénaga
+              ubicacion: {latitud: 10.98, longitud: -74.47}
+              areaProtegida: true
+              buenasPracticas: [No alimentar a los animales]
+      responses:
+        '201':
+          description: La zona registrada; `Location` es su ficha pública.
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /api/catalogo/zonas/a00000000000000000000008
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zona'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '409':
+          $ref: '#/components/responses/ZonaDuplicada'
+
+  /admin/zonas/{zonaId}:
+    put:
+      tags: [Administrador]
+      operationId: editarZona
+      summary: Reemplaza los datos y las marcas de la zona; también la inactiva o la reactiva (HU-ADM-06, RF-84)
+      description: |
+        Reemplaza todos los datos: lo que no se envía queda vacío, y las marcas que no se envían, en false. `activa` es
+        obligatoria: en false, la zona sale de `GET /zonas` y no admite ofertas nuevas ni ediciones
+        (`ZONA_NO_DISPONIBLE`), pero sus ofertas siguen visibles; en true, la reactiva (DC-49). Los cambios se ven de
+        inmediato en la ficha de las ofertas y en la consulta de la recomendación.
+      parameters:
+        - $ref: '#/components/parameters/ZonaId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ZonaRequest'
+                - type: object
+                  required: [activa]
+      responses:
+        '200':
+          description: La zona como quedó.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zona'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/ZonaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ZonaDuplicada'
 
   /admin/moderacion/ofertas:
     get:
@@ -817,6 +945,13 @@ paths:
 
 components:
   parameters:
+    ZonaId:
+      name: zonaId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: a00000000000000000000005
     OpinionId:
       name: id
       in: path
@@ -983,6 +1118,32 @@ components:
             detail: El prestador 20000000-0000-0000-0000-000000000002 todavía no tiene perfil público
             instance: /api/catalogo/prestador/perfil
             codigo: PERFIL_NO_ENCONTRADO
+    ZonaNoEncontrada:
+      description: No hay una zona con ese identificador.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: No existe la zona a00000000000000000000099
+            instance: /api/catalogo/zonas/a00000000000000000000099
+            codigo: ZONA_NO_ENCONTRADA
+    ZonaDuplicada:
+      description: Ya hay otra zona con ese nombre, sin distinguir mayúsculas, tildes ni espacios repetidos (DC-49).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: Ya existe una zona con el nombre TAGANGA
+            instance: /api/catalogo/admin/zonas
+            codigo: ZONA_DUPLICADA
     FotoNoEncontrada:
       description: No hay una foto con ese identificador, o el tamaño no existe.
       content:
@@ -1297,7 +1458,7 @@ components:
 
     Zona:
       type: object
-      required: [id, nombre, areaProtegida, altaAfluencia, buenasPracticas]
+      required: [id, nombre, areaProtegida, altaAfluencia, activa, buenasPracticas]
       properties:
         id:
           type: string
@@ -1313,12 +1474,50 @@ components:
         altaAfluencia:
           type: boolean
           description: Zona congestionada (RF-29).
+        activa:
+          type: boolean
+          description: |
+            Una zona inactiva no admite ofertas nuevas ni ediciones, pero sus ofertas siguen visibles (DC-49). La lista
+            pública solo trae las activas.
         buenasPracticas:
           type: array
           items:
             type: string
         condicionesVisita:
           type: string
+
+    ZonaRequest:
+      type: object
+      description: |
+        Lo que escribe el administrador (HU-ADM-06). Nombre, descripción y ubicación son obligatorios; el nombre es
+        único sin distinguir mayúsculas, tildes ni espacios repetidos (DC-49).
+      required: [nombre, descripcion, ubicacion]
+      properties:
+        nombre:
+          type: string
+          example: Isla de Salamanca
+        descripcion:
+          type: string
+        ubicacion:
+          $ref: '#/components/schemas/Coordenada'
+        areaProtegida:
+          type: boolean
+          default: false
+          description: Área protegida o ecosistema sensible (RF-25, RF-84).
+        altaAfluencia:
+          type: boolean
+          default: false
+          description: Zona congestionada (RF-29, RF-84).
+        buenasPracticas:
+          type: array
+          description: Una práctica por elemento, sin elementos en blanco.
+          items:
+            type: string
+        condicionesVisita:
+          type: string
+        activa:
+          type: boolean
+          description: Solo al editar, y ahí es obligatoria. Al registrar se ignora.
 
     PerfilPublico:
       type: object
@@ -2090,6 +2289,8 @@ components:
             - RNT_INACTIVO
             - OFERTA_NO_ENCONTRADA
             - OFERTA_NO_EDITABLE
+            - ZONA_NO_ENCONTRADA
+            - ZONA_DUPLICADA
             - CONFLICTO_CONCURRENCIA
             - OPINION_NO_HABILITADA
             - OPINION_DUPLICADA
