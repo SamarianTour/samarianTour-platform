@@ -100,6 +100,16 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
         http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007"))
                 .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
+        // Sin ficha pública todavía, su dueño ya la ve completa para revisarla o corregirla (DC-50)
+        http.perform(comoGuia(get("/prestador/ofertas/" + id)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendiente.estadoModeracion").value("EN_MODERACION"))
+                .andExpect(jsonPath("$.pendiente.contenido.puntoEncuentro").value("Plaza principal de Minca"))
+                .andExpect(jsonPath("$.pendiente.contenido.idiomasAtencion[1]").value("en"));
+        http.perform(get("/prestador/ofertas/" + id).header("X-Usuario-Id", "10000000-0000-0000-0000-000000000001")
+                        .header("X-Rol", "PRESTADOR").header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
 
         String aviso = """
                 {"idAviso": "demo-1", "tipo": "MODERACION", "ofertaId": "%s", "numeroVersion": 1, "decision": "APROBAR"}

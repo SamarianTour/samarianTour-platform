@@ -227,7 +227,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Una oferta propia con el contenido completo de sus versiones (DC-50)
+         * @description En cualquier estado, incluidas la retirada y la que nunca se aprobó. Trae todo el contenido de la versión
+         *     publicada y de la pendiente, el mismo que ve el administrador al moderarla, para que el prestador la revise o
+         *     corrija una versión rechazada. Solo la ve su dueño: la de otro prestador responde 403, como al editarla.
+         */
+        get: operations["consultarOfertaPropia"];
         /**
          * Editar una oferta (RF-66)
          * @description Crea una versión pendiente con número nuevo, que reemplaza a la pendiente anterior. La versión publicada
@@ -798,6 +804,36 @@ export interface components {
             publicada?: components["schemas"]["Version"];
             pendiente?: components["schemas"]["Version"];
         };
+        /**
+         * @description Una oferta propia con el contenido completo de cada versión (DC-50). La lista de ofertas propias solo trae el
+         *     resumen de cada versión.
+         */
+        OfertaPropia: {
+            id: string;
+            tipo: components["schemas"]["TipoOferta"];
+            retirada: boolean;
+            publicada?: components["schemas"]["VersionPropia"];
+            pendiente?: components["schemas"]["VersionPropia"];
+        };
+        /**
+         * @description Una versión de la oferta propia: los datos de su moderación y su contenido completo. `publicada` no viene si
+         *     la oferta nunca se aprobó, y `pendiente`, si no hay una versión en moderación o rechazada.
+         */
+        VersionPropia: {
+            /** @description Número de la versión; es el que nombra el aviso de moderación (DC-05). */
+            numero: number;
+            estadoModeracion: components["schemas"]["EstadoModeracion"];
+            /** @description Solo si el administrador la rechazó. */
+            motivoRechazo?: string;
+            /** Format: date-time */
+            enviadaEn: string;
+            /**
+             * Format: date-time
+             * @description No viene mientras está en moderación.
+             */
+            revisadaEn?: string;
+            contenido: components["schemas"]["ContenidoVersion"];
+        };
         /** @description Como `PaginaOfertas`, pero con las ofertas como las ve su prestador. */
         PaginaOfertasPrestador: {
             contenido: components["schemas"]["OfertaPrestador"][];
@@ -820,6 +856,11 @@ export interface components {
             revisadaEn?: string;
             nombre: string;
             precioReferencia: number;
+            /**
+             * @description A qué corresponde el precio según el tipo de oferta, como en la búsqueda (DC-22).
+             * @example por persona
+             */
+            unidadPrecio: string;
             portada?: components["schemas"]["Foto"];
         };
         Aviso: components["schemas"]["AvisoModeracion"] | components["schemas"]["AvisoHabilitacion"];
@@ -1923,6 +1964,48 @@ export interface operations {
             400: components["responses"]["DatoInvalido"];
             401: components["responses"]["NoAutenticado"];
             403: components["responses"]["Prohibido"];
+        };
+    };
+    consultarOfertaPropia: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR. Decide qué tipos de oferta
+                 *     puede publicar (DC-10).
+                 */
+                "X-Tipo-Prestador": components["parameters"]["TipoPrestador"];
+            };
+            path: {
+                /** @example b00000000000000000000001 */
+                id: components["parameters"]["OfertaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La oferta con sus versiones completas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfertaPropia"];
+                };
+            };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["Prohibido"];
+            404: components["responses"]["OfertaNoEncontrada"];
         };
     };
     editarOferta: {

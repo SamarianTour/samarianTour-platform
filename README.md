@@ -282,6 +282,13 @@ curl -s "$BASE/prestador/ofertas" \
   -H "X-Rol: PRESTADOR" \
   -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
 
+# Una oferta propia completa: las dos versiones con todos sus campos, aunque nunca se haya publicado (DC-50).
+# La de otro prestador responde 403 PRESTADOR_NO_AUTORIZADO
+curl -s "$BASE/prestador/ofertas/$ID" \
+  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
+  -H "X-Rol: PRESTADOR" \
+  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+
 # Retirar la oferta recién publicada: 204. El retiro es definitivo
 curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro" \
   -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \

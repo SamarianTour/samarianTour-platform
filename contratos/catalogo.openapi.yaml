@@ -426,6 +426,32 @@ paths:
           $ref: '#/components/responses/Prohibido'
 
   /prestador/ofertas/{id}:
+    get:
+      tags: [Prestador]
+      operationId: consultarOfertaPropia
+      summary: Una oferta propia con el contenido completo de sus versiones (DC-50)
+      description: |
+        En cualquier estado, incluidas la retirada y la que nunca se aprobó. Trae todo el contenido de la versión
+        publicada y de la pendiente, el mismo que ve el administrador al moderarla, para que el prestador la revise o
+        corrija una versión rechazada. Solo la ve su dueño: la de otro prestador responde 403, como al editarla.
+      parameters:
+        - $ref: '#/components/parameters/OfertaId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      responses:
+        '200':
+          description: La oferta con sus versiones completas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfertaPropia'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
     put:
       tags: [Prestador]
       operationId: editarOferta
@@ -1689,6 +1715,49 @@ components:
         pendiente:
           $ref: '#/components/schemas/Version'
 
+    OfertaPropia:
+      type: object
+      description: |
+        Una oferta propia con el contenido completo de cada versión (DC-50). La lista de ofertas propias solo trae el
+        resumen de cada versión.
+      required: [id, tipo, retirada]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        retirada:
+          type: boolean
+        publicada:
+          $ref: '#/components/schemas/VersionPropia'
+        pendiente:
+          $ref: '#/components/schemas/VersionPropia'
+
+    VersionPropia:
+      type: object
+      description: |
+        Una versión de la oferta propia: los datos de su moderación y su contenido completo. `publicada` no viene si
+        la oferta nunca se aprobó, y `pendiente`, si no hay una versión en moderación o rechazada.
+      required: [numero, estadoModeracion, enviadaEn, contenido]
+      properties:
+        numero:
+          type: integer
+          description: Número de la versión; es el que nombra el aviso de moderación (DC-05).
+        estadoModeracion:
+          $ref: '#/components/schemas/EstadoModeracion'
+        motivoRechazo:
+          type: string
+          description: Solo si el administrador la rechazó.
+        enviadaEn:
+          type: string
+          format: date-time
+        revisadaEn:
+          type: string
+          format: date-time
+          description: No viene mientras está en moderación.
+        contenido:
+          $ref: '#/components/schemas/ContenidoVersion'
+
     PaginaOfertasPrestador:
       type: object
       description: Como `PaginaOfertas`, pero con las ofertas como las ve su prestador.
@@ -1712,7 +1781,7 @@ components:
 
     Version:
       type: object
-      required: [numero, estadoModeracion, enviadaEn, nombre, precioReferencia]
+      required: [numero, estadoModeracion, enviadaEn, nombre, precioReferencia, unidadPrecio]
       properties:
         numero:
           type: integer
@@ -1731,6 +1800,10 @@ components:
           type: string
         precioReferencia:
           type: number
+        unidadPrecio:
+          type: string
+          description: A qué corresponde el precio según el tipo de oferta, como en la búsqueda (DC-22).
+          example: por persona
         portada:
           $ref: '#/components/schemas/Foto'
 

@@ -22,4 +22,13 @@ public interface GestionarOfertaUseCase {
 
     /** Ofertas del prestador en cualquier estado, incluidas las retiradas. */
     Pagina<Oferta> listarMias(UUID prestadorId, Paginacion paginacion);
+
+    /**
+     * Una oferta propia en cualquier estado, con su versión publicada y la pendiente completas, para revisarla o
+     * corregirla aunque nunca se haya publicado (DC-50).
+     *
+     * @throws co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.OfertaNoEncontradaException si no existe
+     * @throws co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PrestadorNoAutorizadoException si es de otro prestador
+     */
+    Oferta consultarMia(String ofertaId, UUID prestadorId);
 }

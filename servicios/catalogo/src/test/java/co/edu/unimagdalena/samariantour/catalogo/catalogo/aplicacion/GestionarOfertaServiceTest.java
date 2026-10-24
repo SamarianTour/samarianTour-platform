@@ -6,12 +6,14 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Pres
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.TipoOfertaNoPermitidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.GuardarPerfilCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
@@ -326,6 +328,48 @@ class GestionarOfertaServiceTest {
             assertThat(primera.pendiente().or(primera::publicada).orElseThrow().contenido().fotos())
                     .containsExactly(FOTO);
             assertThat(segunda.pendiente().orElseThrow().contenido().fotos()).containsExactly(FOTO);
+        }
+    }
+
+    @Nested
+    @DisplayName("Consultar una oferta propia (DC-50)")
+    class ConsultarMia {
+
+        @Test
+        @DisplayName("devuelve una oferta rechazada que nunca se publicó, con su motivo, para corregirla")
+        void rechazadaSinPublicar() {
+            escenario.habilitar(PRESTADOR, true, 1);
+            Oferta nueva = escenario.publicar(AGENCIA, actividad("Tour", "50000", ZONA_ACTIVA));
+            escenario.moderar(nueva.id(), 1, DecisionModeracion.RECHAZAR);
+
+            Oferta mia = servicio.consultarMia(nueva.id(), PRESTADOR);
+
+            assertThat(mia.publicada()).isEmpty();
+            assertThat(mia.pendiente()).hasValueSatisfying(pendiente -> {
+                assertThat(pendiente.estadoModeracion()).isEqualTo(EstadoModeracion.RECHAZADA);
+                assertThat(pendiente.moderacion().motivoRechazo()).isEqualTo("Motivo de prueba");
+                assertThat(pendiente.contenido().nombre()).isEqualTo("Tour");
+            });
+        }
+
+        @Test
+        @DisplayName("también devuelve una oferta retirada")
+        void retirada() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            servicio.retirar(new RetirarOfertaCommand(oferta.id(), PRESTADOR));
+
+            assertThat(servicio.consultarMia(oferta.id(), PRESTADOR).retirada()).isTrue();
+        }
+
+        @Test
+        @DisplayName("la oferta de otro prestador no se muestra, y una que no existe responde no encontrada")
+        void ajenaOInexistente() {
+            Oferta oferta = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+
+            assertThatThrownBy(() -> servicio.consultarMia(oferta.id(), OTRO_PRESTADOR))
+                    .isInstanceOf(PrestadorNoAutorizadoException.class);
+            assertThatThrownBy(() -> servicio.consultarMia("no-existe", PRESTADOR))
+                    .isInstanceOf(OfertaNoEncontradaException.class);
         }
     }
 }

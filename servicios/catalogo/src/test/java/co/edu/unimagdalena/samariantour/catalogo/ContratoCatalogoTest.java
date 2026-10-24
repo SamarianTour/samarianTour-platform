@@ -10,12 +10,15 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaInternaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPendienteResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPrestadorResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPropiaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaVisibleResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilRequest;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionPropiaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ZonaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.ZonaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.AvisoOpinionResponse;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest.dto.MiOpinionResponse;
@@ -98,10 +101,13 @@ class ContratoCatalogoTest {
                 arguments("DetalleAlojamiento", FichaOfertaResponse.DetalleAlojamiento.class),
                 arguments("ActividadIncluida", ActividadIncluidaResponse.class),
                 arguments("Zona", ZonaResponse.class),
+                arguments("ZonaRequest", ZonaRequest.class),
                 arguments("PerfilPublico", PerfilPublicoResponse.class),
                 arguments("OfertaRequest", OfertaRequest.class),
                 arguments("OfertaPrestador", OfertaPrestadorResponse.class),
                 arguments("Version", VersionResponse.class),
+                arguments("OfertaPropia", OfertaPropiaResponse.class),
+                arguments("VersionPropia", VersionPropiaResponse.class),
                 arguments("AvisoResultado", AvisoResponse.class),
                 arguments("OfertaInterna", OfertaInternaResponse.class),
                 arguments("OfertaVisible", OfertaVisibleResponse.class),

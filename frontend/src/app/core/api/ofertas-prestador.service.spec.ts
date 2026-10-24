@@ -17,6 +17,7 @@ function oferta(id: string): OfertaPrestador {
       enviadaEn: '2026-10-01T10:00:00Z',
       nombre: `Oferta ${id}`,
       precioReferencia: 90000,
+      unidadPrecio: 'por persona',
     },
   };
 }

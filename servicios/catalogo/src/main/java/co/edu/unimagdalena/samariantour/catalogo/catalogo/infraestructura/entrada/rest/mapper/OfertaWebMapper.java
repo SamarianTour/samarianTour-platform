@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Modalid
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.RegistroModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Validaciones;
@@ -21,9 +22,11 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.FichaOfertaResponse.DetalleAlojamiento;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.FichaOfertaResponse.DetallePaquete;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPrestadorResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaPropiaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PaginaResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionPropiaResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionResponse;
 
 import java.util.List;
@@ -91,6 +94,13 @@ public final class OfertaWebMapper {
                 oferta.pendiente().map(OfertaWebMapper::aVersionResponse).orElse(null));
     }
 
+    /** La oferta propia con el contenido completo de cada versión (DC-50). */
+    public static OfertaPropiaResponse aOfertaPropia(Oferta oferta) {
+        return new OfertaPropiaResponse(oferta.id(), oferta.tipo(), oferta.retirada(),
+                oferta.publicada().map(OfertaWebMapper::aVersionPropia).orElse(null),
+                oferta.pendiente().map(OfertaWebMapper::aVersionPropia).orElse(null));
+    }
+
     static <T> PaginaResponse<T> aPaginaResponse(Pagina<T> pagina) {
         return new PaginaResponse<>(pagina.contenido(), pagina.paginacion().pagina(), pagina.paginacion().tamano(),
                 pagina.totalElementos(), pagina.totalPaginas());
@@ -136,10 +146,17 @@ public final class OfertaWebMapper {
         return Boolean.TRUE.equals(peticion.accesibleSillaRuedas());
     }
 
+    private static VersionPropiaResponse aVersionPropia(VersionOferta version) {
+        RegistroModeracion moderacion = version.moderacion();
+        return new VersionPropiaResponse(version.numero(), version.estadoModeracion(), moderacion.motivoRechazo(),
+                moderacion.enviadaEn(), moderacion.revisadaEn(), ModeracionWebMapper.aContenido(version));
+    }
+
     private static VersionResponse aVersionResponse(VersionOferta version) {
         return new VersionResponse(version.numero(), version.estadoModeracion(),
                 version.moderacion().motivoRechazo(), version.moderacion().enviadaEn(),
                 version.moderacion().revisadaEn(), version.contenido().nombre(),
-                version.contenido().precioReferencia(), FotoWebMapper.portada(version.contenido().fotos()));
+                version.contenido().precioReferencia(), version.unidadPrecio(),
+                FotoWebMapper.portada(version.contenido().fotos()));
     }
 }
