@@ -13,12 +13,37 @@
 
     <artifactId>recomendacion</artifactId>
     <name>recomendacion</name>
-    <description>Servicio de recomendación (sin base de datos propia) — pendiente, iteraciones 5 a 10</description>
+    <description>Servicio de recomendación: ofertas del catálogo explicadas, por reglas o con IA (sin base de datos)</description>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Solo se expone /actuator/health, para el healthcheck de Docker Compose -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Caché de las ofertas del catálogo (DR-07) -->
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Corte de circuito del proveedor de IA (QAS-03, DR-06) -->
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
