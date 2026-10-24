@@ -50,8 +50,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Zonas activas, ordenadas por nombre (RF-14, RF-25) */
+        /**
+         * Zonas activas, ordenadas por nombre (RF-14, RF-25)
+         * @description Las que se pueden elegir al publicar una oferta y para filtrar la búsqueda. Una zona inactiva no aparece,
+         *     pero sus ofertas siguen visibles (DC-49).
+         */
         get: operations["consultarZonas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/zonas/{zonaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ficha de la zona, con sus buenas prácticas y condiciones de visita (RF-25, HU-TUR-16)
+         * @description También responde por una zona inactiva, con `activa` en false: sus ofertas siguen visibles y su ficha la
+         *     muestra (DC-49).
+         */
+        get: operations["consultarZona"];
         put?: never;
         post?: never;
         delete?: never;
@@ -238,6 +263,51 @@ export interface paths {
          *     y también responde 204. No lleva cuerpo.
          */
         patch: operations["retirarOferta"];
+        trace?: never;
+    };
+    "/admin/zonas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Todas las zonas, activas e inactivas, ordenadas por nombre (HU-ADM-06) */
+        get: operations["listarZonasAdministrador"];
+        put?: never;
+        /**
+         * Registra una zona, que nace activa (HU-ADM-06, RF-84)
+         * @description El administrador escribe directo en el catálogo, que es el dueño de las zonas; no pasa por el núcleo (DC-49).
+         *     No se envía `activa`: si se envía, se ignora. Una zona nunca se elimina: se inactiva.
+         */
+        post: operations["registrarZona"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/zonas/{zonaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reemplaza los datos y las marcas de la zona; también la inactiva o la reactiva (HU-ADM-06, RF-84)
+         * @description Reemplaza todos los datos: lo que no se envía queda vacío, y las marcas que no se envían, en false. `activa` es
+         *     obligatoria: en false, la zona sale de `GET /zonas` y no admite ofertas nuevas ni ediciones
+         *     (`ZONA_NO_DISPONIBLE`), pero sus ofertas siguen visibles; en true, la reactiva (DC-49). Los cambios se ven de
+         *     inmediato en la ficha de las ofertas y en la consulta de la recomendación.
+         */
+        put: operations["editarZona"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/moderacion/ofertas": {
@@ -593,8 +663,38 @@ export interface components {
             areaProtegida: boolean;
             /** @description Zona congestionada (RF-29). */
             altaAfluencia: boolean;
+            /**
+             * @description Una zona inactiva no admite ofertas nuevas ni ediciones, pero sus ofertas siguen visibles (DC-49). La lista
+             *     pública solo trae las activas.
+             */
+            activa: boolean;
             buenasPracticas: string[];
             condicionesVisita?: string;
+        };
+        /**
+         * @description Lo que escribe el administrador (HU-ADM-06). Nombre, descripción y ubicación son obligatorios; el nombre es
+         *     único sin distinguir mayúsculas, tildes ni espacios repetidos (DC-49).
+         */
+        ZonaRequest: {
+            /** @example Isla de Salamanca */
+            nombre: string;
+            descripcion: string;
+            ubicacion: components["schemas"]["Coordenada"];
+            /**
+             * @description Área protegida o ecosistema sensible (RF-25, RF-84).
+             * @default false
+             */
+            areaProtegida: boolean;
+            /**
+             * @description Zona congestionada (RF-29, RF-84).
+             * @default false
+             */
+            altaAfluencia: boolean;
+            /** @description Una práctica por elemento, sin elementos en blanco. */
+            buenasPracticas?: string[];
+            condicionesVisita?: string;
+            /** @description Solo al editar, y ahí es obligatoria. Al registrar se ignora. */
+            activa?: boolean;
         };
         /** @description Perfil público del prestador (RF-24). No incluye datos de contacto directo. */
         PerfilPublico: {
@@ -1043,7 +1143,7 @@ export interface components {
              * @description Motivo estable del error (DC-15).
              * @enum {string}
              */
-            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "CONFLICTO_CONCURRENCIA" | "OPINION_NO_HABILITADA" | "OPINION_DUPLICADA" | "OPINION_NO_ENCONTRADA" | "PERFIL_NO_ENCONTRADO" | "FOTO_NO_ENCONTRADA";
+            codigo: "DATO_INVALIDO" | "ZONA_NO_DISPONIBLE" | "NO_AUTENTICADO" | "ACCESO_DENEGADO" | "PRESTADOR_NO_AUTORIZADO" | "TIPO_OFERTA_NO_PERMITIDO" | "RNT_INACTIVO" | "OFERTA_NO_ENCONTRADA" | "OFERTA_NO_EDITABLE" | "ZONA_NO_ENCONTRADA" | "ZONA_DUPLICADA" | "CONFLICTO_CONCURRENCIA" | "OPINION_NO_HABILITADA" | "OPINION_DUPLICADA" | "OPINION_NO_ENCONTRADA" | "PERFIL_NO_ENCONTRADO" | "FOTO_NO_ENCONTRADA";
         };
     };
     responses: {
@@ -1176,6 +1276,44 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problema"];
             };
         };
+        /** @description No hay una zona con ese identificador. */
+        ZonaNoEncontrada: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Not Found",
+                 *       "status": 404,
+                 *       "detail": "No existe la zona a00000000000000000000099",
+                 *       "instance": "/api/catalogo/zonas/a00000000000000000000099",
+                 *       "codigo": "ZONA_NO_ENCONTRADA"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
+        /** @description Ya hay otra zona con ese nombre, sin distinguir mayúsculas, tildes ni espacios repetidos (DC-49). */
+        ZonaDuplicada: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Conflict",
+                 *       "status": 409,
+                 *       "detail": "Ya existe una zona con el nombre TAGANGA",
+                 *       "instance": "/api/catalogo/admin/zonas",
+                 *       "codigo": "ZONA_DUPLICADA"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problema"];
+            };
+        };
         /** @description No hay una foto con ese identificador, o el tamaño no existe. */
         FotoNoEncontrada: {
             headers: {
@@ -1291,6 +1429,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @example a00000000000000000000005 */
+        ZonaId: string;
         /** @example d0000000000000000000000b */
         OpinionId: string;
         /** @example b00000000000000000000001 */
@@ -1408,6 +1548,30 @@ export interface operations {
                     "application/json": components["schemas"]["Zona"][];
                 };
             };
+        };
+    };
+    consultarZona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example a00000000000000000000005 */
+                zonaId: components["parameters"]["ZonaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La zona. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Zona"];
+                };
+            };
+            404: components["responses"]["ZonaNoEncontrada"];
         };
     };
     consultarFoto: {
@@ -1850,6 +2014,137 @@ export interface operations {
             409: components["responses"]["ConflictoConcurrencia"];
         };
     };
+    listarZonasAdministrador: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las zonas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Zona"][];
+                };
+            };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+        };
+    };
+    registrarZona: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "nombre": "Isla de Salamanca",
+                 *       "descripcion": "Vía Parque entre Barranquilla y Ciénaga",
+                 *       "ubicacion": {
+                 *         "latitud": 10.98,
+                 *         "longitud": -74.47
+                 *       },
+                 *       "areaProtegida": true,
+                 *       "buenasPracticas": [
+                 *         "No alimentar a los animales"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["ZonaRequest"];
+            };
+        };
+        responses: {
+            /** @description La zona registrada; `Location` es su ficha pública. */
+            201: {
+                headers: {
+                    /** @example /api/catalogo/zonas/a00000000000000000000008 */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Zona"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+            409: components["responses"]["ZonaDuplicada"];
+        };
+    };
+    editarZona: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description PROVISIONAL (DC-01): sustituye al identificador del usuario que traerá el JWT del núcleo.
+                 *     Solo se acepta con el perfil `demo`; sin él, la petición responde 401.
+                 */
+                "X-Usuario-Id": components["parameters"]["UsuarioId"];
+                /**
+                 * @description PROVISIONAL (DC-01), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta: en
+                 *     `/prestador/**`, PRESTADOR; con otro rol, la petición responde 403 `ACCESO_DENEGADO`.
+                 */
+                "X-Rol": components["parameters"]["Rol"];
+            };
+            path: {
+                /** @example a00000000000000000000005 */
+                zonaId: components["parameters"]["ZonaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZonaRequest"] & Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description La zona como quedó. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Zona"];
+                };
+            };
+            400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+            404: components["responses"]["ZonaNoEncontrada"];
+            409: components["responses"]["ZonaDuplicada"];
+        };
+    };
     listarOfertasEnModeracion: {
         parameters: {
             query?: {
@@ -2220,5 +2515,5 @@ export const avisoHabilitacionOpinionTipoValues: ReadonlyArray<FlattenedDeepRequ
 export const avisoModeracionOpinionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracionOpinion"]["tipo"]> = ["MODERACION_OPINION"];
 export const avisoModeracionOpinionDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracionOpinion"]["decision"]> = ["APROBAR", "RECHAZAR"];
 export const avisoSupresionTuristaTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoSupresionTurista"]["tipo"]> = ["SUPRESION_TURISTA"];
-export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "CONFLICTO_CONCURRENCIA", "OPINION_NO_HABILITADA", "OPINION_DUPLICADA", "OPINION_NO_ENCONTRADA", "PERFIL_NO_ENCONTRADO", "FOTO_NO_ENCONTRADA"];
+export const problemaCodigoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problema"]["codigo"]> = ["DATO_INVALIDO", "ZONA_NO_DISPONIBLE", "NO_AUTENTICADO", "ACCESO_DENEGADO", "PRESTADOR_NO_AUTORIZADO", "TIPO_OFERTA_NO_PERMITIDO", "RNT_INACTIVO", "OFERTA_NO_ENCONTRADA", "OFERTA_NO_EDITABLE", "ZONA_NO_ENCONTRADA", "ZONA_DUPLICADA", "CONFLICTO_CONCURRENCIA", "OPINION_NO_HABILITADA", "OPINION_DUPLICADA", "OPINION_NO_ENCONTRADA", "PERFIL_NO_ENCONTRADO", "FOTO_NO_ENCONTRADA"];
 export const componentsParametersRolValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["Rol"]> = ["TURISTA", "PRESTADOR", "ADMINISTRADOR"];

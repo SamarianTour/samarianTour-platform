@@ -3,6 +3,8 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salid
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.FotoSubidaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.PerfilDocument;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.ZonaDocument;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.mapper.ZonaMongoMapper;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.Sort;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Component;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.PRESTADOR_ID;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.OfertaDocument.TIPO;
+import static org.springframework.data.mongodb.core.query.Criteria.where;
+import static org.springframework.data.mongodb.core.query.Query.query;
 
 /**
  * Crea los índices del catálogo al arrancar (DC-17). Crear un índice que ya existe con la misma definición no hace
@@ -31,6 +35,8 @@ import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura
  *       uso antes de borrarla (DC-47).</li>
  *   <li>{@code fotos_por_ultimo_uso}: para que la limpieza recorra las fotos sin uso de la más antigua a la más
  *       reciente (DC-47).</li>
+ *   <li>{@code zona_por_nombre}: único, para que dos zonas no se llamen igual sin distinguir mayúsculas ni tildes
+ *       (DC-49).</li>
  * </ul>
  *
  * <p>Los dos índices de búsqueda son parciales: solo guardan las ofertas visibles (ReglaVisibilidad).
@@ -92,5 +98,20 @@ public class IndicesMongo implements InitializingBean {
                 .named("fotos_por_ultimo_uso")
                 .on(FotoSubidaDocument.ULTIMO_USO, Sort.Direction.ASC)
                 .on("_id", Sort.Direction.ASC));
+        completarClaveDeLasZonas();
+        mongo.indexOps(ZonaDocument.class).createIndex(new Index()
+                .named("zona_por_nombre")
+                .on(ZonaDocument.NOMBRE_CLAVE, Sort.Direction.ASC)
+                .unique());
+    }
+
+    /**
+     * Las zonas guardadas antes de DC-49 no tienen {@code nombreClave}. Sin ella, el índice único vería todas con la
+     * clave vacía y no se podría crear; por eso se completa antes. Las réplicas pueden hacerlo a la vez: escriben lo
+     * mismo.
+     */
+    private void completarClaveDeLasZonas() {
+        mongo.find(query(where(ZonaDocument.NOMBRE_CLAVE).exists(false)), ZonaDocument.class)
+                .forEach(zona -> mongo.save(ZonaMongoMapper.aDocumento(ZonaMongoMapper.aDominio(zona))));
     }
 }

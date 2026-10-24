@@ -390,6 +390,63 @@ class DemostracionApiTest {
     }
 
     /** Sube una foto para las ofertas del prestador y devuelve su identificador. */
+    @Test
+    @DisplayName("[Demostración] el administrador registra una zona, el guía publica en ella, la zona se marca como "
+            + "protegida y se inactiva: la oferta sigue visible, pero ya no se publica en esa zona (DC-49)")
+    void zonasDelAdministrador() throws Exception {
+        String zona = """
+                {"nombre": "Isla de Salamanca", "descripcion": "Vía Parque entre Barranquilla y Ciénaga",
+                 "ubicacion": {"latitud": 10.98, "longitud": -74.47}%s}""";
+        String creada = http.perform(comoAdministrador(post("/admin/zonas")).contentType(MediaType.APPLICATION_JSON)
+                        .content(zona.formatted("")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.activa").value(true))
+                .andReturn().getResponse().getContentAsString();
+        String zonaId = JsonPath.read(creada, "$.id");
+        http.perform(comoAdministrador(post("/admin/zonas")).contentType(MediaType.APPLICATION_JSON)
+                        .content(zona.formatted("").replace("Isla de Salamanca", "ISLA DE SALAMANCÁ")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("ZONA_DUPLICADA"));
+        http.perform(get("/zonas")).andExpect(jsonPath("$[*].id", hasItem(zonaId)));
+
+        String actividad = NUEVA_ACTIVIDAD.formatted(subirFoto(GUIA, "GUIA_INDEPENDIENTE"))
+                .replace("a00000000000000000000007", zonaId);
+        String oferta = http.perform(comoGuia(post("/prestador/ofertas")).contentType(MediaType.APPLICATION_JSON)
+                        .content(actividad))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String ofertaId = JsonPath.read(oferta, "$.id");
+        http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"idAviso": "demo-zona-1", "tipo": "MODERACION", "ofertaId": "%s", "numeroVersion": 1,
+                         "decision": "APROBAR"}""".formatted(ofertaId)))
+                .andExpect(jsonPath("$.resultado").value("APLICADO"));
+
+        String protegida = ", \"areaProtegida\": true, \"buenasPracticas\": [\"No alimentar a los animales\"]";
+        http.perform(comoAdministrador(put("/admin/zonas/" + zonaId)).contentType(MediaType.APPLICATION_JSON)
+                        .content(zona.formatted(protegida + ", \"activa\": true")))
+                .andExpect(status().isOk());
+        http.perform(get("/ofertas/" + ofertaId))
+                .andExpect(jsonPath("$.zona.areaProtegida").value(true))
+                .andExpect(jsonPath("$.zona.buenasPracticas[0]").value("No alimentar a los animales"));
+
+        http.perform(comoAdministrador(put("/admin/zonas/" + zonaId)).contentType(MediaType.APPLICATION_JSON)
+                        .content(zona.formatted(protegida + ", \"activa\": false")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activa").value(false));
+        http.perform(get("/zonas")).andExpect(jsonPath("$[*].id", not(hasItem(zonaId))));
+        http.perform(get("/zonas/" + zonaId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.activa").value(false));
+        http.perform(get("/ofertas").param("zonaId", zonaId))
+                .andExpect(jsonPath("$.contenido[*].id", hasItem(ofertaId)));
+        http.perform(comoGuia(post("/prestador/ofertas")).contentType(MediaType.APPLICATION_JSON).content(actividad))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("ZONA_NO_DISPONIBLE"));
+    }
+
+    private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
+        return peticion.header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006").header("X-Rol", "ADMINISTRADOR");
+    }
+
     private String subirFoto(String prestadorId, String tipoPrestador) throws Exception {
         String foto = http.perform(multipart("/prestador/fotos")
                         .file(new MockMultipartFile("foto", "foto.jpg", "image/jpeg", ImagenesDePrueba.jpg(800, 600)))

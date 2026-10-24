@@ -9,7 +9,9 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Perf
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.PrestadorNoAutorizadoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.RntInactivoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.TipoOfertaNoPermitidoException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaDuplicadaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoEncontradaException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -71,7 +73,9 @@ public class ManejadorErrores {
             case OfertaNoEncontradaException e -> HttpStatus.NOT_FOUND;
             case PerfilNoEncontradoException e -> HttpStatus.NOT_FOUND;
             case FotoNoEncontradaException e -> HttpStatus.NOT_FOUND;
+            case ZonaNoEncontradaException e -> HttpStatus.NOT_FOUND;
             case OfertaNoEditableException e -> HttpStatus.CONFLICT;
+            case ZonaDuplicadaException e -> HttpStatus.CONFLICT;
             // Una excepción del dominio que aún no está en la tabla de DC-15 es una regla incumplida por el cliente.
             default -> HttpStatus.BAD_REQUEST;
         };

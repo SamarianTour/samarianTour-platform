@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil y la subida de fotos de las ofertas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo; el núcleo y la recomendación están pendientes.
 
 ## Estructura del repositorio
 
@@ -210,7 +210,9 @@ curl -s "$BASE/ofertas/b00000000000000000000008"
 # Oferta aprobada de un prestador con el RNT inactivo: no es visible, responde 404
 curl -s "$BASE/ofertas/b00000000000000000000016"
 
+# Zonas activas, y la ficha de una zona con sus buenas prácticas
 curl -s "$BASE/zonas"
+curl -s "$BASE/zonas/a00000000000000000000005"
 ```
 
 ### 3. Publicar, aprobar y ver la oferta en la búsqueda
@@ -446,7 +448,34 @@ curl -s -X PUT "$BASE/prestador/ofertas/b00000000000000000000001" "${AGENCIA[@]}
 
 Una foto que nadie usa durante 24 horas se borra: las que se subieron y no se pusieron en una oferta, las de versiones reemplazadas y las de ofertas retiradas. La limpieza corre cada hora, en el minuto 17; para verla antes, se arranca con otra programación, por ejemplo `FOTOS_LIMPIEZA_CRON="0 * * * * *" docker compose -f infra/docker-compose.yml up -d` (cada minuto). La limpieza solo borra fotos con más de 24 horas sin uso.
 
-### 10. Rutas que no se exponen
+### 10. Zonas del administrador
+
+El administrador registra las zonas, las marca como área protegida o de alta afluencia, escribe sus buenas prácticas y las inactiva; una zona nunca se elimina (DC-49). Escribe directo en el catálogo, sin pasar por el núcleo.
+
+```bash
+ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
+ZONA='{"nombre": "Isla de Salamanca", "descripcion": "Parque de manglares entre Barranquilla y Santa Marta",
+       "ubicacion": {"latitud": 10.98, "longitud": -74.47}'
+
+# Registrar: responde 201 con la zona, activa. El mismo nombre con otras mayúsculas, tildes o espacios da 409 ZONA_DUPLICADA
+ZONA_ID=$(curl -s -X POST "$BASE/admin/zonas" "${ADMIN[@]}" -H "Content-Type: application/json" -d "$ZONA}" \
+  | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+curl -s -X POST "$BASE/admin/zonas" "${ADMIN[@]}" -H "Content-Type: application/json" \
+  -d "${ZONA/Isla de Salamanca/ISLA DE  SALAMANCA}}"
+
+# Marcarla como protegida con sus buenas prácticas. El PUT reemplaza todo y exige "activa"
+curl -s -X PUT "$BASE/admin/zonas/$ZONA_ID" "${ADMIN[@]}" -H "Content-Type: application/json" \
+  -d "$ZONA, \"areaProtegida\": true, \"buenasPracticas\": [\"No alimentar a los animales\"], \"activa\": true}"
+curl -s "$BASE/zonas/$ZONA_ID"
+
+# Inactivarla: sale de GET /zonas y no admite ofertas nuevas (400 ZONA_NO_DISPONIBLE), pero sus ofertas siguen visibles.
+# Con "activa": true se reactiva
+curl -s -X PUT "$BASE/admin/zonas/$ZONA_ID" "${ADMIN[@]}" -H "Content-Type: application/json" \
+  -d "$ZONA, \"activa\": false}"
+curl -s "$BASE/admin/zonas" "${ADMIN[@]}"
+```
+
+### 11. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404

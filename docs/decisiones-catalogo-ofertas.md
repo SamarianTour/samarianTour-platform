@@ -58,6 +58,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-46 | Persistencia de opiniones | 🆕 RF-61, DC-30, DC-33 |
 | DC-47 | Las ofertas llevan de 1 a 6 fotos moderadas; las que nadie usa se borran | 🆕 RF-65, RF-66 |
 | DC-48 | Evidencia de QAS-07: métricas en el servidor y prueba de carga de la búsqueda | ✅ QAS-07, QAS-02; RNF-13 en parte |
+| DC-49 | El administrador registra, edita, marca e inactiva las zonas; nunca se eliminan | ✅ HU-ADM-06, RF-84, RF-25 |
 
 ## Identidad y habilitación del prestador
 
@@ -122,7 +123,8 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 |---|---|
 | `OfertaPrestadorController` | `POST /prestador/ofertas`, `PUT /prestador/ofertas/{id}`, `PATCH /prestador/ofertas/{id}/retiro`, `GET /prestador/ofertas` |
 | `OfertaPublicaController` | `GET /ofertas?texto&tipo&zonaId&precioMin&precioMax&tipoActividad&nivelEsfuerzoMaximo&accesibleSillaRuedas&page&size`, `GET /ofertas/{id}` |
-| `ZonaController` | `GET /zonas` |
+| `ZonaController` | `GET /zonas`, `GET /zonas/{zonaId}` |
+| `ZonaAdminController` | `GET /admin/zonas`, `POST /admin/zonas`, `PUT /admin/zonas/{zonaId}` |
 | `AvisoInternoController` | `POST /internal/avisos` |
 | `ConsultaInternaController` | `GET /internal/ofertas`, `GET /internal/ofertas/{id}` |
 | `ModeracionController` | `GET /admin/moderacion/ofertas`, `GET /internal/moderacion/ofertas/{id}` |
@@ -147,6 +149,8 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | `RNT_INACTIVO` | 403 | DC-11 |
 | `OFERTA_NO_ENCONTRADA` | 404 | No existe, o no es visible para quien la consulta |
 | `OFERTA_NO_EDITABLE` | 409 | La oferta está retirada |
+| `ZONA_NO_ENCONTRADA` | 404 | La zona no existe (DC-49) |
+| `ZONA_DUPLICADA` | 409 | Ya hay otra zona con ese nombre (DC-49) |
 | `NO_AUTENTICADO` | 401 | Falta la identidad del usuario, o llegan los headers de demostración sin el perfil `demo` (DC-01) |
 | `ACCESO_DENEGADO` | 403 | El rol del usuario no es el que exige el prefijo de la ruta (DC-13) |
 | `OPINION_NO_HABILITADA` | 403 | El turista no tiene una solicitud pagada de la oferta (DC-41) |
@@ -162,7 +166,7 @@ Un JSON mal formado o un parámetro con el formato equivocado, por ejemplo un pr
 - El discriminador `tipo` va en la raíz, porque no cambia, y cada versión guarda solo los campos de su tipo.
 - El precio se guarda como `Decimal128`. Por defecto Spring lo guardaría como texto y la búsqueda por rango de precio fallaría.
 - Se desactiva el campo `_class` de Spring.
-- Otras colecciones: `zonas`, `prestadores` (réplica de DC-02), `perfiles` (un perfil público por prestador, con `nombreComercial` opcional, DC-26) y `avisos_procesados` (`_id = idAviso`). Las del módulo de opiniones están en DC-46.
+- Otras colecciones: `zonas` (con `nombreClave` y su índice único, DC-49), `prestadores` (réplica de DC-02), `perfiles` (un perfil público por prestador, con `nombreComercial` opcional, DC-26) y `avisos_procesados` (`_id = idAviso`). Las del módulo de opiniones están en DC-46.
 
 **DC-17. Índices parciales para la búsqueda (evidencia de QAS-07).**
 
@@ -254,6 +258,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 | `memoria` | Los adaptadores de salida en la memoria del proceso (`infraestructura/salida/memoria`), con los datos de demostración de Santa Marta | Por defecto, y en las pruebas que no necesitan MongoDB |
 | `mongo` | Los adaptadores de salida de MongoDB (`infraestructura/salida/persistencia`) y la creación de sus índices (DC-33) | En Docker Compose y en las pruebas de integración |
 | `demo` | Los headers que sustituyen al token del prestador (DC-01) y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
+| `carga` | Junto con `mongo`, el catálogo sintético de 5.000 ofertas después de los datos de demostración (DC-48) | Solo en la prueba de carga |
 
 - Docker Compose activa `mongo` y `demo` (`SPRING_PROFILES_ACTIVE=mongo,demo`).
 - **Carga de los datos de demostración** (`CargaDemoMongo`, [SUPUESTO] perfiles `mongo` y `demo` a la vez): al arrancar inserta en MongoDB los mismos datos de Santa Marta que usa el perfil `memoria`. Una colección solo se carga si está vacía, así que no toca una base que ya tiene datos.
@@ -429,6 +434,19 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 - **Sin ajustes:** con los índices parciales (DC-17), el tope de la paginación (DC-14) y la copia del RNT en cada oferta (DC-03) no hizo falta cambiar el código ni la configuración. Nginx, con sus 512 conexiones por defecto, no dio errores.
 - **Límites:** no es la nube del piloto, sino un portátil. Solo mide la búsqueda: ni la ficha, ni las miniaturas de las tarjetas, ni el envío de solicitudes, que es del núcleo y QAS-02 también incluye. El p95 de 3 s de extremo a extremo en red móvil se mide cuando exista el frontend. k6 registró una duración negativa (−1,2 s): un salto del reloj de la máquina virtual de Docker Desktop, que quizá explica también el máximo; no cambia los percentiles.
 
+## Gestión de zonas
+
+**DC-49. El administrador registra, edita, marca e inactiva las zonas; nunca se eliminan** (HU-ADM-06, RF-84). La zona es el lugar o atractivo donde se ubica la oferta; su ficha muestra las buenas prácticas (RF-25, HU-TUR-16).
+- **Dónde:** `/admin/zonas` en el catálogo, con el rol ADMINISTRADOR (DC-13). El administrador escribe directo en el catálogo, que es el dueño de las zonas; a diferencia de la moderación (DC-38), no pasa por el núcleo: las interacciones entre servicios del documento de diseño no incluyen las zonas.
+- **Operaciones** (`GestionarZonasUseCase`): `GET /admin/zonas` lista todas, activas e inactivas; `POST` registra una zona, que nace activa, y responde 201 con su ficha en `Location`; `PUT /admin/zonas/{zonaId}` reemplaza todos sus datos y las marcas. En el `PUT`, `activa` es obligatoria para que inactivar o reactivar sea explícito.
+- **Datos** (`DatosZona`, decisión del equipo): nombre, descripción y ubicación son obligatorios, los tres que nombra la historia; las buenas prácticas (una por elemento, sin elementos en blanco) y las condiciones de visita son opcionales, y las marcas que no se envían quedan en false. `Zona` no exige estas reglas al leer, porque una zona guardada antes puede no cumplirlas.
+- **Nombre único** (decisión del equipo): sin distinguir mayúsculas, tildes ni espacios repetidos (`Zona.claveNombre`, con la misma normalización de la búsqueda por texto, DC-37); otro igual responde 409 `ZONA_DUPLICADA`. En MongoDB lo garantiza el índice único `zona_por_nombre` sobre `nombreClave`, aunque dos réplicas guarden a la vez. Las zonas guardadas antes de DC-49 reciben `nombreClave` al crear los índices.
+- **Inactivar** (decisión del equipo): la zona sale de `GET /zonas` y no admite ofertas nuevas ni ediciones (DC-12, `ZONA_NO_DISPONIBLE`), pero las ofertas que ya tiene **siguen visibles**, en la búsqueda y en su ficha. Por eso la visibilidad (`ReglaVisibilidad`) no cambia y la búsqueda sigue usando solo el índice de ofertas (QAS-07). Una zona inactiva se puede **reactivar**. Nunca se elimina: tampoco una que nadie usa, para no dejar referencias rotas en las solicitudes y los indicadores del núcleo, que guardan la zona.
+- **Ficha de la zona:** `GET /zonas/{zonaId}` responde también por una inactiva, con `activa` en false, porque sus ofertas siguen visibles; `ZONA_NO_ENCONTRADA` si no existe.
+- **Efecto inmediato:** las marcas y las buenas prácticas se ven en cuanto se guardan, porque la ficha de la oferta y la consulta de la recomendación (DC-36) leen la zona al responder; no hay copias en las ofertas que actualizar.
+- **Concurrencia:** cada guardado reemplaza el documento completo de una vez. Si dos administradores editan a la vez, queda la última edición completa; no hay estado intermedio que se pueda corromper.
+- **Alternativas por alta afluencia (RF-29, HU-TUR-17):** las calcula la recomendación, como dice el diseño (decisión del equipo); el catálogo le entrega la marca en la consulta interna (DC-36).
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -461,7 +479,9 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 
 15. **SRS, RF-60 y RF-61 (desviación conocida):** RF-60 permite opinar "sin exigir una solicitud previa ni confirmación de asistencia", como decidió el equipo en la HU-ADM-03 del Entregable 1, y RF-61 permite editar y reenviar una opinión rechazada. El código exige una solicitud pagada (DC-41) y no permite editar la opinión rechazada (DC-42). El equipo decidió dejar el código como está: hay que cambiar los RF o el módulo de opiniones.
 16. **Documento de diseño, verificación de QAS-07 y QAS-02:** citar la prueba de carga de la búsqueda como evidencia de la parte del catálogo, con su entorno y sus límites (DC-48).
+17. **Diagrama del módulo catálogo:** agregar el caso de uso `GestionarZonasUseCase` con `GestionarZonasService`, `ConsultarZonasUseCase.consultar`, las operaciones de escritura de `ZonaRepositoryPort` (`guardar`, `buscarTodas`, `nuevoId`) y el adaptador de entrada `ZonaAdminController` (DC-49). `DatosZona` es una agrupación técnica como `ContenidoComun`: no cambia el modelo.
+18. **Modelo documental (MongoDB):** agregar en `zonas` el campo `nombreClave` y su índice único `zona_por_nombre` (DC-49).
 
 ## Fuera del alcance del prototipo
 
-La pantalla de moderación del administrador, que vive en el núcleo; gestión de zonas; JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.
+La pantalla de moderación del administrador, que vive en el núcleo; las alternativas por alta afluencia, que son de la recomendación (RF-29); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.

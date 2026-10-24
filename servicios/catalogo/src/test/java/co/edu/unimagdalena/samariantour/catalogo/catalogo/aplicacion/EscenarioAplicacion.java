@@ -72,6 +72,7 @@ class EscenarioAplicacion {
     final ConsultarOfertaParaModulosService paraModulos = new ConsultarOfertaParaModulosService(ofertas);
     final ConsultarOfertasVisiblesService visibles = new ConsultarOfertasVisiblesService(ofertas, zonas);
     final ConsultarZonasService consultaZonas = new ConsultarZonasService(zonas);
+    final GestionarZonasService gestionZonas = new GestionarZonasService(zonas);
     final ListarPendientesModeracionService moderacion = new ListarPendientesModeracionService(ofertas);
     final GestionarPerfilPublicoService perfilPublico = new GestionarPerfilPublicoService(perfiles, registroFotos,
             fotos, reloj, reintento);
