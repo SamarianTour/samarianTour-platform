@@ -16,6 +16,7 @@ import { CatalogoService } from '../../../core/api/catalogo.service';
 import {
   Coordenada,
   FichaOferta,
+  Foto,
   ModalidadRecorrido,
   NivelEsfuerzo,
   OfertaPrestador,
@@ -39,7 +40,9 @@ import {
 import { Icono } from '../../../shared/icono/icono';
 import { Mapa } from '../../../shared/mapa/mapa';
 import { versionVigente } from '../estado-oferta';
+import { MINIMO_FOTOS } from './fotos-oferta';
 import { ValoresOferta, aLista, aPeticion, valoresDeFicha } from './peticion-oferta';
+import { SelectorFotos } from './selector-fotos/selector-fotos';
 
 type Campo = keyof ValoresOferta;
 
@@ -88,7 +91,7 @@ const minimoDeActividades: ValidatorFn = (control) =>
  */
 @Component({
   selector: 'app-formulario-oferta',
-  imports: [ReactiveFormsModule, RouterLink, Mapa, Icono],
+  imports: [ReactiveFormsModule, RouterLink, Mapa, Icono, SelectorFotos],
   templateUrl: './formulario-oferta.html',
   styleUrl: './formulario-oferta.css',
 })
@@ -145,11 +148,14 @@ export class FormularioOferta {
   protected readonly zonas = signal<readonly Zona[]>([]);
   protected readonly actividades = signal<readonly ActividadPropia[]>([]);
   protected readonly ubicacion = signal<Coordenada | null>(null);
-  /**
-   * [SUPUESTO] El formulario todavía no sube fotos (DC-47): al editar se conservan las de la versión publicada, y una
-   * oferta nueva se envía sin fotos, así que la API la rechaza hasta que exista la pantalla de fotos.
-   */
-  private readonly fotos = signal<string[]>([]);
+  /** Las fotos de la oferta, en orden; la primera es la portada (DC-47). Al editar parten de las publicadas. */
+  protected readonly fotos = signal<Foto[]>([]);
+  /** Verdadero mientras el selector sube alguna foto: no se envía la oferta hasta que termine. */
+  protected readonly subiendoFotos = signal(false);
+  /** Se activa al intentar enviar; desde entonces la falta de fotos se muestra como error. */
+  private readonly intentoDeEnvio = signal(false);
+  /** Error sobre `fotos` que devolvió la API; se quita al cambiar las fotos. */
+  private readonly errorDeFotosApi = signal<string | null>(null);
   protected readonly conCambiosEnRevision = signal(false);
   protected readonly guardando = signal(false);
   protected readonly errorGeneral = signal<string | null>(null);
@@ -163,6 +169,11 @@ export class FormularioOferta {
     { initialValue: this.formulario.controls.tipo.value },
   );
   protected readonly editando = computed(() => !!this.id());
+  protected readonly errorDeFotos = computed(
+    () =>
+      this.errorDeFotosApi() ??
+      (this.intentoDeEnvio() && this.faltanFotos() ? 'Agrega al menos una foto: la primera es la portada.' : null),
+  );
   protected readonly mensajeDeBloqueo = computed(() => {
     const estado = this.estado();
     return estado.tipo === 'bloqueada' ? estado.mensaje : '';
@@ -217,6 +228,11 @@ export class FormularioOferta {
     control.markAsTouched();
   }
 
+  protected cambiarFotos(fotos: Foto[]): void {
+    this.fotos.set(fotos);
+    this.errorDeFotosApi.set(null);
+  }
+
   protected ponerUbicacion(ubicacion: Coordenada): void {
     this.ubicacion.set(ubicacion);
   }
@@ -231,15 +247,30 @@ export class FormularioOferta {
     }
     this.errorGeneral.set(null);
     this.erroresDeApi.set({});
-    if (this.formulario.invalid) {
+    this.errorDeFotosApi.set(null);
+    this.intentoDeEnvio.set(true);
+    if (this.formulario.invalid || this.faltanFotos()) {
       this.formulario.markAllAsTouched();
       this.cambios.update((cambios) => cambios + 1);
-      this.enfocar(this.primerCampoInvalido());
+      if (this.formulario.invalid) {
+        this.enfocar(this.primerCampoInvalido());
+      } else {
+        this.enfocarFotos();
+      }
+      return;
+    }
+    if (this.subiendoFotos()) {
+      this.errorGeneral.set('Espera a que terminen de subir las fotos y vuelve a enviar la oferta.');
+      this.enfocarFotos();
       return;
     }
 
     const id = this.id();
-    const peticion = aPeticion(this.formulario.getRawValue(), this.ubicacion(), this.fotos());
+    const peticion = aPeticion(
+      this.formulario.getRawValue(),
+      this.ubicacion(),
+      this.fotos().map((foto) => foto.id),
+    );
     this.guardando.set(true);
     (id ? this.servicio.editar(id, peticion) : this.servicio.publicar(peticion)).subscribe({
       next: (oferta) => {
@@ -354,6 +385,12 @@ export class FormularioOferta {
   private mostrarError(fallo: unknown): void {
     const error = aErrorApi(fallo);
     const campo = error.campo;
+    if (campo === 'fotos') {
+      // Por ejemplo una foto que ya se borró porque pasaron 24 horas sin usarla (DC-47).
+      this.errorDeFotosApi.set(mayusculaInicial(error.detalleCampo ?? error.mensaje));
+      this.enfocarFotos();
+      return;
+    }
     if (campo && esCampo(campo, this.formulario.controls)) {
       this.erroresDeApi.set({ [campo]: mayusculaInicial(error.detalleCampo ?? error.mensaje) });
       this.enfocar(campo);
@@ -365,6 +402,15 @@ export class FormularioOferta {
   private primerCampoInvalido(): Campo | undefined {
     const controles = this.formulario.controls;
     return (Object.keys(controles) as Campo[]).find((campo) => controles[campo].invalid);
+  }
+
+  /** Falta alguna foto, pero no cuenta mientras hay subidas en curso: esa foto todavía va a llegar. */
+  private faltanFotos(): boolean {
+    return this.fotos().length < MINIMO_FOTOS && !this.subiendoFotos();
+  }
+
+  private enfocarFotos(): void {
+    this.anfitrion.nativeElement.querySelector<HTMLElement>('#fotos')?.focus();
   }
 
   /** Lleva el foco al campo con error; los campos tienen como id el nombre de su control. */

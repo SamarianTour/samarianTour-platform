@@ -182,6 +182,16 @@
           }
         </section>
 
+        <section class="tarjeta seccion" aria-labelledby="fotos-titulo">
+          <h2 id="fotos-titulo">Fotos</h2>
+          <app-selector-fotos
+            [fotos]="fotos()"
+            (fotosChange)="cambiarFotos($event)"
+            [(subiendo)]="subiendoFotos"
+            [error]="errorDeFotos()"
+          />
+        </section>
+
         @if (tipo() === 'ACTIVIDAD') {
           <section class="tarjeta seccion" aria-labelledby="actividad-titulo">
             <h2 id="actividad-titulo">Datos de la actividad</h2>

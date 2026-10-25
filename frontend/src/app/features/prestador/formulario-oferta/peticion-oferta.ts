@@ -1,6 +1,7 @@
 import {
   Coordenada,
   FichaOferta,
+  Foto,
   ModalidadRecorrido,
   NivelEsfuerzo,
   OfertaRequest,
@@ -98,11 +99,12 @@ export function aPeticion(valores: ValoresOferta, ubicacion: Coordenada | null, 
 /**
  * Valores del formulario a partir de la ficha pública, para editar.
  * [SUPUESTO] La API no devuelve el contenido completo de una oferta propia: se usa su versión publicada.
+ * Las fotos salen completas (con su miniatura) para mostrarlas en el selector; a la API solo viajan sus ids.
  */
 export function valoresDeFicha(ficha: FichaOferta): {
   valores: ValoresOferta;
   ubicacion: Coordenada | null;
-  fotos: string[];
+  fotos: Foto[];
 } {
   const horas = ficha.actividad?.horariosSalida ?? ficha.paquete?.horariosSalida ?? [];
   return {
@@ -128,6 +130,6 @@ export function valoresDeFicha(ficha: FichaOferta): {
       tipoUnidad: ficha.alojamiento?.tipoUnidad ?? '',
     },
     ubicacion: ficha.ubicacion ?? null,
-    fotos: ficha.fotos.map((foto) => foto.id),
+    fotos: [...ficha.fotos],
   };
 }
