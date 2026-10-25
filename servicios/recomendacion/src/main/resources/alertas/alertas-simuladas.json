@@ -1,0 +1,45 @@
+[
+  {
+    "id": "simulada-tayrona-cierre",
+    "zonaId": "a00000000000000000000005",
+    "tipo": "CIERRE",
+    "nivel": "NARANJA",
+    "titulo": "Cierre temporal del parque",
+    "descripcion": "Cierre temporal por recuperación ecológica: no se permite el ingreso de visitantes. Consulta la fecha de reapertura antes de viajar.",
+    "fuente": "Parques Nacionales (simulado)",
+    "emitidaHace": "PT2H",
+    "vigentePor": "P3D"
+  },
+  {
+    "id": "simulada-minca-deslizamiento",
+    "zonaId": "a00000000000000000000007",
+    "tipo": "DESLIZAMIENTO",
+    "nivel": "AMARILLA",
+    "titulo": "Riesgo de deslizamientos por lluvias",
+    "descripcion": "Las lluvias acumuladas aumentan la probabilidad de deslizamientos en la vía a Minca. Viaja de día y con precaución.",
+    "fuente": "IDEAM (simulado)",
+    "emitidaHace": "PT5H",
+    "vigentePor": "P1D"
+  },
+  {
+    "id": "simulada-taganga-oleaje",
+    "zonaId": "a00000000000000000000003",
+    "tipo": "OLEAJE",
+    "nivel": "AMARILLA",
+    "titulo": "Oleaje alto en la bahía",
+    "descripcion": "Se esperan olas altas en la bahía de Taganga. Evita bañarte lejos de la orilla y sigue las indicaciones de los operadores náuticos.",
+    "fuente": "IDEAM (simulado)",
+    "emitidaHace": "PT1H"
+  },
+  {
+    "id": "simulada-centro-lluvias-vencida",
+    "zonaId": "a00000000000000000000001",
+    "tipo": "LLUVIAS",
+    "nivel": "AMARILLA",
+    "titulo": "Lluvias fuertes en la tarde",
+    "descripcion": "Alerta ya vencida: está para comprobar que no se muestra.",
+    "fuente": "IDEAM (simulado)",
+    "emitidaHace": "P2D",
+    "vigentePor": "P1D"
+  }
+]
