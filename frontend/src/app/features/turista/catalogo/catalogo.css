@@ -78,24 +78,37 @@
   height: 100%;
   overflow: hidden;
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: var(--radio-lg);
   background: var(--superficie);
-  box-shadow: var(--sombra);
+  box-shadow: var(--sombra-1);
   color: var(--texto);
   text-decoration: none;
   transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease;
+    transform 250ms ease,
+    border-color 250ms ease,
+    box-shadow 250ms ease;
 }
 
 .oferta:hover {
-  border-color: var(--acento);
-  box-shadow: 0 6px 16px rgb(15 23 42 / 8%);
+  border-color: #bfe3e1;
+  box-shadow: var(--sombra-2);
   color: var(--texto);
+  transform: translateY(-4px);
 }
 
+/* Proporción 16:10 como en el diseño; la foto la llena y, sin foto, queda el icono del tipo. */
 .oferta__portada {
-  height: 8.5rem;
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.oferta__foto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .oferta__cuerpo {
@@ -147,12 +160,30 @@
 
 .oferta__precio strong {
   color: var(--enlace);
+  font-family: var(--fuente-titulos);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .oferta__flecha {
   color: var(--enlace);
+  transition: transform 250ms ease;
+}
+
+.oferta:hover .oferta__flecha {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oferta,
+  .oferta__flecha {
+    transition: none;
+  }
+
+  .oferta:hover,
+  .oferta:hover .oferta__flecha {
+    transform: none;
+  }
 }
 
 @media (max-width: 56rem) {

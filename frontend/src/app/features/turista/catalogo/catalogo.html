@@ -152,8 +152,13 @@
             <li>
               <a class="oferta" [routerLink]="['/ofertas', oferta.id]">
                 <div class="oferta__portada portada">
-                  <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
-                  <span>{{ etiquetaTipo[oferta.tipo] }}</span>
+                  @if (oferta.portada; as portada) {
+                    <!-- Decorativa: el nombre de la oferta ya nombra el enlace. -->
+                    <img class="oferta__foto" [src]="portada.urlMiniatura" alt="" loading="lazy" />
+                  } @else {
+                    <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
+                    <span>{{ etiquetaTipo[oferta.tipo] }}</span>
+                  }
                 </div>
                 <div class="oferta__cuerpo">
                   <span class="etiqueta etiqueta--sello">RNT verificado</span>
