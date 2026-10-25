@@ -194,10 +194,10 @@ a:hover {
 
 .tarjeta {
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: var(--radio-lg);
   padding: 1.5rem;
   background: var(--superficie);
-  box-shadow: var(--sombra);
+  box-shadow: var(--sombra-1);
 }
 
 .tarjeta > :last-child {
@@ -345,24 +345,25 @@ a:hover {
   justify-content: center;
   gap: 0.5rem;
   min-height: 44px;
-  border: 1px solid var(--enlace);
-  border-radius: 8px;
+  border: 1.5px solid var(--enlace);
+  border-radius: var(--radio-md);
   padding: 0.5rem 1.25rem;
   background: var(--enlace);
   color: #fff;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
 }
 
 .boton:hover {
-  border-color: var(--enlace-fuerte);
-  background: var(--enlace-fuerte);
+  border-color: var(--acento-hover);
+  background: var(--acento-hover);
   color: #fff;
 }
 
