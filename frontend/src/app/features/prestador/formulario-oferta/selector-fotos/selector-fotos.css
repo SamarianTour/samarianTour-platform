@@ -1,0 +1,119 @@
+.selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.selector .alerta {
+  margin: 0;
+}
+
+.selector__barra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+}
+
+.selector__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.miniatura {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  background: var(--superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.miniatura__imagen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, var(--acento-suave), var(--superficie-suave) 70%);
+}
+
+.miniatura__imagen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.miniatura__portada {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  box-shadow: var(--sombra-1);
+}
+
+.miniatura__estado {
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.miniatura__error {
+  color: var(--peligro);
+  font-weight: 500;
+}
+
+.miniatura__nombre {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.miniatura__acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+.miniatura__boton {
+  min-height: 44px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio-sm);
+  padding: 0.25rem 0.5rem;
+  background: var(--superficie);
+  color: var(--enlace);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.miniatura__boton:hover:not(:disabled) {
+  background: var(--acento-suave);
+  color: var(--enlace-fuerte);
+}
+
+.miniatura__boton:disabled {
+  background: var(--superficie-suave);
+  color: var(--texto-suave);
+  cursor: not-allowed;
+}
+
+/* "Quitar" ocupa toda la fila para no confundirlo con mover. */
+.miniatura__boton--quitar {
+  grid-column: 1 / -1;
+  color: var(--peligro);
+}
+
+.miniatura__boton--quitar:hover:not(:disabled) {
+  background: var(--peligro-fondo);
+  color: var(--peligro);
+}
