@@ -125,21 +125,52 @@ main {
   outline: none;
 }
 
+/* Pie oscuro: franja con el logo y barra inferior con los derechos. */
 .pie {
-  border-top: 1px solid var(--borde);
-  padding: 1rem;
-  background: var(--superficie);
-  color: var(--texto-suave);
+  background: var(--profundo);
+  color: #cfe3e1;
+}
+
+.pie__arriba {
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  background: var(--profundo-2);
+}
+
+.pie__interior {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 2rem;
+  flex-wrap: wrap;
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 1.375rem 1.5rem;
+}
+
+.pie .marca {
+  color: #fff;
+}
+
+.pie__abajo {
+  color: #a8c8c6;
   font-size: 0.8125rem;
-  text-align: center;
+}
+
+.pie__abajo .pie__interior {
+  padding-block: 1.125rem;
 }
 
 .pie p {
   margin: 0;
+  font-size: 0.875rem;
+}
+
+.pie__abajo p {
+  font-size: inherit;
 }
 
 @media (max-width: 30rem) {
-  .cabecera__interior {
+  .cabecera__interior,
+  .pie__interior {
     padding-inline: 1rem;
   }
 }
