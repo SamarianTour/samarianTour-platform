@@ -1,0 +1,203 @@
+:host {
+  display: block;
+}
+
+/* Mosaico: una foto grande a la izquierda y dos pequeñas a la derecha. */
+.galeria {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.75rem;
+  height: clamp(18.75rem, 40vw, 28.75rem);
+}
+
+.galeria--una {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.galeria--dos {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.mosaico {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radio-lg);
+  padding: 0;
+  background: var(--superficie-suave);
+  cursor: zoom-in;
+  font: inherit;
+  isolation: isolate;
+}
+
+.mosaico--principal {
+  grid-row: span 2;
+}
+
+.galeria--una .mosaico--principal,
+.galeria--dos .mosaico--principal {
+  grid-row: auto;
+}
+
+.mosaico img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.mosaico:hover img,
+.mosaico:focus-visible img {
+  transform: scale(1.06);
+}
+
+.mosaico__mas {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radio-pildora);
+  padding: 0.5rem 0.875rem;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: var(--sombra-2);
+  color: var(--texto);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+/* La etiqueta de la foto grande solo se usa en celular, donde las pequeñas se ocultan. */
+.mosaico__mas--movil {
+  display: none;
+}
+
+/* Visor a pantalla completa */
+.visor {
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: rgb(6 22 25 / 95%);
+  color: #fff;
+}
+
+.visor[open] {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.visor__cerrar {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: var(--radio-pildora);
+  padding: 0 1.25rem;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.visor__nav {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  padding: 0;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  cursor: pointer;
+}
+
+.visor__nav--anterior app-icono {
+  transform: rotate(180deg);
+}
+
+.visor__cerrar:hover,
+.visor__nav:hover {
+  background: rgb(255 255 255 / 22%);
+}
+
+/* Sobre el fondo oscuro el contorno de foco debe ser claro. */
+.visor :focus-visible {
+  outline-color: #fff;
+}
+
+.visor__escenario {
+  width: 100%;
+  max-width: 62.5rem;
+  margin-inline: auto;
+}
+
+.visor__foto {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 8rem);
+  border-radius: var(--radio-lg);
+  object-fit: contain;
+}
+
+.visor__pie {
+  margin: 0.875rem 0 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+@media (max-width: 40rem) {
+  .galeria,
+  .galeria--una,
+  .galeria--dos {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    height: 16.25rem;
+  }
+
+  .mosaico:not(.mosaico--principal) {
+    display: none;
+  }
+
+  .mosaico--principal {
+    grid-row: auto;
+  }
+
+  .mosaico__mas--movil {
+    display: inline-flex;
+  }
+
+  .visor[open] {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+    padding: 0.75rem;
+  }
+
+  .visor__nav {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mosaico img {
+    transition: none;
+  }
+
+  .mosaico:hover img,
+  .mosaico:focus-visible img {
+    transform: none;
+  }
+}

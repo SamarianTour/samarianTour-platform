@@ -1,0 +1,57 @@
+<div class="galeria" [class]="'galeria--' + disposicion()">
+  @for (foto of visibles(); track foto.id; let i = $index) {
+    <button type="button" class="mosaico" [class.mosaico--principal]="i === 0" (click)="abrir(i)">
+      <!-- La foto grande usa el tamaño de galería; las pequeñas, la miniatura. El nombre accesible lo da el texto oculto. -->
+      <img
+        [src]="i === 0 ? foto.url : foto.urlMiniatura"
+        alt=""
+        [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+      />
+      <span class="solo-lectores">Ver foto {{ i + 1 }} de {{ total() }}</span>
+      @if (i === 2 && total() > 3) {
+        <span class="mosaico__mas">Ver las {{ total() }} fotos</span>
+      }
+      @if (i === 0 && total() > 1) {
+        <span class="mosaico__mas mosaico__mas--movil">Ver las {{ total() }} fotos</span>
+      }
+    </button>
+  }
+</div>
+
+<dialog
+  #visor
+  class="visor"
+  [attr.aria-label]="'Fotos de ' + nombre()"
+  (close)="alCerrar()"
+  (keydown)="teclado($event)"
+  (click)="cerrarSiFuera($event)"
+>
+  <button type="button" class="visor__cerrar" (click)="cerrar()">
+    Cerrar<span class="solo-lectores"> la galería</span>
+  </button>
+
+  @if (total() > 1) {
+    <button type="button" class="visor__nav visor__nav--anterior" (click)="ir(-1)">
+      <app-icono nombre="chevron" />
+      <span class="solo-lectores">Foto anterior</span>
+    </button>
+  } @else {
+    <span></span>
+  }
+
+  <div class="visor__escenario">
+    @if (actual(); as foto) {
+      <img class="visor__foto" [src]="foto.url" [alt]="textoAlternativo(indice())" />
+    }
+    <p class="visor__pie" aria-live="polite">{{ indice() + 1 }} de {{ total() }}</p>
+  </div>
+
+  @if (total() > 1) {
+    <button type="button" class="visor__nav" (click)="ir(1)">
+      <app-icono nombre="chevron" />
+      <span class="solo-lectores">Foto siguiente</span>
+    </button>
+  } @else {
+    <span></span>
+  }
+</dialog>
