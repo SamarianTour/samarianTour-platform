@@ -25,6 +25,7 @@ import java.util.Optional;
  *   <li>Si la fuente falla del todo, la caché no se toca: se queda la última lectura buena con su hora.</li>
  *   <li>Si fallan solo algunas zonas, esas conservan sus alertas anteriores con la hora en que se leyeron; las demás
  *   quedan con la hora de esta lectura.</li>
+ *   <li>El reintento solo llama a la fuente mientras la caché no tenga ninguna lectura buena.</li>
  * </ul>
  */
 public class ActualizarAlertasService implements ActualizarAlertasUseCase {
@@ -63,6 +64,14 @@ public class ActualizarAlertasService implements ActualizarAlertasUseCase {
         }));
         cache.guardar(new LecturaAlertas(alertas, reloj.instant(), horasConservadas));
         return true;
+    }
+
+    @Override
+    public Reintento reintentar() {
+        if (cache.ultima().isPresent()) {
+            return Reintento.NO_HACE_FALTA;
+        }
+        return actualizar() ? Reintento.ACTUALIZADA : Reintento.FALLIDA;
     }
 
     private List<ZonaCatalogo> zonas() {
