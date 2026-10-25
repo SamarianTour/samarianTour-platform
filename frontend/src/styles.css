@@ -2,30 +2,30 @@
 
 :root {
   --acento: #0ea5a5;
-  --acento-suave: #dff3f1;
+  --acento-suave: #e1f4f2;
   /* Botones, enlaces y precios: el acento oscurecido para que el texto cumpla contraste AA. */
   --enlace: #0b7373;
-  --enlace-fuerte: #095c5c;
-  --texto: #1e293b;
-  --texto-suave: #475569;
+  --enlace-fuerte: #086868;
+  --texto: #1b2430;
+  --texto-suave: #5b6676;
   --fondo: #fafafa;
   --superficie: #ffffff;
-  --superficie-suave: #f1f5f9;
-  --borde: #e2e8f0;
+  --superficie-suave: #f3f5f7;
+  --borde: #e4e7ec;
   /* Borde de los controles de formulario: el gris más claro que todavía se distingue del fondo (contraste 3:1). */
   --borde-control: #8492a6;
-  --peligro: #b91c1c;
-  --peligro-fondo: #fef2f2;
-  --peligro-borde: #fecaca;
-  --aviso-texto: #713f12;
-  --aviso-fondo: #fffbeb;
+  --peligro: #c42b36;
+  --peligro-fondo: #fdecec;
+  --peligro-borde: #f3bfc3;
+  --aviso-texto: #8a5a00;
+  --aviso-fondo: #fef3c7;
   --aviso-borde: #fde68a;
-  --exito-texto: #166534;
-  --exito-fondo: #ecfdf3;
-  --exito-borde: #bbf7d0;
-  --info-texto: #1d4ed8;
-  --info-fondo: #eff6ff;
-  --info-borde: #bfdbfe;
+  --exito-texto: #167a3e;
+  --exito-fondo: #dcf3e4;
+  --exito-borde: #bfe3cb;
+  --info-texto: #1e4e8c;
+  --info-fondo: #e5eef9;
+  --info-borde: #c7dfef;
   --sombra: 0 1px 2px rgb(15 23 42 / 4%);
   --ancho: 84rem;
 
@@ -86,7 +86,7 @@ body {
   margin: 0;
   background: var(--fondo);
   color: var(--texto);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--fuente-texto);
   font-size: 1rem;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -95,20 +95,26 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--fuente-titulos);
   line-height: 1.25;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 h1 {
   margin: 0;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 h2 {
   margin: 0 0 0.75rem;
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 800;
+}
+
+h3 {
+  font-weight: 700;
 }
 
 a {
