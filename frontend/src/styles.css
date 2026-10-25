@@ -28,6 +28,48 @@
   --info-borde: #bfdbfe;
   --sombra: 0 1px 2px rgb(15 23 42 / 4%);
   --ancho: 84rem;
+
+  /* Diseño visual de Samarian Tour: variables nuevas, todavía sin uso en las piezas. */
+
+  /* Marca: hover del botón, texto sobre fondo suave y los tonos oscuros del pie. */
+  --acento-hover: #086868;
+  --acento-tinta: #0a6b6b;
+  --profundo: #0b3b3c;
+  --profundo-2: #0f4f52;
+  --arena: #f4e4c1;
+  --sol: #f6c77a;
+
+  /* Borde de tarjetas y botones neutros. No es el de los campos: ese es --borde-control. */
+  --borde-fuerte: #d0d5dd;
+
+  /* Estados que la API no distingue pero el diseño sí: borrador, área protegida y alta afluencia. */
+  --borrador-texto: #5b6676;
+  --borrador-fondo: #eef0f3;
+  --protegida-texto: #14633a;
+  --protegida-fondo: #e3f4e8;
+  --afluencia-texto: #7a4b00;
+  --afluencia-fondo: #fff1d6;
+
+  /* Tipografía: Manrope en títulos, Inter en texto. */
+  --fuente-titulos: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fuente-texto: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Radios */
+  --radio-sm: 8px;
+  --radio-md: 12px;
+  --radio-lg: 20px;
+  --radio-xl: 28px;
+  --radio-pildora: 999px;
+
+  /* Sombras: de suave a fuerte. */
+  --sombra-1: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+  --sombra-2: 0 8px 24px rgb(16 24 40 / 8%);
+  --sombra-3: 0 20px 48px rgb(11 59 60 / 20%);
+
+  /* Anillo que se suma al contorno de foco en los campos. */
+  --anillo-foco: 0 0 0 4px rgb(14 165 165 / 22%);
+
+  --cabecera-alto: 4.5rem;
 }
 
 *,
