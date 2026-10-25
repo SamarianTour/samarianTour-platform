@@ -4,11 +4,11 @@ Servicio de recomendación (RF-26 a RF-29): recibe lo que busca el turista y dev
 
 - **Endpoints**, todos públicos:
   - `POST /api/recomendacion/recomendaciones`: POST para que el texto del turista no quede en la URL (DR-09);
-  - `GET /api/recomendacion/zonas/{zonaId}/alertas` y `GET /api/recomendacion/alertas`: alertas activas con su fuente y la hora de actualización (RF-28);
+  - `GET /api/recomendacion/zonas/{zonaId}/alertas?idioma=es|en` y `GET /api/recomendacion/alertas?idioma=es|en`: alertas activas con su fuente y la hora de actualización (RF-28, DR-21);
   - `GET /api/recomendacion/ofertas/{ofertaId}/alternativas?idioma=es|en`: alternativas a una oferta de una zona con alta afluencia (RF-29).
 - **Motores:** por reglas, siempre disponible, o con IA, si `recomendacion.ia.habilitada=true` y hay key (DR-01). Si la IA falla, responde el de reglas sin error para el turista (DR-05, DR-06).
 - **Criterios:** solo los explícitos: tipo de oferta, tipo de actividad, zona, accesibilidad, esfuerzo y precio. Nunca calificaciones, comisión ni identidad del prestador (DR-03).
-- **Alertas:** de la capa de alertas hidrológicas del IDEAM o de un archivo simulado, por configuración (DR-14). Se leen al arrancar y cada 8 horas; el turista solo lee la caché (DR-16).
+- **Alertas:** de la capa de alertas hidrológicas del IDEAM o de un archivo simulado, por configuración (DR-14). Se leen al arrancar y cada 8 horas, y cada 2 minutos mientras no haya ninguna lectura; el turista solo lee la caché (DR-16).
 - **Alternativas:** del mismo tipo, en zonas sin alta afluencia, por regla y sin IA (DR-18, DR-19).
 
 ## Paquetes
@@ -45,6 +45,7 @@ Base: `co.edu.unimagdalena.samariantour.recomendacion`, con el módulo `recomend
 | `resilience4j.circuitbreaker.instances.ia.*` | 3 fallas seguidas, 60 s abierto | Corte de circuito (DR-06) |
 | `recomendacion.alertas.fuente` | `simulada` | `simulada` o `ideam` (DR-14); en Docker Compose, `ideam` |
 | `recomendacion.alertas.actualizacion` | `PT8H` | Cada cuánto se lee la fuente, además de al arrancar (DR-16) |
+| `recomendacion.alertas.reintento` | `PT2M` | Cada cuánto se reintenta mientras no haya ninguna lectura buena (DR-16) |
 | `recomendacion.alertas.ideam.url` | capa `Alertas_vigentes` del IDEAM | Sin `/query` (DR-14) |
 | `recomendacion.alertas.ideam.timeout` | `5s` | Corte por consulta de cada zona |
 | `resilience4j.circuitbreaker.instances.alertas.*` | 3 fallas seguidas, 60 s abierto | Corte de circuito del IDEAM (DR-16) |

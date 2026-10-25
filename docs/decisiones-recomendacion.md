@@ -3,7 +3,7 @@
 Registro de las decisiones tomadas para el prototipo del servicio `recomendacion` (RF-26 y RF-27: recomendaciones explicadas, por reglas o con IA; RF-28: alertas del destino; RF-29: alternativas por alta afluencia). Complementa el diagrama de paquetes detallado (módulo 09) y el registro del catálogo ([decisiones-catalogo-ofertas.md](decisiones-catalogo-ofertas.md)); donde los contradice, se indica en la sección final.
 
 - **Estado:** vigente, octubre de 2026. Pendiente de rectificar contra el SRS cuando termine su revisión.
-- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-20).
+- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21).
 - **Convención:** ✅ decisión que sale de un requisito o de una decisión anterior (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -25,11 +25,12 @@ Registro de las decisiones tomadas para el prototipo del servicio `recomendacion
 | DR-13 | Las palabras del texto desempatan entre ofertas de igual afinidad | 🆕 RF-26, RF-27 |
 | DR-14 | Fuente de alertas por configuración: la capa de alertas hidrológicas del IDEAM o un archivo simulado | ✅ RF-28, DR-01 |
 | DR-15 | Una consulta por punto con las coordenadas de la zona, y la hora de consulta en vez de la de emisión | 🆕 RF-28 |
-| DR-16 | Caché de alertas y actualización al arrancar y cada 8 horas | ✅ RF-28, ADR-04 |
+| DR-16 | Caché de alertas, actualización al arrancar y cada 8 horas, y reintento mientras no haya lectura | ✅ RF-28, ADR-04 |
 | DR-17 | Las alertas simuladas lo dicen en su fuente | 🆕 restricción ética |
 | DR-18 | Regla de alternativas por alta afluencia | ✅ RF-29, módulo 09 · 🆕 [SUPUESTO] criterios |
 | DR-19 | Las alternativas no usan la IA | 🆕 DR-11 |
 | DR-20 | La exposición dice de qué consulta sale | ✅ RET-02 |
+| DR-21 | Alertas en español e inglés; la fuente no se traduce | ✅ DR-02 |
 
 ## Motores
 
@@ -177,14 +178,25 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 - **Sin fechas:** la capa no tiene campos de fecha, así que `emitidaEn` y `vigenteHasta` se omiten en vez de inventarlos. Lo que la pantalla muestra como hora de actualización es `actualizadoEn`, la hora de la última consulta buena de esa zona, y la fuente es "IDEAM, alertas hidrológicas vigentes". Así se cumple RF-28 ("fuente y hora de actualización") sin afirmar algo que el IDEAM no dice.
 - **Medido el 24-10-2026:** unos 0,6 s por consulta; las 7 zonas de la demo tenían alerta amarilla (seis en la subzona Río Piedras - Río Manzanares y Troncal del Caribe en Rio Guachaca - Mendiguaca y Buritaca).
 
-**DR-16. Caché de alertas y actualización al arrancar y cada 8 horas** (RF-28, ADR-04).
+**DR-16. Caché de alertas, actualización al arrancar y cada 8 horas, y reintento mientras no haya lectura** (RF-28, ADR-04).
 - **El turista nunca llama a la fuente:** `ConsultarAlertasZonaUseCase` solo lee `AlertaCachePort` (`AlertaCacheCaffeineAdapter`, en memoria: el servicio sigue sin base de datos, DC-32). Sin ninguna lectura, 503 `ALERTAS_NO_DISPONIBLES` y la pantalla omite la sección.
 - **`AlertasScheduler`** llama a `ActualizarAlertasUseCase` al arrancar y luego cada 8 horas (`recomendacion.alertas.actualizacion: PT8H`, decisión del equipo): las alertas hidrológicas cambian en horas, no en minutos, y con 7 zonas son 21 consultas al día a un servicio público.
 - **Si falla todo,** la caché conserva la última lectura buena con su hora. **Si falla una zona,** esa zona conserva sus alertas y su hora anteriores, y las demás quedan con la lectura nueva.
+- **Reintento mientras no haya lectura** (fix): si la lectura del arranque falla (sin internet, IDEAM caído, catálogo sin responder), la caché queda vacía y, sin reintento, las alertas responderían 503 durante 8 horas. Por eso `AlertasScheduler` tiene una segunda tarea que corre cada 2 minutos (`recomendacion.alertas.reintento: PT2M`) y llama a `ActualizarAlertasUseCase.reintentar()`:
+  - sin ninguna lectura buena en `AlertaCachePort`, lee la fuente; si responde, la caché se llena y desde ahí sigue el ciclo de 8 horas;
+  - con una lectura en la caché, no hace nada y no llama a la fuente (`NO_HACE_FALTA`);
+  - respeta el corte de circuito: si el de `alertas` está abierto, ninguna zona llama al IDEAM y el intento cuenta como fallido (`CIRCUITO_ABIERTO`). Como el circuito se abre por 60 s y el reintento es cada 2 minutos, el siguiente intento ya puede hacer una consulta de prueba;
+  - las dos tareas corren en el único hilo del planificador de Spring, así que el reintento y la actualización de 8 horas nunca se pisan. Con el IDEAM caído, el primer intento hace como mucho 3 consultas antes de que se abra el circuito, y cada reintento, una sola consulta de prueba.
 - **Cortes:** cada consulta se corta a los 5 s, y el circuito `alertas` de Resilience4j, con los mismos valores que el de la IA (DR-06), deja de llamar al IDEAM por 60 s tras 3 fallas seguidas. Las zonas que no alcanzan a consultarse cuentan como fallidas y conservan lo anterior.
 - **Con varias réplicas** no hace falta ShedLock: cada réplica refresca su propia caché, y como solo lee, que el IDEAM reciba una consulta más por réplica no cambia nada.
 
 **DR-17. Las alertas simuladas lo dicen en su fuente** (restricción ética: no presentar un dato inventado como oficial). Toda alerta del archivo simulado tiene una fuente que termina en "(simulado)", por ejemplo "IDEAM (simulado)" o "Parques Nacionales (simulado)". Una prueba lo comprueba.
+
+**DR-21. Alertas en español e inglés; la fuente no se traduce** (DR-02, como las explicaciones de la recomendación y las alternativas). `GET /zonas/{zonaId}/alertas` y `GET /alertas` aceptan `?idioma=es|en`; sin él, español, y otro valor es 400 `DATO_INVALIDO` (`Idioma.deCodigo`).
+- **En el dominio,** el título y la descripción de `AlertaClimatica` son un `TextoTraducido` con los dos idiomas, obligatorios: una alerta no se muestra a medias traducida. El mapeador de la API elige el del idioma pedido; la caché guarda los dos, así que cambiar de idioma no vuelve a leer la fuente.
+- **IDEAM:** la capa solo da la subzona y el nivel, así que el título y la descripción salen de una plantilla en los dos idiomas ("Alerta hidrológica en la subzona X" / "Hydrological alert in the X subzone"; el color, amarilla/yellow, naranja/orange, roja/red). La subzona es un nombre propio y no se traduce.
+- **Simulada:** el JSON trae `titulo` y `descripcion` como `{"es": ..., "en": ...}`. A una alerta que le falte un idioma deja el archivo ilegible, como cualquier otro error del archivo (DR-17).
+- **La fuente no se traduce:** "IDEAM, alertas hidrológicas vigentes" o "Parques Nacionales (simulado)" identifican a quien emite la alerta, y la marca "(simulado)" debe verse igual en los dos idiomas.
 
 ## Alternativas por alta afluencia
 
@@ -208,7 +220,8 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
    - la caché del catálogo vive dentro de `CatalogoRestClientAdapter`. El `CaffeineCacheAdapter` del diagrama es `AlertaCacheCaffeineAdapter`, el de `AlertaCachePort` (DR-16);
    - `IdeamAdapter` se divide en dos adaptadores de `WeatherAlertPort`, elegidos por configuración: `IdeamAlertasHidrologicasAdapter` y `AlertasSimuladasAdapter` (DR-14);
    - `WeatherAlertPort.consultar` recibe las zonas con sus coordenadas, que `ActualizarAlertasService` toma de `CatalogoConsultaPort.zonas()` (DR-15); el resultado dice qué zonas fallaron (DR-16);
-   - `AlertasScheduler` corre al arrancar y cada 8 horas (DR-16);
+   - `AlertasScheduler` corre al arrancar y cada 8 horas, y reintenta cada 2 minutos mientras no haya ninguna lectura (DR-16);
+   - el título y la descripción de `AlertaClimatica` van en los dos idiomas (`TextoTraducido`, DR-21);
    - agregar `AlternativaController`, el que expone `ProponerAlternativasUseCase` (DR-18), y `OrigenExposicion` en el registro de exposición (DR-20);
    - el corte del proveedor de IA es de 6 s y no de 3 s: un modelo que razona tarda más que una consulta REST. El del catálogo sigue en 3 s;
    - en la nota de `ReglaCriteriosExplicitos`, agregar el nivel de esfuerzo a los criterios (tipo de oferta, tipo de actividad, zona, accesibilidad, nivel de esfuerzo y precio).

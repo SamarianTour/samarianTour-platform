@@ -164,7 +164,16 @@ docker compose -f infra/docker-compose.yml logs recomendacion | grep "alertas"
 # Con la fuente ideam:  alertas ideam: zonas=7 conAlerta=7 fallidas=0 latenciaMs=2004
 ```
 
-Si el IDEAM no responde, cada zona conserva su última lectura; si nunca respondió desde que arrancó el servicio, las alertas responden 503 `ALERTAS_NO_DISPONIBLES` y la pantalla omite la sección. Si la capa cambia de dirección, va en `IDEAM_ALERTAS_URL` (ver `infra/.env.example`).
+Si el IDEAM no responde, cada zona conserva su última lectura. Si la lectura del arranque falla (por ejemplo, sin internet), las alertas responden 503 `ALERTAS_NO_DISPONIBLES` y la pantalla omite la sección, y el servicio reintenta cada 2 minutos hasta tener una lectura; después sigue el ciclo de 8 horas (DR-16):
+
+```bash
+docker compose -f infra/docker-compose.yml logs recomendacion | grep "alertas"
+# ... alertas sin actualizar: se conserva la ultima lectura buena latenciaMs=...     (el arranque)
+# ... alertas sin lectura todavia: se reintenta en el proximo ciclo latenciaMs=...   (cada 2 minutos)
+# ... alertas actualizadas en el reintento latenciaMs=...
+```
+
+ Si la capa cambia de dirección, va en `IDEAM_ALERTAS_URL` (ver `infra/.env.example`).
 
 ## Prueba de carga de la búsqueda (QAS-07)
 
@@ -620,6 +629,12 @@ curl -s "$API/alertas"
 # {"actualizadoEn":"...","zonas":[{"zonaId":"a00000000000000000000001","zonaNombre":"Centro Histórico","alertas":[...]},
 #   ... {"zonaId":"a00000000000000000000006","zonaNombre":"Troncal del Caribe","alertas":[{...,
 #   "titulo":"Alerta hidrológica en la subzona Rio Guachaca - Mendiguaca y Buritaca",...}]}, ...]}
+
+# En ingles: el titulo y la descripcion; la fuente no se traduce (DR-21)
+curl -s "$API/zonas/a00000000000000000000001/alertas?idioma=en"
+# {...,"alertas":[{...,"titulo":"Hydrological alert in the Río Piedras - Río Manzanares subzone",
+#   "descripcion":"IDEAM has an active yellow hydrological alert ...","fuente":"IDEAM, alertas hidrológicas vigentes"}]}
+curl -s "$API/alertas?idioma=en"
 ```
 
 Con `ALERTAS_FUENTE=simulada` (ver "Fuente de las alertas" en "Levantar el piloto"):
@@ -633,6 +648,7 @@ curl -s "$API/zonas/a00000000000000000000007/alertas"     # Minca: DESLIZAMIENTO
 curl -s "$API/zonas/a00000000000000000000001/alertas"     # Centro Historico: su alerta ya vencio, no se muestra
 # {"zonaId":"a00000000000000000000001","actualizadoEn":"...","alertas":[]}
 curl -s "$API/alertas"                                    # Taganga, Parque Tayrona y Minca
+curl -s "$API/zonas/a00000000000000000000005/alertas?idioma=en"   # "Temporary park closure"
 ```
 
 **Alternativas por alta afluencia (RF-29).** Para la ficha de una oferta: si su zona tiene alta afluencia (Parque Tayrona, Taganga), de 2 a 3 ofertas del mismo tipo en zonas con menos visitantes, por regla y sin IA (DR-18, DR-19). Entre empatadas el orden rota, así que la segunda y la tercera cambian entre consultas:

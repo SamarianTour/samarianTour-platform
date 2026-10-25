@@ -286,7 +286,7 @@ La respuesta dice qué motor eligió (`motor`) y, en cada recomendación, por qu
 Pedro abre la ficha de la caminata a Cabo San Juan, en el Parque Tayrona. Además de pedirle la ficha al catálogo, la pantalla le pide dos cosas a la recomendación:
 
 ```
-GET /api/recomendacion/zonas/{tayrona}/alertas
+GET /api/recomendacion/zonas/{tayrona}/alertas?idioma=es
    AlertaController → ConsultarAlertasService → solo la caché (AlertaCacheCaffeineAdapter)
    200 { zonaId, actualizadoEn, alertas: [ { tipo: "HIDROLOGICA", nivel: "AMARILLA", titulo, fuente: "IDEAM, ..." } ] }
    (503 ALERTAS_NO_DISPONIBLES si la fuente nunca ha respondido: la pantalla omite la sección)
@@ -300,7 +300,7 @@ GET /api/recomendacion/ofertas/{caminata}/alternativas?idioma=es
    200 { aplica: true, zonaOrigen: { id, nombre: "Parque Tayrona" }, alternativas: [ { posicion: 1, oferta: {...}, ... } ] }
 ```
 
-Las alertas no se consultan al IDEAM en la petición de Pedro: `AlertasScheduler` lee la fuente al arrancar y cada 8 horas y deja la lectura en caché. Con la fuente `ideam` se consulta la capa de alertas hidrológicas vigentes con las coordenadas de cada zona; con `simulada`, un archivo de la demo cuyas fuentes dicen "(simulado)". Las alternativas salen de una regla, sin IA, con una explicación como "Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido." (DR-14 a DR-20).
+Las alertas no se consultan al IDEAM en la petición de Pedro: `AlertasScheduler` lee la fuente al arrancar y cada 8 horas (y cada 2 minutos mientras no tenga ninguna lectura) y deja la lectura en caché, con los textos en español e inglés. Con la fuente `ideam` se consulta la capa de alertas hidrológicas vigentes con las coordenadas de cada zona; con `simulada`, un archivo de la demo cuyas fuentes dicen "(simulado)". Las alternativas salen de una regla, sin IA, con una explicación como "Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido." (DR-14 a DR-20).
 
 ## 6. Dónde está cada cosa
 
