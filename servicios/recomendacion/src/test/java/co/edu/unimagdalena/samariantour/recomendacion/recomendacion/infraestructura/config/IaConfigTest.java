@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.config;
 
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.CatalogoDePrueba;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.MotorRecomendacion;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.CatalogoConsultaPort;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.ExposicionPort;
@@ -22,7 +23,7 @@ class IaConfigTest {
 
     private final ApplicationContextRunner contexto = new ApplicationContextRunner()
             .withUserConfiguration(RecomendacionConfig.class, IaConfig.class)
-            .withBean(CatalogoConsultaPort.class, () -> List::of)
+            .withBean(CatalogoConsultaPort.class, () -> CatalogoDePrueba.de(List.of()))
             .withBean(ExposicionPort.class, () -> registro -> { })
             .withBean(RestClient.Builder.class, RestClient::builder)
             .withBean(CircuitBreakerRegistry.class, CircuitBreakerRegistry::ofDefaults)

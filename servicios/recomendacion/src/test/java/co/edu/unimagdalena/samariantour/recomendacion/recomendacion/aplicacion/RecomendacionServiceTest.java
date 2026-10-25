@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.recomendacion.recomendacion.aplicacion;
 
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.CatalogoDePrueba;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.MotorNoDisponibleException;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.RecomendacionNoDisponibleException;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.Explicacion;
@@ -54,7 +55,7 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("sin IA, responde el motor por reglas con 5 recomendaciones y registra la exposición")
     void porReglas() {
-        ResultadoRecomendacion resultado = servicio(() -> catalogo, reglas).recomendar(senderismo);
+        ResultadoRecomendacion resultado = servicio(CatalogoDePrueba.de(catalogo), reglas).recomendar(senderismo);
 
         assertThat(resultado.motor()).isEqualTo(REGLAS);
         assertThat(resultado.aviso()).isNull();
@@ -69,7 +70,7 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("si la IA responde, el resultado dice IA")
     void conIA() {
-        ResultadoRecomendacion resultado = servicio(() -> catalogo, motor(IA, false)).recomendar(senderismo);
+        ResultadoRecomendacion resultado = servicio(CatalogoDePrueba.de(catalogo), motor(IA, false)).recomendar(senderismo);
 
         assertThat(resultado.motor()).isEqualTo(IA);
         assertThat(exposiciones.getFirst().motor()).isEqualTo(IA);
@@ -78,7 +79,7 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("si la IA falla, responde el motor por reglas sin error para el turista (QAS-03)")
     void iaFalla() {
-        ResultadoRecomendacion resultado = servicio(() -> catalogo, motor(IA, true)).recomendar(senderismo);
+        ResultadoRecomendacion resultado = servicio(CatalogoDePrueba.de(catalogo), motor(IA, true)).recomendar(senderismo);
 
         assertThat(resultado.motor()).isEqualTo(REGLAS);
         assertThat(resultado.recomendaciones()).hasSize(5);
@@ -88,11 +89,7 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("si el catálogo falla sin caché, RECOMENDACION_NO_DISPONIBLE (503) y no se registra exposición")
     void catalogoFalla() {
-        CatalogoConsultaPort caido = () -> {
-            throw new RecomendacionNoDisponibleException("El catálogo no responde");
-        };
-
-        assertThatThrownBy(() -> servicio(caido, reglas).recomendar(senderismo))
+        assertThatThrownBy(() -> servicio(CatalogoDePrueba.caido(), reglas).recomendar(senderismo))
                 .isInstanceOf(RecomendacionNoDisponibleException.class);
         assertThat(exposiciones).isEmpty();
     }
@@ -100,7 +97,7 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("si solo 2 pasan los filtros duros, devuelve esas 2 con POCAS_COINCIDENCIAS, sin relajar el filtro")
     void pocasCoincidencias() {
-        ResultadoRecomendacion resultado = servicio(() -> catalogo, reglas)
+        ResultadoRecomendacion resultado = servicio(CatalogoDePrueba.de(catalogo), reglas)
                 .recomendar(preferencias().accesible().crear());
 
         assertThat(resultado.aviso()).isEqualTo(POCAS_COINCIDENCIAS);
@@ -111,7 +108,7 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("si ninguna pasa, 0 recomendaciones con el aviso y sin llamar a la IA")
     void ninguna() {
-        ResultadoRecomendacion resultado = servicio(() -> catalogo, motor(IA, true))
+        ResultadoRecomendacion resultado = servicio(CatalogoDePrueba.de(catalogo), motor(IA, true))
                 .recomendar(preferencias().precioMaximo(1_000).crear());
 
         assertThat(resultado.recomendaciones()).isEmpty();
@@ -126,7 +123,7 @@ class RecomendacionServiceTest {
         conSnorkel.add(oferta("snorkel").nombre("Snorkel en Playa Cristal").actividades(BUCEO_SNORKEL).crear());
 
         for (long semilla = 0; semilla < 10; semilla++) {
-            ResultadoRecomendacion resultado = servicio(() -> conSnorkel, reglas, semilla)
+            ResultadoRecomendacion resultado = servicio(CatalogoDePrueba.de(conSnorkel), reglas, semilla)
                     .recomendar(preferencias().texto("quiero hacer snorkeling").crear());
             assertThat(resultado.recomendaciones().getFirst().oferta().id()).as("semilla %d", semilla)
                     .isEqualTo("snorkel");
@@ -136,9 +133,9 @@ class RecomendacionServiceTest {
     @Test
     @DisplayName("el motor recibe las candidatas ya rotadas: con otra semilla, otro orden entre empatadas")
     void rotacion() {
-        List<String> conSemilla1 = ids(servicio(() -> catalogo, reglas, 1).recomendar(senderismo));
-        List<String> conSemilla1OtraVez = ids(servicio(() -> catalogo, reglas, 1).recomendar(senderismo));
-        List<String> conSemilla2 = ids(servicio(() -> catalogo, reglas, 2).recomendar(senderismo));
+        List<String> conSemilla1 = ids(servicio(CatalogoDePrueba.de(catalogo), reglas, 1).recomendar(senderismo));
+        List<String> conSemilla1OtraVez = ids(servicio(CatalogoDePrueba.de(catalogo), reglas, 1).recomendar(senderismo));
+        List<String> conSemilla2 = ids(servicio(CatalogoDePrueba.de(catalogo), reglas, 2).recomendar(senderismo));
 
         assertThat(conSemilla1).isEqualTo(conSemilla1OtraVez);
         assertThat(conSemilla1).isNotEqualTo(conSemilla2);

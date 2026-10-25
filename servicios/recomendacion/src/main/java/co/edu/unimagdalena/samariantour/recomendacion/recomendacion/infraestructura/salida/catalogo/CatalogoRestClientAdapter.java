@@ -5,6 +5,7 @@ import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.mode
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.OfertaCandidata;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoOferta;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ZonaCatalogo;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.CatalogoConsultaPort;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -20,7 +21,7 @@ import org.springframework.web.client.RestClientException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,8 +30,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
 /**
- * Lee las ofertas visibles del catálogo ({@code GET /internal/ofertas}, de a 100 hasta el final) y los nombres de sus
- * zonas ({@code GET /zonas}), y los guarda en una caché en memoria (DR-07).
+ * Lee las ofertas visibles del catálogo ({@code GET /internal/ofertas}, de a 100 hasta el final) y sus zonas, con su
+ * nombre y su ubicación ({@code GET /zonas}), y los guarda en una caché en memoria (DR-07).
  * <ul>
  *   <li>Pasada la vigencia (60 s), la siguiente consulta dispara una lectura nueva en segundo plano y recibe la copia
  *   anterior; las siguientes, la nueva.</li>
@@ -48,7 +49,7 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
     private static final Logger LOG = LoggerFactory.getLogger(CatalogoRestClientAdapter.class);
 
     private final RestClient catalogo;
-    private final LoadingCache<String, List<OfertaCandidata>> cache;
+    private final LoadingCache<String, Instantanea> cache;
 
     public CatalogoRestClientAdapter(RestClient catalogo, Duration vigencia) {
         this(catalogo, vigencia, Ticker.systemTicker(), ForkJoinPool.commonPool());
@@ -66,6 +67,15 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
 
     @Override
     public List<OfertaCandidata> ofertasVisibles() {
+        return instantanea().ofertas();
+    }
+
+    @Override
+    public List<ZonaCatalogo> zonas() {
+        return instantanea().zonas();
+    }
+
+    private Instantanea instantanea() {
         try {
             return cache.get(CLAVE);
         } catch (RuntimeException e) {
@@ -75,13 +85,12 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
         }
     }
 
-    private List<OfertaCandidata> leer() {
+    private Instantanea leer() {
         long inicio = System.nanoTime();
-        Map<String, String> nombresZonas = new HashMap<>();
-        List<ZonaJson> zonas = catalogo.get().uri("/zonas").retrieve()
+        Map<String, ZonaJson> zonas = new LinkedHashMap<>();
+        List<ZonaJson> activas = catalogo.get().uri("/zonas").retrieve()
                 .body(new ParameterizedTypeReference<List<ZonaJson>>() { });
-        Objects.requireNonNullElse(zonas, List.<ZonaJson>of())
-                .forEach(zona -> nombresZonas.put(zona.id(), zona.nombre()));
+        Objects.requireNonNullElse(activas, List.<ZonaJson>of()).forEach(zona -> zonas.put(zona.id(), zona));
 
         List<OfertaCandidata> ofertas = new ArrayList<>();
         int descartadas = 0;
@@ -95,7 +104,8 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
                 break;
             }
             for (OfertaVisibleJson json : leida.contenido()) {
-                OfertaCandidata oferta = convertir(json, zonaNombre(json.zonaId(), nombresZonas));
+                ZonaJson zona = zona(json.zonaId(), zonas);
+                OfertaCandidata oferta = convertir(json, zona == null ? null : zona.nombre());
                 if (oferta == null) {
                     descartadas++;
                 } else {
@@ -106,30 +116,34 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
                 break;
             }
         }
-        LOG.info("catalogo leido: ofertas={} descartadas={} latenciaMs={}", ofertas.size(), descartadas,
-                (System.nanoTime() - inicio) / 1_000_000);
-        return List.copyOf(ofertas);
+        LOG.info("catalogo leido: ofertas={} descartadas={} zonas={} latenciaMs={}", ofertas.size(), descartadas,
+                zonas.size(), (System.nanoTime() - inicio) / 1_000_000);
+        return new Instantanea(List.copyOf(ofertas), zonas.values().stream()
+                .filter(Objects::nonNull)
+                .map(zona -> new ZonaCatalogo(zona.id(), zona.nombre(),
+                        zona.ubicacion() == null ? null : zona.ubicacion().latitud(),
+                        zona.ubicacion() == null ? null : zona.ubicacion().longitud()))
+                .toList());
     }
 
     /**
-     * {@code GET /zonas} solo trae las activas, pero las ofertas de una zona inactiva siguen visibles (DC-49): su
-     * nombre se pide a {@code GET /zonas/{id}}. Si tampoco se puede, la oferta queda sin nombre de zona.
+     * {@code GET /zonas} solo trae las activas, pero las ofertas de una zona inactiva siguen visibles (DC-49): esa zona
+     * se pide a {@code GET /zonas/{id}}. Si tampoco se puede, la oferta queda sin nombre de zona.
      */
-    private String zonaNombre(String zonaId, Map<String, String> nombres) {
+    private ZonaJson zona(String zonaId, Map<String, ZonaJson> zonas) {
         if (zonaId == null) {
             return null;
         }
-        if (!nombres.containsKey(zonaId)) {
-            // Se guarda aunque no tenga nombre, para no volver a pedirla por cada oferta de esa zona.
-            nombres.put(zonaId, leerZona(zonaId));
+        if (!zonas.containsKey(zonaId)) {
+            // Se guarda aunque no exista, para no volver a pedirla por cada oferta de esa zona.
+            zonas.put(zonaId, leerZona(zonaId));
         }
-        return nombres.get(zonaId);
+        return zonas.get(zonaId);
     }
 
-    private String leerZona(String zonaId) {
+    private ZonaJson leerZona(String zonaId) {
         try {
-            ZonaJson zona = catalogo.get().uri("/zonas/{id}", zonaId).retrieve().body(ZonaJson.class);
-            return zona == null ? null : zona.nombre();
+            return catalogo.get().uri("/zonas/{id}", zonaId).retrieve().body(ZonaJson.class);
         } catch (HttpClientErrorException e) {
             return null;
         }
@@ -148,8 +162,8 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
                 .map(texto -> valor(TipoActividad.class, texto)).filter(Objects::nonNull)
                 .forEach(tiposActividad::add);
         return new OfertaCandidata(json.id(), tipo, json.nombre(), json.descripcion(), json.prestadorId(),
-                json.zonaId(), zonaNombre, json.precioReferencia(), json.unidadPrecio(), tiposActividad, nivel,
-                json.accesibleSillaRuedas());
+                json.zonaId(), zonaNombre, json.zonaAltaAfluencia(), json.precioReferencia(), json.unidadPrecio(),
+                tiposActividad, nivel, json.accesibleSillaRuedas());
     }
 
     private static <E extends Enum<E>> E valor(Class<E> tipo, String texto) {
@@ -171,21 +185,25 @@ public class CatalogoRestClientAdapter implements CatalogoConsultaPort {
         return raiz.getClass().getSimpleName();
     }
 
-    private class Cargador implements CacheLoader<String, List<OfertaCandidata>> {
+    /** Lo que se guarda en la caché: una lectura completa del catálogo. */
+    private record Instantanea(List<OfertaCandidata> ofertas, List<ZonaCatalogo> zonas) {
+    }
+
+    private class Cargador implements CacheLoader<String, Instantanea> {
 
         @Override
-        public List<OfertaCandidata> load(String clave) {
+        public Instantanea load(String clave) {
             return leer();
         }
 
         /** Si el catálogo falla al refrescar, la copia anterior sigue en uso hasta la próxima vigencia. */
         @Override
-        public List<OfertaCandidata> reload(String clave, List<OfertaCandidata> anterior) {
+        public Instantanea reload(String clave, Instantanea anterior) {
             try {
                 return leer();
             } catch (RestClientException e) {
                 LOG.warn("catalogo no disponible: se sigue usando la copia anterior ({} ofertas); causa={}",
-                        anterior.size(), causa(e));
+                        anterior.ofertas().size(), causa(e));
                 return anterior;
             }
         }

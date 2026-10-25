@@ -5,6 +5,7 @@ import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.mode
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.OfertaCandidata;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoActividad;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoOferta;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ZonaCatalogo;
 import com.github.benmanes.caffeine.cache.Ticker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,8 +33,8 @@ class CatalogoRestClientAdapterTest {
 
     private static final String BASE = "http://catalogo/api/catalogo";
     private static final String ZONAS = """
-            [{"id": "a1", "nombre": "Minca", "areaProtegida": false, "altaAfluencia": false, "activa": true,
-              "buenasPracticas": []}]""";
+            [{"id": "a1", "nombre": "Minca", "ubicacion": {"latitud": 11.143, "longitud": -74.117},
+              "areaProtegida": false, "altaAfluencia": false, "activa": true, "buenasPracticas": []}]""";
 
     private final AtomicLong nanos = new AtomicLong();
     private final Ticker reloj = nanos::get;
@@ -84,6 +85,34 @@ class CatalogoRestClientAdapterTest {
 
         servidor.verify();
         assertThat(ofertas).extracting(OfertaCandidata::zonaNombre).containsExactly("Bahía Concha", "Bahía Concha", null);
+    }
+
+    @Test
+    @DisplayName("zonas: las activas y las inactivas con ofertas, con su ubicación; desde la misma lectura que las ofertas")
+    void zonas() {
+        esperarZonas();
+        esperarPagina(0, 1, oferta("b1", "ACTIVIDAD", "a9", "[]", "null"));
+        servidor.expect(requestTo(BASE + "/zonas/a9"))
+                .andRespond(withSuccess("{\"id\": \"a9\", \"nombre\": \"Bahía Concha\", \"activa\": false}",
+                        MediaType.APPLICATION_JSON));
+
+        List<ZonaCatalogo> zonas = adaptador.zonas();
+        adaptador.ofertasVisibles();
+
+        servidor.verify();
+        assertThat(zonas).containsExactly(new ZonaCatalogo("a1", "Minca", 11.143, -74.117),
+                new ZonaCatalogo("a9", "Bahía Concha", null, null));
+        assertThat(zonas.get(1).tieneUbicacion()).isFalse();
+    }
+
+    @Test
+    @DisplayName("la marca de alta afluencia de la zona de cada oferta llega a la candidata (RF-29)")
+    void altaAfluencia() {
+        esperarZonas();
+        esperarPagina(0, 1, oferta("b1", "ACTIVIDAD", "a1", "[]", "null").replace(
+                "\"zonaAltaAfluencia\": false", "\"zonaAltaAfluencia\": true"));
+
+        assertThat(adaptador.ofertasVisibles().getFirst().zonaAltaAfluencia()).isTrue();
     }
 
     @Test

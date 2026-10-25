@@ -39,6 +39,7 @@ public final class OfertasDePrueba {
         private UUID prestadorId = UUID.fromString("20000000-0000-0000-0000-000000000002");
         private String zonaId = MINCA;
         private String zonaNombre = "Minca";
+        private boolean altaAfluencia;
         private BigDecimal precio = new BigDecimal("80000");
         private Set<TipoActividad> tiposActividad = Set.of(TipoActividad.SENDERISMO);
         private NivelEsfuerzo nivel = NivelEsfuerzo.MODERADO;
@@ -75,6 +76,12 @@ public final class OfertasDePrueba {
             return this;
         }
 
+        /** La zona de la oferta está marcada como de alta afluencia (RF-29). */
+        public Oferta altaAfluencia() {
+            altaAfluencia = true;
+            return this;
+        }
+
         public Oferta precio(long valor) {
             precio = BigDecimal.valueOf(valor);
             return this;
@@ -96,8 +103,8 @@ public final class OfertasDePrueba {
         }
 
         public OfertaCandidata crear() {
-            return new OfertaCandidata(id, tipo, nombre, descripcion, prestadorId, zonaId, zonaNombre, precio,
-                    "por persona", tiposActividad, nivel, accesible);
+            return new OfertaCandidata(id, tipo, nombre, descripcion, prestadorId, zonaId, zonaNombre, altaAfluencia,
+                    precio, "por persona", tiposActividad, nivel, accesible);
         }
     }
 

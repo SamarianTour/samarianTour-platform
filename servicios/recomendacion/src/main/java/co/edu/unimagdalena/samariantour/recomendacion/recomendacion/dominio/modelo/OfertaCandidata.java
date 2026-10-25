@@ -11,13 +11,14 @@ import java.util.UUID;
  * del prestador (DC-36).
  *
  * @param prestadorId  solo para el registro de exposición (RET-02); nunca es criterio ni va al proveedor de IA
- * @param zonaNombre   null si el catálogo no lo pudo dar
- * @param nivelEsfuerzo null en alojamientos y restaurantes
+ * @param zonaNombre        null si el catálogo no lo pudo dar
+ * @param zonaAltaAfluencia la zona está marcada como de alta afluencia (RF-29): de ahí salen las alternativas
+ * @param nivelEsfuerzo     null en alojamientos y restaurantes
  */
 public record OfertaCandidata(String id, TipoOferta tipo, String nombre, String descripcion, UUID prestadorId,
-                              String zonaId, String zonaNombre, BigDecimal precioReferencia, String unidadPrecio,
-                              Set<TipoActividad> tiposActividad, NivelEsfuerzo nivelEsfuerzo,
-                              boolean accesibleSillaRuedas) {
+                              String zonaId, String zonaNombre, boolean zonaAltaAfluencia,
+                              BigDecimal precioReferencia, String unidadPrecio, Set<TipoActividad> tiposActividad,
+                              NivelEsfuerzo nivelEsfuerzo, boolean accesibleSillaRuedas) {
 
     public OfertaCandidata {
         Objects.requireNonNull(id, "id");
