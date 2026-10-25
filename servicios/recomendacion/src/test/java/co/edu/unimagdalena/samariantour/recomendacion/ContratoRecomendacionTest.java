@@ -1,14 +1,22 @@
 package co.edu.unimagdalena.samariantour.recomendacion;
 
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.CriterioAfinidad;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.NivelAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.MotorRecomendacion;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoActividad;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoOferta;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.AlertaResponse;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.AlertasZonaResponse;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.AlternativasResponse;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.OfertaRecomendadaResponse;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.RecomendacionRequest;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.RecomendacionResponse;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.RecomendacionesResponse;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.ResumenAlertasResponse;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.ZonaConAlertasResponse;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest.dto.ZonaOrigenResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -73,7 +81,13 @@ class ContratoRecomendacionTest {
                 arguments("ConsultaRecomendacion", RecomendacionRequest.class),
                 arguments("Recomendaciones", RecomendacionesResponse.class),
                 arguments("Recomendacion", RecomendacionResponse.class),
-                arguments("OfertaRecomendada", OfertaRecomendadaResponse.class));
+                arguments("OfertaRecomendada", OfertaRecomendadaResponse.class),
+                arguments("Alternativas", AlternativasResponse.class),
+                arguments("ZonaOrigen", ZonaOrigenResponse.class),
+                arguments("AlertasZona", AlertasZonaResponse.class),
+                arguments("ResumenAlertas", ResumenAlertasResponse.class),
+                arguments("ZonaConAlertas", ZonaConAlertasResponse.class),
+                arguments("Alerta", AlertaResponse.class));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -90,7 +104,9 @@ class ContratoRecomendacionTest {
                 arguments("CriterioAfinidad", CriterioAfinidad.class),
                 arguments("TipoOferta", TipoOferta.class),
                 arguments("TipoActividad", TipoActividad.class),
-                arguments("NivelEsfuerzo", NivelEsfuerzo.class));
+                arguments("NivelEsfuerzo", NivelEsfuerzo.class),
+                arguments("TipoAlerta", TipoAlerta.class),
+                arguments("NivelAlerta", NivelAlerta.class));
     }
 
     private Set<String> rutasDelControlador() {

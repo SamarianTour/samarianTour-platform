@@ -1,15 +1,21 @@
 openapi: 3.0.3
 info:
   title: Samarian Tour · Recomendación
-  version: 0.1.0
+  version: 0.2.0
   description: |
-    API del servicio de recomendación (RF-26, RF-27). Recomienda de 3 a 5 ofertas visibles del catálogo, cada una
-    con la explicación del criterio usado. Responde un motor por reglas o uno con IA, que se elige por configuración
-    (QAS-06); si la IA falla, responde el de reglas sin error para el turista (QAS-03).
+    API del servicio de recomendación (RF-26 a RF-29):
+
+    - Recomienda de 3 a 5 ofertas visibles del catálogo, cada una con la explicación del criterio usado. Responde un
+      motor por reglas o uno con IA, que se elige por configuración (QAS-06); si la IA falla, responde el de reglas
+      sin error para el turista (QAS-03).
+    - Muestra las alertas activas de cada zona con su fuente y la hora de actualización (RF-28). La fuente es el IDEAM
+      o un archivo simulado para la demo, por configuración (DR-14); una alerta simulada siempre lo dice en `fuente`.
+    - Propone de 2 a 3 alternativas del mismo tipo en zonas sin alta afluencia cuando la oferta está en una zona con
+      alta afluencia (RF-29), por regla y sin IA (DR-18, DR-19).
 
     - Las rutas no incluyen el prefijo `/api/recomendacion`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
-    - Es pública: la sesión solo se exige al enviar una solicitud, en el núcleo.
+    - Es pública, sin rol: la sesión solo se exige al enviar una solicitud, en el núcleo.
     - Nunca usa calificaciones, opiniones, comisión, tamaño ni identidad del prestador para elegir (DR-03).
 servers:
   - url: http://localhost:8080/api/recomendacion
@@ -17,6 +23,10 @@ servers:
 tags:
   - name: Recomendación
     description: Recomendaciones explicadas para el turista; no exige identidad.
+  - name: Alertas
+    description: Condiciones activas del destino por zona (RF-28); responden desde la caché, nunca llaman a la fuente.
+  - name: Alternativas
+    description: Ofertas parecidas en zonas con menos visitantes, para la ficha de una oferta (RF-29).
 
 paths:
   /recomendaciones:
@@ -71,6 +81,216 @@ paths:
         '503':
           $ref: '#/components/responses/RecomendacionNoDisponible'
 
+  /ofertas/{ofertaId}/alternativas:
+    get:
+      tags: [Alternativas]
+      operationId: proponerAlternativas
+      summary: Alternativas en zonas sin alta afluencia (RF-29)
+      description: |
+        Para la ficha de una oferta. Si su zona no es de alta afluencia, responde `aplica: false` con la lista vacía y
+        la ficha no muestra la sección. Si lo es:
+
+        - Candidatas: visibles, del mismo tipo, en zonas sin alta afluencia. Si la oferta es accesible en silla de
+          ruedas, las alternativas también [SUPUESTO] (DR-18).
+        - Afinidad, un punto por criterio: comparte algún tipo de actividad, esfuerzo igual o menor y precio dentro de
+          ±50 % del de la oferta [SUPUESTO]. Entre empatadas el orden rota en cada consulta.
+        - De 2 a 3 [SUPUESTO: máximo 3]; si hay menos de 2, las que haya con el aviso `POCAS_COINCIDENCIAS`.
+        - Siempre por regla, sin IA (DR-19). Cada alternativa tiene la forma de una `Recomendacion`; sus criterios
+          son `TIPO_OFERTA` (mismo tipo), `ACCESIBILIDAD` si la oferta es accesible, y los de afinidad que cumple.
+      parameters:
+        - name: ofertaId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: b00000000000000000000001
+        - name: idioma
+          in: query
+          required: false
+          description: Idioma de las explicaciones; sin él, español.
+          schema:
+            type: string
+            enum: [es, en]
+      responses:
+        '200':
+          description: 'Las alternativas, o `aplica: false` si la zona de la oferta no es de alta afluencia.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alternativas'
+              examples:
+                aplica:
+                  summary: Caminata a Cabo San Juan del Guía, en el Parque Tayrona (alta afluencia)
+                  value:
+                    aplica: true
+                    zonaOrigen:
+                      id: a00000000000000000000005
+                      nombre: Parque Tayrona
+                    alternativas:
+                      - posicion: 1
+                        oferta:
+                          id: b0000000000000000000000c
+                          nombre: Caminata a Pozo Azul y cascada de Marinka
+                          tipo: ACTIVIDAD
+                          zonaNombre: Minca y Sierra Nevada
+                          precioReferencia: 95000
+                          unidadPrecio: por persona
+                        criterios: [TIPO_OFERTA, TIPO_ACTIVIDAD, NIVEL_ESFUERZO, PRECIO]
+                        explicacion: 'Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido.'
+                      - posicion: 2
+                        oferta:
+                          id: b0000000000000000000000a
+                          nombre: Avistamiento de aves en Minca
+                          tipo: ACTIVIDAD
+                          zonaNombre: Minca y Sierra Nevada
+                          precioReferencia: 120000
+                          unidadPrecio: por persona
+                        criterios: [TIPO_OFERTA, NIVEL_ESFUERZO, PRECIO]
+                        explicacion: 'Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también con esfuerzo igual o menor y precio parecido.'
+                      - posicion: 3
+                        oferta:
+                          id: b00000000000000000000005
+                          nombre: Tubing por el río Buritaca
+                          tipo: ACTIVIDAD
+                          zonaNombre: Troncal del Caribe
+                          precioReferencia: 90000
+                          unidadPrecio: por persona
+                        criterios: [TIPO_OFERTA, NIVEL_ESFUERZO, PRECIO]
+                        explicacion: 'Mismo tipo de oferta en Troncal del Caribe, una zona con menos visitantes; también con esfuerzo igual o menor y precio parecido.'
+                pocasCoincidencias:
+                  summary: 'Paquete "Taganga bajo el agua": solo un paquete fuera de zonas con alta afluencia'
+                  value:
+                    aplica: true
+                    aviso: POCAS_COINCIDENCIAS
+                    zonaOrigen:
+                      id: a00000000000000000000003
+                      nombre: Taganga
+                    alternativas:
+                      - posicion: 1
+                        oferta:
+                          id: b0000000000000000000000e
+                          nombre: 'Minca: aves y café'
+                          tipo: PAQUETE
+                          zonaNombre: Minca y Sierra Nevada
+                          precioReferencia: 190000
+                          unidadPrecio: por persona
+                        criterios: [TIPO_OFERTA, NIVEL_ESFUERZO]
+                        explicacion: 'Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también con esfuerzo igual o menor.'
+                noAplica:
+                  summary: Recorrido a pie por el Centro Histórico (sin alta afluencia)
+                  value:
+                    aplica: false
+                    alternativas: []
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+        '503':
+          $ref: '#/components/responses/RecomendacionNoDisponible'
+
+  /zonas/{zonaId}/alertas:
+    get:
+      tags: [Alertas]
+      operationId: alertasDeZona
+      summary: Alertas activas de una zona (RF-28)
+      description: |
+        Solo las activas (sin `vigenteHasta` o con `vigenteHasta` posterior a ahora), de mayor a menor nivel y, con
+        el mismo nivel, la más reciente primero (las que no tienen `emitidaEn`, al final de su nivel).
+
+        - No valida que la zona exista: una zona sin alertas responde la lista vacía (estado "sin alertas activas").
+        - `actualizadoEn` es la hora de la última lectura buena de la fuente para esa zona: es lo que se le muestra al
+          turista como hora de actualización. Las alertas del IDEAM no traen fecha de emisión ni de fin (DR-15).
+        - La fuente se lee al arrancar y cada 8 horas (DR-16); si falla, se conserva la última lectura.
+      parameters:
+        - name: zonaId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: a00000000000000000000001
+      responses:
+        '200':
+          description: Las alertas activas de la zona; la lista vacía si no tiene.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertasZona'
+              examples:
+                ideam:
+                  summary: Fuente ideam, Centro Histórico
+                  value:
+                    zonaId: a00000000000000000000001
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    alertas:
+                      - id: ideam-hidrologica-a00000000000000000000001
+                        tipo: HIDROLOGICA
+                        nivel: AMARILLA
+                        titulo: Alerta hidrológica en la subzona Río Piedras - Río Manzanares
+                        descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Río Piedras - Río Manzanares, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
+                        fuente: IDEAM, alertas hidrológicas vigentes
+                simulada:
+                  summary: Fuente simulada, Parque Tayrona
+                  value:
+                    zonaId: a00000000000000000000005
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    alertas:
+                      - id: simulada-tayrona-cierre
+                        tipo: CIERRE
+                        nivel: NARANJA
+                        titulo: Cierre temporal del parque
+                        descripcion: 'Cierre temporal por recuperación ecológica: no se permite el ingreso de visitantes. Consulta la fecha de reapertura antes de viajar.'
+                        fuente: Parques Nacionales (simulado)
+                        emitidaEn: '2026-10-24T21:42:10.512Z'
+                        vigenteHasta: '2026-10-27T21:42:10.512Z'
+                sinAlertas:
+                  summary: Una zona sin alertas activas
+                  value:
+                    zonaId: a00000000000000000000001
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    alertas: []
+        '503':
+          $ref: '#/components/responses/AlertasNoDisponibles'
+
+  /alertas:
+    get:
+      tags: [Alertas]
+      operationId: todasLasAlertas
+      summary: Todas las alertas activas, agrupadas por zona (RF-28)
+      description: |
+        Para la vista general. Solo aparecen las zonas con alguna alerta activa, en el orden de su id, con el nombre
+        tomado de la caché del catálogo; si el catálogo no lo pudo dar, solo el id. `actualizadoEn` es la hora de la
+        última lectura de la fuente.
+      responses:
+        '200':
+          description: Las zonas con alertas activas; la lista vacía si no hay ninguna.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenAlertas'
+              example:
+                actualizadoEn: '2026-10-24T23:42:10.512Z'
+                zonas:
+                  - zonaId: a00000000000000000000001
+                    zonaNombre: Centro Histórico
+                    alertas:
+                      - id: ideam-hidrologica-a00000000000000000000001
+                        tipo: HIDROLOGICA
+                        nivel: AMARILLA
+                        titulo: Alerta hidrológica en la subzona Río Piedras - Río Manzanares
+                        descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Río Piedras - Río Manzanares, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
+                        fuente: IDEAM, alertas hidrológicas vigentes
+                  - zonaId: a00000000000000000000006
+                    zonaNombre: Troncal del Caribe
+                    alertas:
+                      - id: ideam-hidrologica-a00000000000000000000006
+                        tipo: HIDROLOGICA
+                        nivel: AMARILLA
+                        titulo: Alerta hidrológica en la subzona Rio Guachaca - Mendiguaca y Buritaca
+                        descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Rio Guachaca - Mendiguaca y Buritaca, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
+                        fuente: IDEAM, alertas hidrológicas vigentes
+        '503':
+          $ref: '#/components/responses/AlertasNoDisponibles'
+
 components:
   responses:
     DatoInvalido:
@@ -101,6 +321,34 @@ components:
             detail: El catálogo no responde y no hay ofertas en caché; intenta de nuevo en unos minutos
             instance: /api/recomendacion/recomendaciones
             codigo: RECOMENDACION_NO_DISPONIBLE
+    OfertaNoEncontrada:
+      description: La oferta no está entre las visibles del catálogo (no existe, está retirada o no es visible).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: La oferta b000000000000000000000ff no está entre las visibles del catálogo
+            instance: /api/recomendacion/ofertas/b000000000000000000000ff/alternativas
+            codigo: OFERTA_NO_ENCONTRADA
+    AlertasNoDisponibles:
+      description: |
+        La fuente de alertas no ha respondido ni una vez desde que arrancó el servicio, así que no hay lectura en caché.
+        La pantalla omite la sección de alertas y el resto sigue (ADR-04).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            detail: La fuente de alertas todavía no ha respondido; intenta de nuevo más tarde
+            instance: /api/recomendacion/alertas
+            codigo: ALERTAS_NO_DISPONIBLES
 
   schemas:
     ConsultaRecomendacion:
@@ -163,6 +411,7 @@ components:
           type: integer
           minimum: 1
           maximum: 5
+          description: Desde 1; hasta 5 en las recomendaciones y hasta 3 en las alternativas.
         oferta:
           $ref: '#/components/schemas/OfertaRecomendada'
         criterios:
@@ -175,6 +424,37 @@ components:
           type: string
           maxLength: 300
           description: Por qué se recomienda, citando solo criterios explícitos (RF-27).
+
+    Alternativas:
+      type: object
+      description: Las alternativas a una oferta (RF-29). Si `aplica` es false, la lista va vacía y sin `zonaOrigen`.
+      required: [aplica, alternativas]
+      properties:
+        aplica:
+          type: boolean
+          description: Si la zona de la oferta es de alta afluencia.
+        aviso:
+          type: string
+          enum: [POCAS_COINCIDENCIAS]
+          description: Solo si aplica y menos de 2 ofertas cumplen.
+        zonaOrigen:
+          $ref: '#/components/schemas/ZonaOrigen'
+        alternativas:
+          type: array
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/Recomendacion'
+
+    ZonaOrigen:
+      type: object
+      description: La zona con alta afluencia de la oferta consultada.
+      required: [id]
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+          description: Se omite si el catálogo no lo pudo dar.
 
     OfertaRecomendada:
       type: object
@@ -197,6 +477,91 @@ components:
           type: string
           enum: [por persona, por noche y unidad, promedio por persona]
 
+    AlertasZona:
+      type: object
+      required: [zonaId, actualizadoEn, alertas]
+      properties:
+        zonaId:
+          type: string
+        actualizadoEn:
+          type: string
+          format: date-time
+          description: Hora de la última lectura buena de la fuente para esta zona (RF-28).
+        alertas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alerta'
+
+    ResumenAlertas:
+      type: object
+      required: [actualizadoEn, zonas]
+      properties:
+        actualizadoEn:
+          type: string
+          format: date-time
+          description: Hora de la última lectura de la fuente.
+        zonas:
+          type: array
+          description: Solo las zonas con alguna alerta activa.
+          items:
+            $ref: '#/components/schemas/ZonaConAlertas'
+
+    ZonaConAlertas:
+      type: object
+      required: [zonaId, alertas]
+      properties:
+        zonaId:
+          type: string
+        zonaNombre:
+          type: string
+          description: Se omite si el catálogo no lo pudo dar.
+        alertas:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Alerta'
+
+    Alerta:
+      type: object
+      description: Una condición activa del destino (RF-28).
+      required: [id, tipo, nivel, titulo, fuente]
+      properties:
+        id:
+          type: string
+          description: Estable entre lecturas de la misma alerta.
+        tipo:
+          $ref: '#/components/schemas/TipoAlerta'
+        nivel:
+          $ref: '#/components/schemas/NivelAlerta'
+        titulo:
+          type: string
+        descripcion:
+          type: string
+          description: Qué pasa y qué hacer. Se omite si la fuente no la da.
+        fuente:
+          type: string
+          description: |
+            Quién la emite, para mostrársela al turista: "IDEAM, alertas hidrológicas vigentes" o, en la demo, un texto
+            que termina en "(simulado)". Nunca se presenta un dato simulado como oficial (DR-17).
+        emitidaEn:
+          type: string
+          format: date-time
+          description: Se omite si la fuente no la da (las del IDEAM no la traen, DR-15).
+        vigenteHasta:
+          type: string
+          format: date-time
+          description: Se omite si no tiene fin anunciado.
+
+    TipoAlerta:
+      type: string
+      description: HIDROLOGICA es la que da hoy el IDEAM (crecientes de ríos y quebradas).
+      enum: [HIDROLOGICA, LLUVIAS, DESLIZAMIENTO, OLEAJE, CIERRE, OTRA]
+
+    NivelAlerta:
+      type: string
+      description: De menor a mayor gravedad.
+      enum: [AMARILLA, NARANJA, ROJA]
+
     MotorRecomendacion:
       type: string
       description: Quién eligió las recomendaciones. Se le muestra al turista.
@@ -206,7 +571,9 @@ components:
       type: string
       description: |
         Criterios explícitos (DR-03). Blandos, que suman afinidad: TIPO_OFERTA, TIPO_ACTIVIDAD y ZONA. Duros, que son
-        filtros si el turista los pide: ACCESIBILIDAD, NIVEL_ESFUERZO y PRECIO.
+        filtros si el turista los pide: ACCESIBILIDAD, NIVEL_ESFUERZO y PRECIO. En las alternativas (RF-29),
+        TIPO_OFERTA es el mismo tipo, ACCESIBILIDAD que es accesible como la de origen, NIVEL_ESFUERZO esfuerzo igual
+        o menor y PRECIO precio dentro de ±50 %; ZONA no se usa.
       enum: [TIPO_OFERTA, TIPO_ACTIVIDAD, ZONA, ACCESIBILIDAD, NIVEL_ESFUERZO, PRECIO]
 
     TipoOferta:
@@ -255,4 +622,6 @@ components:
           description: Motivo estable del error.
           enum:
             - DATO_INVALIDO
+            - OFERTA_NO_ENCONTRADA
             - RECOMENDACION_NO_DISPONIBLE
+            - ALERTAS_NO_DISPONIBLES
