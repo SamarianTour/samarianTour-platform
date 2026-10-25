@@ -251,52 +251,56 @@ a:hover {
   align-items: center;
   gap: 0.25rem;
   align-self: flex-start;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--radio-pildora);
+  padding: 0.25rem 0.625rem;
   background: var(--acento-suave);
-  color: var(--enlace-fuerte);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.5;
+  color: var(--acento-tinta);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
 /* Sello en mayúsculas, como "RNT verificado" */
 .etiqueta--sello {
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .etiqueta--neutra {
-  border-color: var(--borde);
-  background: var(--superficie-suave);
-  color: var(--texto-suave);
+  background: var(--borrador-fondo);
+  color: var(--borrador-texto);
 }
 
 .etiqueta--aviso {
-  border-color: var(--aviso-borde);
   background: var(--aviso-fondo);
   color: var(--aviso-texto);
 }
 
 .etiqueta--peligro {
-  border-color: var(--peligro-borde);
   background: var(--peligro-fondo);
   color: var(--peligro);
 }
 
 .etiqueta--exito {
-  border-color: var(--exito-borde);
   background: var(--exito-fondo);
   color: var(--exito-texto);
 }
 
 .etiqueta--info {
-  border-color: var(--info-borde);
   background: var(--info-fondo);
   color: var(--info-texto);
+}
+
+/* Marcas de la zona: área protegida y alta afluencia */
+.etiqueta--protegida {
+  background: var(--protegida-fondo);
+  color: var(--protegida-texto);
+}
+
+.etiqueta--afluencia {
+  background: var(--afluencia-fondo);
+  color: var(--afluencia-texto);
 }
 
 /* Listas de datos */
@@ -411,9 +415,9 @@ a:hover {
 .campo label,
 .grupo legend {
   color: var(--texto-suave);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 0.71875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -426,13 +430,21 @@ a:hover {
 .campo textarea {
   width: 100%;
   min-height: 44px;
-  border: 1px solid var(--borde-control);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--borde-control);
+  border-radius: var(--radio-md);
+  padding: 0.5rem 0.875rem;
   background: var(--superficie);
   color: var(--texto);
   font: inherit;
   font-size: 0.9375rem;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.campo input::placeholder,
+.campo textarea::placeholder {
+  color: #66717f;
 }
 
 .campo input:hover,
@@ -441,9 +453,27 @@ a:hover {
   border-color: var(--texto-suave);
 }
 
+/* El anillo suave se suma al contorno de :focus-visible, que se conserva. */
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  border-color: var(--enlace);
+  box-shadow: var(--anillo-foco);
+}
+
 .campo textarea {
   min-height: 7rem;
+  padding-block: 0.75rem;
   resize: vertical;
+}
+
+/* Flecha propia en lugar de la del navegador; el color es --texto-suave. */
+.campo select {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6676' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
 }
 
 .campo input[readonly] {
@@ -453,6 +483,7 @@ a:hover {
 .campo [aria-invalid='true'] {
   border-color: var(--peligro);
   border-width: 2px;
+  background-color: var(--peligro-fondo);
 }
 
 .campo__ayuda {
