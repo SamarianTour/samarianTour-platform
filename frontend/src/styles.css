@@ -2,32 +2,74 @@
 
 :root {
   --acento: #0ea5a5;
-  --acento-suave: #dff3f1;
+  --acento-suave: #e1f4f2;
   /* Botones, enlaces y precios: el acento oscurecido para que el texto cumpla contraste AA. */
   --enlace: #0b7373;
-  --enlace-fuerte: #095c5c;
-  --texto: #1e293b;
-  --texto-suave: #475569;
+  --enlace-fuerte: #086868;
+  --texto: #1b2430;
+  --texto-suave: #5b6676;
   --fondo: #fafafa;
   --superficie: #ffffff;
-  --superficie-suave: #f1f5f9;
-  --borde: #e2e8f0;
+  --superficie-suave: #f3f5f7;
+  --borde: #e4e7ec;
   /* Borde de los controles de formulario: el gris más claro que todavía se distingue del fondo (contraste 3:1). */
   --borde-control: #8492a6;
-  --peligro: #b91c1c;
-  --peligro-fondo: #fef2f2;
-  --peligro-borde: #fecaca;
-  --aviso-texto: #713f12;
-  --aviso-fondo: #fffbeb;
+  --peligro: #c42b36;
+  --peligro-fondo: #fdecec;
+  --peligro-borde: #f3bfc3;
+  --aviso-texto: #8a5a00;
+  --aviso-fondo: #fef3c7;
   --aviso-borde: #fde68a;
-  --exito-texto: #166534;
-  --exito-fondo: #ecfdf3;
-  --exito-borde: #bbf7d0;
-  --info-texto: #1d4ed8;
-  --info-fondo: #eff6ff;
-  --info-borde: #bfdbfe;
+  --exito-texto: #167a3e;
+  --exito-fondo: #dcf3e4;
+  --exito-borde: #bfe3cb;
+  --info-texto: #1e4e8c;
+  --info-fondo: #e5eef9;
+  --info-borde: #c7dfef;
   --sombra: 0 1px 2px rgb(15 23 42 / 4%);
   --ancho: 84rem;
+
+  /* Diseño visual de Samarian Tour: variables nuevas, todavía sin uso en las piezas. */
+
+  /* Marca: hover del botón, texto sobre fondo suave y los tonos oscuros del pie. */
+  --acento-hover: #086868;
+  --acento-tinta: #0a6b6b;
+  --profundo: #0b3b3c;
+  --profundo-2: #0f4f52;
+  --arena: #f4e4c1;
+  --sol: #f6c77a;
+
+  /* Borde de tarjetas y botones neutros. No es el de los campos: ese es --borde-control. */
+  --borde-fuerte: #d0d5dd;
+
+  /* Estados que la API no distingue pero el diseño sí: borrador, área protegida y alta afluencia. */
+  --borrador-texto: #5b6676;
+  --borrador-fondo: #eef0f3;
+  --protegida-texto: #14633a;
+  --protegida-fondo: #e3f4e8;
+  --afluencia-texto: #7a4b00;
+  --afluencia-fondo: #fff1d6;
+
+  /* Tipografía: Manrope en títulos, Inter en texto. */
+  --fuente-titulos: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fuente-texto: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Radios */
+  --radio-sm: 8px;
+  --radio-md: 12px;
+  --radio-lg: 20px;
+  --radio-xl: 28px;
+  --radio-pildora: 999px;
+
+  /* Sombras: de suave a fuerte. */
+  --sombra-1: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+  --sombra-2: 0 8px 24px rgb(16 24 40 / 8%);
+  --sombra-3: 0 20px 48px rgb(11 59 60 / 20%);
+
+  /* Anillo que se suma al contorno de foco en los campos. */
+  --anillo-foco: 0 0 0 4px rgb(14 165 165 / 22%);
+
+  --cabecera-alto: 4.5rem;
 }
 
 *,
@@ -44,7 +86,7 @@ body {
   margin: 0;
   background: var(--fondo);
   color: var(--texto);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--fuente-texto);
   font-size: 1rem;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -53,20 +95,26 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--fuente-titulos);
   line-height: 1.25;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 h1 {
   margin: 0;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 h2 {
   margin: 0 0 0.75rem;
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 800;
+}
+
+h3 {
+  font-weight: 700;
 }
 
 a {
@@ -146,10 +194,10 @@ a:hover {
 
 .tarjeta {
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: var(--radio-lg);
   padding: 1.5rem;
   background: var(--superficie);
-  box-shadow: var(--sombra);
+  box-shadow: var(--sombra-1);
 }
 
 .tarjeta > :last-child {
@@ -203,52 +251,56 @@ a:hover {
   align-items: center;
   gap: 0.25rem;
   align-self: flex-start;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--radio-pildora);
+  padding: 0.25rem 0.625rem;
   background: var(--acento-suave);
-  color: var(--enlace-fuerte);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.5;
+  color: var(--acento-tinta);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
 /* Sello en mayúsculas, como "RNT verificado" */
 .etiqueta--sello {
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .etiqueta--neutra {
-  border-color: var(--borde);
-  background: var(--superficie-suave);
-  color: var(--texto-suave);
+  background: var(--borrador-fondo);
+  color: var(--borrador-texto);
 }
 
 .etiqueta--aviso {
-  border-color: var(--aviso-borde);
   background: var(--aviso-fondo);
   color: var(--aviso-texto);
 }
 
 .etiqueta--peligro {
-  border-color: var(--peligro-borde);
   background: var(--peligro-fondo);
   color: var(--peligro);
 }
 
 .etiqueta--exito {
-  border-color: var(--exito-borde);
   background: var(--exito-fondo);
   color: var(--exito-texto);
 }
 
 .etiqueta--info {
-  border-color: var(--info-borde);
   background: var(--info-fondo);
   color: var(--info-texto);
+}
+
+/* Marcas de la zona: área protegida y alta afluencia */
+.etiqueta--protegida {
+  background: var(--protegida-fondo);
+  color: var(--protegida-texto);
+}
+
+.etiqueta--afluencia {
+  background: var(--afluencia-fondo);
+  color: var(--afluencia-texto);
 }
 
 /* Listas de datos */
@@ -297,24 +349,25 @@ a:hover {
   justify-content: center;
   gap: 0.5rem;
   min-height: 44px;
-  border: 1px solid var(--enlace);
-  border-radius: 8px;
+  border: 1.5px solid var(--enlace);
+  border-radius: var(--radio-md);
   padding: 0.5rem 1.25rem;
   background: var(--enlace);
   color: #fff;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
 }
 
 .boton:hover {
-  border-color: var(--enlace-fuerte);
-  background: var(--enlace-fuerte);
+  border-color: var(--acento-hover);
+  background: var(--acento-hover);
   color: #fff;
 }
 
@@ -362,9 +415,9 @@ a:hover {
 .campo label,
 .grupo legend {
   color: var(--texto-suave);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 0.71875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -377,13 +430,21 @@ a:hover {
 .campo textarea {
   width: 100%;
   min-height: 44px;
-  border: 1px solid var(--borde-control);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--borde-control);
+  border-radius: var(--radio-md);
+  padding: 0.5rem 0.875rem;
   background: var(--superficie);
   color: var(--texto);
   font: inherit;
   font-size: 0.9375rem;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.campo input::placeholder,
+.campo textarea::placeholder {
+  color: #66717f;
 }
 
 .campo input:hover,
@@ -392,9 +453,27 @@ a:hover {
   border-color: var(--texto-suave);
 }
 
+/* El anillo suave se suma al contorno de :focus-visible, que se conserva. */
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  border-color: var(--enlace);
+  box-shadow: var(--anillo-foco);
+}
+
 .campo textarea {
   min-height: 7rem;
+  padding-block: 0.75rem;
   resize: vertical;
+}
+
+/* Flecha propia en lugar de la del navegador; el color es --texto-suave. */
+.campo select {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6676' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
 }
 
 .campo input[readonly] {
@@ -404,6 +483,7 @@ a:hover {
 .campo [aria-invalid='true'] {
   border-color: var(--peligro);
   border-width: 2px;
+  background-color: var(--peligro-fondo);
 }
 
 .campo__ayuda {
@@ -453,13 +533,13 @@ a:hover {
 .alerta {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.875rem;
   margin: 0 0 1rem;
   border: 1px solid var(--borde);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
+  border-radius: var(--radio-md);
+  padding: 1rem 1.125rem;
   background: var(--superficie);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 
 .alerta app-icono {
@@ -469,7 +549,7 @@ a:hover {
 .alerta--error {
   border-color: var(--peligro-borde);
   background: var(--peligro-fondo);
-  color: #7f1d1d;
+  color: #8e1b24;
 }
 
 .alerta--aviso {
@@ -485,9 +565,9 @@ a:hover {
 }
 
 .alerta--info {
-  border-color: transparent;
-  background: var(--acento-suave);
-  color: var(--enlace-fuerte);
+  border-color: var(--info-borde);
+  background: var(--info-fondo);
+  color: var(--info-texto);
 }
 
 /* Estado vacío o de "no disponible" */
