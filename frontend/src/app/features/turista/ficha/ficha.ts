@@ -7,6 +7,7 @@ import { FichaOferta } from '../../../core/api/modelos';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { DuracionPipe } from '../../../shared/duracion.pipe';
 import { MODALIDAD, NIVEL_ESFUERZO, TIPO_ACTIVIDAD, TIPO_OFERTA } from '../../../shared/etiquetas';
+import { GaleriaFotos } from '../../../shared/galeria-fotos/galeria-fotos';
 import { ICONO_DE_TIPO, Icono } from '../../../shared/icono/icono';
 import { Mapa } from '../../../shared/mapa/mapa';
 import { OpinionesDeLaOferta } from './opiniones/opiniones-oferta';
@@ -24,7 +25,7 @@ type Estado =
  */
 @Component({
   selector: 'app-ficha',
-  imports: [RouterLink, PrecioPipe, DuracionPipe, Mapa, Icono, OpinionesDeLaOferta],
+  imports: [RouterLink, PrecioPipe, DuracionPipe, Mapa, Icono, GaleriaFotos, OpinionesDeLaOferta],
   templateUrl: './ficha.html',
   styleUrl: './ficha.css',
 })
