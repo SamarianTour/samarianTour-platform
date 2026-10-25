@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestruc
 
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.CriterioAfinidad;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.MotorRecomendacion;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.OrigenExposicion;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.RegistroExposicion;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.ExposicionPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,9 +16,9 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
- * Escribe una línea JSON por consulta en el logger {@code exposicion}: fecha, motor y, por cada recomendación, la
- * oferta, su prestador, la posición y los criterios (RET-02, DR-08). Con eso se puede contar cuántas veces y en qué
- * posición sale cada prestador. No lleva el texto ni ningún dato del turista.
+ * Escribe una línea JSON por consulta en el logger {@code exposicion}: fecha, origen (RECOMENDACION o ALTERNATIVAS),
+ * motor y, por cada oferta mostrada, la oferta, su prestador, la posición y los criterios (RET-02, DR-08, DR-20). Con
+ * eso se puede contar cuántas veces y en qué posición sale cada prestador. No lleva el texto ni ningún dato del turista.
  * <p>Provisional: cuando exista el núcleo, se cambia por un adaptador HTTP que le envíe el mismo registro.
  */
 @Component
@@ -49,12 +50,14 @@ public class ExposicionLogAdapter implements ExposicionPort {
         }
     }
 
-    record LineaExposicion(String fecha, MotorRecomendacion motor, List<OfertaJson> recomendaciones) {
+    record LineaExposicion(String fecha, OrigenExposicion origen, MotorRecomendacion motor,
+                           List<OfertaJson> recomendaciones) {
 
         static LineaExposicion de(RegistroExposicion registro) {
-            return new LineaExposicion(registro.fecha().toString(), registro.motor(), registro.ofertas().stream()
-                    .map(o -> new OfertaJson(o.ofertaId(), o.prestadorId(), o.posicion(), o.criterios()))
-                    .toList());
+            return new LineaExposicion(registro.fecha().toString(), registro.origen(), registro.motor(),
+                    registro.ofertas().stream()
+                            .map(o -> new OfertaJson(o.ofertaId(), o.prestadorId(), o.posicion(), o.criterios()))
+                            .toList());
         }
     }
 
