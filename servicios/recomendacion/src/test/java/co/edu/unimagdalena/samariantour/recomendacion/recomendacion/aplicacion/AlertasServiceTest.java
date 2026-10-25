@@ -8,6 +8,7 @@ import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.mode
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.NivelAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ResultadoFuenteAlertas;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ResumenAlertas;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TextoTraducido;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ZonaCatalogo;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.CatalogoConsultaPort;
@@ -187,7 +188,8 @@ class AlertasServiceTest {
     }
 
     private static AlertaClimatica alerta(String id, String zonaId, NivelAlerta nivel, Instant emitida, Instant hasta) {
-        return new AlertaClimatica(id, zonaId, TipoAlerta.LLUVIAS, nivel, "Lluvias", "Descripción", "IDEAM (simulado)",
+        return new AlertaClimatica(id, zonaId, TipoAlerta.LLUVIAS, nivel,
+                new TextoTraducido("Lluvias", "Rain"), null, "IDEAM (simulado)",
                 emitida, hasta);
     }
 }

@@ -37,7 +37,10 @@ class AlertasSimuladasAdapterTest {
         assertThat(tayrona.zonaId()).isEqualTo("a00000000000000000000005");
         assertThat(tayrona.tipo()).isEqualTo(TipoAlerta.CIERRE);
         assertThat(tayrona.nivel()).isEqualTo(NivelAlerta.NARANJA);
-        assertThat(tayrona.titulo()).isEqualTo("Cierre temporal del parque");
+        assertThat(tayrona.titulo().es()).isEqualTo("Cierre temporal del parque");
+        assertThat(tayrona.titulo().en()).isEqualTo("Temporary park closure");
+        assertThat(alertas).allSatisfy(alerta -> assertThat(alerta.descripcion()).as(alerta.id()).isNotNull());
+        assertThat(tayrona.fuente()).as("la fuente no se traduce").isEqualTo("Parques Nacionales (simulado)");
         assertThat(porId(alertas, "simulada-minca-deslizamiento").zonaId()).isEqualTo("a00000000000000000000007");
         assertThat(porId(alertas, "simulada-taganga-oleaje").zonaId()).isEqualTo("a00000000000000000000003");
         assertThat(alertas.stream().filter(a -> a.activa(AHORA))).hasSize(3);
@@ -57,6 +60,29 @@ class AlertasSimuladasAdapterTest {
         List<AlertaClimatica> ahora = adaptador(new ClassPathResource("alertas/alertas-simuladas.json"), AHORA)
                 .consultar(List.of()).alertas();
         assertThat(porId(ahora, "simulada-taganga-oleaje").vigenteHasta()).as("sin vigentePor no tiene fin").isNull();
+    }
+
+    @Test
+    @DisplayName("una alerta sin el título en inglés deja el archivo ilegible: no se muestra a medias traducida")
+    void sinTraduccion() {
+        ByteArrayResource sinIngles = new ByteArrayResource("""
+                [{"id": "x", "zonaId": "a00000000000000000000005", "tipo": "CIERRE", "nivel": "NARANJA",
+                  "titulo": {"es": "Cierre temporal del parque"}, "fuente": "Parques Nacionales (simulado)"}]"""
+                .getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> adaptador(sinIngles, AHORA).consultar(List.of()))
+                .isInstanceOf(FuenteAlertasNoDisponibleException.class);
+    }
+
+    @Test
+    @DisplayName("sin descripción, la alerta queda sin descripción")
+    void sinDescripcion() {
+        ByteArrayResource sinDescripcion = new ByteArrayResource("""
+                [{"id": "x", "zonaId": "a00000000000000000000005", "tipo": "CIERRE", "nivel": "NARANJA",
+                  "titulo": {"es": "Cierre", "en": "Closure"}, "fuente": "Parques Nacionales (simulado)"}]"""
+                .getBytes(StandardCharsets.UTF_8));
+
+        assertThat(adaptador(sinDescripcion, AHORA).consultar(List.of()).alertas().getFirst().descripcion()).isNull();
     }
 
     @Test

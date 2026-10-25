@@ -7,8 +7,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 
 /**
- * Esquema {@code Alerta}: una condición activa del destino, con su fuente (RF-28).
+ * Esquema {@code Alerta}: una condición activa del destino, con su fuente (RF-28). El título y la descripción van en el
+ * idioma pedido; la fuente, tal cual (DR-21).
  *
+ * @param descripcion  se omite si la fuente no la da
  * @param vigenteHasta se omite si la alerta no tiene fin anunciado
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)

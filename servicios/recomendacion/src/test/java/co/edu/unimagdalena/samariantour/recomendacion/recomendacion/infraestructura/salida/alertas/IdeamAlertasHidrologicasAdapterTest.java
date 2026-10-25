@@ -67,7 +67,12 @@ class IdeamAlertasHidrologicasAdapterTest {
         assertThat(alerta.zonaId()).isEqualTo(CENTRO.id());
         assertThat(alerta.tipo()).isEqualTo(TipoAlerta.HIDROLOGICA);
         assertThat(alerta.nivel()).isEqualTo(NivelAlerta.AMARILLA);
-        assertThat(alerta.titulo()).isEqualTo("Alerta hidrológica en la subzona Río Piedras - Río Manzanares");
+        assertThat(alerta.titulo().es()).isEqualTo("Alerta hidrológica en la subzona Río Piedras - Río Manzanares");
+        assertThat(alerta.titulo().en()).isEqualTo("Hydrological alert in the Río Piedras - Río Manzanares subzone");
+        assertThat(alerta.descripcion().es()).startsWith("El IDEAM tiene vigente una alerta hidrológica amarilla en la "
+                + "subzona hidrográfica Río Piedras - Río Manzanares");
+        assertThat(alerta.descripcion().en()).startsWith("IDEAM has an active yellow hydrological alert in the "
+                + "Río Piedras - Río Manzanares hydrographic subzone");
         assertThat(alerta.fuente()).isEqualTo("IDEAM, alertas hidrológicas vigentes");
         assertThat(alerta.emitidaEn()).as("la capa no tiene fechas: no se inventan").isNull();
         assertThat(alerta.vigenteHasta()).isNull();
@@ -113,7 +118,9 @@ class IdeamAlertasHidrologicasAdapterTest {
         AlertaClimatica alerta = adaptador.consultar(List.of(CENTRO)).alertas().getFirst();
 
         assertThat(alerta.nivel()).isEqualTo(NivelAlerta.ROJA);
-        assertThat(alerta.titulo()).endsWith("Río Gaira");
+        assertThat(alerta.titulo().es()).endsWith("Río Gaira");
+        assertThat(alerta.descripcion().es()).contains("alerta hidrológica roja");
+        assertThat(alerta.descripcion().en()).contains("active red hydrological alert");
     }
 
     @Test
@@ -127,7 +134,7 @@ class IdeamAlertasHidrologicasAdapterTest {
         assertThat(resultado.zonasFallidas()).containsExactly(CENTRO.id());
         assertThat(resultado.alertas()).singleElement().satisfies(alerta -> {
             assertThat(alerta.zonaId()).isEqualTo(TRONCAL.id());
-            assertThat(alerta.titulo()).endsWith("Rio Guachaca - Mendiguaca y Buritaca");
+            assertThat(alerta.titulo().es()).endsWith("Rio Guachaca - Mendiguaca y Buritaca");
         });
     }
 

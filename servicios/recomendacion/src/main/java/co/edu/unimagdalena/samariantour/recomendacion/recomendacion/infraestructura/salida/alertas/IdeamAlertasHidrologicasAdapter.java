@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.exce
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.AlertaClimatica;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.NivelAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ResultadoFuenteAlertas;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TextoTraducido;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ZonaCatalogo;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.WeatherAlertPort;
@@ -49,6 +50,10 @@ public class IdeamAlertasHidrologicasAdapter implements WeatherAlertPort {
             "ALERTA NARANJA", NivelAlerta.NARANJA,
             "ALERTA ROJA", NivelAlerta.ROJA);
     private static final String CONDICIONES_NORMALES = "CONDICIONES NORMALES";
+    private static final Map<NivelAlerta, String> COLORES_ES = Map.of(
+            NivelAlerta.AMARILLA, "amarilla", NivelAlerta.NARANJA, "naranja", NivelAlerta.ROJA, "roja");
+    private static final Map<NivelAlerta, String> COLORES_EN = Map.of(
+            NivelAlerta.AMARILLA, "yellow", NivelAlerta.NARANJA, "orange", NivelAlerta.ROJA, "red");
 
     private final RestClient ideam;
     private final CircuitBreaker circuito;
@@ -151,15 +156,28 @@ public class IdeamAlertasHidrologicasAdapter implements WeatherAlertPort {
         }
     }
 
+    /**
+     * Título y descripción por plantilla, en español e inglés (DR-21). La subzona es un nombre propio: no se traduce.
+     */
     private static AlertaClimatica alerta(ZonaCatalogo zona, NivelAlerta nivel, String subzona) {
-        String color = nivel.name().toLowerCase(Locale.ROOT);
         boolean conSubzona = subzona != null && !subzona.isBlank();
-        String donde = conSubzona ? "en la subzona hidrográfica " + subzona + ", donde queda esta zona" : "en esta zona";
-        return new AlertaClimatica("ideam-hidrologica-" + zona.id(), zona.id(), TipoAlerta.HIDROLOGICA, nivel,
-                conSubzona ? "Alerta hidrológica en la subzona " + subzona : "Alerta hidrológica",
-                "El IDEAM tiene vigente una alerta hidrológica %s %s. ".formatted(color, donde)
+        TextoTraducido titulo = conSubzona
+                ? new TextoTraducido("Alerta hidrológica en la subzona " + subzona,
+                        "Hydrological alert in the " + subzona + " subzone")
+                : new TextoTraducido("Alerta hidrológica", "Hydrological alert");
+        String dondeEs = conSubzona
+                ? "en la subzona hidrográfica " + subzona + ", donde queda esta zona"
+                : "en esta zona";
+        String dondeEn = conSubzona
+                ? "in the " + subzona + " hydrographic subzone, where this area is"
+                : "in this area";
+        TextoTraducido descripcion = new TextoTraducido(
+                "El IDEAM tiene vigente una alerta hidrológica %s %s. ".formatted(COLORES_ES.get(nivel), dondeEs)
                         + "Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.",
-                FUENTE, null, null);
+                "IDEAM has an active %s hydrological alert %s. ".formatted(COLORES_EN.get(nivel), dondeEn)
+                        + "Before visiting rivers and streams, check the guidance of the local authorities.");
+        return new AlertaClimatica("ideam-hidrologica-" + zona.id(), zona.id(), TipoAlerta.HIDROLOGICA, nivel,
+                titulo, descripcion, FUENTE, null, null);
     }
 
     private static boolean esTiempoAgotado(Throwable error) {

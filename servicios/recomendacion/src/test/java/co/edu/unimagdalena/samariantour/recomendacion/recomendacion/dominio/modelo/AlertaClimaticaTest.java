@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AlertaClimaticaTest {
 
@@ -40,8 +41,20 @@ class AlertaClimaticaTest {
                 "roja", "roja-sin-fecha", "naranja", "amarilla-nueva", "amarilla-vieja", "amarilla-sin-fecha");
     }
 
+    @Test
+    @DisplayName("texto traducido: cada idioma con el suyo; los dos son obligatorios")
+    void textoTraducido() {
+        TextoTraducido titulo = new TextoTraducido("Cierre temporal del parque", "Temporary park closure");
+
+        assertThat(titulo.para(Idioma.ES)).isEqualTo("Cierre temporal del parque");
+        assertThat(titulo.para(Idioma.EN)).isEqualTo("Temporary park closure");
+        assertThatThrownBy(() -> new TextoTraducido("Lluvias", " ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new TextoTraducido(null, "Rain")).isInstanceOf(NullPointerException.class);
+    }
+
     private static AlertaClimatica alerta(String id, NivelAlerta nivel, Instant emitida, Instant hasta) {
-        return new AlertaClimatica(id, "a00000000000000000000005", TipoAlerta.LLUVIAS, nivel, "Lluvias", null,
+        return new AlertaClimatica(id, "a00000000000000000000005", TipoAlerta.LLUVIAS, nivel,
+                new TextoTraducido("Lluvias", "Rain"), null,
                 "IDEAM (simulado)", emitida, hasta);
     }
 }

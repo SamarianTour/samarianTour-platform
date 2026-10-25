@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.exce
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.AlertaClimatica;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.NivelAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ResultadoFuenteAlertas;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TextoTraducido;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.TipoAlerta;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.ZonaCatalogo;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.WeatherAlertPort;
@@ -23,7 +24,8 @@ import java.util.List;
  * Fuente simulada de alertas para la demostración (DR-17): lee {@code alertas/alertas-simuladas.json}. Las fechas van
  * relativas ("emitida hace 2 horas, vigente por 1 día") y se calculan con el reloj en cada lectura, para que la demo
  * nunca quede vencida. La fuente de cada alerta dice "(simulado)": un dato inventado no se presenta como oficial.
- * Ya trae la zona de cada alerta, así que no usa las zonas del catálogo.
+ * Ya trae la zona de cada alerta, así que no usa las zonas del catálogo. El título y la descripción vienen en español e
+ * inglés (DR-21); si a alguno le falta un idioma, el archivo es ilegible.
  */
 public class AlertasSimuladasAdapter implements WeatherAlertPort {
 
@@ -53,16 +55,26 @@ public class AlertasSimuladasAdapter implements WeatherAlertPort {
      * Una alerta del archivo.
      *
      * @param emitidaHace duración ISO-8601 antes de ahora, por ejemplo PT2H
+     * @param titulo      {@code {"es": ..., "en": ...}}
+     * @param descripcion igual que el título; opcional
      * @param vigentePor  duración ISO-8601 desde la emisión; sin ella, la alerta no tiene fin anunciado
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record AlertaSimulada(String id, String zonaId, TipoAlerta tipo, NivelAlerta nivel, String titulo,
-                          String descripcion, String fuente, Duration emitidaHace, Duration vigentePor) {
+    record AlertaSimulada(String id, String zonaId, TipoAlerta tipo, NivelAlerta nivel, Texto titulo,
+                          Texto descripcion, String fuente, Duration emitidaHace, Duration vigentePor) {
 
         AlertaClimatica aAlerta(Instant ahora) {
             Instant emitida = ahora.minus(emitidaHace == null ? Duration.ZERO : emitidaHace);
-            return new AlertaClimatica(id, zonaId, tipo, nivel, titulo, descripcion, fuente, emitida,
+            return new AlertaClimatica(id, zonaId, tipo, nivel, titulo.aDominio(),
+                    descripcion == null ? null : descripcion.aDominio(), fuente, emitida,
                     vigentePor == null ? null : emitida.plus(vigentePor));
+        }
+    }
+
+    record Texto(String es, String en) {
+
+        TextoTraducido aDominio() {
+            return new TextoTraducido(es, en);
         }
     }
 }

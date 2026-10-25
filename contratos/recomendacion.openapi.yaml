@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Samarian Tour · Recomendación
-  version: 0.2.0
+  version: 0.3.0
   description: |
     API del servicio de recomendación (RF-26 a RF-29):
 
@@ -200,7 +200,9 @@ paths:
         - No valida que la zona exista: una zona sin alertas responde la lista vacía (estado "sin alertas activas").
         - `actualizadoEn` es la hora de la última lectura buena de la fuente para esa zona: es lo que se le muestra al
           turista como hora de actualización. Las alertas del IDEAM no traen fecha de emisión ni de fin (DR-15).
-        - La fuente se lee al arrancar y cada 8 horas (DR-16); si falla, se conserva la última lectura.
+        - La fuente se lee al arrancar y cada 8 horas (DR-16); si falla, se conserva la última lectura. Si la del
+          arranque falló, se reintenta cada 2 minutos hasta tener una.
+        - Con `?idioma=en`, el título y la descripción en inglés (DR-21).
       parameters:
         - name: zonaId
           in: path
@@ -208,6 +210,13 @@ paths:
           schema:
             type: string
           example: a00000000000000000000001
+        - name: idioma
+          in: query
+          required: false
+          description: Idioma del título y la descripción; sin él, español. La fuente no se traduce (DR-21).
+          schema:
+            type: string
+            enum: [es, en]
       responses:
         '200':
           description: Las alertas activas de la zona; la lista vacía si no tiene.
@@ -228,6 +237,18 @@ paths:
                         titulo: Alerta hidrológica en la subzona Río Piedras - Río Manzanares
                         descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Río Piedras - Río Manzanares, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
                         fuente: IDEAM, alertas hidrológicas vigentes
+                ideamEnIngles:
+                  summary: Fuente ideam, Centro Histórico, con ?idioma=en
+                  value:
+                    zonaId: a00000000000000000000001
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    alertas:
+                      - id: ideam-hidrologica-a00000000000000000000001
+                        tipo: HIDROLOGICA
+                        nivel: AMARILLA
+                        titulo: Hydrological alert in the Río Piedras - Río Manzanares subzone
+                        descripcion: 'IDEAM has an active yellow hydrological alert in the Río Piedras - Río Manzanares hydrographic subzone, where this area is. Before visiting rivers and streams, check the guidance of the local authorities.'
+                        fuente: IDEAM, alertas hidrológicas vigentes
                 simulada:
                   summary: Fuente simulada, Parque Tayrona
                   value:
@@ -239,6 +260,20 @@ paths:
                         nivel: NARANJA
                         titulo: Cierre temporal del parque
                         descripcion: 'Cierre temporal por recuperación ecológica: no se permite el ingreso de visitantes. Consulta la fecha de reapertura antes de viajar.'
+                        fuente: Parques Nacionales (simulado)
+                        emitidaEn: '2026-10-24T21:42:10.512Z'
+                        vigenteHasta: '2026-10-27T21:42:10.512Z'
+                simuladaEnIngles:
+                  summary: Fuente simulada, Parque Tayrona, con ?idioma=en
+                  value:
+                    zonaId: a00000000000000000000005
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    alertas:
+                      - id: simulada-tayrona-cierre
+                        tipo: CIERRE
+                        nivel: NARANJA
+                        titulo: Temporary park closure
+                        descripcion: 'Temporary closure for ecological recovery: visitors are not allowed in. Check the reopening date before you travel.'
                         fuente: Parques Nacionales (simulado)
                         emitidaEn: '2026-10-24T21:42:10.512Z'
                         vigenteHasta: '2026-10-27T21:42:10.512Z'
@@ -259,7 +294,15 @@ paths:
       description: |
         Para la vista general. Solo aparecen las zonas con alguna alerta activa, en el orden de su id, con el nombre
         tomado de la caché del catálogo; si el catálogo no lo pudo dar, solo el id. `actualizadoEn` es la hora de la
-        última lectura de la fuente.
+        última lectura de la fuente. Con `?idioma=en`, el título y la descripción en inglés (DR-21).
+      parameters:
+        - name: idioma
+          in: query
+          required: false
+          description: Idioma del título y la descripción; sin él, español. La fuente no se traduce (DR-21).
+          schema:
+            type: string
+            enum: [es, en]
       responses:
         '200':
           description: Las zonas con alertas activas; la lista vacía si no hay ninguna.
@@ -267,27 +310,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResumenAlertas'
-              example:
-                actualizadoEn: '2026-10-24T23:42:10.512Z'
-                zonas:
-                  - zonaId: a00000000000000000000001
-                    zonaNombre: Centro Histórico
-                    alertas:
-                      - id: ideam-hidrologica-a00000000000000000000001
-                        tipo: HIDROLOGICA
-                        nivel: AMARILLA
-                        titulo: Alerta hidrológica en la subzona Río Piedras - Río Manzanares
-                        descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Río Piedras - Río Manzanares, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
-                        fuente: IDEAM, alertas hidrológicas vigentes
-                  - zonaId: a00000000000000000000006
-                    zonaNombre: Troncal del Caribe
-                    alertas:
-                      - id: ideam-hidrologica-a00000000000000000000006
-                        tipo: HIDROLOGICA
-                        nivel: AMARILLA
-                        titulo: Alerta hidrológica en la subzona Rio Guachaca - Mendiguaca y Buritaca
-                        descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Rio Guachaca - Mendiguaca y Buritaca, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
-                        fuente: IDEAM, alertas hidrológicas vigentes
+              examples:
+                espanol:
+                  summary: Fuente ideam
+                  value:
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    zonas:
+                      - zonaId: a00000000000000000000001
+                        zonaNombre: Centro Histórico
+                        alertas:
+                          - id: ideam-hidrologica-a00000000000000000000001
+                            tipo: HIDROLOGICA
+                            nivel: AMARILLA
+                            titulo: Alerta hidrológica en la subzona Río Piedras - Río Manzanares
+                            descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Río Piedras - Río Manzanares, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
+                            fuente: IDEAM, alertas hidrológicas vigentes
+                      - zonaId: a00000000000000000000006
+                        zonaNombre: Troncal del Caribe
+                        alertas:
+                          - id: ideam-hidrologica-a00000000000000000000006
+                            tipo: HIDROLOGICA
+                            nivel: AMARILLA
+                            titulo: Alerta hidrológica en la subzona Rio Guachaca - Mendiguaca y Buritaca
+                            descripcion: 'El IDEAM tiene vigente una alerta hidrológica amarilla en la subzona hidrográfica Rio Guachaca - Mendiguaca y Buritaca, donde queda esta zona. Antes de visitar ríos y quebradas, consulta las indicaciones de las autoridades locales.'
+                            fuente: IDEAM, alertas hidrológicas vigentes
+                ingles:
+                  summary: Fuente ideam, con ?idioma=en
+                  value:
+                    actualizadoEn: '2026-10-24T23:42:10.512Z'
+                    zonas:
+                      - zonaId: a00000000000000000000006
+                        zonaNombre: Troncal del Caribe
+                        alertas:
+                          - id: ideam-hidrologica-a00000000000000000000006
+                            tipo: HIDROLOGICA
+                            nivel: AMARILLA
+                            titulo: Hydrological alert in the Rio Guachaca - Mendiguaca y Buritaca subzone
+                            descripcion: 'IDEAM has an active yellow hydrological alert in the Rio Guachaca - Mendiguaca y Buritaca hydrographic subzone, where this area is. Before visiting rivers and streams, check the guidance of the local authorities.'
+                            fuente: IDEAM, alertas hidrológicas vigentes
         '503':
           $ref: '#/components/responses/AlertasNoDisponibles'
 
@@ -337,7 +397,8 @@ components:
     AlertasNoDisponibles:
       description: |
         La fuente de alertas no ha respondido ni una vez desde que arrancó el servicio, así que no hay lectura en caché.
-        La pantalla omite la sección de alertas y el resto sigue (ADR-04).
+        Mientras tanto se reintenta cada 2 minutos (DR-16). La pantalla omite la sección de alertas y el resto sigue
+        (ADR-04).
       content:
         application/problem+json:
           schema:
@@ -346,7 +407,7 @@ components:
             type: about:blank
             title: Service Unavailable
             status: 503
-            detail: La fuente de alertas todavía no ha respondido; intenta de nuevo más tarde
+            detail: La fuente de alertas todavía no ha respondido; intenta de nuevo en unos minutos
             instance: /api/recomendacion/alertas
             codigo: ALERTAS_NO_DISPONIBLES
 
@@ -535,14 +596,15 @@ components:
           $ref: '#/components/schemas/NivelAlerta'
         titulo:
           type: string
+          description: En el idioma pedido (`?idioma=es|en`).
         descripcion:
           type: string
-          description: Qué pasa y qué hacer. Se omite si la fuente no la da.
+          description: Qué pasa y qué hacer, en el idioma pedido. Se omite si la fuente no la da.
         fuente:
           type: string
           description: |
             Quién la emite, para mostrársela al turista: "IDEAM, alertas hidrológicas vigentes" o, en la demo, un texto
-            que termina en "(simulado)". Nunca se presenta un dato simulado como oficial (DR-17).
+            que termina en "(simulado)". Nunca se presenta un dato simulado como oficial (DR-17). No se traduce.
         emitidaEn:
           type: string
           format: date-time
