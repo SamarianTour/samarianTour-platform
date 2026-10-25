@@ -1,9 +1,12 @@
 package co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.config;
 
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.aplicacion.ProponerAlternativasService;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.aplicacion.RecomendacionService;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.modelo.MotorRecomendacion;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.politica.PoliticaRotacion;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.politica.ReglaAlternativas;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.politica.ReglaCriteriosExplicitos;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.entrada.ProponerAlternativasUseCase;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.entrada.RecomendarOfertasUseCase;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.CatalogoConsultaPort;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puerto.salida.ExposicionPort;
@@ -21,7 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.random.RandomGenerator;
 
 /**
- * Crea el caso de uso con sus políticas y sus motores. El motor por reglas siempre existe: es el respaldo. Si la IA
+ * Crea los casos de uso de la recomendación y de las alternativas, con sus políticas y sus motores. El motor por reglas siempre existe: es el respaldo. Si la IA
  * está configurada, {@code IaConfig} registra su adaptador como el motor principal (DR-01); si no, el principal
  * también es el de reglas.
  */
@@ -55,6 +58,18 @@ public class RecomendacionConfig {
                                                RecomendadorPorReglasAdapter respaldo, ExposicionPort exposicion,
                                                ReglaCriteriosExplicitos regla, PoliticaRotacion rotacion) {
         return new RecomendacionService(catalogo, motor, respaldo, exposicion, regla, rotacion, Clock.systemUTC());
+    }
+
+    @Bean
+    ReglaAlternativas reglaAlternativas(PoliticaRotacion rotacion) {
+        return new ReglaAlternativas(rotacion);
+    }
+
+    /** Sin IA (DR-19): una regla determinista que no gasta el cupo del proveedor. */
+    @Bean
+    ProponerAlternativasUseCase proponerAlternativas(CatalogoConsultaPort catalogo, ExposicionPort exposicion,
+                                                     ReglaAlternativas regla) {
+        return new ProponerAlternativasService(catalogo, exposicion, regla, Clock.systemUTC());
     }
 
     /** Deja en el log qué motor responde, sin la key. */

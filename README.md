@@ -152,6 +152,29 @@ Desde ahí las respuestas dicen `"motor": "IA"`. Si Groq tarda más de 6 s, resp
 docker compose -f infra/docker-compose.yml up -d recomendacion    # recrea el contenedor con la misma imagen
 ```
 
+### Fuente de las alertas: IDEAM o simulada
+
+Las alertas del destino (RF-28) salen por defecto de la capa de alertas hidrológicas vigentes del IDEAM, consultada con las coordenadas de cada zona al arrancar y cada 8 horas (DR-14 a DR-16). El contenedor necesita salida a internet hacia `visualizador.ideam.gov.co`. Para la demo sin internet, o para mostrar todos los niveles y tipos (cierre del Tayrona, deslizamiento en Minca, oleaje en Taganga), está la fuente simulada, cuyas alertas dicen "(simulado)" en la fuente:
+
+```bash
+# En infra/.env: ALERTAS_FUENTE=simulada  (o, solo esta vez, en la misma línea:)
+ALERTAS_FUENTE=simulada docker compose -f infra/docker-compose.yml up -d recomendacion
+docker compose -f infra/docker-compose.yml logs recomendacion | grep "alertas"
+# ... alertas actualizadas latenciaMs=238
+# Con la fuente ideam:  alertas ideam: zonas=7 conAlerta=7 fallidas=0 latenciaMs=2004
+```
+
+Si el IDEAM no responde, cada zona conserva su última lectura. Si la lectura del arranque falla (por ejemplo, sin internet), las alertas responden 503 `ALERTAS_NO_DISPONIBLES` y la pantalla omite la sección, y el servicio reintenta cada 2 minutos hasta tener una lectura; después sigue el ciclo de 8 horas (DR-16):
+
+```bash
+docker compose -f infra/docker-compose.yml logs recomendacion | grep "alertas"
+# ... alertas sin actualizar: se conserva la ultima lectura buena latenciaMs=...     (el arranque)
+# ... alertas sin lectura todavia: se reintenta en el proximo ciclo latenciaMs=...   (cada 2 minutos)
+# ... alertas actualizadas en el reintento latenciaMs=...
+```
+
+ Si la capa cambia de dirección, va en `IDEAM_ALERTAS_URL` (ver `infra/.env.example`).
+
 ## Prueba de carga de la búsqueda (QAS-07)
 
 500 usuarios buscan durante 10 minutos con filtros de tipo, zona y precio sobre 5.000 ofertas, y k6 compara el resultado con QAS-07 (p95 ≤ 2 s en el servidor) y con la parte de QAS-02 que le toca al catálogo (menos de 1 % de errores, al menos 50 búsquedas por segundo). Corre como un proyecto aparte, `samarian-carga`, con sus propios volúmenes: no toca los datos del piloto. Los dos publican el puerto 8080, así que hay que detener el piloto antes (`docker compose -f infra/docker-compose.yml stop`). El método y los resultados están en DC-48.
@@ -573,7 +596,7 @@ Entre ofertas con la misma afinidad el orden cambia en cada consulta (RF-27). Ca
 
 ```bash
 docker compose -f infra/docker-compose.yml logs recomendacion | grep exposicion
-# ... exposicion : {"fecha":"...","motor":"REGLAS","recomendaciones":[{"ofertaId":"b0000000000000000000000a",
+# ... exposicion : {"fecha":"...","origen":"RECOMENDACION","motor":"REGLAS","recomendaciones":[{"ofertaId":"b0000000000000000000000a",
 #   "prestadorId":"20000000-0000-0000-0000-000000000002","posicion":1,"criterios":[...]}, ...]}
 ```
 
@@ -588,6 +611,73 @@ docker compose -f infra/docker-compose.yml start catalogo
 ```
 
 Para el motor con IA y el cambio de proveedor, ver "Motor de recomendación: reglas o IA" en "Levantar el piloto".
+
+**Alertas del destino (RF-28).** Públicas; responden desde la caché, nunca llaman al IDEAM en la petición. Con la fuente por defecto (`ideam`), el 24-10-2026 las 7 zonas tenían alerta hidrológica amarilla:
+
+```bash
+API=http://localhost:8080/api/recomendacion
+
+# Las de una zona (Centro Historico). Las del IDEAM no traen fecha de emision: la hora es la de la consulta
+curl -s "$API/zonas/a00000000000000000000001/alertas"
+# {"zonaId":"a00000000000000000000001","actualizadoEn":"2026-10-25T00:12:18.314609063Z","alertas":[
+#   {"id":"ideam-hidrologica-a00000000000000000000001","tipo":"HIDROLOGICA","nivel":"AMARILLA",
+#    "titulo":"Alerta hidrológica en la subzona Río Piedras - Río Manzanares","descripcion":"El IDEAM tiene ...",
+#    "fuente":"IDEAM, alertas hidrológicas vigentes"}]}
+
+# Todas, agrupadas por zona y con el nombre de la zona
+curl -s "$API/alertas"
+# {"actualizadoEn":"...","zonas":[{"zonaId":"a00000000000000000000001","zonaNombre":"Centro Histórico","alertas":[...]},
+#   ... {"zonaId":"a00000000000000000000006","zonaNombre":"Troncal del Caribe","alertas":[{...,
+#   "titulo":"Alerta hidrológica en la subzona Rio Guachaca - Mendiguaca y Buritaca",...}]}, ...]}
+
+# En ingles: el titulo y la descripcion; la fuente no se traduce (DR-21)
+curl -s "$API/zonas/a00000000000000000000001/alertas?idioma=en"
+# {...,"alertas":[{...,"titulo":"Hydrological alert in the Río Piedras - Río Manzanares subzone",
+#   "descripcion":"IDEAM has an active yellow hydrological alert ...","fuente":"IDEAM, alertas hidrológicas vigentes"}]}
+curl -s "$API/alertas?idioma=en"
+```
+
+Con `ALERTAS_FUENTE=simulada` (ver "Fuente de las alertas" en "Levantar el piloto"):
+
+```bash
+curl -s "$API/zonas/a00000000000000000000005/alertas"     # Parque Tayrona
+# {"zonaId":"a00000000000000000000005","actualizadoEn":"...","alertas":[{"id":"simulada-tayrona-cierre",
+#   "tipo":"CIERRE","nivel":"NARANJA","titulo":"Cierre temporal del parque",...,
+#   "fuente":"Parques Nacionales (simulado)","emitidaEn":"...","vigenteHasta":"..."}]}
+curl -s "$API/zonas/a00000000000000000000007/alertas"     # Minca: DESLIZAMIENTO, AMARILLA, "IDEAM (simulado)"
+curl -s "$API/zonas/a00000000000000000000001/alertas"     # Centro Historico: su alerta ya vencio, no se muestra
+# {"zonaId":"a00000000000000000000001","actualizadoEn":"...","alertas":[]}
+curl -s "$API/alertas"                                    # Taganga, Parque Tayrona y Minca
+curl -s "$API/zonas/a00000000000000000000005/alertas?idioma=en"   # "Temporary park closure"
+```
+
+**Alternativas por alta afluencia (RF-29).** Para la ficha de una oferta: si su zona tiene alta afluencia (Parque Tayrona, Taganga), de 2 a 3 ofertas del mismo tipo en zonas con menos visitantes, por regla y sin IA (DR-18, DR-19). Entre empatadas el orden rota, así que la segunda y la tercera cambian entre consultas:
+
+```bash
+# Caminata a Cabo San Juan, en el Parque Tayrona
+curl -s "$API/ofertas/b00000000000000000000001/alternativas"
+# {"aplica":true,"zonaOrigen":{"id":"a00000000000000000000005","nombre":"Parque Tayrona"},"alternativas":[
+#   {"posicion":1,"oferta":{"id":"b0000000000000000000000c","nombre":"Caminata a Pozo Azul y cascada de Marinka",...},
+#    "criterios":["TIPO_OFERTA","TIPO_ACTIVIDAD","NIVEL_ESFUERZO","PRECIO"],
+#    "explicacion":"Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de
+#    senderismo, con esfuerzo igual o menor y precio parecido."}, {"posicion":2,...}, {"posicion":3,...}]}
+
+# En ingles
+curl -s "$API/ofertas/b00000000000000000000001/alternativas?idioma=en"
+
+# Paquete de Taganga: solo un paquete cumple, con el aviso
+curl -s "$API/ofertas/b00000000000000000000009/alternativas"
+# {"aplica":true,"aviso":"POCAS_COINCIDENCIAS","zonaOrigen":{...,"nombre":"Taganga"},"alternativas":[{...}]}
+
+# Recorrido por el Centro Historico: la zona no tiene alta afluencia, la ficha no muestra nada
+curl -s "$API/ofertas/b00000000000000000000006/alternativas"
+# {"aplica":false,"alternativas":[]}
+
+# Una oferta que no existe o no es visible: 404 OFERTA_NO_ENCONTRADA
+curl -s "$API/ofertas/b000000000000000000000ff/alternativas"
+```
+
+Las alternativas también dejan su línea en el registro de exposición, con `"origen":"ALTERNATIVAS"` (las recomendaciones llevan `"origen":"RECOMENDACION"`), para que la métrica de sesgo las separe (DR-20).
 
 ### 12. Rutas que no se exponen
 

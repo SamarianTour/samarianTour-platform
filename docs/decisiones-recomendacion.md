@@ -1,9 +1,9 @@
 # Decisiones del prototipo: servicio de recomendación
 
-Registro de las decisiones tomadas para el prototipo del servicio `recomendacion` (RF-26 y RF-27: recomendaciones explicadas, por reglas o con IA). Complementa el diagrama de paquetes detallado (módulo 09) y el registro del catálogo ([decisiones-catalogo-ofertas.md](decisiones-catalogo-ofertas.md)); donde los contradice, se indica en la sección final.
+Registro de las decisiones tomadas para el prototipo del servicio `recomendacion` (RF-26 y RF-27: recomendaciones explicadas, por reglas o con IA; RF-28: alertas del destino; RF-29: alternativas por alta afluencia). Complementa el diagrama de paquetes detallado (módulo 09) y el registro del catálogo ([decisiones-catalogo-ofertas.md](decisiones-catalogo-ofertas.md)); donde los contradice, se indica en la sección final.
 
 - **Estado:** vigente, octubre de 2026. Pendiente de rectificar contra el SRS cuando termine su revisión.
-- **Rama:** `feature/recomendacion-ofertas`. Las alertas del IDEAM (RF-28) y las alternativas por alta afluencia (RF-29) van en `feature/recomendacion-alertas`.
+- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21).
 - **Convención:** ✅ decisión que sale de un requisito o de una decisión anterior (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -23,6 +23,14 @@ Registro de las decisiones tomadas para el prototipo del servicio `recomendacion
 | DR-11 | Límites del plan gratis de Groq | 🆕 |
 | DR-12 | El turista siempre sabe qué motor eligió | ✅ restricción ética del enunciado |
 | DR-13 | Las palabras del texto desempatan entre ofertas de igual afinidad | 🆕 RF-26, RF-27 |
+| DR-14 | Fuente de alertas por configuración: la capa de alertas hidrológicas del IDEAM o un archivo simulado | ✅ RF-28, DR-01 |
+| DR-15 | Una consulta por punto con las coordenadas de la zona, y la hora de consulta en vez de la de emisión | 🆕 RF-28 |
+| DR-16 | Caché de alertas, actualización al arrancar y cada 8 horas, y reintento mientras no haya lectura | ✅ RF-28, ADR-04 |
+| DR-17 | Las alertas simuladas lo dicen en su fuente | 🆕 restricción ética |
+| DR-18 | Regla de alternativas por alta afluencia | ✅ RF-29, módulo 09 · 🆕 [SUPUESTO] criterios |
+| DR-19 | Las alternativas no usan la IA | 🆕 DR-11 |
+| DR-20 | La exposición dice de qué consulta sale | ✅ RET-02 |
+| DR-21 | Alertas en español e inglés; la fuente no se traduce | ✅ DR-02 |
 
 ## Motores
 
@@ -109,7 +117,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 ## Exposición y privacidad
 
 **DR-08. Registro de exposición en el log hasta que el núcleo lo reciba** (RET-02). El diagrama pone el registro en el núcleo (`ExposicionRestClientAdapter`). El núcleo ya tiene su base (PR #20: PostgreSQL, identidad provisional y bandeja de salida), pero todavía no tiene la ruta que recibe la exposición.
-- **Por ahora,** `ExposicionLogAdapter` escribe una línea JSON por consulta en el logger `exposicion`: `{"fecha", "motor", "recomendaciones": [{"ofertaId", "prestadorId", "posicion", "criterios"}]}`. Con eso se puede contar cuántas veces y en qué posición sale cada prestador.
+- **Por ahora,** `ExposicionLogAdapter` escribe una línea JSON por consulta en el logger `exposicion`: `{"fecha", "origen", "motor", "recomendaciones": [{"ofertaId", "prestadorId", "posicion", "criterios"}]}` (`origen`, desde DR-20). Con eso se puede contar cuántas veces y en qué posición sale cada prestador.
 - **No lleva** el texto ni ningún dato del turista, ni las explicaciones.
 - **Si el registro falla,** la recomendación igual llega al turista.
 - **Cuando el núcleo tenga esa ruta,** se cambia por un adaptador HTTP con el mismo `RegistroExposicion`, sin tocar el dominio, y su contrato va en `contratos/internos/`.
@@ -145,21 +153,86 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
   - el motor por reglas, que no entiende el texto, ahora sí devuelve primero lo relacionado y lo dice en la explicación.
 - **Sin sesgo hacia un prestador:** solo usa el contenido de la oferta, que el administrador moderó antes de que fuera visible (RF-79). Llenar una descripción de palabras para aparecer más es un asunto de moderación.
 
+## Alertas del destino
+
+**DR-14. Fuente de alertas por configuración: la capa de alertas hidrológicas del IDEAM o un archivo simulado** (RF-28, como los motores de DR-01). `WeatherAlertPort` tiene dos adaptadores y `recomendacion.alertas.fuente` elige uno, sin recompilar:
+- **`ideam`** (`IdeamAlertasHidrologicasAdapter`): la capa "Alertas_vigentes" del servicio ArcGIS REST del IDEAM, verificada el 24 de octubre de 2026: `https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2`. Son polígonos de subzonas hidrográficas con `NOMSZH` (la subzona) y `NIVEL_A` ("ALERTA AMARILLA", "ALERTA NARANJA", "ALERTA ROJA"). Ese día la capa tenía 199 polígonos con alerta (76 amarillas, 114 naranjas y 9 rojas), ninguno en condiciones normales.
+- **`simulada`** (`AlertasSimuladasAdapter`): `alertas/alertas-simuladas.json`, con un cierre del Tayrona (naranja), riesgo de deslizamientos en Minca y oleaje en Taganga (amarillas) y una alerta vencida para comprobar que no se muestra. Las fechas son relativas al momento de la lectura (`emitidaHace`, `vigentePor`), así la demo nunca queda vencida.
+- **Por defecto:** `simulada` en `application.yml`, para que las pruebas y quien corra sin internet no dependan del IDEAM; `ideam` en Docker Compose (`ALERTAS_FUENTE` en `infra/.env`). Ninguna prueba ni el CI llaman al IDEAM: usan respuestas grabadas en `src/test/resources/ideam/`.
+- **Riesgo:** el servicio está publicado bajo "StoryMaps_IDA", para un mapa narrativo, no como una API documentada, y puede cambiar o desaparecer sin aviso. Si pasa, las zonas conservan su última lectura (DR-16) y basta con `ALERTAS_FUENTE=simulada` o con una URL nueva en `IDEAM_ALERTAS_URL`.
+- **Fuentes del IDEAM evaluadas y descartadas:**
+
+  | Fuente | Por qué no |
+  |---|---|
+  | Estaciones en datos.gov.co: `57sv-p2fu` (lecturas) y `cqmv-a99d` (catálogo de estaciones) | Lecturas crudas de sensores con actualización anual; `cqmv-a99d` solo lista las estaciones. No son alertas. |
+  | "Alertas de Deslizamientos" en datos.gov.co (`m3en-ptx7`) | Diaria y por municipio, sin consulta por ubicación. El 24-10-2026 la API SODA respondía 403 ("non-tabular"): el recurso es un enlace a un CSV en `bart.ideam.gov.co` que habría que descargar completo y filtrar. |
+  | Radar meteorológico en AWS (Open Data) | Barridos crudos que exigen procesamiento científico; no son alertas para un turista. |
+  | App "Ideam en tu Mano" | No tiene API pública para terceros. |
+
+  La capa ArcGIS da alertas oficiales vigentes, en JSON, sin autenticación y consultables por coordenadas, que es lo que tiene cada zona del catálogo.
+
+**DR-15. Una consulta por punto con las coordenadas de la zona, y la hora de consulta en vez de la de emisión** (RF-28).
+- **Por punto:** una consulta por zona a `/query` con `geometry=<longitud>,<latitud>` (x,y: primero la longitud), `geometryType=esriGeometryPoint`, `inSR=4326`, `spatialRel=esriSpatialRelIntersects`, `outFields=NOMSZH,NIVEL_A` y `returnGeometry=false`. Las coordenadas salen de `GET /api/catalogo/zonas` (`ubicacion`), que ya leía `CatalogoRestClientAdapter`. Por eso `WeatherAlertPort.consultar` recibe las zonas, a diferencia del diagrama.
+- **Lectura:** amarilla, naranja o roja son una alerta `HIDROLOGICA` titulada "Alerta hidrológica en la subzona <NOMSZH>". Ninguna feature, condiciones normales o un nivel desconocido dejan la zona sin alerta; el desconocido se anota como advertencia en el log. Si caen varias features en el punto, queda la de mayor nivel.
+- **Errores:** ArcGIS responde los errores con HTTP 200 y un objeto `error`, y con las coordenadas invertidas responde sin features en vez de fallar. El adaptador trata el objeto `error` como falla de la zona, y una prueba fija el orden longitud,latitud en la URL.
+- **Sin fechas:** la capa no tiene campos de fecha, así que `emitidaEn` y `vigenteHasta` se omiten en vez de inventarlos. Lo que la pantalla muestra como hora de actualización es `actualizadoEn`, la hora de la última consulta buena de esa zona, y la fuente es "IDEAM, alertas hidrológicas vigentes". Así se cumple RF-28 ("fuente y hora de actualización") sin afirmar algo que el IDEAM no dice.
+- **Medido el 24-10-2026:** unos 0,6 s por consulta; las 7 zonas de la demo tenían alerta amarilla (seis en la subzona Río Piedras - Río Manzanares y Troncal del Caribe en Rio Guachaca - Mendiguaca y Buritaca).
+
+**DR-16. Caché de alertas, actualización al arrancar y cada 8 horas, y reintento mientras no haya lectura** (RF-28, ADR-04).
+- **El turista nunca llama a la fuente:** `ConsultarAlertasZonaUseCase` solo lee `AlertaCachePort` (`AlertaCacheCaffeineAdapter`, en memoria: el servicio sigue sin base de datos, DC-32). Sin ninguna lectura, 503 `ALERTAS_NO_DISPONIBLES` y la pantalla omite la sección.
+- **`AlertasScheduler`** llama a `ActualizarAlertasUseCase` al arrancar y luego cada 8 horas (`recomendacion.alertas.actualizacion: PT8H`, decisión del equipo): las alertas hidrológicas cambian en horas, no en minutos, y con 7 zonas son 21 consultas al día a un servicio público.
+- **Si falla todo,** la caché conserva la última lectura buena con su hora. **Si falla una zona,** esa zona conserva sus alertas y su hora anteriores, y las demás quedan con la lectura nueva.
+- **Reintento mientras no haya lectura** (fix): si la lectura del arranque falla (sin internet, IDEAM caído, catálogo sin responder), la caché queda vacía y, sin reintento, las alertas responderían 503 durante 8 horas. Por eso `AlertasScheduler` tiene una segunda tarea que corre cada 2 minutos (`recomendacion.alertas.reintento: PT2M`) y llama a `ActualizarAlertasUseCase.reintentar()`:
+  - sin ninguna lectura buena en `AlertaCachePort`, lee la fuente; si responde, la caché se llena y desde ahí sigue el ciclo de 8 horas;
+  - con una lectura en la caché, no hace nada y no llama a la fuente (`NO_HACE_FALTA`);
+  - respeta el corte de circuito: si el de `alertas` está abierto, ninguna zona llama al IDEAM y el intento cuenta como fallido (`CIRCUITO_ABIERTO`). Como el circuito se abre por 60 s y el reintento es cada 2 minutos, el siguiente intento ya puede hacer una consulta de prueba;
+  - las dos tareas corren en el único hilo del planificador de Spring, así que el reintento y la actualización de 8 horas nunca se pisan. Con el IDEAM caído, el primer intento hace como mucho 3 consultas antes de que se abra el circuito, y cada reintento, una sola consulta de prueba.
+- **Cortes:** cada consulta se corta a los 5 s, y el circuito `alertas` de Resilience4j, con los mismos valores que el de la IA (DR-06), deja de llamar al IDEAM por 60 s tras 3 fallas seguidas. Las zonas que no alcanzan a consultarse cuentan como fallidas y conservan lo anterior.
+- **Con varias réplicas** no hace falta ShedLock: cada réplica refresca su propia caché, y como solo lee, que el IDEAM reciba una consulta más por réplica no cambia nada.
+
+**DR-17. Las alertas simuladas lo dicen en su fuente** (restricción ética: no presentar un dato inventado como oficial). Toda alerta del archivo simulado tiene una fuente que termina en "(simulado)", por ejemplo "IDEAM (simulado)" o "Parques Nacionales (simulado)". Una prueba lo comprueba.
+
+**DR-21. Alertas en español e inglés; la fuente no se traduce** (DR-02, como las explicaciones de la recomendación y las alternativas). `GET /zonas/{zonaId}/alertas` y `GET /alertas` aceptan `?idioma=es|en`; sin él, español, y otro valor es 400 `DATO_INVALIDO` (`Idioma.deCodigo`).
+- **En el dominio,** el título y la descripción de `AlertaClimatica` son un `TextoTraducido` con los dos idiomas, obligatorios: una alerta no se muestra a medias traducida. El mapeador de la API elige el del idioma pedido; la caché guarda los dos, así que cambiar de idioma no vuelve a leer la fuente.
+- **IDEAM:** la capa solo da la subzona y el nivel, así que el título y la descripción salen de una plantilla en los dos idiomas ("Alerta hidrológica en la subzona X" / "Hydrological alert in the X subzone"; el color, amarilla/yellow, naranja/orange, roja/red). La subzona es un nombre propio y no se traduce.
+- **Simulada:** el JSON trae `titulo` y `descripcion` como `{"es": ..., "en": ...}`. A una alerta que le falte un idioma deja el archivo ilegible, como cualquier otro error del archivo (DR-17).
+- **La fuente no se traduce:** "IDEAM, alertas hidrológicas vigentes" o "Parques Nacionales (simulado)" identifican a quien emite la alerta, y la marca "(simulado)" debe verse igual en los dos idiomas.
+
+## Alternativas por alta afluencia
+
+**DR-18. Regla de alternativas por alta afluencia** (RF-29, `ReglaAlternativas` del módulo 09). `GET /api/recomendacion/ofertas/{ofertaId}/alternativas`, para la ficha de una oferta:
+- **Solo aplica** si la zona de la oferta está marcada con alta afluencia (`zonaAltaAfluencia`, que ya trae la oferta visible del catálogo). Si no, `aplica: false` con la lista vacía y la ficha no muestra nada. Una oferta que no está entre las visibles es 404 `OFERTA_NO_ENCONTRADA`.
+- **Candidatas:** visibles, del mismo tipo, en zonas sin alta afluencia y distintas de la de origen. Si la de origen es accesible en silla de ruedas, también deben serlo [SUPUESTO]: no se ofrece algo menos accesible.
+- **Afinidad** [SUPUESTO], un punto por criterio: comparte algún tipo de actividad, esfuerzo igual o menor, y precio dentro de ±50 % del de origen.
+- **Orden:** de mayor a menor afinidad, con los empates en orden al azar (`PoliticaRotacion`, como en DR-03).
+- **Cuántas:** 2 o 3 [SUPUESTO: máximo 3, para no recargar la ficha]. Si hay menos de 2, las que haya con el aviso `POCAS_COINCIDENCIAS`.
+- **Criterios de la respuesta:** se reutiliza `CriterioAfinidad`: `TIPO_OFERTA` (mismo tipo) siempre, `ACCESIBILIDAD` si la de origen es accesible, y `TIPO_ACTIVIDAD`, `NIVEL_ESFUERZO` y `PRECIO` si los cumple. Cada alternativa tiene la misma forma que una recomendación, así el frontend reutiliza la tarjeta.
+
+**DR-19. Las alternativas no usan la IA.** Es una regla de sostenibilidad, determinista y explicable, y así no gasta el cupo de Groq (DR-11). La explicación sale de una plantilla en español e inglés (`?idioma=es|en`) con la zona y los criterios que cumple, por ejemplo: "Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido." Los nombres de los tipos y niveles los comparten las dos plantillas (`Etiquetas`, en el dominio).
+
+**DR-20. La exposición dice de qué consulta sale** (RET-02). Las alternativas también se registran con `ExposicionPort`, y cada registro lleva `origen`: `RECOMENDACION` o `ALTERNATIVAS`, para que la métrica de sesgo pueda separarlas (las alternativas no las pide el turista con sus filtros). Las alternativas se registran con `motor: REGLAS`. Si no aplica, no se muestra nada y no se registra.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Diagrama del módulo 09:**
    - agregar las políticas `ValidacionRespuestaIA` (DR-05) y `RelevanciaTexto` (DR-13) en el dominio;
    - cambiar `ExposicionRestClientAdapter` por `ExposicionLogAdapter` mientras el núcleo no tenga la ruta que recibe la exposición (DR-08);
-   - la caché del catálogo vive dentro de `CatalogoRestClientAdapter`. El `CaffeineCacheAdapter` del diagrama queda para las alertas (RF-28);
+   - la caché del catálogo vive dentro de `CatalogoRestClientAdapter`. El `CaffeineCacheAdapter` del diagrama es `AlertaCacheCaffeineAdapter`, el de `AlertaCachePort` (DR-16);
+   - `IdeamAdapter` se divide en dos adaptadores de `WeatherAlertPort`, elegidos por configuración: `IdeamAlertasHidrologicasAdapter` y `AlertasSimuladasAdapter` (DR-14);
+   - `WeatherAlertPort.consultar` recibe las zonas con sus coordenadas, que `ActualizarAlertasService` toma de `CatalogoConsultaPort.zonas()` (DR-15); el resultado dice qué zonas fallaron (DR-16);
+   - `AlertasScheduler` corre al arrancar y cada 8 horas, y reintenta cada 2 minutos mientras no haya ninguna lectura (DR-16);
+   - el título y la descripción de `AlertaClimatica` van en los dos idiomas (`TextoTraducido`, DR-21);
+   - agregar `AlternativaController`, el que expone `ProponerAlternativasUseCase` (DR-18), y `OrigenExposicion` en el registro de exposición (DR-20);
    - el corte del proveedor de IA es de 6 s y no de 3 s: un modelo que razona tarda más que una consulta REST. El del catálogo sigue en 3 s;
    - en la nota de `ReglaCriteriosExplicitos`, agregar el nivel de esfuerzo a los criterios (tipo de oferta, tipo de actividad, zona, accesibilidad, nivel de esfuerzo y precio).
 2. **Contratos internos:** escribir el del registro de exposición hacia el núcleo (DR-08).
 3. **SRS, RF-27:** confirmar las preferencias de la consulta (DR-02) y el aviso `POCAS_COINCIDENCIAS` cuando menos de 3 ofertas cumplen los filtros duros (DR-03).
-4. **Diagrama de despliegue:**
+4. **SRS, RF-28 y RF-29:** la fuente oficial es la capa de alertas hidrológicas del IDEAM (DR-14), sin fecha de emisión (DR-15); confirmar los supuestos de las alternativas: accesibilidad, ±50 % del precio y máximo 3 (DR-18).
+5. **Diagrama de despliegue:**
    - el contenedor `recomendacion`, con una réplica y 384 MB;
-   - su salida HTTPS al proveedor de IA;
+   - su salida HTTPS al proveedor de IA y a `visualizador.ideam.gov.co`;
    - el archivo `infra/.env` con la key, que no se versiona.
 
 ## Fuera del alcance de esta rama
 
-Las alertas del IDEAM (RF-28) y las alternativas por alta afluencia (RF-29), que van en `feature/recomendacion-alertas`; el registro de exposición en el núcleo; la autenticación entre servicios.
+El registro de exposición en el núcleo; la autenticación entre servicios; otros tipos de alerta del IDEAM (lluvias, deslizamientos, oleaje), que hoy solo da la fuente simulada porque no tienen un servicio consultable por ubicación (DR-14); el frontend de alertas y alternativas, a cargo de otra persona del equipo.

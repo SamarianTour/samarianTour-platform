@@ -5,10 +5,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Qué ofertas se le mostraron a un turista y en qué posición (RET-02, DR-08). Sirve para comprobar que ningún prestador
- * sale favorecido: no lleva el texto ni ningún dato del turista.
+ * Qué ofertas se le mostraron a un turista, en qué posición y desde qué consulta (RET-02, DR-08, DR-20). Sirve para
+ * comprobar que ningún prestador sale favorecido: no lleva el texto ni ningún dato del turista.
  */
-public record RegistroExposicion(Instant fecha, MotorRecomendacion motor, List<OfertaExpuesta> ofertas) {
+public record RegistroExposicion(Instant fecha, OrigenExposicion origen, MotorRecomendacion motor,
+                                 List<OfertaExpuesta> ofertas) {
 
     public RegistroExposicion {
         ofertas = List.copyOf(ofertas);
@@ -22,9 +23,20 @@ public record RegistroExposicion(Instant fecha, MotorRecomendacion motor, List<O
     }
 
     public static RegistroExposicion de(Instant fecha, ResultadoRecomendacion resultado) {
-        return new RegistroExposicion(fecha, resultado.motor(), resultado.recomendaciones().stream()
+        return new RegistroExposicion(fecha, OrigenExposicion.RECOMENDACION, resultado.motor(),
+                expuestas(resultado.recomendaciones()));
+    }
+
+    /** Las alternativas siempre salen del motor por reglas: no usan la IA (DR-19). */
+    public static RegistroExposicion de(Instant fecha, ResultadoAlternativas resultado) {
+        return new RegistroExposicion(fecha, OrigenExposicion.ALTERNATIVAS, MotorRecomendacion.REGLAS,
+                expuestas(resultado.alternativas()));
+    }
+
+    private static List<OfertaExpuesta> expuestas(List<Recomendacion> recomendaciones) {
+        return recomendaciones.stream()
                 .map(r -> new OfertaExpuesta(r.oferta().id(), r.oferta().prestadorId(), r.posicion(),
                         r.explicacion().criterios()))
-                .toList());
+                .toList();
     }
 }

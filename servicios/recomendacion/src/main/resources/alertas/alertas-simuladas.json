@@ -1,0 +1,69 @@
+[
+  {
+    "id": "simulada-tayrona-cierre",
+    "zonaId": "a00000000000000000000005",
+    "tipo": "CIERRE",
+    "nivel": "NARANJA",
+    "titulo": {
+      "es": "Cierre temporal del parque",
+      "en": "Temporary park closure"
+    },
+    "descripcion": {
+      "es": "Cierre temporal por recuperación ecológica: no se permite el ingreso de visitantes. Consulta la fecha de reapertura antes de viajar.",
+      "en": "Temporary closure for ecological recovery: visitors are not allowed in. Check the reopening date before you travel."
+    },
+    "fuente": "Parques Nacionales (simulado)",
+    "emitidaHace": "PT2H",
+    "vigentePor": "P3D"
+  },
+  {
+    "id": "simulada-minca-deslizamiento",
+    "zonaId": "a00000000000000000000007",
+    "tipo": "DESLIZAMIENTO",
+    "nivel": "AMARILLA",
+    "titulo": {
+      "es": "Riesgo de deslizamientos por lluvias",
+      "en": "Landslide risk due to rain"
+    },
+    "descripcion": {
+      "es": "Las lluvias acumuladas aumentan la probabilidad de deslizamientos en la vía a Minca. Viaja de día y con precaución.",
+      "en": "Accumulated rainfall increases the likelihood of landslides on the road to Minca. Travel during the day and with caution."
+    },
+    "fuente": "IDEAM (simulado)",
+    "emitidaHace": "PT5H",
+    "vigentePor": "P1D"
+  },
+  {
+    "id": "simulada-taganga-oleaje",
+    "zonaId": "a00000000000000000000003",
+    "tipo": "OLEAJE",
+    "nivel": "AMARILLA",
+    "titulo": {
+      "es": "Oleaje alto en la bahía",
+      "en": "High waves in the bay"
+    },
+    "descripcion": {
+      "es": "Se esperan olas altas en la bahía de Taganga. Evita bañarte lejos de la orilla y sigue las indicaciones de los operadores náuticos.",
+      "en": "High waves are expected in Taganga Bay. Avoid swimming far from the shore and follow the instructions of boat operators."
+    },
+    "fuente": "IDEAM (simulado)",
+    "emitidaHace": "PT1H"
+  },
+  {
+    "id": "simulada-centro-lluvias-vencida",
+    "zonaId": "a00000000000000000000001",
+    "tipo": "LLUVIAS",
+    "nivel": "AMARILLA",
+    "titulo": {
+      "es": "Lluvias fuertes en la tarde",
+      "en": "Heavy rain in the afternoon"
+    },
+    "descripcion": {
+      "es": "Alerta ya vencida: está para comprobar que no se muestra.",
+      "en": "Expired alert: it is here to check that it is not shown."
+    },
+    "fuente": "IDEAM (simulado)",
+    "emitidaHace": "P2D",
+    "vigentePor": "P1D"
+  }
+]

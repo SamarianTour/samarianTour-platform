@@ -12,6 +12,6 @@ import java.util.UUID;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 record OfertaVisibleJson(String id, String tipo, String nombre, String descripcion, UUID prestadorId, String zonaId,
-                         BigDecimal precioReferencia, String unidadPrecio, List<String> tiposActividad,
-                         String nivelEsfuerzo, boolean accesibleSillaRuedas) {
+                         boolean zonaAltaAfluencia, BigDecimal precioReferencia, String unidadPrecio,
+                         List<String> tiposActividad, String nivelEsfuerzo, boolean accesibleSillaRuedas) {
 }

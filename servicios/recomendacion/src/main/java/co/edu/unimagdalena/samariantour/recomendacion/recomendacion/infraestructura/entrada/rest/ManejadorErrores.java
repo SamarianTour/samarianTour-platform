@@ -1,7 +1,9 @@
 package co.edu.unimagdalena.samariantour.recomendacion.recomendacion.infraestructura.entrada.rest;
 
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.AlertasNoDisponiblesException;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.ExcepcionDominio;
+import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.OfertaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.excepcion.RecomendacionNoDisponibleException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -13,8 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Traduce las excepciones del dominio a ProblemDetail (RFC 7807) con la propiedad {@code codigo}, igual que el
- * catálogo: 400 DATO_INVALIDO y 503 RECOMENDACION_NO_DISPONIBLE. Una falla del proveedor de IA nunca llega aquí: la
- * resuelve el motor por reglas.
+ * catálogo: 400 DATO_INVALIDO, 404 OFERTA_NO_ENCONTRADA y 503 RECOMENDACION_NO_DISPONIBLE o ALERTAS_NO_DISPONIBLES.
+ * Una falla del proveedor de IA nunca llega aquí: la resuelve el motor por reglas.
  */
 @RestControllerAdvice
 // Antes que el manejador por defecto de Spring, para que una petición ilegible también lleve el código.
@@ -38,7 +40,9 @@ public class ManejadorErrores {
     private static HttpStatus estadoDe(ExcepcionDominio excepcion) {
         return switch (excepcion) {
             case DatoInvalidoException e -> HttpStatus.BAD_REQUEST;
+            case OfertaNoEncontradaException e -> HttpStatus.NOT_FOUND;
             case RecomendacionNoDisponibleException e -> HttpStatus.SERVICE_UNAVAILABLE;
+            case AlertasNoDisponiblesException e -> HttpStatus.SERVICE_UNAVAILABLE;
             default -> HttpStatus.BAD_REQUEST;
         };
     }

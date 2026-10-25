@@ -37,7 +37,7 @@ Son **tres servicios** independientes, cada uno en su propio contenedor Docker, 
 |---|---|---|---|
 | **Núcleo** | Cuentas, login (emite el token JWT), datos de los prestadores y su RNT, solicitudes, pagos y la decisión del administrador al moderar | PostgreSQL | Esqueleto 🔨 |
 | **Catálogo** | Zonas, ofertas, perfiles públicos y opiniones | MongoDB | En construcción |
-| **Recomendación** | Recomendaciones explicadas, por reglas o con IA; las alertas del clima 🔨 | Ninguna | Prototipo de las recomendaciones |
+| **Recomendación** | Recomendaciones explicadas, por reglas o con IA; alertas del destino (IDEAM) y alternativas en zonas con menos visitantes | Ninguna | Prototipo |
 
 **¿Por qué separarlos?** En temporada alta casi todo el tráfico es gente mirando el catálogo. Al separarlo, se levantan varias copias del catálogo (2 réplicas) sin tocar el núcleo, donde está el dinero (ADR-02).
 
@@ -280,6 +280,27 @@ RecomendacionService
 ```
 
 La respuesta dice qué motor eligió (`motor`) y, en cada recomendación, por qué (`criterios` y `explicacion`). Nunca por calificaciones, comisión ni por quién presta el servicio. Las decisiones están en [decisiones-recomendacion.md](decisiones-recomendacion.md).
+
+### Paso 13: Pedro mira una oferta del Tayrona: alertas y alternativas
+
+Pedro abre la ficha de la caminata a Cabo San Juan, en el Parque Tayrona. Además de pedirle la ficha al catálogo, la pantalla le pide dos cosas a la recomendación:
+
+```
+GET /api/recomendacion/zonas/{tayrona}/alertas?idioma=es
+   AlertaController → ConsultarAlertasService → solo la caché (AlertaCacheCaffeineAdapter)
+   200 { zonaId, actualizadoEn, alertas: [ { tipo: "HIDROLOGICA", nivel: "AMARILLA", titulo, fuente: "IDEAM, ..." } ] }
+   (503 ALERTAS_NO_DISPONIBLES si la fuente nunca ha respondido: la pantalla omite la sección)
+
+GET /api/recomendacion/ofertas/{caminata}/alternativas?idioma=es
+   AlternativaController → ProponerAlternativasService
+   1. La oferta, entre las visibles del catálogo     si no está → 404
+   2. ¿Su zona es de alta afluencia?                  el Tayrona sí; si no → { aplica: false, alternativas: [] }
+   3. ReglaAlternativas                               mismo tipo, zonas sin alta afluencia, afinidad y rotación
+   4. Registro de exposición con origen ALTERNATIVAS
+   200 { aplica: true, zonaOrigen: { id, nombre: "Parque Tayrona" }, alternativas: [ { posicion: 1, oferta: {...}, ... } ] }
+```
+
+Las alertas no se consultan al IDEAM en la petición de Pedro: `AlertasScheduler` lee la fuente al arrancar y cada 8 horas (y cada 2 minutos mientras no tenga ninguna lectura) y deja la lectura en caché, con los textos en español e inglés. Con la fuente `ideam` se consulta la capa de alertas hidrológicas vigentes con las coordenadas de cada zona; con `simulada`, un archivo de la demo cuyas fuentes dicen "(simulado)". Las alternativas salen de una regla, sin IA, con una explicación como "Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido." (DR-14 a DR-20).
 
 ## 6. Dónde está cada cosa
 

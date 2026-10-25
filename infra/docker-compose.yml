@@ -137,6 +137,11 @@ services:
       RECOMENDACION_IA_MODELO: ${IA_MODELO:-openai/gpt-oss-120b}
       # Vacío para un modelo que no razona (por ejemplo, uno de Ollama).
       RECOMENDACION_IA_ESFUERZO_RAZONAMIENTO: ${IA_ESFUERZO_RAZONAMIENTO-low}
+      # Alertas del destino (RF-28, DR-14): por defecto las del IDEAM, que se leen al arrancar y cada 8 horas.
+      # Con ALERTAS_FUENTE=simulada en infra/.env, las del archivo de la demo. Necesita salida a internet hacia
+      # visualizador.ideam.gov.co, como la de Groq.
+      RECOMENDACION_ALERTAS_FUENTE: ${ALERTAS_FUENTE:-ideam}
+      RECOMENDACION_ALERTAS_IDEAM_URL: ${IDEAM_ALERTAS_URL:-https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2}
     depends_on:
       catalogo:
         condition: service_healthy

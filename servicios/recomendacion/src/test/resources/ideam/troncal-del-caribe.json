@@ -1,0 +1,1 @@
+{"displayFieldName":"NOMAH","fieldAliases":{"NOMSZH":"NOMSZH","NIVEL_A":"NIVEL_A"},"fields":[{"name":"NOMSZH","type":"esriFieldTypeString","alias":"NOMSZH","length":80},{"name":"NIVEL_A","type":"esriFieldTypeString","alias":"NIVEL_A","length":80}],"features":[{"attributes":{"NOMSZH":"Rio Guachaca - Mendiguaca y Buritaca","NIVEL_A":"ALERTA AMARILLA"}}]}

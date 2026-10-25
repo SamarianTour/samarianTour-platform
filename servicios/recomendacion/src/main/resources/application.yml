@@ -41,6 +41,19 @@ recomendacion:
     candidatas: 10
     # Solo para modelos de razonamiento como gpt-oss; vacío para un modelo que no lo acepte.
     esfuerzo-razonamiento: low
+  alertas:
+    # simulada (por defecto: las pruebas y quien corra sin internet no dependen del IDEAM) o ideam (DR-14). En Docker
+    # Compose se sobrescribe con RECOMENDACION_ALERTAS_FUENTE, que por defecto es ideam.
+    fuente: simulada
+    # Cada cuánto se lee la fuente: una vez al arrancar y luego cada 8 horas (DR-16). El turista solo lee la caché.
+    actualizacion: PT8H
+    # Si la lectura del arranque falla, se reintenta cada 2 minutos mientras no haya ninguna lectura buena (DR-16).
+    reintento: PT2M
+    ideam:
+      # Capa "Alertas_vigentes" del servicio ArcGIS del IDEAM, verificada el 24-10-2026 (DR-14). Sin /query.
+      url: https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2
+      # Corte por consulta de cada zona.
+      timeout: 5s
 
 resilience4j:
   circuitbreaker:
@@ -48,6 +61,16 @@ resilience4j:
       # Corte de circuito del proveedor de IA (QAS-03, DR-06): tras 3 fallas seguidas, 60 s directo a reglas; luego
       # una consulta de prueba decide si se vuelve a la IA.
       ia:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 3
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 1
+        automatic-transition-from-open-to-half-open-enabled: false
+      # Corte de circuito de la fuente de alertas del IDEAM (DR-16): tras 3 consultas fallidas seguidas, 60 s sin
+      # llamarla; las zonas que no se leen conservan sus alertas anteriores.
+      alertas:
         sliding-window-type: COUNT_BASED
         sliding-window-size: 3
         minimum-number-of-calls: 3
