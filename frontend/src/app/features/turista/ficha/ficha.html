@@ -26,10 +26,15 @@
         <span aria-current="page">{{ oferta.nombre }}</span>
       </nav>
 
-      <div class="ficha__portada portada">
-        <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
-        <span>{{ etiquetaTipo[oferta.tipo] }}</span>
-      </div>
+      @if (oferta.fotos.length > 0) {
+        <app-galeria-fotos class="ficha__galeria" [fotos]="oferta.fotos" [nombre]="oferta.nombre" />
+      } @else {
+        <!-- Una versión anterior a las fotos (DC-47) no tiene ninguna: se queda el icono del tipo. -->
+        <div class="ficha__portada portada">
+          <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
+          <span>{{ etiquetaTipo[oferta.tipo] }}</span>
+        </div>
+      }
 
       <div class="ficha">
         <div class="ficha__principal">

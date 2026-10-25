@@ -167,7 +167,8 @@ describe('valoresDeFicha', () => {
 
     const { valores, ubicacion, fotos } = valoresDeFicha(ficha);
 
-    expect(fotos).toEqual(['3f2504e0-4f89-11d3-9a0c-0305e82c3301']);
+    expect(fotos).toEqual(ficha.fotos);
+    expect(fotos[0].urlMiniatura).toBe('/api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/miniatura');
     expect(valores.zonaId).toBe('a00000000000000000000007');
     expect(valores.horariosSalida).toBe('07:30, 14:00');
     expect(valores.idiomasAtencion).toBe('es, en');
@@ -198,12 +199,14 @@ describe('valoresDeFicha', () => {
       },
     };
 
-    const { valores, ubicacion } = valoresDeFicha(ficha);
+    const { valores, ubicacion, fotos } = valoresDeFicha(ficha);
 
     expect(valores.actividadIds).toEqual(['b00000000000000000000001', 'b00000000000000000000002']);
     expect(valores.duracionMinutos).toBe(480);
     expect(valores.horariosSalida).toBe('06:00');
     expect(valores.accesibleSillaRuedas).toBe(false);
     expect(ubicacion).toBeNull();
+    // Una versión anterior a las fotos (DC-47) no tiene ninguna: el prestador tendrá que agregarlas para editarla.
+    expect(fotos).toEqual([]);
   });
 });

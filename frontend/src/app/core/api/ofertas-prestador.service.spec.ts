@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { OfertaPrestador, OfertaRequest, PaginaOfertasPrestador } from './modelos';
+import { Foto, OfertaPrestador, OfertaRequest, PaginaOfertasPrestador } from './modelos';
 import { OfertasPrestadorService } from './ofertas-prestador.service';
 
 const URL = '/api/catalogo/prestador/ofertas';
@@ -35,6 +35,12 @@ const PETICION: OfertaRequest = {
   capacidadMaxima: 8,
   fotos: ['3f2504e0-4f89-11d3-9a0c-0305e82c3301'],
   accesibleSillaRuedas: true,
+};
+
+const FOTO: Foto = {
+  id: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  url: '/api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/galeria',
+  urlMiniatura: '/api/catalogo/fotos/3f2504e0-4f89-11d3-9a0c-0305e82c3301/miniatura',
 };
 
 describe('OfertasPrestadorService', () => {
@@ -105,6 +111,20 @@ describe('OfertasPrestadorService', () => {
     expect(peticion.request.method).toBe('PUT');
     expect(peticion.request.body).toEqual(PETICION);
     peticion.flush(oferta('b00000000000000000000001'));
+  });
+
+  it('sube una foto con POST multipart en el campo foto', () => {
+    const archivo = new File(['contenido'], 'cascada.jpg', { type: 'image/jpeg' });
+    let subida: Foto | undefined;
+
+    servicio.subirFoto(archivo).subscribe((foto) => (subida = foto));
+
+    const peticion = http.expectOne('/api/catalogo/prestador/fotos');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toBeInstanceOf(FormData);
+    expect((peticion.request.body as FormData).get('foto')).toBe(archivo);
+    peticion.flush(FOTO, { status: 201, statusText: 'Created' });
+    expect(subida).toEqual(FOTO);
   });
 
   it('retira una oferta con PATCH sobre /retiro', () => {

@@ -1,0 +1,124 @@
+<fieldset
+  class="grupo selector"
+  id="fotos"
+  tabindex="-1"
+  [attr.aria-invalid]="error() ? 'true' : null"
+  [attr.aria-describedby]="error() ? 'fotos-error fotos-ayuda' : 'fotos-ayuda'"
+>
+  <legend>Fotos de la oferta <span class="requerido" aria-hidden="true">*</span></legend>
+  <p class="campo__ayuda" id="fotos-ayuda">
+    Agrega de 1 a {{ maximo }} fotos en JPG, PNG o WebP de hasta 5 MB. La primera es la portada:
+    para cambiarla, usa «Mover antes» en otra foto.
+  </p>
+
+  <div class="selector__barra">
+    <button
+      #agregar
+      type="button"
+      class="boton boton--secundario"
+      [disabled]="cupos() === 0"
+      (click)="abrirSelector()"
+    >
+      <app-icono nombre="mas" />
+      Agregar fotos
+    </button>
+    <span class="texto-suave" aria-hidden="true">{{ fotos().length }} de {{ maximo }}</span>
+    @if (cupos() === 0) {
+      <span class="campo__ayuda">Llegaste al máximo de {{ maximo }} fotos.</span>
+    }
+  </div>
+  <input #entrada type="file" hidden multiple [accept]="formatos" (change)="elegidos($event)" />
+
+  @for (aviso of avisos(); track aviso) {
+    <p class="alerta alerta--aviso" role="status">
+      <app-icono nombre="alerta" />
+      <span>{{ aviso }}</span>
+    </p>
+  }
+
+  @if (fotos().length > 0 || pendientes().length > 0) {
+    <ol class="selector__lista">
+      @for (
+        foto of fotos();
+        track foto.id;
+        let i = $index;
+        let primera = $first;
+        let ultima = $last
+      ) {
+        <li class="miniatura">
+          <div class="miniatura__imagen">
+            <img [src]="foto.urlMiniatura" [alt]="textoAlternativo(i)" loading="lazy" />
+            @if (primera) {
+              <span class="etiqueta miniatura__portada">Portada</span>
+            }
+          </div>
+          <div class="miniatura__acciones">
+            <button
+              type="button"
+              class="miniatura__boton"
+              [attr.data-foto]="foto.id"
+              data-accion="antes"
+              [disabled]="primera"
+              (click)="moverFoto(foto, -1)"
+            >
+              Mover antes<span class="solo-lectores"> la foto {{ i + 1 }}</span>
+            </button>
+            <button
+              type="button"
+              class="miniatura__boton"
+              [attr.data-foto]="foto.id"
+              data-accion="despues"
+              [disabled]="ultima"
+              (click)="moverFoto(foto, 1)"
+            >
+              Mover después<span class="solo-lectores"> la foto {{ i + 1 }}</span>
+            </button>
+            <button
+              type="button"
+              class="miniatura__boton miniatura__boton--quitar"
+              [attr.data-foto]="foto.id"
+              data-accion="quitar"
+              (click)="quitarFoto(foto)"
+            >
+              Quitar<span class="solo-lectores"> la foto {{ i + 1 }}</span>
+            </button>
+          </div>
+        </li>
+      }
+      @for (pendiente of pendientes(); track pendiente.clave) {
+        <li class="miniatura miniatura--pendiente">
+          <div class="miniatura__imagen miniatura__estado">
+            @if (pendiente.estado === 'subiendo') {
+              <span role="status">Subiendo…</span>
+            } @else {
+              <span class="miniatura__error" role="alert">{{ pendiente.mensaje }}</span>
+            }
+          </div>
+          <p class="miniatura__nombre">{{ pendiente.archivo.name }}</p>
+          @if (pendiente.estado === 'fallida') {
+            <div class="miniatura__acciones">
+              <button type="button" class="miniatura__boton" (click)="reintentar(pendiente)">
+                Reintentar<span class="solo-lectores">
+                  la subida de {{ pendiente.archivo.name }}</span
+                >
+              </button>
+              <button
+                type="button"
+                class="miniatura__boton miniatura__boton--quitar"
+                (click)="descartar(pendiente.clave)"
+              >
+                Descartar<span class="solo-lectores"> {{ pendiente.archivo.name }}</span>
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ol>
+  }
+
+  <p class="solo-lectores" aria-live="polite">{{ anuncio() }}</p>
+
+  @if (error(); as mensaje) {
+    <p class="campo__error" id="fotos-error">{{ mensaje }}</p>
+  }
+</fieldset>

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, expand, map, reduce } from 'rxjs';
 import { API_CATALOGO } from './api.config';
-import { OfertaPrestador, OfertaRequest, PaginaOfertasPrestador } from './modelos';
+import { Foto, OfertaPrestador, OfertaRequest, PaginaOfertasPrestador } from './modelos';
 
 /** Tamaño máximo de página que acepta la API (DC-14). */
 const TAMANO_MAXIMO = 100;
@@ -15,6 +15,7 @@ const TAMANO_MAXIMO = 100;
 export class OfertasPrestadorService {
   private readonly http = inject(HttpClient);
   private readonly url = `${API_CATALOGO}/prestador/ofertas`;
+  private readonly urlFotos = `${API_CATALOGO}/prestador/fotos`;
 
   listar(pagina: number, tamano: number): Observable<PaginaOfertasPrestador> {
     return this.http.get<PaginaOfertasPrestador>(this.url, { params: { page: pagina, size: tamano } });
@@ -44,6 +45,16 @@ export class OfertasPrestadorService {
 
   editar(id: string, oferta: OfertaRequest): Observable<OfertaPrestador> {
     return this.http.put<OfertaPrestador>(`${this.url}/${encodeURIComponent(id)}`, oferta);
+  }
+
+  /**
+   * Sube una foto para las ofertas (DC-47). Queda suelta: se pone en una oferta enviando su `id` en `fotos` al
+   * publicarla o editarla. Va como multipart con el campo `foto`; el navegador agrega el Content-Type con su límite.
+   */
+  subirFoto(archivo: File): Observable<Foto> {
+    const cuerpo = new FormData();
+    cuerpo.append('foto', archivo);
+    return this.http.post<Foto>(this.urlFotos, cuerpo);
   }
 
   retirar(id: string): Observable<void> {

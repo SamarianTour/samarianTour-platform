@@ -16,6 +16,7 @@ export type Coordenada = Esquemas['Coordenada'];
 export type OfertaResumen = Esquemas['OfertaResumen'];
 export type PaginaOfertas = Esquemas['PaginaOfertas'];
 export type FichaOferta = Esquemas['FichaOferta'];
+export type Foto = Esquemas['Foto'];
 export type Zona = Esquemas['Zona'];
 export type PerfilPublico = Esquemas['PerfilPublico'];
 export type OfertaRequest = Esquemas['OfertaRequest'];
