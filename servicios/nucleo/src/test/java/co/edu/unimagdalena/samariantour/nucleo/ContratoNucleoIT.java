@@ -3,6 +3,18 @@ package co.edu.unimagdalena.samariantour.nucleo;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionModeracionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.AtencionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.AvisoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.CondicionesResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.EnviarSolicitudRequest;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.OfertaSolicitadaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.PaginaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.RespuestaCondicionesRequest;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.SolicitudColaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.SolicitudOperadorResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.SolicitudResumenResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.SolicitudTuristaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.TransicionResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -69,7 +81,21 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
         return Stream.of(
                 arguments("DecisionOfertaRequest", DecisionOfertaRequest.class),
                 arguments("DecisionOpinionRequest", DecisionOpinionRequest.class),
-                arguments("DecisionModeracion", DecisionModeracionResponse.class));
+                arguments("DecisionModeracion", DecisionModeracionResponse.class),
+                arguments("EnviarSolicitudRequest", EnviarSolicitudRequest.class),
+                arguments("RespuestaCondicionesRequest", RespuestaCondicionesRequest.class),
+                arguments("AtencionRequest", AtencionRequest.class),
+                arguments("OfertaSolicitada", OfertaSolicitadaResponse.class),
+                arguments("Condiciones", CondicionesResponse.class),
+                arguments("Transicion", TransicionResponse.class),
+                arguments("SolicitudResumen", SolicitudResumenResponse.class),
+                arguments("SolicitudTurista", SolicitudTuristaResponse.class),
+                arguments("SolicitudCola", SolicitudColaResponse.class),
+                arguments("SolicitudOperador", SolicitudOperadorResponse.class),
+                arguments("Aviso", AvisoResponse.class),
+                arguments("PaginaSolicitudesTurista", PaginaResponse.class),
+                arguments("PaginaColaOperador", PaginaResponse.class),
+                arguments("PaginaAvisos", PaginaResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {

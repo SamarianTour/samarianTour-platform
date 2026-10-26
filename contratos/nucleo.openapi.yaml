@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
   title: Samarian Tour · Núcleo
-  version: 0.1.0
+  version: 0.2.0
   description: |
     API del núcleo transaccional: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e
-    indicadores. Por ahora solo tiene la base del servicio; cada módulo agrega aquí sus rutas antes de escribir su
-    código (API first), y `ContratoNucleoIT` falla si una ruta existe en el contrato y no en los controladores, o al
-    revés.
+    indicadores. Hoy tiene la moderación (módulo 8) y las solicitudes de disponibilidad (módulo 4); cada módulo agrega
+    aquí sus rutas antes de escribir su código (API first), y `ContratoNucleoIT` falla si una ruta existe en el
+    contrato y no en los controladores, o al revés.
 
     - Las rutas no incluyen el prefijo `/api/nucleo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
@@ -21,7 +21,9 @@ tags:
   - name: Cuentas
     description: Módulo 1 (RF-01 a RF-13).
   - name: Solicitudes
-    description: Módulo 4 (RF-30 a RF-45).
+    description: |
+      Módulo 4 (RF-30 a RF-45): el turista envía, consulta y responde; el operador de disponibilidad atiende su cola.
+      Enviar y responder las condiciones exigen `Idempotency-Key` (ADR-04, DN-12).
   - name: Pagos
     description: Módulo 5 (RF-46 a RF-58).
   - name: Prestadores
@@ -126,8 +128,548 @@ paths:
         '503':
           $ref: '#/components/responses/CatalogoNoDisponible'
 
+  /turista/solicitudes:
+    post:
+      tags: [Solicitudes]
+      operationId: enviarSolicitud
+      summary: Enviar una solicitud de disponibilidad sobre una oferta (RF-30 a RF-32, RF-34)
+      description: |
+        La solicitud queda Pendiente, asignada al operador vinculado al prestador (RF-32), con 24 h para atenderla
+        (`venceEn`). El turista debe tener su WhatsApp verificado: es su único canal y no se vuelve a pedir (RF-03).
+
+        - **Oferta:** se consulta al catálogo, con corte de circuito de 3 s (ADR-04). Si no está visible, 404
+          `OFERTA_NO_ENCONTRADA`; si el catálogo no responde, 503 `CATALOGO_NO_DISPONIBLE` y no se crea nada.
+        - **Fecha:** al menos 2 días calendario después del envío, en la hora de Colombia (RF-30).
+        - **Campos del tipo de oferta (RF-30):** la actividad y el paquete piden `horaSalida`, una de sus
+          `horariosSalida`; el alojamiento, `fechaSalida` (posterior a la de inicio) y `numeroUnidades` (entero
+          positivo); el restaurante, `horaReserva`. Un campo que falta o que no corresponde al tipo es 400
+          `DATO_INVALIDO`.
+        - **Personas:** de 1 a la capacidad máxima de la oferta.
+        - **No duplicado:** una segunda solicitud abierta del mismo turista para la misma oferta, fecha de inicio y hora
+          (la de salida o la de la reserva; el alojamiento, solo por la fecha) es 409 `SOLICITUD_DUPLICADA` (RF-31).
+        - **Idempotencia:** la misma `Idempotency-Key` con el mismo cuerpo devuelve la respuesta original, con
+          `Idempotency-Replayed: true`, sin crear otra; con otro cuerpo, 422. Si la solicitud no se creó (por ejemplo,
+          el catálogo no respondió), el reintento con la misma clave vuelve a intentarlo.
+
+        El operador recibe un aviso en la plataforma (RF-34) y el turista, una notificación por WhatsApp (RF-44).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnviarSolicitudRequest'
+            examples:
+              actividad:
+                summary: Actividad o paquete, con su horario de salida
+                value:
+                  ofertaId: b00000000000000000000001
+                  fechaInicio: '2026-10-28'
+                  horaSalida: '07:00'
+                  personas: 2
+                  nota: Vamos con una niña de 8 años
+              alojamiento:
+                summary: Alojamiento, con la fecha de salida y las unidades
+                value:
+                  ofertaId: b0000000000000000000000f
+                  fechaInicio: '2026-10-28'
+                  fechaSalida: '2026-10-30'
+                  numeroUnidades: 1
+                  personas: 3
+              restaurante:
+                summary: Restaurante, con la hora de la reserva
+                value:
+                  ofertaId: b00000000000000000000013
+                  fechaInicio: '2026-10-28'
+                  horaReserva: '19:30'
+                  personas: 4
+      responses:
+        '201':
+          description: La solicitud creada, o la original si la clave ya se había usado con el mismo cuerpo.
+          headers:
+            Idempotency-Replayed:
+              description: true si es la respuesta original de un envío anterior con la misma clave.
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitudTurista'
+              example:
+                id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                oferta:
+                  id: b00000000000000000000001
+                  tipo: ACTIVIDAD
+                  nombre: Caminata a Cabo San Juan del Guía
+                  zonaId: a00000000000000000000005
+                fechaInicio: '2026-10-28'
+                horaSalida: '07:00'
+                personas: 2
+                nota: Vamos con una niña de 8 años
+                estado: PENDIENTE
+                venceEn: '2026-10-27T15:00:00Z'
+                creadaEn: '2026-10-26T15:00:00Z'
+                actualizadaEn: '2026-10-26T15:00:00Z'
+                historial:
+                  - a: PENDIENTE
+                    en: '2026-10-26T15:00:00Z'
+                    actor: TURISTA
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/OfertaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ConflictoSolicitud'
+        '422':
+          $ref: '#/components/responses/ClaveReutilizada'
+        '503':
+          $ref: '#/components/responses/CatalogoNoDisponible'
+    get:
+      tags: [Solicitudes]
+      operationId: listarSolicitudesTurista
+      summary: Mis solicitudes, de la más reciente a la más antigua (RF-33)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Una página de las solicitudes del turista.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaSolicitudesTurista'
+              example:
+                contenido:
+                  - id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                    oferta:
+                      id: b00000000000000000000001
+                      tipo: ACTIVIDAD
+                      nombre: Caminata a Cabo San Juan del Guía
+                      zonaId: a00000000000000000000005
+                    fechaInicio: '2026-10-28'
+                    horaSalida: '07:00'
+                    personas: 2
+                    estado: ATENDIDA
+                    venceEn: '2026-10-26T19:00:00Z'
+                    creadaEn: '2026-10-26T15:00:00Z'
+                    actualizadaEn: '2026-10-26T16:00:00Z'
+                pagina: 0
+                tamano: 20
+                totalElementos: 1
+                totalPaginas: 1
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /turista/solicitudes/{solicitudId}:
+    get:
+      tags: [Solicitudes]
+      operationId: consultarSolicitudTurista
+      summary: El estado real de una solicitud, con su historial y su plazo vigente (RF-33, RF-42)
+      description: |
+        Es la reconsulta al reconectar del ADR-04: si una petición quedó sin respuesta, la aplicación pregunta aquí en
+        lugar de suponer. Atendida, trae el precio base y las condiciones, incluida la política de cancelación (RF-42),
+        y `venceEn` es el fin de la ventana para confirmar y pagar (RF-55). La de otro turista responde 404.
+      parameters:
+        - $ref: '#/components/parameters/SolicitudId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: La solicitud.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitudTurista'
+              example:
+                id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                oferta:
+                  id: b00000000000000000000001
+                  tipo: ACTIVIDAD
+                  nombre: Caminata a Cabo San Juan del Guía
+                  zonaId: a00000000000000000000005
+                fechaInicio: '2026-10-28'
+                horaSalida: '07:00'
+                personas: 2
+                nota: Vamos con una niña de 8 años
+                estado: ATENDIDA
+                condiciones:
+                  precioBase: 300000
+                  politicaCancelacion: Sin reembolso a menos de 24 horas del servicio
+                  nota: Incluye el ingreso al parque
+                venceEn: '2026-10-26T19:00:00Z'
+                creadaEn: '2026-10-26T15:00:00Z'
+                actualizadaEn: '2026-10-26T16:00:00Z'
+                historial:
+                  - a: PENDIENTE
+                    en: '2026-10-26T15:00:00Z'
+                    actor: TURISTA
+                  - de: PENDIENTE
+                    a: ATENDIDA
+                    en: '2026-10-26T16:00:00Z'
+                    actor: OPERADOR
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/SolicitudNoEncontrada'
+
+  /turista/solicitudes/{solicitudId}/respuesta:
+    post:
+      tags: [Solicitudes]
+      operationId: responderCondiciones
+      summary: Confirmar o declinar las condiciones de una solicitud atendida (RF-43)
+      description: |
+        CONFIRMAR la deja Confirmada para pagar dentro de la misma ventana; DECLINAR la cierra y avisa al prestador que el
+        cupo quedó libre (RF-56). Solo dentro de la ventana: después, 409 `PLAZO_VENCIDO`. Repetir con la misma
+        `Idempotency-Key` devuelve la respuesta original sin hacer nada más.
+      parameters:
+        - $ref: '#/components/parameters/SolicitudId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespuestaCondicionesRequest'
+            example:
+              decision: CONFIRMAR
+      responses:
+        '200':
+          description: La solicitud con su nuevo estado, o la respuesta original si la clave ya se había usado.
+          headers:
+            Idempotency-Replayed:
+              description: true si es la respuesta original de una petición anterior con la misma clave.
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitudTurista'
+              example:
+                id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                oferta:
+                  id: b00000000000000000000001
+                  tipo: ACTIVIDAD
+                  nombre: Caminata a Cabo San Juan del Guía
+                  zonaId: a00000000000000000000005
+                fechaInicio: '2026-10-28'
+                horaSalida: '07:00'
+                personas: 2
+                estado: CONFIRMADA
+                condiciones:
+                  precioBase: 300000
+                  politicaCancelacion: Sin reembolso a menos de 24 horas del servicio
+                venceEn: '2026-10-26T19:00:00Z'
+                creadaEn: '2026-10-26T15:00:00Z'
+                actualizadaEn: '2026-10-26T17:00:00Z'
+                historial:
+                  - a: PENDIENTE
+                    en: '2026-10-26T15:00:00Z'
+                    actor: TURISTA
+                  - de: PENDIENTE
+                    a: ATENDIDA
+                    en: '2026-10-26T16:00:00Z'
+                    actor: OPERADOR
+                  - de: ATENDIDA
+                    a: CONFIRMADA
+                    en: '2026-10-26T17:00:00Z'
+                    actor: TURISTA
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/SolicitudNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ConflictoSolicitud'
+        '422':
+          $ref: '#/components/responses/ClaveReutilizada'
+
+  /operador/solicitudes:
+    get:
+      tags: [Solicitudes]
+      operationId: colaOperador
+      summary: La cola del operador, de la más antigua a la más reciente (RF-35, RF-36)
+      description: |
+        Sin `estado`, sus pendientes de la más antigua a la más reciente: su cola (RF-35). `proximaAVencer` resalta
+        las que tienen 6 h o menos para atenderlas (RF-36). Con otro `estado`, su historial de trámites, de la más
+        reciente a la más antigua. Solo las asignadas a ese operador (RF-32).
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/EstadoSolicitud'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Una página de su cola.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaColaOperador'
+              example:
+                contenido:
+                  - id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                    oferta:
+                      id: b00000000000000000000001
+                      tipo: ACTIVIDAD
+                      nombre: Caminata a Cabo San Juan del Guía
+                      zonaId: a00000000000000000000005
+                    fechaInicio: '2026-10-28'
+                    horaSalida: '07:00'
+                    personas: 2
+                    estado: PENDIENTE
+                    venceEn: '2026-10-27T15:00:00Z'
+                    proximaAVencer: false
+                    creadaEn: '2026-10-26T15:00:00Z'
+                pagina: 0
+                tamano: 20
+                totalElementos: 1
+                totalPaginas: 1
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /operador/solicitudes/{solicitudId}:
+    get:
+      tags: [Solicitudes]
+      operationId: detalleSolicitudOperador
+      summary: Una solicitud de su cola, para verificarla con el prestador (RF-37)
+      description: |
+        Trae el WhatsApp del prestador, para contactarlo fuera de la plataforma (RF-71) [SUPUESTO] (DN-16). La asignada a
+        otro operador responde 404.
+      parameters:
+        - $ref: '#/components/parameters/SolicitudId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: La solicitud.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitudOperador'
+              example:
+                id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                oferta:
+                  id: b00000000000000000000001
+                  tipo: ACTIVIDAD
+                  nombre: Caminata a Cabo San Juan del Guía
+                  zonaId: a00000000000000000000005
+                prestadorId: 10000000-0000-0000-0000-000000000001
+                whatsappPrestador: '+573001110101'
+                fechaInicio: '2026-10-28'
+                horaSalida: '07:00'
+                personas: 2
+                nota: Vamos con una niña de 8 años
+                estado: PENDIENTE
+                venceEn: '2026-10-27T15:00:00Z'
+                proximaAVencer: false
+                creadaEn: '2026-10-26T15:00:00Z'
+                actualizadaEn: '2026-10-26T15:00:00Z'
+                historial:
+                  - a: PENDIENTE
+                    en: '2026-10-26T15:00:00Z'
+                    actor: TURISTA
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/SolicitudNoEncontrada'
+
+  /operador/solicitudes/{solicitudId}/atencion:
+    post:
+      tags: [Solicitudes]
+      operationId: atenderSolicitud
+      summary: Marcar la solicitud Atendida, con precio y condiciones, o No disponible (RF-37 a RF-40)
+      description: |
+        - **ATENDIDA:** exige `precioBase` (el total en pesos, sin cargos adicionales, RF-37), `politicaCancelacion`
+          y `aparteAcordado: true` (el prestador aceptó apartar el cupo durante la ventana, RF-38, RF-39). Abre la
+          ventana de confirmación y pago: 3 h, o hasta las 08:00 siguientes si se atiende entre las 19:00 y las 04:59
+          (RF-55). Si esa ventana, con la gracia de 30 min, terminaría después del inicio del servicio, responde 409
+          `SIN_TIEMPO_PARA_CONFIRMAR`: solo puede marcarse No disponible (RF-39).
+        - **NO_DISPONIBLE:** `nota` opcional como motivo, sin el detalle de la negociación (RF-40).
+
+        Pasadas las 24 h no se puede atender (409 `PLAZO_VENCIDO`). Si el vencimiento corrió a la vez, gana uno y el
+        otro ve el estado real: 409 `TRANSICION_INVALIDA` (ADR-05). Una vez atendida, sus datos no cambian.
+      parameters:
+        - $ref: '#/components/parameters/SolicitudId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtencionRequest'
+            examples:
+              atendida:
+                summary: Hay cupo
+                value:
+                  resultado: ATENDIDA
+                  precioBase: 300000
+                  politicaCancelacion: Sin reembolso a menos de 24 horas del servicio
+                  aparteAcordado: true
+                  nota: Incluye el ingreso al parque
+              noDisponible:
+                summary: No hay cupo
+                value:
+                  resultado: NO_DISPONIBLE
+                  nota: Sin cupo esa semana
+      responses:
+        '200':
+          description: La solicitud con su nuevo estado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitudOperador'
+              example:
+                id: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                oferta:
+                  id: b00000000000000000000001
+                  tipo: ACTIVIDAD
+                  nombre: Caminata a Cabo San Juan del Guía
+                  zonaId: a00000000000000000000005
+                prestadorId: 10000000-0000-0000-0000-000000000001
+                whatsappPrestador: '+573001110101'
+                fechaInicio: '2026-10-28'
+                horaSalida: '07:00'
+                personas: 2
+                estado: ATENDIDA
+                condiciones:
+                  precioBase: 300000
+                  politicaCancelacion: Sin reembolso a menos de 24 horas del servicio
+                  nota: Incluye el ingreso al parque
+                venceEn: '2026-10-26T19:00:00Z'
+                proximaAVencer: false
+                creadaEn: '2026-10-26T15:00:00Z'
+                actualizadaEn: '2026-10-26T16:00:00Z'
+                historial:
+                  - a: PENDIENTE
+                    en: '2026-10-26T15:00:00Z'
+                    actor: TURISTA
+                  - de: PENDIENTE
+                    a: ATENDIDA
+                    en: '2026-10-26T16:00:00Z'
+                    actor: OPERADOR
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/SolicitudNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ConflictoSolicitud'
+
+  /operador/avisos:
+    get:
+      tags: [Solicitudes]
+      operationId: avisosOperador
+      summary: Los avisos del operador en la plataforma, del más reciente al más antiguo (RF-34)
+      description: Cada solicitud nueva que llega a su cola deja un aviso NUEVA_SOLICITUD [SUPUESTO] (DN-13).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Una página de sus avisos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaAvisos'
+              example:
+                contenido:
+                  - id: 0b7e3c55-8f0a-4d63-b2a1-7c9d4e5f6a10
+                    tipo: NUEVA_SOLICITUD
+                    solicitudId: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                    datos:
+                      solicitudId: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                      nombreOferta: Caminata a Cabo San Juan del Guía
+                      fechaInicio: '2026-10-28'
+                      horaSalida: '07:00'
+                      personas: '2'
+                      estado: PENDIENTE
+                      venceEn: '2026-10-27T15:00:00Z'
+                    creadoEn: '2026-10-26T15:00:00Z'
+                pagina: 0
+                tamano: 20
+                totalElementos: 1
+                totalPaginas: 1
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
 components:
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Un UUID que la aplicación genera antes del primer intento de la operación y repite en cada reintento (ADR-04).
+        Sin él, 400. La clave vale 24 h [SUPUESTO] (DN-12).
+      schema:
+        type: string
+        format: uuid
+      example: 3d6f9a0e-2b1c-4e5f-8a7b-9c0d1e2f3a4b
+    SolicitudId:
+      name: solicitudId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      required: false
+      description: La página, desde 0.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
     UsuarioId:
       name: X-Usuario-Id
       in: header
@@ -196,7 +738,10 @@ components:
             detail: "La versión 1 de la oferta b00000000000000000000017 ya se decidió: APROBAR"
             codigo: MODERACION_YA_DECIDIDA
     CatalogoNoDisponible:
-      description: El catálogo no respondió a tiempo al verificar; no se decide sin verificar. Se puede reintentar.
+      description: |
+        El catálogo no respondió en 3 s, respondió un error o su circuito está abierto (ADR-04). En la moderación no se
+        decide sin verificar; en una solicitud no se crea nada. Se puede reintentar (con la misma Idempotency-Key, en
+        una solicitud).
       content:
         application/problem+json:
           schema:
@@ -207,6 +752,63 @@ components:
             status: 503
             detail: "El catálogo no está disponible: no respondió a tiempo"
             codigo: CATALOGO_NO_DISPONIBLE
+    SolicitudNoEncontrada:
+      description: La solicitud no existe, es de otro turista o está asignada a otro operador.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: La solicitud 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20 no existe
+            codigo: SOLICITUD_NO_ENCONTRADA
+    OfertaNoEncontrada:
+      description: La oferta no existe o no está visible en el catálogo (retirada, sin versión aprobada o RNT inactivo).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: La oferta b000000000000000000000ff no existe o no está visible en el catálogo
+            codigo: OFERTA_NO_ENCONTRADA
+    ConflictoSolicitud:
+      description: |
+        La solicitud no admite la operación en su estado actual; la aplicación debe volver a consultarla (RF-33):
+        - `TRANSICION_INVALIDA`: por ejemplo, confirmar una ya declinada, o atender una que venció mientras tanto.
+        - `PLAZO_VENCIDO`: el plazo de 24 h o la ventana de confirmación y pago ya terminó.
+        - `SIN_TIEMPO_PARA_CONFIRMAR`: la ventana terminaría después del inicio del servicio; solo queda No disponible.
+        - `SOLICITUD_DUPLICADA`: ya hay una abierta del turista para la misma oferta, fecha y hora (RF-31).
+        - `PRESTADOR_SIN_OPERADOR`: el prestador no tiene un operador asignado [SUPUESTO] (DN-15). Se rechaza y se
+          registra la incidencia (RF-32).
+        - `WHATSAPP_NO_VERIFICADO`: el turista no tiene su WhatsApp verificado (RF-30).
+        - `CONFLICTO_CONCURRENCIA`: otra operación la cambió a la vez y los reintentos no alcanzaron (ADR-05).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: La solicitud está SIN_RESPUESTA y no puede pasar a ATENDIDA
+            codigo: TRANSICION_INVALIDA
+    ClaveReutilizada:
+      description: La Idempotency-Key ya se usó con otra petición [SUPUESTO] (DN-12); no se hizo nada.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Unprocessable Entity
+            status: 422
+            detail: "La clave de idempotencia 3d6f9a0e-2b1c-4e5f-8a7b-9c0d1e2f3a4b ya se usó con otra petición: genera una clave nueva para cada operación"
+            codigo: CLAVE_IDEMPOTENCIA_REUTILIZADA
     NoAutenticado:
       description: Falta la identidad del usuario, o está mal formada.
       content:
@@ -296,6 +898,394 @@ components:
         decididaEn:
           type: string
           format: date-time
+    EnviarSolicitudRequest:
+      type: object
+      required: [ofertaId, fechaInicio, personas]
+      properties:
+        ofertaId:
+          type: string
+        fechaInicio:
+          type: string
+          format: date
+          description: Al menos 2 días calendario después del envío, en la hora de Colombia (RF-30).
+        horaSalida:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Obligatoria en actividades y paquetes, y una de sus horas de salida; no va en los demás tipos.
+        horaReserva:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Obligatoria en restaurantes; no va en los demás tipos.
+        fechaSalida:
+          type: string
+          format: date
+          description: Obligatoria en alojamientos y posterior a la fecha de inicio; no va en los demás tipos.
+        numeroUnidades:
+          type: integer
+          minimum: 1
+          description: Obligatorio en alojamientos; no va en los demás tipos.
+        personas:
+          type: integer
+          minimum: 1
+          description: Hasta la capacidad máxima de la oferta.
+        nota:
+          type: string
+          maxLength: 500
+    RespuestaCondicionesRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [CONFIRMAR, DECLINAR]
+    AtencionRequest:
+      type: object
+      required: [resultado]
+      properties:
+        resultado:
+          type: string
+          enum: [ATENDIDA, NO_DISPONIBLE]
+        precioBase:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Obligatorio para ATENDIDA. El total en pesos colombianos, sin cargos adicionales (RF-37).
+        politicaCancelacion:
+          type: string
+          maxLength: 1000
+          description: Obligatoria para ATENDIDA (RF-39).
+        aparteAcordado:
+          type: boolean
+          description: Debe ser true para ATENDIDA. El prestador aceptó apartar el cupo durante la ventana (RF-38).
+        nota:
+          type: string
+          maxLength: 1000
+          description: Otras condiciones (ATENDIDA) o el motivo (NO_DISPONIBLE, hasta 500); opcional.
+    OfertaSolicitada:
+      type: object
+      description: La oferta como se copió al crear la solicitud (DC-35); no cambia si el prestador la edita.
+      required: [id, tipo, nombre, zonaId]
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoOferta'
+        nombre:
+          type: string
+        zonaId:
+          type: string
+    Condiciones:
+      type: object
+      description: Lo que registró el operador y el turista ve antes de confirmar (RF-42).
+      required: [precioBase, politicaCancelacion]
+      properties:
+        precioBase:
+          type: integer
+          format: int64
+          description: Lo que se cobra, en pesos (RF-46, RF-49).
+        politicaCancelacion:
+          type: string
+        nota:
+          type: string
+        aparteHasta:
+          type: string
+          format: date-time
+          description: |
+            Hasta cuándo el prestador aparta el cupo: el fin de la ventana de confirmación y pago, desde la transición
+            a Atendida (RF-38, RF-55). Queda registrado aunque la solicitud se cierre.
+    Transicion:
+      type: object
+      required: [a, en, actor]
+      properties:
+        de:
+          $ref: '#/components/schemas/EstadoSolicitud'
+        a:
+          $ref: '#/components/schemas/EstadoSolicitud'
+        en:
+          type: string
+          format: date-time
+        actor:
+          type: string
+          enum: [TURISTA, OPERADOR, SISTEMA, PAGOS]
+        motivo:
+          type: string
+    SolicitudResumen:
+      type: object
+      required: [id, oferta, fechaInicio, personas, estado, creadaEn, actualizadaEn]
+      properties:
+        id:
+          type: string
+          format: uuid
+        oferta:
+          $ref: '#/components/schemas/OfertaSolicitada'
+        fechaInicio:
+          type: string
+          format: date
+        horaSalida:
+          type: string
+          description: Solo actividad y paquete.
+        horaReserva:
+          type: string
+          description: Solo restaurante.
+        fechaSalida:
+          type: string
+          format: date
+          description: Solo alojamiento.
+        numeroUnidades:
+          type: integer
+          description: Solo alojamiento.
+        personas:
+          type: integer
+        estado:
+          $ref: '#/components/schemas/EstadoSolicitud'
+        venceEn:
+          type: string
+          format: date-time
+          description: El plazo vigente; se omite si está cerrada.
+        creadaEn:
+          type: string
+          format: date-time
+        actualizadaEn:
+          type: string
+          format: date-time
+    SolicitudTurista:
+      type: object
+      description: Una solicitud con su historial y su plazo vigente (RF-33).
+      required: [id, oferta, fechaInicio, personas, estado, creadaEn, actualizadaEn, historial]
+      properties:
+        id:
+          type: string
+          format: uuid
+        oferta:
+          $ref: '#/components/schemas/OfertaSolicitada'
+        fechaInicio:
+          type: string
+          format: date
+        horaSalida:
+          type: string
+          description: Solo actividad y paquete.
+        horaReserva:
+          type: string
+          description: Solo restaurante.
+        fechaSalida:
+          type: string
+          format: date
+          description: Solo alojamiento.
+        numeroUnidades:
+          type: integer
+          description: Solo alojamiento.
+        personas:
+          type: integer
+        nota:
+          type: string
+        estado:
+          $ref: '#/components/schemas/EstadoSolicitud'
+        condiciones:
+          $ref: '#/components/schemas/Condiciones'
+        venceEn:
+          type: string
+          format: date-time
+          description: |
+            El plazo vigente: el del operador (24 h) mientras está Pendiente; la ventana de confirmación y pago desde que
+            está Atendida (RF-55). Se omite si está cerrada.
+        creadaEn:
+          type: string
+          format: date-time
+        actualizadaEn:
+          type: string
+          format: date-time
+        historial:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transicion'
+    SolicitudCola:
+      type: object
+      required: [id, oferta, fechaInicio, personas, estado, proximaAVencer, creadaEn]
+      properties:
+        id:
+          type: string
+          format: uuid
+        oferta:
+          $ref: '#/components/schemas/OfertaSolicitada'
+        fechaInicio:
+          type: string
+          format: date
+        horaSalida:
+          type: string
+          description: Solo actividad y paquete.
+        horaReserva:
+          type: string
+          description: Solo restaurante.
+        fechaSalida:
+          type: string
+          format: date
+          description: Solo alojamiento.
+        numeroUnidades:
+          type: integer
+          description: Solo alojamiento.
+        personas:
+          type: integer
+        estado:
+          $ref: '#/components/schemas/EstadoSolicitud'
+        venceEn:
+          type: string
+          format: date-time
+        proximaAVencer:
+          type: boolean
+          description: Pendiente con 6 h o menos para atenderla (RF-36).
+        creadaEn:
+          type: string
+          format: date-time
+    SolicitudOperador:
+      type: object
+      required: [id, oferta, prestadorId, fechaInicio, personas, estado, proximaAVencer, creadaEn, actualizadaEn,
+                 historial]
+      properties:
+        id:
+          type: string
+          format: uuid
+        oferta:
+          $ref: '#/components/schemas/OfertaSolicitada'
+        prestadorId:
+          type: string
+          format: uuid
+        whatsappPrestador:
+          type: string
+          description: Para contactarlo fuera de la plataforma (RF-71); se omite si no tiene uno registrado.
+        fechaInicio:
+          type: string
+          format: date
+        horaSalida:
+          type: string
+          description: Solo actividad y paquete.
+        horaReserva:
+          type: string
+          description: Solo restaurante.
+        fechaSalida:
+          type: string
+          format: date
+          description: Solo alojamiento.
+        numeroUnidades:
+          type: integer
+          description: Solo alojamiento.
+        personas:
+          type: integer
+        nota:
+          type: string
+        estado:
+          $ref: '#/components/schemas/EstadoSolicitud'
+        condiciones:
+          $ref: '#/components/schemas/Condiciones'
+        venceEn:
+          type: string
+          format: date-time
+        proximaAVencer:
+          type: boolean
+        creadaEn:
+          type: string
+          format: date-time
+        actualizadaEn:
+          type: string
+          format: date-time
+        historial:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transicion'
+    Aviso:
+      type: object
+      required: [id, tipo, solicitudId, datos, creadoEn]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tipo:
+          $ref: '#/components/schemas/TipoNotificacion'
+        solicitudId:
+          type: string
+          format: uuid
+        datos:
+          type: object
+          additionalProperties:
+            type: string
+          description: Los datos de la solicitud que lo produjo, como texto.
+        creadoEn:
+          type: string
+          format: date-time
+    PaginaSolicitudesTurista:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/SolicitudResumen'
+        pagina:
+          type: integer
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+    PaginaColaOperador:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/SolicitudCola'
+        pagina:
+          type: integer
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+    PaginaAvisos:
+      type: object
+      required: [contenido, pagina, tamano, totalElementos, totalPaginas]
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/Aviso'
+        pagina:
+          type: integer
+        tamano:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+    EstadoSolicitud:
+      type: string
+      description: |
+        Los nueve estados del ciclo de vida (SRS 3.1.3, DN-09). Terminales: NO_DISPONIBLE, SIN_RESPUESTA, DECLINADA,
+        VENCIDA y PAGADA.
+      enum: [PENDIENTE, ATENDIDA, NO_DISPONIBLE, SIN_RESPUESTA, CONFIRMADA, DECLINADA, PAGO_FALLIDO, PAGADA, VENCIDA]
+    TipoOferta:
+      type: string
+      enum: [ACTIVIDAD, PAQUETE, ALOJAMIENTO, RESTAURANTE]
+    TipoNotificacion:
+      type: string
+      description: Los mensajes del ciclo de vida (DN-13); el operador solo recibe NUEVA_SOLICITUD.
+      enum:
+        - SOLICITUD_RECIBIDA
+        - NUEVA_SOLICITUD
+        - SOLICITUD_ATENDIDA
+        - SOLICITUD_NO_DISPONIBLE
+        - SOLICITUD_SIN_RESPUESTA
+        - SOLICITUD_CONFIRMADA
+        - SOLICITUD_DECLINADA
+        - SOLICITUD_VENCIDA
+        - CUPO_LIBERADO
+        - PAGO_FALLIDO
+        - SOLICITUD_PAGADA
     Rol:
       type: string
       description: Los roles del SRS (DN-04). El catálogo solo distingue los tres primeros.
@@ -330,3 +1320,12 @@ components:
             - VERSION_NO_VIGENTE
             - MODERACION_YA_DECIDIDA
             - CATALOGO_NO_DISPONIBLE
+            - OFERTA_NO_ENCONTRADA
+            - SOLICITUD_NO_ENCONTRADA
+            - TRANSICION_INVALIDA
+            - PLAZO_VENCIDO
+            - SIN_TIEMPO_PARA_CONFIRMAR
+            - SOLICITUD_DUPLICADA
+            - PRESTADOR_SIN_OPERADOR
+            - WHATSAPP_NO_VERIFICADO
+            - CLAVE_IDEMPOTENCIA_REUTILIZADA

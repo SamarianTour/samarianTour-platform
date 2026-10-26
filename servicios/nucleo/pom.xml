@@ -40,6 +40,11 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
+            <!-- Corte de circuito de la consulta al catálogo al crear una solicitud (ADR-04, QAS-03, DN-09) -->
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+        </dependency>
+        <dependency>
             <!-- Solo se exponen /actuator/health, para el healthcheck de Docker Compose, y /actuator/prometheus -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
