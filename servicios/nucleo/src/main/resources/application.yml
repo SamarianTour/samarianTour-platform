@@ -46,3 +46,30 @@ nucleo:
     publicacion:
       # Cada 15 s envía al catálogo los avisos pendientes (DN-06). Con "-" no corre.
       cron: "*/15 * * * * *"
+  solicitudes:
+    vencimiento:
+      # Cada minuto aplica los vencimientos de 24 h y de la ventana de pago [SUPUESTO] (DN-14). Con "-" no corre.
+      cron: "0 * * * * *"
+    notificaciones:
+      # Cada 10 s envía las notificaciones de WhatsApp pendientes [SUPUESTO] (DN-13). Con "-" no corre.
+      cron: "*/10 * * * * *"
+    idempotencia:
+      # Cada hora borra las claves de idempotencia vencidas (DN-12). Con "-" no corre.
+      cron: "0 0 * * * *"
+    # La pantalla de confirmación del frontend que lleva la notificación de Atendida (RF-45) [SUPUESTO] (DN-13).
+    enlace-confirmacion: http://localhost:8080/turista/solicitudes/{id}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      # Corte de circuito de la consulta al catálogo al crear una solicitud (ADR-04, QAS-03, DN-09): tras 5 fallas en
+      # las últimas 10 consultas, 30 s sin llamarlo; luego dos consultas de prueba deciden si se cierra [SUPUESTO].
+      # Un 404 no cuenta como falla.
+      catalogo:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
