@@ -121,6 +121,40 @@ class ArquitecturaTest {
                 .check(clases);
     }
 
+    @Test
+    @DisplayName("10. el paquete api de un módulo es Java puro y no expone su dominio, su aplicación ni su "
+            + "infraestructura (DN-17)")
+    void apiEsJavaPuro() {
+        noClasses().that().resideInAPackage(BASE + ".*.api..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..dominio..", "..aplicacion..", "..infraestructura..", "org.springframework..", "jakarta..",
+                        "com.fasterxml.jackson..", "org.hibernate..", "org.postgresql..")
+                .allowEmptyShould(true)
+                .check(clases);
+    }
+
+    @Test
+    @DisplayName("11. el api de un módulo lo implementa su infraestructura/entrada/modulos, como un controlador")
+    void apiImplementadaEnLaEntrada() {
+        classes().that(implementanElApiDeUnModulo())
+                .should().resideInAPackage("..infraestructura.entrada.modulos..")
+                .allowEmptyShould(true)
+                .check(clases);
+    }
+
+    private static DescribedPredicate<JavaClass> implementanElApiDeUnModulo() {
+        return DescribedPredicate.describe("implementan el api de un módulo", clase -> !clase.isInterface()
+                && clase.getAllRawInterfaces().stream().anyMatch(interfaz -> esDeUnApi(interfaz.getPackageName())));
+    }
+
+    private static boolean esDeUnApi(String paquete) {
+        if (!paquete.startsWith(BASE + ".")) {
+            return false;
+        }
+        String[] partes = paquete.substring(BASE.length() + 1).split("\\.");
+        return partes.length >= 2 && partes[1].equals("api");
+    }
+
     /** Módulo al que pertenece la clase, o null si es compartido, la clase Application o ajena al servicio. */
     private static String moduloDe(JavaClass clase) {
         String paquete = clase.getBaseComponentType().getPackageName();
