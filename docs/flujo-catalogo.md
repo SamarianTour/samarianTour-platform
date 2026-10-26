@@ -35,7 +35,7 @@ Son **tres servicios** independientes, cada uno en su propio contenedor Docker, 
 
 | Servicio | De qué se encarga | Base de datos | Estado |
 |---|---|---|---|
-| **Núcleo** | Cuentas, login (emite el token JWT), datos de los prestadores y su RNT, solicitudes, pagos y la decisión del administrador al moderar | PostgreSQL | Esqueleto 🔨 |
+| **Núcleo** | Cuentas, login (emite el token JWT), datos de los prestadores y su RNT, solicitudes, pagos y la decisión del administrador al moderar | PostgreSQL | Moderación y solicitudes de disponibilidad; lo demás 🔨 |
 | **Catálogo** | Zonas, ofertas, perfiles públicos y opiniones | MongoDB | En construcción |
 | **Recomendación** | Recomendaciones explicadas, por reglas o con IA; alertas del destino (IDEAM) y alternativas en zonas con menos visitantes | Ninguna | Prototipo |
 
@@ -302,6 +302,27 @@ GET /api/recomendacion/ofertas/{caminata}/alternativas?idioma=es
 
 Las alertas no se consultan al IDEAM en la petición de Pedro: `AlertasScheduler` lee la fuente al arrancar y cada 8 horas (y cada 2 minutos mientras no tenga ninguna lectura) y deja la lectura en caché, con los textos en español e inglés. Con la fuente `ideam` se consulta la capa de alertas hidrológicas vigentes con las coordenadas de cada zona; con `simulada`, un archivo de la demo cuyas fuentes dicen "(simulado)". Las alternativas salen de una regla, sin IA, con una explicación como "Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido." (DR-14 a DR-20).
 
+### Paso 14: Pedro pide disponibilidad y el operador la atiende
+
+Antes de pagar (paso 8), Pedro pide disponibilidad al **núcleo**, que es dueño de las solicitudes (DN-09 a DN-17). El catálogo solo responde la consulta de la oferta.
+
+```
+POST /api/nucleo/turista/solicitudes          Idempotency-Key: <uuid>
+Cuerpo: { ofertaId, fechaInicio (≥ 2 días), personas, nota } y los campos de su tipo:
+        horaSalida (actividad y paquete), fechaSalida y numeroUnidades (alojamiento) u horaReserva (restaurante)
+   ▼
+EnviarSolicitudService, en una transacción con la clave de idempotencia
+   1. WhatsApp verificado del turista              ContactoPort (tabla de la demo)
+   2. La oferta visible                             GET /api/catalogo/internal/ofertas/{id}, corte de circuito de 3 s
+   3. El operador del prestador (RF-32)             PrestadoresPort (tabla de la demo)
+   4. Fecha, campos, personas y no duplicado        SolicitudDisponibilidad, ReglaNoDuplicado e índice único
+   5. Pendiente, 24 h para el operador              más su aviso al operador y la notificación a Pedro
+   ▼
+201 { id, estado: "PENDIENTE", venceEn, historial }   (con la misma clave, la misma respuesta)
+```
+
+El operador ve su cola (`GET /api/nucleo/operador/solicitudes`), verifica con el prestador fuera de la plataforma y la marca **Atendida** con el precio base, la política de cancelación y el aparte acordado, o **No disponible**. Desde Atendida corre la ventana de 3 h, o hasta las 08:00 si fue de noche, para que Pedro **confirme** o **decline** (`POST /api/nucleo/turista/solicitudes/{id}/respuesta`) y pague. Una tarea programada vence las que no se atendieron en 24 h (Sin respuesta) y las que no se pagaron a tiempo (Vencida), y cada cambio deja su notificación por WhatsApp, simulada en el log por ahora. El pago, con su webhook, llega en la rama de pagos: el núcleo ya tiene la API interna que usará (DN-17).
+
 ## 6. Dónde está cada cosa
 
 Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalogo/`
@@ -332,7 +353,7 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Simulación del token | `compartido/seguridad/` |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |
 
-La recomendación está en `servicios/recomendacion/` (ver su [README](../servicios/recomendacion/README.md)).
+La recomendación está en `servicios/recomendacion/` (ver su [README](../servicios/recomendacion/README.md)), y las solicitudes, en `servicios/nucleo/` (ver su [README](../servicios/nucleo/README.md)).
 
 Fuera del código: `infra/docker-compose.yml`, `infra/nginx/nginx.conf`, `infra/mongo/init/` (vacío: los datos de demostración los carga `CargaDemoMongo` al arrancar), `.github/workflows/ci.yml`.
 

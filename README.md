@@ -679,7 +679,112 @@ curl -s "$API/ofertas/b000000000000000000000ff/alternativas"
 
 Las alternativas también dejan su línea en el registro de exposición, con `"origen":"ALTERNATIVAS"` (las recomendaciones llevan `"origen":"RECOMENDACION"`), para que la métrica de sesgo las separe (DR-20).
 
-### 12. Rutas que no se exponen
+### 12. Solicitudes de disponibilidad
+
+El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de `application-demo.yml` del núcleo: la turista `90000000-...-001` tiene su WhatsApp verificado, la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-15). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
+
+```bash
+NUCLEO=http://localhost:8080/api/nucleo
+TURISTA=(-H "X-Usuario-Id: 90000000-0000-0000-0000-000000000001" -H "X-Rol: TURISTA")
+OPERADOR=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000001" -H "X-Rol: OPERADOR_DISPONIBILIDAD")
+FECHA=$(date -d "+3 days" +%F)        # al menos 2 días calendario después del envío (RF-30)
+# En la aplicación, cada operación genera su UUID antes del primer intento; aquí van fijos para repetirlos
+CLAVE=11111111-aaaa-4bbb-8ccc-000000000001
+
+# El turista envía la solicitud con su Idempotency-Key (ADR-04): queda Pendiente, con 24 h para el operador
+curl -s -i -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: $CLAVE" \
+  -H "Content-Type: application/json" \
+  -d "{\"ofertaId\":\"b00000000000000000000001\",\"fechaInicio\":\"$FECHA\",\"horaSalida\":\"07:00\",\"personas\":2,\"nota\":\"Vamos con una nina de 8 anos\"}"
+# HTTP/1.1 201
+# {"id":"49df6cc9-...","oferta":{"id":"b00000000000000000000001","tipo":"ACTIVIDAD",
+#   "nombre":"Caminata a Cabo San Juan del Guía",...},"estado":"PENDIENTE","venceEn":"...","historial":[...]}
+ID=49df6cc9-...                       # el id de la respuesta
+
+# Repetir con la misma clave (por ejemplo, tras un corte de señal) no crea otra: devuelve la respuesta original
+curl -s -i -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: $CLAVE" \
+  -H "Content-Type: application/json" \
+  -d "{\"ofertaId\":\"b00000000000000000000001\",\"fechaInicio\":\"$FECHA\",\"horaSalida\":\"07:00\",\"personas\":2,\"nota\":\"Vamos con una nina de 8 anos\"}" \
+  | grep -E "^HTTP|Idempotency-Replayed"
+# HTTP/1.1 201
+# Idempotency-Replayed: true
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c "SELECT count(*) FROM solicitudes"
+# 1
+
+# La cola del operador, de la más antigua a la más reciente, con proximaAVencer (RF-35, RF-36), y su aviso (RF-34)
+curl -s "$NUCLEO/operador/solicitudes" "${OPERADOR[@]}"
+curl -s "$NUCLEO/operador/avisos" "${OPERADOR[@]}"
+# {"contenido":[{"tipo":"NUEVA_SOLICITUD","solicitudId":"49df6cc9-...",...}],...}
+
+# El detalle trae el WhatsApp del prestador para verificar con él; el operador 2 no la ve (404)
+curl -s "$NUCLEO/operador/solicitudes/$ID" "${OPERADOR[@]}"
+
+# El operador la atiende: precio base, política de cancelación y el aparte acordado (RF-37 a RF-39)
+curl -s -X POST "$NUCLEO/operador/solicitudes/$ID/atencion" "${OPERADOR[@]}" -H "Content-Type: application/json" \
+  -d '{"resultado":"ATENDIDA","precioBase":300000,"politicaCancelacion":"Sin reembolso a menos de 24 horas del servicio","aparteAcordado":true,"nota":"Incluye el ingreso al parque"}'
+# {"estado":"ATENDIDA","condiciones":{"precioBase":300000,...,"aparteHasta":"..."},"venceEn":"..."}
+# venceEn es el fin de la ventana para confirmar y pagar: 3 h, o las 08:00 siguientes si se atendió de noche (RF-55);
+# aparteHasta, hasta cuándo el prestador aparta el cupo, que es lo mismo (RF-38)
+
+# El turista ve el precio y las condiciones (RF-42) y confirma con otra clave (RF-43)
+curl -s "$NUCLEO/turista/solicitudes/$ID" "${TURISTA[@]}"
+curl -s -X POST "$NUCLEO/turista/solicitudes/$ID/respuesta" "${TURISTA[@]}" -H "Idempotency-Key: 11111111-aaaa-4bbb-8ccc-000000000002" \
+  -H "Content-Type: application/json" -d '{"decision":"CONFIRMAR"}'
+# {"estado":"CONFIRMADA",...}
+
+# Otra solicitud, que el operador marca no disponible
+CLAVE2=11111111-aaaa-4bbb-8ccc-000000000003
+curl -s -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: $CLAVE2" -H "Content-Type: application/json" \
+  -d "{\"ofertaId\":\"b00000000000000000000002\",\"fechaInicio\":\"$FECHA\",\"horaSalida\":\"08:00\",\"personas\":3}"
+ID2=...                               # el id de la respuesta
+curl -s -X POST "$NUCLEO/operador/solicitudes/$ID2/atencion" "${OPERADOR[@]}" -H "Content-Type: application/json" \
+  -d '{"resultado":"NO_DISPONIBLE","nota":"Sin cupo esa semana"}'
+# {"estado":"NO_DISPONIBLE",...}
+
+# Un alojamiento y un restaurante, con los campos de su tipo (RF-30); los atiende el operador 2
+OPERADOR2=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000002" -H "X-Rol: OPERADOR_DISPONIBILIDAD")
+SALIDA=$(date -d "+5 days" +%F)       # posterior a la fecha de inicio
+curl -s -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: 11111111-aaaa-4bbb-8ccc-000000000007" \
+  -H "Content-Type: application/json" \
+  -d "{\"ofertaId\":\"b0000000000000000000000f\",\"fechaInicio\":\"$FECHA\",\"fechaSalida\":\"$SALIDA\",\"numeroUnidades\":1,\"personas\":3}"
+# {"oferta":{"tipo":"ALOJAMIENTO","nombre":"Cabaña frente al mar en Buritaca",...},"fechaSalida":"...","numeroUnidades":1,
+#  "estado":"PENDIENTE",...}
+curl -s -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: 11111111-aaaa-4bbb-8ccc-000000000008" \
+  -H "Content-Type: application/json" \
+  -d "{\"ofertaId\":\"b00000000000000000000013\",\"fechaInicio\":\"$FECHA\",\"horaReserva\":\"19:30\",\"personas\":4}"
+# {"oferta":{"tipo":"RESTAURANTE","nombre":"Cocina del Caribe en el Centro Histórico",...},"horaReserva":"19:30",
+#  "estado":"PENDIENTE",...}
+curl -s "$NUCLEO/operador/solicitudes" "${OPERADOR2[@]}"
+# {"contenido":[{...,"fechaSalida":"...","numeroUnidades":1,...},{...,"horaReserva":"19:30",...}],"totalElementos":2,...}
+
+# Las notificaciones salen por WhatsApp simulado, con el número enmascarado (DN-13)
+docker compose -f infra/docker-compose.yml logs nucleo | grep "WhatsApp simulado"
+# [WhatsApp simulado] para=******0001 tipo=SOLICITUD_RECIBIDA solicitud=49df6cc9-...
+# [WhatsApp simulado] para=******0001 tipo=SOLICITUD_ATENDIDA solicitud=49df6cc9-... enlace=http://localhost:8080/turista/solicitudes/49df6cc9-...
+```
+
+Para mostrar un vencimiento sin esperar 3 h, se adelanta el plazo de la solicitud confirmada **solo en la base de la demo**; en el código las ventanas no se tocan (QAS-05). La tarea de vencimientos corre cada minuto:
+
+```bash
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "UPDATE solicitudes SET vence_en = now() - interval '1 minute', limite_vencimiento = now() - interval '1 minute' WHERE id = '$ID'"
+# En menos de un minuto queda Vencida, y el turista y el prestador reciben el aviso del cupo liberado (RF-55, RF-56)
+curl -s "$NUCLEO/turista/solicitudes/$ID" "${TURISTA[@]}"
+# {"estado":"VENCIDA",...,"historial":[...,{"de":"CONFIRMADA","a":"VENCIDA","actor":"SISTEMA",
+#   "motivo":"Terminó la ventana de confirmación y pago"}]}
+docker compose -f infra/docker-compose.yml logs nucleo | grep -E "SOLICITUD_VENCIDA|CUPO_LIBERADO"
+```
+
+Con una pendiente, el mismo `UPDATE` la deja Sin respuesta (RF-41). Otros casos que se pueden mostrar:
+
+- **Duplicada:** otra solicitud igual con otra clave responde 409 `SOLICITUD_DUPLICADA` (RF-31): misma oferta, fecha de inicio y hora (la de salida o la de la reserva); en el alojamiento basta la misma fecha de inicio.
+- **Campo de otro tipo o que falta:** `horaSalida` en el restaurante, o el alojamiento sin `fechaSalida`, responde 400 `DATO_INVALIDO` (RF-30).
+- **Clave reutilizada:** la misma clave con otro cuerpo responde 422 `CLAVE_IDEMPOTENCIA_REUTILIZADA`.
+- **Sin la clave:** 400 `DATO_INVALIDO` con el detalle `Idempotency-Key: es obligatorio...`.
+- **Oferta no visible o catálogo caído:** una oferta que no existe responde 404 `OFERTA_NO_ENCONTRADA`. Con el catálogo detenido (`docker compose -f infra/docker-compose.yml stop catalogo`), 503 `CATALOGO_NO_DISPONIBLE` sin crear nada; al volver, el reintento con la misma clave la crea.
+- **Fecha muy cercana:** mañana responde 400 (`fechaInicio: debe ser desde el ...`).
+- **Solicitud ajena:** la de otro turista o la de otro operador responde 404.
+
+### 13. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404
@@ -690,6 +795,7 @@ curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator"                     # 
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/prometheus"          # 404: las métricas solo dentro de Docker
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/api/recomendacion/actuator/health  # 404
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/api/nucleo/internal/x            # 404
 ```
 
 Otros casos que se pueden mostrar:
