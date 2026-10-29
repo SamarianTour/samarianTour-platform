@@ -104,6 +104,12 @@ services:
       NUCLEO_CATALOGO_URL: http://catalogo:8080/api/catalogo
       # demo: headers que sustituyen al token mientras no exista el JWT (DN-05). Solo para la demostración.
       SPRING_PROFILES_ACTIVE: demo
+      # Pagos (DN-18): la pasarela simulada por defecto; wompi con las llaves del sandbox en infra/.env, que no se
+      # versiona (ver infra/.env.example). Las llaves nunca se escriben en este archivo.
+      NUCLEO_PAGOS_PASARELA: ${PAGOS_PASARELA:-simulada}
+      WOMPI_LLAVE_PUBLICA: ${WOMPI_LLAVE_PUBLICA:-}
+      WOMPI_SECRETO_INTEGRIDAD: ${WOMPI_SECRETO_INTEGRIDAD:-}
+      WOMPI_SECRETO_EVENTOS: ${WOMPI_SECRETO_EVENTOS:-}
     depends_on:
       postgres:
         condition: service_healthy
