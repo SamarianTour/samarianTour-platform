@@ -117,6 +117,9 @@ services:
       WOMPI_LLAVE_PUBLICA: ${WOMPI_LLAVE_PUBLICA:-}
       WOMPI_SECRETO_INTEGRIDAD: ${WOMPI_SECRETO_INTEGRIDAD:-}
       WOMPI_SECRETO_EVENTOS: ${WOMPI_SECRETO_EVENTOS:-}
+      # RNT (DN-33): la tabla simulada de la demo por defecto; soda consulta el RNT real en datos.gov.co.
+      NUCLEO_RNT_FUENTE: ${RNT_FUENTE:-simulada}
+      NUCLEO_RNT_SODA_TOKEN_APLICACION: ${RNT_SODA_TOKEN_APLICACION:-}
     depends_on:
       postgres:
         condition: service_healthy
