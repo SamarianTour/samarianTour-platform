@@ -142,6 +142,17 @@ class ArquitecturaTest {
                 .check(clases);
     }
 
+    @Test
+    @DisplayName("12. pagos usa las solicitudes solo por su api y no conoce la administración, que lo usa a él (DN-17, "
+            + "DN-23)")
+    void pagosSoloPorLaApiDeSolicitudes() {
+        noClasses().that().resideInAPackage(BASE + ".pagos..")
+                .should().dependOnClassesThat().resideInAnyPackage(BASE + ".administracion..",
+                        BASE + ".solicitudes.dominio..", BASE + ".solicitudes.aplicacion..",
+                        BASE + ".solicitudes.infraestructura..")
+                .check(clases);
+    }
+
     private static DescribedPredicate<JavaClass> implementanElApiDeUnModulo() {
         return DescribedPredicate.describe("implementan el api de un módulo", clase -> !clase.isInterface()
                 && clase.getAllRawInterfaces().stream().anyMatch(interfaz -> esDeUnApi(interfaz.getPackageName())));
