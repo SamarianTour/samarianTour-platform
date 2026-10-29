@@ -252,6 +252,20 @@ public final class SolicitudDisponibilidad {
     }
 
     /**
+     * El intento de pago quedó abandonado, sin resultado de la pasarela (DN-20): deja de aplazar el vencimiento, que se
+     * aplica en la siguiente vuelta si la ventana ya terminó. No cuenta como rechazo (RF-58).
+     */
+    public ResultadoEventoPago liberarIntentoEnCurso(Instant ahora) {
+        if (!intentoPagoEnCurso || estado.esTerminal()) {
+            return ResultadoEventoPago.SIN_CAMBIOS;
+        }
+        intentoPagoEnCurso = false;
+        actualizadaEn = micros(ahora);
+        cambios++;
+        return ResultadoEventoPago.APLICADO;
+    }
+
+    /**
      * La pasarela aprobó el pago (RF-50). Sobre una solicitud ya Pagada no hace nada. Sobre una cerrada, o cuya ventana
      * ya terminó, no la revive: la cierra como Vencida si hacía falta y responde pago tardío.
      */

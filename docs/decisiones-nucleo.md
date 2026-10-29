@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08) y las solicitudes de disponibilidad (DN-09 a DN-17); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17) y los pagos (DN-18 a DN-27); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -26,13 +26,23 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-15 | Prestadores y contactos provisionales de la demo | 🆕 [SUPUESTO] |
 | DN-16 | Cola del operador | ✅ RF-32, RF-34 a RF-36 |
 | DN-17 | API de las solicitudes para pagos | ✅ documento de diseño, RF-50, RF-55, RF-58 |
+| DN-18 | Pasarela elegida por configuración: la simulada de la demo o Wompi sandbox | ✅ QAS-06, RF-46 a RF-48 · 🆕 [SUPUESTO] página simulada |
+| DN-19 | Claves de idempotencia propias de pagos | ✅ ADR-04, DN-12 · 🆕 duplicadas, no extraídas |
+| DN-20 | Intentos de pago: tres con resultado, y el abandonado | ✅ RF-46, RF-49, RF-55, RF-58 · 🆕 [SUPUESTO] abandonado a los 30 min |
+| DN-21 | Webhook con recepción síncrona y procesamiento asíncrono | ✅ RT-07, ADR-04, ADR-05, RF-50 a RF-52 · 🆕 [SUPUESTO] clave de duplicados |
+| DN-22 | Pagos tardíos para el reembolso manual | ✅ RF-50 · 🆕 [SUPUESTO] segunda transacción aprobada |
+| DN-23 | Comisión con historial y costo transaccional configurable | ✅ RF-53, RF-82, RF-83 · 🆕 [SUPUESTO] costo y redondeo |
+| DN-24 | Dispersión al prestador con tres reintentos; con Wompi, delegada a la simulada | ✅ RF-53, RF-54, RF-74, RF-75 · 🆕 [SUPUESTO] esperas |
+| DN-25 | Persistencia de pagos (V7) | ✅ DN-02, ADR-05 |
+| DN-26 | Cuentas de cobro y contactos provisionales de la demo | 🆕 [SUPUESTO] |
+| DN-27 | Aviso HABILITACION_OPINION desde solicitudes | ✅ DC-41, DN-06, DN-17 |
 
 ## Persistencia
 
 **DN-01. El esquema lo crea Flyway.** Las migraciones están en `servicios/nucleo/src/main/resources/db/migration` y se aplican al arrancar. Hibernate solo valida que las entidades coincidan con el esquema (`ddl-auto: validate`): nunca crea ni cambia tablas.
 - **Nombres:** `V<n>__<descripcion_en_minusculas>.sql`, con el número siguiente al último en `develop`. Una migración ya fusionada no se edita: un cambio va en una migración nueva.
 - **Varias réplicas:** las dos réplicas pueden arrancar a la vez. Flyway serializa las migraciones con un candado de PostgreSQL, así que cada una se aplica una sola vez.
-- **V1** crea la bandeja de salida (DN-06); **V2**, el historial de moderación (DN-08), **V3**, las solicitudes con su historial, las claves de idempotencia y las notificaciones (DN-11 a DN-13); **V4**, los campos de cada tipo de oferta y el índice de no duplicado con la hora de la reserva (DN-09, DN-11); **V5**, el nombre `SOLICITUD_PAGADA` de las notificaciones ya guardadas (DN-13), y **V6**, el aparte del cupo (DN-09).
+- **V1** crea la bandeja de salida (DN-06); **V2**, el historial de moderación (DN-08), **V3**, las solicitudes con su historial, las claves de idempotencia y las notificaciones (DN-11 a DN-13); **V4**, los campos de cada tipo de oferta y el índice de no duplicado con la hora de la reserva (DN-09, DN-11); **V5**, el nombre `SOLICITUD_PAGADA` de las notificaciones ya guardadas (DN-13); **V6**, el aparte del cupo (DN-09), y **V7**, los pagos (DN-25).
 
 **DN-02. Spring Data JPA, con el dominio separado.** Las entidades JPA y los repositorios viven en `infraestructura/salida/persistencia` de cada módulo (regla 8 de `ArquitecturaTest`), y el adaptador convierte entre la entidad y el modelo del dominio, que no conoce JPA (regla 1). Es el mismo esquema que el catálogo con sus documentos de MongoDB. `open-in-view` está apagado: cada caso de uso carga lo que necesita.
 
@@ -187,18 +197,154 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 - **El detalle** trae el WhatsApp del prestador [SUPUESTO], porque el operador lo contacta fuera de la plataforma (RF-71). El turista no lo ve.
 - **Los avisos** de la plataforma (RF-34) están en `GET /operador/avisos` (DN-13).
 
-**DN-17. API de las solicitudes para pagos** (documento de diseño: "PagoService invoca a SolicitudService en la misma transacción"). `solicitudes.api.SolicitudesPagosApi`, como `bandeja.api`, implementada aquí y probada (`SolicitudesPagosApiIT`); la usará la rama de pagos.
-- **`consultarParaCobro(solicitudId, turistaId)`:** estado, precio base, fin de la ventana, prestador y oferta, solo si el turista es el dueño y está Confirmada o con el pago fallido; si no, vacío.
-- **Eventos:** `marcarIntentoEnCurso`, `registrarPagoAprobado` y `registrarPagoRechazado` devuelven `APLICADO`, `SIN_CAMBIOS` (el evento ya se había aplicado) o `PAGO_TARDIO` (un aprobado sobre una solicitud ya vencida, que no se revive: pagos lo registra y avisa al administrador, RF-50).
+**DN-17. API de las solicitudes para pagos** (documento de diseño: "PagoService invoca a SolicitudService en la misma transacción"). `solicitudes.api.SolicitudesPagosApi`, como `bandeja.api`, implementada aquí y probada (`SolicitudesPagosApiIT`); la usa pagos (DN-21).
+- **`consultarParaCobro(solicitudId, turistaId)`:** estado, precio base, fin de la ventana, prestador y oferta, solo si el turista es el dueño; si no, vacío. Trae la solicitud en cualquier estado, para que pagos responda 409 `SOLICITUD_NO_COBRABLE` si no está Confirmada ni con el pago fallido (DN-20), y el precio base queda vacío si no se atendió.
+- **Eventos:** `marcarIntentoEnCurso`, `liberarIntentoEnCurso` (el intento quedó abandonado, DN-20), `registrarPagoAprobado` y `registrarPagoRechazado` devuelven `APLICADO`, `SIN_CAMBIOS` (el evento ya se había aplicado) o `PAGO_TARDIO` (un aprobado sobre una solicitud ya vencida, que no se revive: pagos lo registra y avisa al administrador, RF-50).
 - **Sin transacción propia:** los eventos exigen la de pagos (`MANDATORY`), para que el pago y la solicitud se confirmen juntos, y no reintentan: ante `ConflictoConcurrenciaException` reintenta pagos con su transacción completa.
 - **Errores:** si la solicitud no existe o su estado no admite el evento, lanzan `EventoPagoNoAplicableException` con el código (`SOLICITUD_NO_ENCONTRADA`, `TRANSICION_INVALIDA`, `PLAZO_VENCIDO`).
 - **El api es Java puro:** tiene sus propios tipos (`SolicitudParaCobro`, `ResultadoPago`), y el adaptador de `infraestructura/entrada/modulos` traduce los del dominio, así pagos no depende del dominio de solicitudes. Lo comprueban dos reglas nuevas de `ArquitecturaTest`: la 10 (el `api` no depende de dominio, aplicación, infraestructura ni frameworks) y la 11 (solo `infraestructura/entrada/modulos` lo implementa).
-- **Pendiente para la rama de pagos:** el aviso `HABILITACION_OPINION` al catálogo cuando una solicitud queda Pagada (DC-41) y la notificación al administrador del pago tardío.
+- **Hechos en la rama de pagos:** el aviso `HABILITACION_OPINION` al catálogo cuando una solicitud queda Pagada (DC-41, DN-27) y la notificación al administrador del pago tardío (DN-22).
+
+## Pagos
+
+**DN-18. Pasarela elegida por configuración** (QAS-06, RF-46 a RF-48). Es el módulo `pagos` (módulo 5 del SRS, módulo 03 del diagrama de paquetes). `PaymentGatewayPort` tiene tres operaciones: crear la sesión de cobro, verificar un evento y ordenar una dispersión. `nucleo.pagos.pasarela` elige el adaptador (`NUCLEO_PAGOS_PASARELA` en Docker Compose, `PAGOS_PASARELA` en `infra/.env`):
+- **`simulada`** (por defecto, la del prototipo según el SRS):
+  - la sesión es una página del propio núcleo, solo con el perfil demo: `GET /api/nucleo/pasarela-simulada/{referencia}`. Muestra el monto y la referencia, con dos botones, "Aprobar" y "Rechazar";
+  - al pulsar uno, `EmisorEventosSimulados` arma un evento `transaction.updated` con la misma forma que el de Wompi, lo firma con un secreto de demo y lo envía 3 s después a su propio webhook, por HTTP;
+  - así la demo recorre el mismo camino que un pago real: firma, registro y procesamiento. La página nunca cambia la solicitud por su cuenta (RF-51);
+  - la página vive en `infraestructura/salida/pasarela/simulada`, con su adaptador, porque hace el papel del checkout de Wompi: no es parte de la API del núcleo ni del contrato.
+- **`wompi`** (sandbox):
+  - la sesión es la URL del Web Checkout (`https://checkout.wompi.co/p/`) con `public-key`, `currency=COP`, `amount-in-cents`, `reference`, `signature:integrity` y `redirect-url`;
+  - la firma de integridad es SHA-256 de la referencia, el monto en centavos, la moneda y el secreto de integridad, concatenados en ese orden;
+  - el backend nunca recibe datos de tarjeta ni de cuenta (RF-47, RF-48). El turista vuelve a la pantalla de su solicitud, y esa vuelta no prueba nada: el resultado solo llega por el webhook (RF-51);
+  - sin las tres llaves (`WOMPI_LLAVE_PUBLICA`, `WOMPI_SECRETO_INTEGRIDAD`, `WOMPI_SECRETO_EVENTOS`), el adaptador no arranca;
+  - las llaves llegan por variables de entorno desde `infra/.env`, que no se versiona; no están en el repositorio, en las pruebas ni en los logs, y `toString` las oculta.
+- **Lo que dice la documentación de Wompi** (docs.wompi.co, Colombia, consultada el 28 de octubre de 2026):
+  - las llaves de sandbox tienen los prefijos `pub_test_`, `prv_test_`, `test_events_` y `test_integrity_`;
+  - la referencia debe ser única por transacción (hasta 255 caracteres; si se repite, 422 "Referencia duplicada"). Por eso cada intento tiene la suya (`ST-` y su UUID);
+  - la consulta de transacciones ya exige la llave privada y no se hace desde el frontend. El núcleo no consulta: confía en el evento firmado [SUPUESTO], y la conciliación con el reporte de Wompi queda fuera del prototipo;
+  - los datos de prueba del sandbox: la tarjeta 4242 4242 4242 4242 se aprueba, la 4111 1111 1111 1111 se rechaza y cualquier otra termina en ERROR; Nequi 3991111111 se aprueba y 3992222222 se rechaza.
+- **ArquitecturaTest, regla 12:** pagos usa las solicitudes solo por su `api` (DN-17) y no depende de la administración, que es la que lo usa a él.
+
+**DN-19. Claves de idempotencia propias de pagos** (ADR-04, como DN-12). `POST /turista/solicitudes/{id}/pago` exige `Idempotency-Key`. Las reglas son las de DN-12:
+- la misma clave con la misma petición devuelve la respuesta guardada, con `Idempotency-Replayed: true`;
+- con otra petición, responde 422 `CLAVE_IDEMPOTENCIA_REUTILIZADA`;
+- la clave vence a las 24 h [SUPUESTO].
+
+El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_idempotencia_pagos`, su `IdempotenciaPort` y su `EjecucionIdempotente`.
+- Extraerlo a `compartido` habría cambiado el módulo de solicitudes, que ya está integrado, y lo habría acoplado con pagos.
+- Son unas 150 líneas. Si un tercer módulo las necesita, se extraen.
+- Una tarea horaria borra las claves vencidas (`nucleo.pagos.idempotencia.cron`).
+
+**DN-20. Intentos de pago** (RF-46, RF-55, RF-58).
+- **Abrir el pago:**
+  - responde 404 si la solicitud no es del turista;
+  - 409 `SOLICITUD_NO_COBRABLE` si no está Confirmada ni con el pago fallido, y 409 `INTENTOS_AGOTADOS` si ya hubo tres intentos con resultado;
+  - si ya hay un intento en curso, devuelve ese mismo con una sesión nueva y no abre otro;
+  - si no, abre el siguiente y llama a `marcarIntentoEnCurso`, que aplaza el vencimiento hasta 30 min (RF-55, DN-14);
+  - un índice único parcial impide dos en curso a la vez, aunque las peticiones lleguen a réplicas distintas.
+- **El monto** es el precio base × 100, en centavos y en COP, sin cargos adicionales (RF-49). Un evento por otro monto no paga la solicitud: queda procesado con el resultado `MONTO_DISTINTO`.
+- **Estados:** EN_CURSO, APROBADO, RECHAZADO, ERROR y ABANDONADO.
+  - DECLINED y VOIDED quedan como RECHAZADO; ERROR, como ERROR. Los tres llevan la solicitud a Pago fallido, o a Vencida al tercero (RF-58);
+  - PENDING solo guarda el id de la transacción, y el intento queda con el id de la que lo resuelve (RF-52).
+- **Abandonado** [SUPUESTO]:
+  - un intento en curso sin resultado 30 min después de abierto queda Abandonado: el turista cerró el checkout o no lo terminó;
+  - una tarea por minuto lo marca con `FOR UPDATE SKIP LOCKED` y llama a `liberarIntentoEnCurso`, así la solicitud vuelve a su plazo;
+  - un abandonado no cuenta para el límite de RF-58, porque la pasarela no lo rechazó;
+  - si después llega su resultado, vale: aprobado paga la solicitud, o queda como pago tardío si ya venció.
+- **El número** del intento es correlativo y no se reinicia, así que con abandonados puede pasar de 3 [SUPUESTO]. El SRS habla de "número 1 a 3"; lo que se limita a tres son los intentos con resultado de la pasarela.
+- **`GET /turista/solicitudes/{id}/pagos`:** los intentos con su estado, para que el frontend consulte de nuevo al reconectarse (ADR-04).
+
+**DN-21. Webhook con recepción síncrona y procesamiento asíncrono** (RT-07, ADR-04, ADR-05, RF-50 a RF-52).
+- **`POST /pagos/eventos`:**
+  - es público, sin rol, y no está bajo `/internal`, porque lo llama la pasarela. Nginx ya lo enruta con `/api/nucleo/`;
+  - verifica el checksum de Wompi: SHA-256 de los valores de `signature.properties` (rutas dentro de `data`, leídas de cada evento porque pueden cambiar), el `timestamp` y el secreto de eventos, concatenados;
+  - lo compara sin distinguir mayúsculas y en tiempo constante, con el de `signature.checksum` y, si llega, con el de `X-Event-Checksum`;
+  - una firma inválida o un cuerpo ilegible responden 401 `EVENTO_NO_AUTENTICO` y no guardan nada. El log registra solo el motivo, nunca el cuerpo;
+  - un evento válido se guarda y se responde 200 de inmediato, también si es un duplicado. Wompi reintenta a los 30 min, a las 3 h y a las 24 h si no recibe 200.
+- **Duplicados** [SUPUESTO]: el evento no trae id, así que la clave de unicidad es el id de la transacción más el estado. La inserción usa `ON CONFLICT DO NOTHING`, y la respuesta dice `duplicado: true`, como también para un evento auténtico que no es de una transacción (no se guarda).
+- **Procesamiento:**
+  - cada 5 s [SUPUESTO] (`nucleo.pagos.eventos.cron`) se toman los eventos sin procesar, de a uno y del más antiguo, con `FOR UPDATE SKIP LOCKED`: las dos réplicas trabajan a la vez, sin repetir y sin ShedLock;
+  - en una sola transacción se actualizan el intento, la solicitud (por `SolicitudesPagosApi`, `MANDATORY`, DN-17), la dispersión o el pago tardío, y el evento queda procesado con su resultado;
+  - un `ConflictoConcurrenciaException` reintenta la transacción completa;
+  - si la solicitud no admite el evento (`EventoPagoNoAplicableException`), la transacción se deshace y el evento queda procesado en otra transacción con el código del error, para no repetirlo.
+- **Lo que hace cada estado:**
+  - APPROVED lleva la solicitud a Pagada (RF-50) y deja su dispersión pendiente (DN-24);
+  - DECLINED, VOIDED y ERROR la llevan a Pago fallido, o a Vencida al tercer intento (RF-58);
+  - PENDING solo actualiza el intento;
+  - un evento sin intento queda procesado como `SIN_INTENTO`.
+- **Hallazgo en la documentación:** el ejemplo de checksum de la página de eventos (`3476DDA5…`) no corresponde a su propia cadena. Su SHA-256 es `5a18ec5e…`, que es el vector de `FormatoWompiTest`, junto con los dos ejemplos de la página de eventos de Pagos a terceros, que sí cuadran. La firma de integridad sí cuadra con su ejemplo (`37c84077…`).
+
+**DN-22. Pagos tardíos** (RF-50).
+- **Qué es un pago tardío:** un aprobado que no paga nada. Hay tres casos:
+  - la solicitud ya estaba Vencida o cerrada (`PAGO_TARDIO` de `registrarPagoAprobado`);
+  - otro intento ya la había pagado (`SIN_CAMBIOS`);
+  - el intento ya tenía resultado y llega aprobada otra transacción con su referencia [SUPUESTO]. Pasa en la página simulada si el turista vuelve atrás y pulsa Aprobar después de Rechazar. En Wompi no debería pasar, porque la referencia es única por transacción, pero la regla igual lo cubre.
+- **Qué se hace:** la solicitud no cambia ni revive. Se guarda un `PagoTardio` (uno por transacción) y una tarea avisa al administrador por WhatsApp (`PAGO_TARDIO`) para que lo reembolse a mano, fuera del sistema (los reembolsos están fuera del alcance).
+- **`GET /admin/pagos-tardios`** (ADMINISTRADOR): los pagos tardíos del más reciente al más antiguo, con la referencia, el id de la transacción, el monto en pesos y si ya se avisó.
+
+**DN-23. Comisión y costo transaccional** (RF-53, RF-82, RF-83).
+- **El porcentaje** está en `configuracion_comision`, con su historial: cada cambio agrega una fila con `vigenteDesde` y el administrador que lo hizo.
+  - El inicial es 4 % desde el 1 de enero de 2026 (sembrado por V7).
+  - Se admiten de 0 a menos de 100, con dos decimales como máximo; si no, 400 `DATO_INVALIDO`.
+  - `GET` y `PUT /admin/comision` son solo del administrador; el operador nunca la ve (SRS, perfil del operador).
+- **Sin efecto retroactivo** (RF-83): la dispersión guarda el porcentaje vigente cuando se procesa el pago aprobado, y ese porcentaje no cambia después.
+- **El costo transaccional** [SUPUESTO]:
+  - el real de Wompi depende del medio de pago y del contrato del comercio, y no viene en la transacción ni en el evento;
+  - en el prototipo es configurable: `nucleo.pagos.costo-transaccional` = 2,65 % + $700 + 19 % de IVA, la tarifa pública del plan Avanzado;
+  - en el ambiente real se toma del reporte de la pasarela.
+- **Redondeo** [SUPUESTO], en `CalculadoraComision`, en pesos enteros:
+  - la comisión es el precio × porcentaje, redondeado a la mitad hacia arriba;
+  - el costo es (precio × porcentaje + fijo) × (1 + IVA), con el mismo redondeo;
+  - el neto es el precio menos la comisión y el costo, y nunca baja de cero;
+  - por ejemplo, $300.000 al 4 % dan una comisión de $12.000, un costo de $10.294 y un neto de $277.706.
+
+**DN-24. Dispersión al prestador** (RF-53, RF-54, RF-74, RF-75).
+- **Al confirmarse el pago** queda una `Dispersion` PENDIENTE, una por solicitud, con el monto bruto, el porcentaje y el valor de la comisión, el costo transaccional y el neto.
+- **`DispersionScheduler`**, cada 15 s [SUPUESTO]:
+  - toma las pendientes que ya toca intentar, con `FOR UPDATE SKIP LOCKED`;
+  - las ejecuta con la cuenta de cobro vigente del prestador en ese momento (RF-74), y guarda la cuenta destino enmascarada.
+- **Si falla** (la pasarela la rechaza, la llamada lanza un error o el prestador no tiene cuenta):
+  - reintenta hasta 3 veces, con una espera que se duplica: 1, 2 y 4 min [SUPUESTO]; en la demo, 10, 20 y 40 s;
+  - al cuarto fallo queda FALLIDA, y se avisa al prestador por WhatsApp (`DISPERSION_FALLIDA`) para que actualice su cuenta (RF-54).
+- **Pendiente:** "reintentarla al actualizarse la cuenta" espera a que RF-74 exista en el módulo de prestadores.
+- **La cuenta** solo la ve la dispersión (RF-75). En las respuestas, la base y los logs sale enmascarada (`******1234`), y `CuentaCobro.toString` también la enmascara.
+- **Wompi delega la dispersión a la simulada.** Wompi tiene una API documentada de dispersión ("Pagos a terceros", `api.sandbox.payouts.wompi.co`) con sandbox, pero:
+  - exige activarla en la cuenta del comercio, con la validación biométrica del representante legal y de 2 a 5 días hábiles de revisión;
+  - tiene credenciales propias (`user-principal-id` y `x-api-key`), que no se ven hasta activarla;
+  - se fondea con el saldo de Wompi o con cuentas Bancolombia, y sus tarifas no están en la documentación técnica.
+
+  Por eso el adaptador `wompi` cobra con Wompi y dispersa con `DispersionSimulada`. Cuando se active el producto, se agrega su cliente en ese adaptador sin tocar el dominio.
+
+**DN-25. Persistencia de pagos (V7)** (DN-02, ADR-05).
+- **Tablas:**
+  - `intentos_pago`: referencia única, un solo intento en curso por solicitud (índice único parcial), índice de los en curso por abandonar y revisión con `@Version`;
+  - `eventos_pasarela`: clave única, cuerpo recibido e índice parcial de los que faltan por procesar;
+  - `pagos_tardios`: uno por transacción e índice de los que faltan por avisar;
+  - `configuracion_comision`, con el valor inicial;
+  - `dispersiones`: una por solicitud e índices de las pendientes y de las fallidas sin aviso;
+  - `claves_idempotencia_pagos`.
+- **Sin claves foráneas a `solicitudes`:** pagos solo guarda su identificador, para no depender de las tablas de otro módulo.
+- **Los avisos** de pagos tardíos y de dispersiones fallidas se marcan en su propia fila (`aviso_enviado_en`), y la tarea de las dispersiones los envía con `SKIP LOCKED`: no hace falta otra cola de notificaciones.
+
+**DN-26. Cuentas de cobro y contactos provisionales** [SUPUESTO], como DN-15. La cuenta de cobro de cada prestador (RF-74) y el WhatsApp del administrador son de los módulos de prestadores y cuentas, todavía vacíos. Por ahora `CuentasCobroPort` y `ContactosPagosPort` leen `nucleo.demo` en `application-demo.yml`:
+- la agencia tiene una cuenta de ahorros Bancolombia; la guía, Nequi; el hotel, una cuenta corriente del Banco de Bogotá, y el restaurante, Daviplata;
+- la cuenta del restaurante está configurada para fallar en la dispersión simulada (`nucleo.pagos.simulada.cuentas-que-fallan`), para mostrar los reintentos y el aviso;
+- el administrador tiene un WhatsApp ficticio.
+
+Sin el perfil demo, la tabla queda vacía y las dispersiones fallan por falta de cuenta.
+
+**DN-27. Aviso `HABILITACION_OPINION` desde solicitudes** (DC-41, DN-06, DN-17).
+- **Quién lo encola:** el módulo de solicitudes, en `registrarPagoAprobado`, cuando la solicitud queda Pagada, porque es el que conoce al turista y la oferta.
+- **Cómo:** con `BandejaSalidaApi`, en la misma transacción del pago, con `{idAviso, tipo, turistaId, ofertaId}` hacia `POST /internal/opiniones/avisos` del catálogo.
+- **El `idAviso`** es `habilitacion-opinion-` más el id de la solicitud: si se repite, el catálogo lo descarta.
+
+Con esto quedan hechos los dos pendientes de DN-17.
 
 ## Estructura y despliegue
 
 **DN-07. Estructura del servicio y despliegue en el piloto.**
-- **Paquetes:** `co.edu.unimagdalena.samariantour.nucleo`, con un paquete por módulo (`cuentas`, `solicitudes`, `pagos`, `prestadores`, `administracion`, `indicadores` y `bandeja`) y `compartido`, cada módulo hexagonal como en el catálogo. Cada `package-info.java` dice qué requisitos le tocan. Las 9 primeras reglas de `ArquitecturaTest` son las del catálogo, con JPA, Hibernate y PostgreSQL en lugar de MongoDB; la 10 y la 11 cuidan el `api` de cada módulo (DN-17).
+- **Paquetes:** `co.edu.unimagdalena.samariantour.nucleo`, con un paquete por módulo (`cuentas`, `solicitudes`, `pagos`, `prestadores`, `administracion`, `indicadores` y `bandeja`) y `compartido`, cada módulo hexagonal como en el catálogo. Cada `package-info.java` dice qué requisitos le tocan. Las 9 primeras reglas de `ArquitecturaTest` son las del catálogo, con JPA, Hibernate y PostgreSQL en lugar de MongoDB; la 10 y la 11 cuidan el `api` de cada módulo (DN-17), y la 12, que pagos use las solicitudes solo por su `api` y no dependa de la administración (DN-18).
 - **API:** prefijo `/api/nucleo` y errores en RFC 7807. El contrato es `contratos/nucleo.openapi.yaml`; `ContratoNucleoIT` falla si una ruta está en un lado y no en el otro, o si un esquema de respuesta no tiene los mismos campos que su DTO. Un cuerpo que no es JSON válido o un parámetro con el tipo equivocado responde 400 `DATO_INVALIDO` en cualquier módulo (`ManejadorPeticionIlegible`).
 - **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. Nginx enruta `/api/nucleo/` y bloquea `/api/nucleo/internal/` y `/api/nucleo/actuator/`. El CI construye también la imagen del núcleo.
 - **Métricas:** como el catálogo (DC-48), `/actuator/prometheus` con los umbrales de latencia de cada ruta, solo desde la red de Docker.
@@ -219,4 +365,11 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
    - los campos de RF-30 de cada tipo están en `CamposDelTipo`: `horaSalida`, `horaReserva`, `fechaSalida` y `numeroUnidades` (DN-09);
    - todavía no tiene `codigo` corto: la solicitud se identifica por su UUID, que es lo que RF-30 pide mostrar;
    - `ventanaVenceEn` es `venceEn`, el plazo vigente en cualquier estado abierto; el aparte es `aparteHasta` (DN-09).
-7. **Diagrama entidad-relación:** agregar `solicitudes`, con las columnas de V4 y V6, `transiciones_solicitud`, `claves_idempotencia` y `notificaciones_solicitud` (V3).
+7. **Diagrama entidad-relación:** agregar `solicitudes`, con las columnas de V4 y V6, `transiciones_solicitud`, `claves_idempotencia` y `notificaciones_solicitud` (V3), y las seis tablas de pagos de V7 (DN-25).
+8. **Diagrama de paquetes, módulo 03 (pagos):**
+   - los adaptadores de entrada son `PagoController`, `WebhookPasarelaController`, `DispersionScheduler`, la tarea de los eventos y `PagosAdministracionApi`, que usa la administración para la comisión y los pagos tardíos (`/admin/comision`, `/admin/pagos-tardios`);
+   - `PaymentGatewayPort` tiene dos adaptadores, `simulada` (con su página de pago) y `wompi`; el de Wompi delega la dispersión a la simulada mientras Pagos a terceros no esté activo (DN-18, DN-24);
+   - se agregan `IntentoPagoRepositoryPort`, `EventoPasarelaRepositoryPort`, `PagoTardioRepositoryPort`, `ComisionRepositoryPort`, `DispersionRepositoryPort`, `TransaccionPort`, `IdempotenciaPort` (DN-19), `SolicitudesPort` (sobre `SolicitudesPagosApi`), `CuentasCobroPort` y `ContactosPagosPort` (provisionales, DN-26) y `AvisoPagoPort`;
+   - el intento tiene el estado ABANDONADO (DN-20), y el aviso `HABILITACION_OPINION` lo encola solicitudes, no pagos (DN-27).
+9. **Diccionario de clases, pagos:** `IntentoPago`, `EventoPasarela`, `PagoTardio`, `ConfiguracionComision` y `Dispersion` con los campos de DN-20 a DN-25; el costo transaccional es un parámetro del prototipo (DN-23).
+10. **Diagrama de despliegue:** el webhook `/api/nucleo/pagos/eventos` es público, y para el sandbox de Wompi se publica con un túnel (README, sección de pagos).

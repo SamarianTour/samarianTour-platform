@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
   title: Samarian Tour · Núcleo
-  version: 0.2.0
+  version: 0.3.0
   description: |
     API del núcleo transaccional: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e
-    indicadores. Hoy tiene la moderación (módulo 8) y las solicitudes de disponibilidad (módulo 4); cada módulo agrega
+    indicadores. Hoy tiene la moderación y la comisión (módulo 8), las solicitudes de disponibilidad (módulo 4) y los
+    pagos (módulo 5); cada módulo agrega
     aquí sus rutas antes de escribir su código (API first), y `ContratoNucleoIT` falla si una ruta existe en el
     contrato y no en los controladores, o al revés.
 
@@ -25,7 +26,12 @@ tags:
       Módulo 4 (RF-30 a RF-45): el turista envía, consulta y responde; el operador de disponibilidad atiende su cola.
       Enviar y responder las condiciones exigen `Idempotency-Key` (ADR-04, DN-12).
   - name: Pagos
-    description: Módulo 5 (RF-46 a RF-58).
+    description: |
+      Módulo 5 (RF-46 a RF-58): el turista abre el pago de su solicitud confirmada en la pasarela (simulada en el
+      prototipo o Wompi, DN-18) y el resultado llega por el webhook `POST /pagos/eventos`, nunca por la redirección del
+      navegador (RF-51). La sesión de cobro exige `Idempotency-Key` (ADR-04, DN-19). La página de pago de la pasarela
+      simulada (`GET /pasarela-simulada/{referencia}`, solo con el perfil demo) hace el papel del checkout de Wompi y no
+      es parte de esta API.
   - name: Prestadores
     description: Módulo 7 (RF-62, RF-63, RF-68 a RF-71, RF-73 a RF-75).
   - name: Administración
@@ -632,6 +638,293 @@ paths:
         '403':
           $ref: '#/components/responses/AccesoDenegado'
 
+  /turista/solicitudes/{solicitudId}/pago:
+    post:
+      tags: [Pagos]
+      operationId: generarSesionCobro
+      summary: Abrir el pago de una solicitud confirmada (RF-46 a RF-49)
+      description: |
+        Devuelve lo que el frontend necesita para abrir el pago en la pasarela: la URL del checkout y, con Wompi, la
+        llave pública y la firma de integridad para el widget. El monto es el precio base exacto en centavos de peso,
+        sin cargos adicionales (RF-49). El backend nunca recibe datos de tarjeta ni de cuenta (RF-47).
+
+        - **Solo Confirmada o con el pago fallido:** si no es del turista, 404; si está en otro estado, 409
+          `SOLICITUD_NO_COBRABLE`.
+        - **Un intento en curso:** si ya hay uno, devuelve ese mismo; si no, abre el siguiente y la solicitud queda con
+          un intento en curso, que aplaza su vencimiento hasta 30 min (RF-55). Sin resultado a los 30 min, el intento se
+          abandona [SUPUESTO] (DN-20).
+        - **Tres intentos** con resultado de la pasarela por solicitud (RF-58); un cuarto es 409 `INTENTOS_AGOTADOS`.
+          Normalmente no se llega: al tercer rechazo la solicitud ya está Vencida.
+        - **Idempotencia:** la misma `Idempotency-Key` devuelve la respuesta original, con `Idempotency-Replayed: true`.
+      parameters:
+        - $ref: '#/components/parameters/SolicitudId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '201':
+          description: El intento en curso y cómo abrirlo, o la respuesta original si la clave ya se había usado.
+          headers:
+            Idempotency-Replayed:
+              description: true si es la respuesta original de una petición anterior con la misma clave.
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SesionCobro'
+              examples:
+                simulada:
+                  summary: Pasarela simulada (la del prototipo)
+                  value:
+                    intentoId: 2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                    solicitudId: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                    numero: 1
+                    estado: EN_CURSO
+                    referencia: ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                    montoCentavos: 30000000
+                    moneda: COP
+                    creadoEn: '2026-10-26T17:05:00Z'
+                    checkout:
+                      pasarela: SIMULADA
+                      url: http://localhost:8080/api/nucleo/pasarela-simulada/ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f?monto=30000000&solicitud=6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                      urlRedireccion: http://localhost:8080/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                wompi:
+                  summary: Wompi (sandbox), con lo que necesita el widget
+                  value:
+                    intentoId: 2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                    solicitudId: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                    numero: 1
+                    estado: EN_CURSO
+                    referencia: ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                    montoCentavos: 30000000
+                    moneda: COP
+                    creadoEn: '2026-10-26T17:05:00Z'
+                    checkout:
+                      pasarela: WOMPI
+                      url: https://checkout.wompi.co/p/?public-key=pub_test_X&currency=COP&amount-in-cents=30000000&reference=ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f&signature:integrity=9a1f...&redirect-url=http://localhost:8080/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                      llavePublica: pub_test_X
+                      firmaIntegridad: 9a1f...
+                      urlRedireccion: http://localhost:8080/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/SolicitudNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ConflictoPago'
+        '422':
+          $ref: '#/components/responses/ClaveReutilizada'
+
+  /turista/solicitudes/{solicitudId}/pagos:
+    get:
+      tags: [Pagos]
+      operationId: consultarIntentosPago
+      summary: Los intentos de pago de una solicitud del turista (ADR-04)
+      description: |
+        Del primero al último, con su estado y el id de la transacción en la pasarela (RF-52). Sirve para reconsultar al
+        reconectar: la redirección del navegador no prueba el pago (RF-51); el estado de la solicitud cambia solo con el
+        evento del webhook (RF-50).
+      parameters:
+        - $ref: '#/components/parameters/SolicitudId'
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Los intentos de la solicitud.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntentoPago'
+              example:
+                - id: 2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                  numero: 1
+                  estado: APROBADO
+                  referencia: ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                  montoCentavos: 30000000
+                  transaccionId: 1234-1610641025-49201
+                  creadoEn: '2026-10-26T17:05:00Z'
+                  resueltoEn: '2026-10-26T17:06:10Z'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/SolicitudNoEncontrada'
+
+  /pagos/eventos:
+    post:
+      tags: [Pagos]
+      operationId: recibirEventoPasarela
+      summary: Webhook de la pasarela (RF-50, RT-07)
+      description: |
+        Público y sin rol: lo llama la pasarela. Su autenticidad es la firma del evento: el checksum de Wompi
+        (SHA-256 de los valores de `signature.properties`, el `timestamp` y el secreto de eventos), comparado sin
+        distinguir mayúsculas; si llega `X-Event-Checksum`, también debe coincidir. Sin una firma válida, 401 y no se guarda nada.
+
+        Con una firma válida, guarda el evento y responde 200 de inmediato, también si es un duplicado (Wompi reintenta
+        mientras no recibe 200: a los 30 min, a las 3 h y a las 24 h). El evento se identifica por el id de la
+        transacción y su estado [SUPUESTO] (DN-21), porque Wompi no manda un id de evento. Una tarea programada lo
+        procesa después: la solicitud y el pago se confirman juntos (DN-17). Un evento auténtico que no es de una
+        transacción (por ejemplo `nequi_token.updated`) responde 200 y no se guarda.
+      parameters:
+        - name: X-Event-Checksum
+          in: header
+          required: false
+          description: El checksum del evento, que Wompi manda también en la cabecera.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventoPasarela'
+            example:
+              event: transaction.updated
+              data:
+                transaction:
+                  id: 1234-1610641025-49201
+                  amount_in_cents: 30000000
+                  reference: ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                  currency: COP
+                  payment_method_type: NEQUI
+                  status: APPROVED
+              environment: test
+              signature:
+                properties: [transaction.id, transaction.status, transaction.amount_in_cents]
+                checksum: 5a18ec5e8fdb7df463e9f94774cba8f583ba21bd04a09ceff2ea68a4bc0aefbe
+              timestamp: 1530291411
+              sent_at: '2026-10-26T17:06:10.000Z'
+      responses:
+        '200':
+          description: Recibido. A la pasarela solo le importa el código.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoRecibido'
+              example:
+                duplicado: false
+        '401':
+          description: La firma no es válida o el evento no se puede leer; no se guardó nada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                type: about:blank
+                title: Unauthorized
+                status: 401
+                detail: 'El evento no viene de la pasarela: la firma no coincide'
+                codigo: EVENTO_NO_AUTENTICO
+
+  /admin/comision:
+    get:
+      tags: [Administración]
+      operationId: consultarComision
+      summary: La comisión vigente de la plataforma y su historial (RF-82)
+      description: |
+        El porcentaje sobre el precio base que se descuenta en la dispersión al prestador (RF-53). El inicial es 4 %. El
+        operador de disponibilidad nunca ve la comisión (SRS, perfil del operador).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: La vigente y el historial, del cambio más reciente al más antiguo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comision'
+              example:
+                porcentaje: 4.00
+                vigenteDesde: '2026-01-01T00:00:00Z'
+                historial:
+                  - porcentaje: 4.00
+                    vigenteDesde: '2026-01-01T00:00:00Z'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+    put:
+      tags: [Administración]
+      operationId: cambiarComision
+      summary: Cambiar el porcentaje de comisión (RF-82, RF-83)
+      description: |
+        Rige para los pagos que se confirmen desde ahora: los ya confirmados conservan el porcentaje que se les aplicó,
+        sin efecto retroactivo (RF-83). De 0 a menos de 100, con hasta dos decimales [SUPUESTO] (DN-23).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComisionRequest'
+            example:
+              porcentaje: 5.5
+      responses:
+        '200':
+          description: La nueva vigente y el historial.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comision'
+              example:
+                porcentaje: 5.50
+                vigenteDesde: '2026-10-27T15:00:00Z'
+                historial:
+                  - porcentaje: 5.50
+                    vigenteDesde: '2026-10-27T15:00:00Z'
+                    administradorId: 70000000-0000-0000-0000-000000000001
+                  - porcentaje: 4.00
+                    vigenteDesde: '2026-01-01T00:00:00Z'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /admin/pagos-tardios:
+    get:
+      tags: [Administración]
+      operationId: consultarPagosTardios
+      summary: Pagos aprobados que llegaron con la solicitud ya vencida (RF-50)
+      description: |
+        La solicitud no cambió y el administrador los reembolsa a mano, fuera del sistema. También llega uno por
+        WhatsApp al registrarse (DN-22). Del más reciente al más antiguo.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Los pagos tardíos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PagoTardio'
+              example:
+                - id: 8d1e4c2b-7a6f-4e3d-b5c9-1f0a2e3d4c5b
+                  solicitudId: 6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20
+                  referencia: ST-2b7e3f10-5c4d-4a8e-9f61-0d2c3b4a5e6f
+                  transaccionId: 1234-1610641025-49201
+                  monto: 300000
+                  registradoEn: '2026-10-26T19:31:00Z'
+                  avisado: true
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
 components:
   parameters:
     IdempotencyKey:
@@ -809,6 +1102,23 @@ components:
             status: 422
             detail: "La clave de idempotencia 3d6f9a0e-2b1c-4e5f-8a7b-9c0d1e2f3a4b ya se usó con otra petición: genera una clave nueva para cada operación"
             codigo: CLAVE_IDEMPOTENCIA_REUTILIZADA
+    ConflictoPago:
+      description: |
+        La solicitud no admite el pago en su estado actual; la aplicación debe volver a consultarla:
+        - `SOLICITUD_NO_COBRABLE`: solo se paga una solicitud Confirmada o con el pago fallido (RF-46, RF-58).
+        - `INTENTOS_AGOTADOS`: ya tuvo los tres intentos con resultado de la pasarela (RF-58).
+        - `PLAZO_VENCIDO`: la ventana de confirmación y pago terminó mientras se abría el pago (RF-55).
+        - `CONFLICTO_CONCURRENCIA`: otra operación la cambió a la vez y los reintentos no alcanzaron (ADR-05).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: 'La solicitud está ATENDIDA: solo se paga una solicitud Confirmada o con el pago fallido'
+            codigo: SOLICITUD_NO_COBRABLE
     NoAutenticado:
       description: Falta la identidad del usuario, o está mal formada.
       content:
@@ -1293,6 +1603,186 @@ components:
     TipoPrestador:
       type: string
       enum: [ALOJAMIENTO, RESTAURANTE, AGENCIA_OPERADORA, GUIA_INDEPENDIENTE]
+    SesionCobro:
+      type: object
+      description: El intento de pago en curso y cómo abrirlo en la pasarela (RF-46 a RF-49).
+      required: [intentoId, solicitudId, numero, estado, referencia, montoCentavos, moneda, creadoEn, checkout]
+      properties:
+        intentoId:
+          type: string
+          format: uuid
+        solicitudId:
+          type: string
+          format: uuid
+        numero:
+          type: integer
+          minimum: 1
+          description: El orden del intento en la solicitud.
+        estado:
+          $ref: '#/components/schemas/EstadoIntento'
+        referencia:
+          type: string
+          description: La que la pasarela devuelve en sus eventos; única por intento.
+        montoCentavos:
+          type: integer
+          format: int64
+          description: El precio base exacto en centavos de peso, sin cargos adicionales (RF-49).
+        moneda:
+          type: string
+          enum: [COP]
+        creadoEn:
+          type: string
+          format: date-time
+        checkout:
+          $ref: '#/components/schemas/Checkout'
+    Checkout:
+      type: object
+      description: Cómo abrir el pago. El backend nunca ve datos de tarjeta ni de cuenta (RF-47).
+      required: [pasarela, url]
+      properties:
+        pasarela:
+          type: string
+          enum: [SIMULADA, WOMPI]
+        url:
+          type: string
+          description: El checkout de la pasarela (Web Checkout de Wompi, o la página de la pasarela simulada).
+        llavePublica:
+          type: string
+          description: Solo Wompi, para el widget.
+        firmaIntegridad:
+          type: string
+          description: Solo Wompi, para el widget. SHA-256 de la referencia, el monto, la moneda y el secreto.
+        urlRedireccion:
+          type: string
+          description: A dónde vuelve el turista; no es prueba del pago (RF-51).
+    IntentoPago:
+      type: object
+      required: [id, numero, estado, referencia, montoCentavos, creadoEn]
+      properties:
+        id:
+          type: string
+          format: uuid
+        numero:
+          type: integer
+        estado:
+          $ref: '#/components/schemas/EstadoIntento'
+        referencia:
+          type: string
+        montoCentavos:
+          type: integer
+          format: int64
+        transaccionId:
+          type: string
+          description: El id de la transacción en la pasarela (RF-52); se omite hasta su primer evento.
+        creadoEn:
+          type: string
+          format: date-time
+        resueltoEn:
+          type: string
+          format: date-time
+          description: Se omite mientras está en curso.
+    EstadoIntento:
+      type: string
+      description: |
+        ABANDONADO: sin resultado 30 min después de abierto [SUPUESTO] (DN-20); no cuenta como rechazo. ERROR cuenta
+        como rechazo (RF-58).
+      enum: [EN_CURSO, APROBADO, RECHAZADO, ERROR, ABANDONADO]
+    EventoPasarela:
+      type: object
+      description: |
+        Un evento de Wompi (documentación oficial, "Eventos"). Se guarda tal como llega; solo `transaction.updated`
+        cambia los pagos.
+      required: [event, data, signature, timestamp]
+      properties:
+        event:
+          type: string
+        data:
+          type: object
+        environment:
+          type: string
+          enum: [test, prod]
+        signature:
+          type: object
+          required: [properties, checksum]
+          properties:
+            properties:
+              type: array
+              items:
+                type: string
+            checksum:
+              type: string
+        timestamp:
+          type: integer
+          format: int64
+        sent_at:
+          type: string
+    EventoRecibido:
+      type: object
+      required: [duplicado]
+      properties:
+        duplicado:
+          type: boolean
+          description: true si el evento ya se había recibido, o no es de una transacción; no se guardó otra vez.
+    ComisionRequest:
+      type: object
+      required: [porcentaje]
+      properties:
+        porcentaje:
+          type: number
+          minimum: 0
+          exclusiveMaximum: true
+          maximum: 100
+          description: Sobre el precio base, con hasta dos decimales.
+    Comision:
+      type: object
+      required: [porcentaje, vigenteDesde, historial]
+      properties:
+        porcentaje:
+          type: number
+        vigenteDesde:
+          type: string
+          format: date-time
+        historial:
+          type: array
+          items:
+            $ref: '#/components/schemas/CambioComision'
+    CambioComision:
+      type: object
+      required: [porcentaje, vigenteDesde]
+      properties:
+        porcentaje:
+          type: number
+        vigenteDesde:
+          type: string
+          format: date-time
+        administradorId:
+          type: string
+          format: uuid
+          description: Quién lo cambió; se omite en el inicial.
+    PagoTardio:
+      type: object
+      required: [id, solicitudId, referencia, transaccionId, monto, registradoEn, avisado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        solicitudId:
+          type: string
+          format: uuid
+        referencia:
+          type: string
+        transaccionId:
+          type: string
+        monto:
+          type: integer
+          format: int64
+          description: En pesos.
+        registradoEn:
+          type: string
+          format: date-time
+        avisado:
+          type: boolean
+          description: Si ya se avisó al administrador por WhatsApp.
     Problema:
       type: object
       description: ProblemDetail (RFC 7807) con la propiedad `codigo`.
@@ -1329,3 +1819,6 @@ components:
             - PRESTADOR_SIN_OPERADOR
             - WHATSAPP_NO_VERIFICADO
             - CLAVE_IDEMPOTENCIA_REUTILIZADA
+            - SOLICITUD_NO_COBRABLE
+            - INTENTOS_AGOTADOS
+            - EVENTO_NO_AUTENTICO

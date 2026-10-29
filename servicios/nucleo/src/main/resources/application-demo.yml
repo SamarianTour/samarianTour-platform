@@ -5,20 +5,41 @@ nucleo:
   # Los identificadores son los de la demo del catálogo y de sus opiniones; los números de WhatsApp son ficticios.
   demo:
     prestadores:
-      # Agencia y guía: los atiende el operador 1 (RF-32).
+      # Agencia y guía: los atiende el operador 1 (RF-32). La cuenta de cobro vigente de cada uno (RF-74) solo la usa la
+      # dispersión (RF-75, DN-26); los números son ficticios.
       - id: 10000000-0000-0000-0000-000000000001
         operador-id: 60000000-0000-0000-0000-000000000001
         whatsapp: "+573001110101"
+        cuenta:
+          tipo: AHORROS
+          entidad: Bancolombia
+          numero: "40112233440101"
       - id: 20000000-0000-0000-0000-000000000002
         operador-id: 60000000-0000-0000-0000-000000000001
         whatsapp: "+573001110202"
-      # Hotel y restaurante: el operador 2.
+        cuenta:
+          tipo: NEQUI
+          entidad: Nequi
+          numero: "3001110202"
+      # Hotel y restaurante: el operador 2. La cuenta del restaurante está configurada para fallar en la dispersión
+      # simulada (nucleo.pagos.simulada.cuentas-que-fallan): sirve para mostrar los reintentos y el aviso (RF-54).
       - id: 30000000-0000-0000-0000-000000000003
         operador-id: 60000000-0000-0000-0000-000000000002
         whatsapp: "+573001110303"
+        cuenta:
+          tipo: CORRIENTE
+          entidad: Banco de Bogotá
+          numero: "00987654320303"
       - id: 40000000-0000-0000-0000-000000000004
         operador-id: 60000000-0000-0000-0000-000000000002
         whatsapp: "+573001110404"
+        cuenta:
+          tipo: DAVIPLATA
+          entidad: Daviplata
+          numero: "3001110404"
+    # El administrador recibe por WhatsApp los pagos tardíos para reembolsarlos a mano (RF-50, DN-26).
+    administrador:
+      whatsapp: "+573005550099"
     turistas:
       - id: 90000000-0000-0000-0000-000000000001
         nombre: Laura Gómez
@@ -29,3 +50,12 @@ nucleo:
       - id: 90000000-0000-0000-0000-000000000003
         nombre: Ana Torres
         whatsapp: "+573105550003"
+
+  # La pasarela simulada de la demo (DN-18, DN-24): reintentos de la dispersión cada 10 s, 20 s y 40 s, para mostrarlos
+  # sin esperar minutos, y la cuenta del restaurante, que siempre falla.
+  pagos:
+    dispersion:
+      espera-base: 10s
+    simulada:
+      cuentas-que-fallan:
+        - "3001110404"

@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.conf
 
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.RegistrarEventoPagoService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.RegistrarEventoPagoUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.AvisosCatalogoPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.NotificacionRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.SolicitudRepositoryPort;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +16,8 @@ public class SolicitudesPagosConfig {
 
     @Bean
     RegistrarEventoPagoUseCase registrarEventoPago(SolicitudRepositoryPort solicitudes,
-                                                   NotificacionRepositoryPort notificaciones, Clock reloj) {
-        return new RegistrarEventoPagoService(solicitudes, notificaciones, reloj);
+                                                   NotificacionRepositoryPort notificaciones,
+                                                   AvisosCatalogoPort catalogo, Clock reloj) {
+        return new RegistrarEventoPagoService(solicitudes, notificaciones, catalogo, reloj);
     }
 }

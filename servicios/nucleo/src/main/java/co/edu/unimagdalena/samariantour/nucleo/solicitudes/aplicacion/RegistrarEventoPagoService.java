@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.Estado
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.ResultadoEventoPago;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.SolicitudDisponibilidad;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.RegistrarEventoPagoUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.AvisosCatalogoPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.NotificacionRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.SolicitudRepositoryPort;
 import org.springframework.transaction.annotation.Propagation;
@@ -19,18 +20,21 @@ import java.util.function.Function;
 /**
  * Aplica a la solicitud lo que pasa con su pago (RF-50, RF-55, RF-58, DN-17). Los cambios no abren una transacción:
  * exigen la de pagos ({@code MANDATORY}), para que el pago y la solicitud se confirmen juntos. Tampoco reintentan ante
- * un conflicto de concurrencia: lo hace pagos con su transacción completa (ADR-05).
+ * un conflicto de concurrencia: lo hace pagos con su transacción completa (ADR-05). Cuando queda Pagada, el turista ya
+ * puede opinar de la oferta: el aviso HABILITACION_OPINION se encola en la bandeja en la misma transacción (DC-41).
  */
 public class RegistrarEventoPagoService implements RegistrarEventoPagoUseCase {
 
     private final SolicitudRepositoryPort solicitudes;
     private final NotificacionRepositoryPort notificaciones;
+    private final AvisosCatalogoPort catalogo;
     private final Clock reloj;
 
     public RegistrarEventoPagoService(SolicitudRepositoryPort solicitudes, NotificacionRepositoryPort notificaciones,
-                                      Clock reloj) {
+                                      AvisosCatalogoPort catalogo, Clock reloj) {
         this.solicitudes = solicitudes;
         this.notificaciones = notificaciones;
+        this.catalogo = catalogo;
         this.reloj = reloj;
     }
 
@@ -38,11 +42,9 @@ public class RegistrarEventoPagoService implements RegistrarEventoPagoUseCase {
     public Optional<DatosCobro> consultarParaCobro(UUID solicitudId, UUID turistaId) {
         return solicitudes.buscar(solicitudId)
                 .filter(solicitud -> solicitud.esDelTurista(turistaId))
-                .filter(solicitud -> solicitud.estado() == EstadoSolicitud.CONFIRMADA
-                        || solicitud.estado() == EstadoSolicitud.PAGO_FALLIDO)
                 .map(solicitud -> new DatosCobro(solicitud.id(), solicitud.estado(),
-                        solicitud.condiciones().precioBase(), solicitud.venceEn(), solicitud.oferta().prestadorId(),
-                        solicitud.ofertaId()));
+                        solicitud.condiciones() == null ? null : solicitud.condiciones().precioBase(),
+                        solicitud.venceEn(), solicitud.oferta().prestadorId(), solicitud.ofertaId()));
     }
 
     @Override
@@ -53,8 +55,20 @@ public class RegistrarEventoPagoService implements RegistrarEventoPagoUseCase {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
+    public ResultadoEventoPago liberarIntentoEnCurso(UUID solicitudId) {
+        return aplicar(solicitudId, solicitud -> solicitud.liberarIntentoEnCurso(reloj.instant()));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public ResultadoEventoPago registrarPagoAprobado(UUID solicitudId) {
-        return aplicar(solicitudId, solicitud -> solicitud.registrarPagoAprobado(reloj.instant()));
+        return aplicar(solicitudId, solicitud -> {
+            ResultadoEventoPago resultado = solicitud.registrarPagoAprobado(reloj.instant());
+            if (resultado == ResultadoEventoPago.APLICADO && solicitud.estado() == EstadoSolicitud.PAGADA) {
+                catalogo.habilitarOpinion(solicitud);
+            }
+            return resultado;
+        });
     }
 
     @Override

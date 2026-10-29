@@ -444,6 +444,27 @@ class SolicitudDisponibilidadTest {
         }
 
         @Test
+        @DisplayName("intento abandonado: deja de aplazar el vencimiento y no cuenta como rechazo (DN-20)")
+        void intentoLiberado() {
+            SolicitudDisponibilidad solicitud = confirmada();
+            solicitud.marcarIntentoEnCurso(FIN_VENTANA.minusSeconds(60));
+            assertThat(solicitud.vencer(FIN_VENTANA.plus(Duration.ofMinutes(10)))).isFalse();
+
+            assertThat(solicitud.liberarIntentoEnCurso(FIN_VENTANA.plus(Duration.ofMinutes(20))))
+                    .isEqualTo(ResultadoEventoPago.APLICADO);
+
+            assertThat(solicitud.intentoPagoEnCurso()).isFalse();
+            assertThat(solicitud.intentosPagoFallidos()).isZero();
+            assertThat(solicitud.limiteVencimiento()).isEqualTo(FIN_VENTANA);
+            assertThat(solicitud.liberarIntentoEnCurso(FIN_VENTANA.plus(Duration.ofMinutes(21))))
+                    .isEqualTo(ResultadoEventoPago.SIN_CAMBIOS);
+            assertThat(solicitud.vencer(FIN_VENTANA.plus(Duration.ofMinutes(21)))).isTrue();
+            assertThat(solicitud.estado()).isEqualTo(VENCIDA);
+            assertThat(solicitud.liberarIntentoEnCurso(FIN_VENTANA.plus(Duration.ofMinutes(22))))
+                    .isEqualTo(ResultadoEventoPago.SIN_CAMBIOS);
+        }
+
+        @Test
         @DisplayName("aprobado durante la gracia: Pagada; aprobado sobre una vencida: pago tardío, no la revive")
         void tardio() {
             SolicitudDisponibilidad enGracia = confirmada();
