@@ -63,6 +63,14 @@ nucleo:
     clave-privada:
     # El emisor (iss) que los demás servicios exigirán en el token.
     emisor: samarian-tour-nucleo
+  rnt:
+    # La fuente del RNT (DN-33): simulada, con la tabla de application-demo.yml, porque los prestadores de la demo son
+    # ficticios; o soda, el conjunto real del Ministerio en datos.gov.co. En Docker Compose, con RNT_FUENTE.
+    fuente: simulada
+    soda:
+      url: https://www.datos.gov.co/resource/thwd-ivmp.json
+      # Opcional: sube el límite de consultas de Socrata. Nunca va en el repositorio.
+      token-aplicacion:
   correo:
     remitente: Samarian Tour <no-responder@samariantour.co>
   cuentas:
@@ -87,6 +95,11 @@ nucleo:
       cron: "0 0 * * * *"
     # La pantalla de confirmación del frontend que lleva la notificación de Atendida (RF-45) [SUPUESTO] (DN-13).
     enlace-confirmacion: http://localhost:8080/turista/solicitudes/{id}
+  administracion:
+    sincronizacion-rnt:
+      # Los lunes a las 3:00 de Colombia compara a los prestadores con el RNT [SUPUESTO] (RF-76, DN-36). Con "-" no
+      # corre.
+      cron: "0 0 3 * * MON"
   pagos:
     # La pasarela (QAS-06, DN-18): simulada, la del prototipo, o wompi. En Docker Compose se cambia con
     # NUCLEO_PAGOS_PASARELA en infra/.env.

@@ -36,10 +36,12 @@ public abstract class IntegracionPostgresBase {
         registro.add("spring.datasource.password", POSTGRES::getPassword);
         registro.add("nucleo.cifrado.clave", () -> CLAVE_CIFRADO);
         registro.add("nucleo.jwt.clave-privada", () -> CLAVE_TOKEN);
-        // Spring guarda en caché el contexto de cada clase de prueba, con sus tareas programadas vivas: un vencimiento o
-        // un envío de otra clase podría tomar las solicitudes de la que corre. Las pruebas llaman a esos casos de uso.
+        // Spring guarda en caché el contexto de cada clase de prueba, con sus tareas programadas vivas: un vencimiento
+        // o un envío de otra clase podría tomar las solicitudes de la que corre. Las pruebas llaman a esos casos de uso
+        // directamente.
         registro.add("nucleo.solicitudes.vencimiento.cron", () -> "-");
         registro.add("nucleo.solicitudes.notificaciones.cron", () -> "-");
+        registro.add("nucleo.administracion.sincronizacion-rnt.cron", () -> "-");
     }
 
     private static String claveRsaNueva() {
