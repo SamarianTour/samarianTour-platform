@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08) y las solicitudes de disponibilidad (DN-09 a DN-17); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17) y las cuentas (DN-18 a DN-22); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -26,13 +26,18 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-15 | Prestadores y contactos provisionales de la demo | 🆕 [SUPUESTO] |
 | DN-16 | Cola del operador | ✅ RF-32, RF-34 a RF-36 |
 | DN-17 | API de las solicitudes para pagos | ✅ documento de diseño, RF-50, RF-55, RF-58 |
+| DN-18 | Modelo de las cuentas, nombre y WhatsApp cifrados, administrador inicial y cuentas de la demo | ✅ RF-01 a RF-03, RF-09 a RF-11, RNF-08, diccionario · 🆕 [SUPUESTO] validaciones y 3 intentos |
+| DN-19 | Sesión: JWT RS256 de 15 min y token de renovación rotativo de 7 días; bloqueo con la fila bloqueada | ✅ RF-04 a RF-06, diagrama de cuentas · 🆕 vigencias |
+| DN-20 | Restablecer la contraseña por correo, con Mailpit en el piloto | ✅ RF-07, RF-08 · 🆕 equipo |
+| DN-21 | Datos personales y supresión inmediata del turista, con anonimización | ✅ RF-12, RF-13, Ley 1581 · 🆕 equipo |
+| DN-22 | API de las cuentas para los demás módulos: el contacto del turista | ✅ diagrama de paquetes, RF-44, RF-57 |
 
 ## Persistencia
 
 **DN-01. El esquema lo crea Flyway.** Las migraciones están en `servicios/nucleo/src/main/resources/db/migration` y se aplican al arrancar. Hibernate solo valida que las entidades coincidan con el esquema (`ddl-auto: validate`): nunca crea ni cambia tablas.
-- **Nombres:** `V<n>__<descripcion_en_minusculas>.sql`, con el número siguiente al último en `develop`. Una migración ya fusionada no se edita: un cambio va en una migración nueva.
+- **Nombres:** `V<n>__<descripcion_en_minusculas>.sql`, con el número siguiente al último en `develop`. Una migración en Java, como V9, es una clase con el mismo nombre registrada como bean de Spring. Una migración ya fusionada no se edita: un cambio va en una migración nueva.
 - **Varias réplicas:** las dos réplicas pueden arrancar a la vez. Flyway serializa las migraciones con un candado de PostgreSQL, así que cada una se aplica una sola vez.
-- **V1** crea la bandeja de salida (DN-06); **V2**, el historial de moderación (DN-08), **V3**, las solicitudes con su historial, las claves de idempotencia y las notificaciones (DN-11 a DN-13); **V4**, los campos de cada tipo de oferta y el índice de no duplicado con la hora de la reserva (DN-09, DN-11); **V5**, el nombre `SOLICITUD_PAGADA` de las notificaciones ya guardadas (DN-13), y **V6**, el aparte del cupo (DN-09).
+- **V1** crea la bandeja de salida (DN-06); **V2**, el historial de moderación (DN-08), **V3**, las solicitudes con su historial, las claves de idempotencia y las notificaciones (DN-11 a DN-13); **V4**, los campos de cada tipo de oferta y el índice de no duplicado con la hora de la reserva (DN-09, DN-11); **V5**, el nombre `SOLICITUD_PAGADA` de las notificaciones ya guardadas (DN-13), **V6**, el aparte del cupo (DN-09); **V8**, las cuentas, y **V9**, el administrador inicial (DN-18). V7 la reserva otra rama.
 
 **DN-02. Spring Data JPA, con el dominio separado.** Las entidades JPA y los repositorios viven en `infraestructura/salida/persistencia` de cada módulo (regla 8 de `ArquitecturaTest`), y el adaptador convierte entre la entidad y el modelo del dominio, que no conoce JPA (regla 1). Es el mismo esquema que el catálogo con sus documentos de MongoDB. `open-in-view` está apagado: cada caso de uso carga lo que necesita.
 
@@ -44,7 +49,8 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 
 **DN-05. Identidad provisional y autorización por prefijo, como el catálogo** (DC-01, DC-13, DC-15).
 - Mientras no exista `libs/seguridad-jwt`, la identidad llega en los headers `X-Usuario-Id`, `X-Rol` y, para el prestador, `X-Tipo-Prestador`, solo con el perfil `demo` (`IdentidadPorHeaders`). El JWT la reemplaza con otra implementación de `ResolutorIdentidad`; lo demás no cambia.
-- Cada prefijo exige un rol (`SeguridadConfig`): `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**`. Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`.
+- Cada prefijo exige un rol (`SeguridadConfig`): `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**`; `/cuenta/**` admite los cinco (DN-21). Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`.
+- El núcleo ya emite el token (DN-19). En el PR de `seguridad-jwt`, la validación del token en los tres servicios pasa a Spring Security (servidor de recursos con la clave pública), como dice el diagrama de paquetes (`compartido/seguridad: Spring Security + libs/seguridad-jwt`), y reemplaza a `ExigirRol` con los mismos 401 y 403.
 - `compartido` es una copia del del catálogo (identidad, reloj, `X-Instancia`, reintento ante conflictos del ADR-05). Cada servicio se despliega por separado, así que no comparten código; la única biblioteca común será `libs/seguridad-jwt`.
 
 ## Bandeja de salida
@@ -172,11 +178,11 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 - **`limite_vencimiento`:** lo calcula el dominio en cada cambio: el plazo vigente, o 30 min después si hay un intento de pago en curso. Así la consulta solo compara fechas y la gracia no se repite en SQL (QAS-05).
 - **Con la fila bloqueada,** el operador o el turista que la cambien a la vez esperan, chocan con la revisión y ven el estado real (DN-11).
 
-**DN-15. Prestadores y contactos provisionales** [SUPUESTO]. El operador asignado y el WhatsApp de cada prestador son del módulo de prestadores, y el contacto del turista es del de cuentas, que todavía están vacíos.
+**DN-15. Prestadores y contactos provisionales** [SUPUESTO]. El operador asignado y el WhatsApp de cada prestador son del módulo de prestadores, que todavía está vacío. El contacto del turista ya sale de su cuenta (DN-22); la tabla de turistas que estaba aquí se quitó.
 - **Tabla de la demo:** `PrestadoresPort` y `ContactoPort` tienen adaptadores provisionales que leen `nucleo.demo` en `application-demo.yml`, con los identificadores de la demo del catálogo y de sus opiniones:
   - la agencia (`10000000-...-001`) y la guía (`20000000-...-002`) las atiende el operador `60000000-...-001`;
   - el hotel (`30000000-...-003`) y el restaurante (`40000000-...-004`), el `60000000-...-002`;
-  - los turistas `90000000-...-001` a `...003` tienen un WhatsApp ficticio verificado.
+  - los turistas `90000000-...-001` a `...003` ya no están en la tabla: son cuentas de la demo (DN-18).
 - **Sin el perfil demo** la tabla queda vacía y ninguna solicitud se puede enviar.
 - **Errores:** un prestador sin operador responde 409 `PRESTADOR_SIN_OPERADOR` y deja la incidencia en el log, con el prefijo `[INCIDENCIA RF-32]`, el prestador y la oferta, para que el administrador le asigne uno (RF-32). Un turista sin WhatsApp verificado responde 409 `WHATSAPP_NO_VERIFICADO` (RF-30).
 - **Cuando existan los módulos,** se cambian por adaptadores que llamen a su `api`, sin tocar el dominio.
@@ -195,12 +201,111 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 - **El api es Java puro:** tiene sus propios tipos (`SolicitudParaCobro`, `ResultadoPago`), y el adaptador de `infraestructura/entrada/modulos` traduce los del dominio, así pagos no depende del dominio de solicitudes. Lo comprueban dos reglas nuevas de `ArquitecturaTest`: la 10 (el `api` no depende de dominio, aplicación, infraestructura ni frameworks) y la 11 (solo `infraestructura/entrada/modulos` lo implementa).
 - **Pendiente para la rama de pagos:** el aviso `HABILITACION_OPINION` al catálogo cuando una solicitud queda Pagada (DC-41) y la notificación al administrador del pago tardío.
 
+## Cuentas
+
+**DN-18. Modelo de las cuentas, datos cifrados y cuentas iniciales** (RF-01 a RF-03, RF-09 a RF-11, RNF-06, RNF-08, diccionario de clases). Es el módulo `cuentas`, con los casos de uso del diagrama de paquetes.
+- **Modelo:**
+  - `Usuario` es abstracta, con una subclase por rol (`Turista`, `Prestador`, `OperadorDisponibilidad`, `Administrador`, `GestorDestino`), como en el diccionario de clases.
+  - En la base de datos es una sola tabla, `usuarios`, con la columna `rol`.
+  - Solo el turista tiene datos propios en este módulo: su WhatsApp y si lo verificó. El RNT, el tipo y el WhatsApp del prestador son del módulo de prestadores.
+- **Migraciones:**
+  - **V8** crea `usuarios`, `politicas_datos` con la versión `v1`, `aceptaciones_politica`, `solicitudes_supresion`, `codigos_un_uso` y `sesiones`.
+  - V7 queda libre para la migración de otro compañero; Flyway admite el hueco.
+- **Cifrado en reposo** (RNF-08, decisión del equipo):
+  - el nombre y el WhatsApp van cifrados con AES-256-GCM (`compartido/cifrado/CifradorDatos`), que el módulo de prestadores reutilizará para las cuentas de cobro;
+  - el correo queda en claro y en minúsculas, porque es con lo que se inicia sesión;
+  - el adaptador JPA cifra al guardar y descifra al leer; el dominio nunca ve un valor cifrado.
+- **Claves:**
+  - `NUCLEO_CIFRADO_CLAVE` no tiene valor por defecto: sin ella el núcleo no arranca, en lugar de guardar datos sin cifrar.
+  - `bash infra/generar-claves.sh` la agrega a `infra/.env`, junto con la del token (DN-19). Solo agrega las que faltan, porque **cambiar la clave de cifrado deja ilegibles los datos ya guardados**.
+- **Contraseñas:** se guardan con BCrypt, de costo 10 (`spring-security-crypto`). Los secretos de un solo uso (códigos, enlaces y tokens de renovación) usan el mismo hash.
+- **Administrador inicial** (RF-01, decisión del equipo):
+  - lo crea **V9**, una migración de Flyway en Java (`V9__crear_administrador_inicial`), porque su nombre se guarda cifrado con la clave del entorno;
+  - es `admin@samariantour.co`, con la contraseña inicial `SamarianAdmin2026` y el identificador `60000000-...-006` del administrador de la demo del catálogo;
+  - Flyway la aplica una sola vez por base. La contraseña está en el repositorio, así que se cambia con el restablecimiento por correo (DN-20) al instalar.
+- **Cuentas de la demo** (`PrecargaCuentasDemo`, solo con el perfil `demo`):
+  - 13 cuentas con los identificadores del catálogo, del frontend y de la demo de solicitudes: 5 prestadores, 2 operadores, un gestor (`60000000-...-003`, nuevo), Laura (`7000...`), Andrés (`8000...`) y los turistas `9000...001` a `003`;
+  - todas con la contraseña `Demo1234`, correos `@demo.samariantour.co` y la política aceptada; los turistas, con su WhatsApp ficticio verificado;
+  - se crean al arrancar si no existen.
+- **Registro** (`POST /cuentas/registro`, público):
+  - turista o prestador (RF-01); exige `aceptaPolitica` y la versión vigente (RF-09, RF-10), y queda la constancia;
+  - el correo es único sin importar las mayúsculas (409 `CORREO_YA_REGISTRADO`);
+  - el turista registra su WhatsApp y el prestador no;
+  - la política se lee en `GET /politica-datos/vigente` y su texto en `GET /politica-datos/v1`. Ese texto es de demostración [SUPUESTO] y declara la transferencia del nombre y el WhatsApp del turista al prestador (RF-11).
+- **Verificación del WhatsApp** (RF-03):
+  - el registro envía un código de 6 dígitos, que vale 30 minutos (RF-08) y admite 3 intentos (decisión del equipo);
+  - `POST /turista/whatsapp/codigo` envía otro, y solo sirve el último;
+  - sin verificar, el turista no envía solicitudes (RF-30);
+  - el WhatsApp es simulado, como en DN-13: el log muestra el número enmascarado y el código, para poder verificar en la demo.
+- **Datos de la cuenta** [SUPUESTO], como DC-19:
+  - nombre de hasta 100 caracteres;
+  - correo de hasta 254;
+  - WhatsApp en formato E.164 (`+57...`);
+  - contraseña de 8 a 72 caracteres con una letra y un número (BCrypt ignora lo que pasa de 72 bytes).
+
+**DN-19. Sesión: token de acceso JWT RS256 y token de renovación rotativo** (RF-04 a RF-06, decisión del equipo).
+- **Rutas:** `POST /cuentas/sesion`, `/cuentas/sesion/renovacion` y `/cuentas/sesion/cierre`, públicas.
+- **Token de acceso** (`JwtRs256Adapter`):
+  - es un JWT RS256 de **15 minutos**, firmado con `NimbusJwtEncoder` de Spring Security;
+  - lleva `iss` (`samarian-tour-nucleo`), `sub` (el usuario), `rol`, `sid` (la sesión), `iat`, `exp` y, en la cabecera, `kid` (la huella de la clave);
+  - los demás servicios lo validarán con la clave pública, sin consultar al núcleo (PR de `seguridad-jwt`);
+  - la clave privada llega en `NUCLEO_JWT_CLAVE_PRIVADA`, en PKCS#8 y Base64, generada por `infra/generar-claves.sh`. Las dos réplicas usan la misma.
+- **Token de renovación:**
+  - es opaco, `<sesión>.<secreto>`, y de la sesión solo se guarda el hash del secreto;
+  - dura **7 días desde su último uso** y rota en cada renovación;
+  - si llega uno que ya rotó, se revoca la sesión completa: o se filtró, o lo usó otro cliente;
+  - va en el cuerpo de la respuesta, no en una cookie.
+- **Bloqueo** (RF-05): cinco fallos consecutivos bloquean 15 minutos (`PoliticaBloqueo`).
+  - El inicio de sesión lee la cuenta con `SELECT ... FOR UPDATE`, así que los intentos de una misma cuenta se atienden uno tras otro, aunque lleguen a réplicas distintas, y ninguno se escapa del conteo.
+  - Mientras dura el bloqueo, ni la contraseña correcta entra: 423 `CUENTA_BLOQUEADA`, con `bloqueadaHasta`.
+- **Sin revelar cuentas:**
+  - un correo inexistente y una contraseña equivocada responden lo mismo (401 `CREDENCIALES_INVALIDAS`);
+  - con un correo inexistente igual se compara contra un hash ficticio, para que el tiempo de respuesta no lo delate;
+  - una cuenta desactivada solo se informa después de verificar la contraseña (403 `CUENTA_DESACTIVADA`).
+- **Cierre** (RF-06): revoca la sesión; el token de acceso ya emitido vence solo, en 15 minutos como máximo. Con un token que no sirve también responde 204.
+- **Pendiente para el PR de `seguridad-jwt`:**
+  - el token todavía no lleva el tipo de prestador, que el catálogo necesita y que es del módulo de prestadores;
+  - mientras tanto, las rutas protegidas siguen leyendo los headers de la demo (DN-05).
+
+**DN-20. Restablecer la contraseña por correo, con Mailpit en el piloto** (RF-07, RF-08, decisión del equipo).
+- **`POST /cuentas/contrasena/restablecimiento` `{correo}`:**
+  - responde 202 exista o no la cuenta, para no revelar qué correos están registrados;
+  - a una cuenta activa le envía un enlace al frontend, `/restablecer-contrasena?token=<id>.<secreto>` (`nucleo.cuentas.enlace-restablecimiento`);
+  - el enlace es un `CodigoUnUso` de 30 minutos y un solo uso; pedir otro invalida los anteriores.
+- **`POST /cuentas/contrasena` `{token, contrasena}`:**
+  - cambia la contraseña, quita el bloqueo por intentos (quien abre el enlace demostró que el correo es suyo) y cierra todas las sesiones;
+  - un enlace que no sirve responde 409 `CODIGO_NO_VIGENTE`, y una contraseña débil, 400, sin gastar el enlace.
+- **Correo por SMTP** (`SmtpEmailAdapter`), con 3 s de espera (RNF-05):
+  - en el piloto el servidor es **Mailpit** (`axllent/mailpit:v1.21`), que muestra los correos en `http://localhost:8025` y no entrega nada a direcciones reales;
+  - el correo sale dentro de la transacción: si el SMTP falla, responde 503 `CORREO_NO_DISPONIBLE` y no queda guardado un enlace que nunca llegó;
+  - el chequeo de salud del correo está apagado: sin correo el núcleo sigue sirviendo y Docker no lo marca como enfermo.
+
+**DN-21. Datos personales y supresión inmediata del turista** (RF-12, RF-13, Ley 1581, decisiones del equipo).
+- **`GET /cuenta` y `PUT /cuenta`**, para cualquier rol (por eso `/cuenta/**` admite los cinco, DN-05):
+  - se cambian el nombre y, el turista, el WhatsApp; uno distinto queda sin verificar y recibe un código nuevo;
+  - el correo no se cambia por ahora, porque habría que verificar el nuevo.
+- **`POST /turista/supresion` `{contrasena}`:** solo el turista en este PR; el prestador queda para el módulo de prestadores, porque sus ofertas viven en el catálogo.
+  - Se confirma con la contraseña; el fallo cuenta para el bloqueo de RF-05, así que esta ruta no sirve para adivinarla.
+  - Es **inmediata**, en una sola transacción:
+    - el nombre pasa a "Titular suprimido";
+    - el correo pasa a `suprimido-<id>@cuentas.invalid`, para que el titular pueda volver a registrarse con el suyo;
+    - se borran la contraseña y el WhatsApp, y la cuenta queda `SUPRIMIDA`;
+    - se cierran sus sesiones y se encola `SUPRESION_TURISTA` para que el catálogo borre sus opiniones (DC-45).
+- **Lo que se conserva:** la constancia (`solicitudes_supresion`, `EJECUTADA`, con sus fechas) y las aceptaciones de la política, que no tienen datos personales y son la evidencia de RNF-09. Las solicitudes del turista conservan solo su UUID: se suprime aunque tenga solicitudes abiertas, porque las cuentas no dependen de otro módulo.
+
+**DN-22. API de las cuentas para los demás módulos** (diagrama de paquetes: `CuentasApiInterna`, RF-44, RF-57).
+- **La API:** `cuentas.api.CuentasApiInterna.contactoTurista(id)` da el nombre y el WhatsApp solo si la cuenta está activa y el WhatsApp verificado.
+  - La implementa `infraestructura/entrada/modulos/CuentasApiInternaAdapter` con `ConsultarContactoUseCase`.
+  - Las cuentas no dependen de ningún módulo: los demás las consultan.
+- **Solicitudes la usa:** su `ContactoPort` lo implementa `CuentasModuloAdapter`, que reemplaza la tabla de turistas de la demo (DN-15).
+- **Pendiente:** crear y desactivar cuentas internas (RF-81) se hará con el módulo de administración. Ya existe el código `ESTABLECER_CONTRASENA`, y `POST /cuentas/contrasena` lo acepta.
+
 ## Estructura y despliegue
 
 **DN-07. Estructura del servicio y despliegue en el piloto.**
 - **Paquetes:** `co.edu.unimagdalena.samariantour.nucleo`, con un paquete por módulo (`cuentas`, `solicitudes`, `pagos`, `prestadores`, `administracion`, `indicadores` y `bandeja`) y `compartido`, cada módulo hexagonal como en el catálogo. Cada `package-info.java` dice qué requisitos le tocan. Las 9 primeras reglas de `ArquitecturaTest` son las del catálogo, con JPA, Hibernate y PostgreSQL en lugar de MongoDB; la 10 y la 11 cuidan el `api` de cada módulo (DN-17).
 - **API:** prefijo `/api/nucleo` y errores en RFC 7807. El contrato es `contratos/nucleo.openapi.yaml`; `ContratoNucleoIT` falla si una ruta está en un lado y no en el otro, o si un esquema de respuesta no tiene los mismos campos que su DTO. Un cuerpo que no es JSON válido o un parámetro con el tipo equivocado responde 400 `DATO_INVALIDO` en cualquier módulo (`ManejadorPeticionIlegible`).
-- **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. Nginx enruta `/api/nucleo/` y bloquea `/api/nucleo/internal/` y `/api/nucleo/actuator/`. El CI construye también la imagen del núcleo.
+- **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados), Mailpit (DN-20) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. El núcleo exige `NUCLEO_CIFRADO_CLAVE` y `NUCLEO_JWT_CLAVE_PRIVADA` en `infra/.env` (`bash infra/generar-claves.sh`); sin ellas Compose no arranca. Nginx enruta `/api/nucleo/` y bloquea `/api/nucleo/internal/` y `/api/nucleo/actuator/`. El CI construye también la imagen del núcleo.
 - **Métricas:** como el catálogo (DC-48), `/actuator/prometheus` con los umbrales de latencia de cada ruta, solo desde la red de Docker.
 
 ## Cambios pendientes en los documentos de diseño
@@ -220,3 +325,14 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
    - todavía no tiene `codigo` corto: la solicitud se identifica por su UUID, que es lo que RF-30 pide mostrar;
    - `ventanaVenceEn` es `venceEn`, el plazo vigente en cualquier estado abierto; el aparte es `aparteHasta` (DN-09).
 7. **Diagrama entidad-relación:** agregar `solicitudes`, con las columnas de V4 y V6, `transiciones_solicitud`, `claves_idempotencia` y `notificaciones_solicitud` (V3).
+8. **Diagrama de paquetes, módulo de cuentas:**
+   - se agrega `ConsultarPoliticaDatosUseCase` (DN-18), porque un controlador no lee repositorios;
+   - `EmailPort` y `NotificationPort` tienen adaptadores para Mailpit y para el WhatsApp simulado (DN-18, DN-20);
+   - se agrega `AvisosCatalogoPort`, que deja `SUPRESION_TURISTA` en la bandeja (DN-21);
+   - `CrearCuentaInternaUseCase` y `DesactivarCuentaInternaUseCase` quedan para el módulo de administración (RF-81). `AnonimizarUsuarioUseCase` es hoy la supresión del turista (DN-21).
+9. **Diccionario de clases, cuentas:**
+   - `CodigoUnUso` agrega `intentosFallidos` (DN-18);
+   - el token de renovación y el enlace del correo son `TokenOpaco` (`<id>.<secreto>`); `Sesion` guarda el hash del secreto (DN-19);
+   - `Usuario` agrega `cambiarNombre`, `cambiarContrasena` y la anonimización, y `Turista`, `verificarWhatsapp`, `cambiarWhatsapp` y `suprimir`.
+10. **Diagrama entidad-relación:** agregar `usuarios`, `politicas_datos`, `aceptaciones_politica`, `solicitudes_supresion`, `codigos_un_uso` y `sesiones` (V8).
+11. **Diagrama de despliegue:** Mailpit en el piloto (DN-20).
