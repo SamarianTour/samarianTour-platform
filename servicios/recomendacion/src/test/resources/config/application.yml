@@ -1,0 +1,6 @@
+# Se suma al application.yml del servicio en todas las pruebas que levantan el contexto (@SpringBootTest y
+# @WebMvcTest). Sin las lecturas programadas de alertas, ningún hilo del planificador usa un @MockitoBean mientras la
+# prueba lo configura, ni llama al catálogo real (DR-16). La lógica de las alertas se prueba directamente.
+recomendacion:
+  alertas:
+    programadas: false
