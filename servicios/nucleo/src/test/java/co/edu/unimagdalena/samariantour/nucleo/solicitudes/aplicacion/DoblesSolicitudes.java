@@ -30,11 +30,13 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -124,6 +126,25 @@ final class DoblesSolicitudes {
             return guardadas.values().stream()
                     .filter(s -> s.limiteVencimiento() != null && !s.limiteVencimiento().isAfter(ahora))
                     .sorted(Comparator.comparing(SolicitudDisponibilidad::limiteVencimiento))
+                    .limit(limite)
+                    .map(s -> copia(s, revisiones.get(s.id())))
+                    .toList();
+        }
+
+        @Override
+        public List<UUID> prestadoresConAbiertas() {
+            return guardadas.values().stream()
+                    .filter(s -> !s.estado().esTerminal())
+                    .map(s -> s.oferta().prestadorId())
+                    .distinct()
+                    .toList();
+        }
+
+        @Override
+        public List<SolicitudDisponibilidad> tomarAbiertasDelPrestador(UUID prestadorId, int limite) {
+            return guardadas.values().stream()
+                    .filter(s -> !s.estado().esTerminal() && !s.intentoPagoEnCurso()
+                            && s.oferta().prestadorId().equals(prestadorId))
                     .limit(limite)
                     .map(s -> copia(s, revisiones.get(s.id())))
                     .toList();
@@ -235,6 +256,8 @@ final class DoblesSolicitudes {
     static final class Directorio implements PrestadoresPort, ContactoPort {
 
         final Map<UUID, UUID> operadores = new HashMap<>(Map.of(AGENCIA, OPERADOR));
+        /** Los prestadores sin el RNT activo; los demás están habilitados. */
+        final Set<UUID> inhabilitados = new HashSet<>();
         final Map<UUID, ContactoTurista> turistas = new HashMap<>(
                 Map.of(TURISTA, new ContactoTurista("Laura Gómez", "+573105550001")));
 
@@ -246,6 +269,11 @@ final class DoblesSolicitudes {
         @Override
         public Optional<String> whatsapp(UUID prestadorId) {
             return Optional.of("+573001110001");
+        }
+
+        @Override
+        public boolean estaHabilitado(UUID prestadorId) {
+            return !inhabilitados.contains(prestadorId);
         }
 
         @Override

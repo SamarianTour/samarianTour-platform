@@ -39,4 +39,23 @@ interface SolicitudJpaRepository extends JpaRepository<SolicitudEntity, UUID> {
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
     List<SolicitudEntity> tomarPorVencer(@Param("ahora") Instant ahora, @Param("limite") int limite);
+
+    @Query(value = """
+            SELECT DISTINCT prestador_id FROM solicitudes
+            WHERE estado IN ('PENDIENTE', 'ATENDIDA', 'CONFIRMADA', 'PAGO_FALLIDO')
+            """, nativeQuery = true)
+    List<UUID> prestadoresConAbiertas();
+
+    /** Las abiertas del prestador que se pueden cerrar ya: con un intento de pago en curso se espera (DN-36). */
+    @Query(value = """
+            SELECT * FROM solicitudes
+            WHERE prestador_id = :prestadorId
+              AND estado IN ('PENDIENTE', 'ATENDIDA', 'CONFIRMADA', 'PAGO_FALLIDO')
+              AND NOT intento_pago_en_curso
+            ORDER BY creada_en, id
+            LIMIT :limite
+            FOR UPDATE SKIP LOCKED
+            """, nativeQuery = true)
+    List<SolicitudEntity> tomarAbiertasDelPrestador(@Param("prestadorId") UUID prestadorId,
+                                                    @Param("limite") int limite);
 }

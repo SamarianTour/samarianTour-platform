@@ -4,7 +4,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo;
 public enum ActorTransicion {
     TURISTA,
     OPERADOR,
-    /** Los vencimientos automáticos (RF-41, RF-55). */
+    /** Los vencimientos automáticos (RF-41, RF-55) y el cierre por el RNT inactivo del prestador (RF-77). */
     SISTEMA,
     /** Los eventos de la pasarela, que llegan por el módulo de pagos (RF-50, RF-58). */
     PAGOS

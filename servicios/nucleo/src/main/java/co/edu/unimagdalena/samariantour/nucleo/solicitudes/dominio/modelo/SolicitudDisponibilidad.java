@@ -50,6 +50,8 @@ public final class SolicitudDisponibilidad {
     public static final int LONGITUD_MAXIMA_MOTIVO = 500;
     /** Tres intentos de pago en total: dos reintentos después del primero (RF-58). */
     public static final int INTENTOS_PAGO = 3;
+    /** El motivo que ve el turista cuando se cierra porque el prestador perdió el RNT [SUPUESTO] (RF-77, DN-36). */
+    public static final String MOTIVO_RNT_INACTIVO = "El prestador ya no tiene el Registro Nacional de Turismo activo";
 
     private static final Map<EstadoSolicitud, Set<EstadoSolicitud>> TRANSICIONES = new EnumMap<>(Map.of(
             PENDIENTE, EnumSet.of(ATENDIDA, NO_DISPONIBLE, SIN_RESPUESTA),
@@ -227,6 +229,26 @@ public final class SolicitudDisponibilidad {
                     ? "Terminó la ventana de confirmación y pago y la gracia del intento en curso"
                     : "Terminó la ventana de confirmación y pago";
             cerrarComoVencida(motivo, ahora);
+        }
+        return true;
+    }
+
+    /**
+     * El prestador perdió la habilitación RNT y su catálogo salió de la vista pública (RF-77, DN-36): una Pendiente
+     * queda No disponible; una Atendida, Confirmada o con el pago fallido, Vencida, y el cupo apartado se libera. Con
+     * un intento de pago en curso espera su resultado: si se aprueba, queda Pagada.
+     *
+     * @return false si ya está cerrada o tiene un intento de pago en curso
+     */
+    public boolean cerrarPorRntInactivo(Instant ahora) {
+        if (estado.esTerminal() || intentoPagoEnCurso) {
+            return false;
+        }
+        if (estado == PENDIENTE) {
+            this.venceEn = null;
+            transicionar(NO_DISPONIBLE, ActorTransicion.SISTEMA, null, MOTIVO_RNT_INACTIVO, ahora);
+        } else {
+            cerrarComoVencida(MOTIVO_RNT_INACTIVO, ahora);
         }
         return true;
     }
