@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo), la moderación de ofertas y opiniones, las solicitudes de disponibilidad y las cuentas (registro, sesión con JWT, restablecimiento de la contraseña, datos personales y supresión); sus demás módulos están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo), la moderación de ofertas y opiniones, las solicitudes de disponibilidad, los pagos con la pasarela simulada o Wompi sandbox, y las cuentas (registro, sesión con JWT, restablecimiento de la contraseña, datos personales y supresión); sus demás módulos están pendientes.
 
 
 ## Estructura del repositorio
@@ -128,6 +128,42 @@ Actualizar solo el frontend:
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build --no-deps nginx
 ```
+
+### Pasarela de pagos: simulada o Wompi sandbox
+
+Sin configurar nada, los pagos van por la **pasarela simulada**. Es una página del propio núcleo con los botones "Aprobar" y "Rechazar", que envía al webhook eventos con la forma y la firma de los de Wompi (DN-18). El recorrido está en la sección 13.
+
+Para cobrar en el **sandbox de Wompi** (QAS-06, sin recompilar):
+
+1. **Crea una cuenta de comercio** en comercios.wompi.co. En el dashboard, en modo de pruebas (Sandbox), copia de "Desarrolladores" la llave pública (`pub_test_...`) y, de "Desarrolladores > Secretos para integración técnica", el secreto de integridad (`test_integrity_...`) y el de eventos (`test_events_...`).
+2. **Pon las llaves en `infra/.env`,** que no se versiona; nunca van al repositorio:
+
+   ```bash
+   # En infra/.env:
+   #   PAGOS_PASARELA=wompi
+   #   WOMPI_LLAVE_PUBLICA=pub_test_...
+   #   WOMPI_SECRETO_INTEGRIDAD=test_integrity_...
+   #   WOMPI_SECRETO_EVENTOS=test_events_...
+   docker compose -f infra/docker-compose.yml up -d nucleo        # recrea el núcleo con la misma imagen
+   ```
+
+   Sin alguna de las tres llaves, el núcleo no arranca con `wompi`.
+3. **Publica el webhook con un túnel:** Wompi envía los eventos a una URL pública y el piloto está en `localhost`. Con cloudflared:
+
+   ```bash
+   cloudflared tunnel --url http://localhost:8080
+   # ... https://<nombre-aleatorio>.trycloudflare.com
+   ```
+
+4. **Registra la URL de eventos** en el panel de Wompi, en modo de pruebas: `https://<nombre-aleatorio>.trycloudflare.com/api/nucleo/pagos/eventos`. Cada vez que se reinicia el túnel cambia la URL y hay que registrarla de nuevo.
+
+Desde ahí, `POST /turista/solicitudes/{id}/pago` responde con `"pasarela":"WOMPI"` y la URL del Web Checkout (`https://checkout.wompi.co/p/?public-key=...&signature:integrity=...`).
+- **Datos de prueba del sandbox:** la tarjeta 4242 4242 4242 4242 (cualquier fecha futura y CVC de 3 dígitos) se aprueba, la 4111 1111 1111 1111 se rechaza y cualquier otra termina en ERROR. Con Nequi, 3991111111 se aprueba y 3992222222 se rechaza.
+- **Al terminar,** Wompi devuelve al turista a la pantalla de su solicitud y envía el evento firmado al webhook, que es lo único que cambia el estado (RF-51).
+- **Sin el túnel,** el pago se hace pero el evento no llega: el intento queda en curso y a los 30 min se abandona (DN-20).
+- **La dispersión al prestador sigue siendo simulada:** "Pagos a terceros" de Wompi exige activarlo en la cuenta del comercio, con sus propias credenciales (DN-24).
+
+Para volver a la simulada, borra `PAGOS_PASARELA` de `infra/.env` (o ponle `simulada`) y recrea el núcleo.
 
 ### Motor de recomendación: reglas o IA
 
@@ -458,7 +494,7 @@ curl -s -X POST "$BASE/turista/opiniones" -H "Content-Type: application/json" \
 # 403 OPINION_NO_HABILITADA
 ```
 
-Cuando una solicitud queda pagada, el núcleo habilita al turista con un aviso. Mientras el núcleo no exista, se envía a mano desde la red de Docker:
+Cuando una solicitud queda pagada, el núcleo habilita al turista con un aviso (sección 13). Para mostrarlo sin pagar, se envía a mano desde la red de Docker:
 
 ```bash
 docker compose -f infra/docker-compose.yml exec -T nginx \
@@ -686,7 +722,7 @@ Las alternativas también dejan su línea en el registro de exposición, con `"o
 
 ### 12. Solicitudes de disponibilidad
 
-El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de `application-demo.yml` del núcleo: la turista `90000000-...-001` tiene su WhatsApp verificado, la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-15). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
+El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de las cuentas precargadas y de `application-demo.yml` del núcleo: la turista `90000000-...-001` es una cuenta con el WhatsApp verificado (DN-28, DN-32), la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-15). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
@@ -789,7 +825,126 @@ Con una pendiente, el mismo `UPDATE` la deja Sin respuesta (RF-41). Otros casos 
 - **Fecha muy cercana:** mañana responde 400 (`fechaInicio: debe ser desde el ...`).
 - **Solicitud ajena:** la de otro turista o la de otro operador responde 404.
 
-### 13. Cuentas
+### 13. Pagos
+
+El turista paga una solicitud confirmada en la pasarela, el resultado llega por el webhook y la solicitud queda Pagada. Después se dispersa al prestador el precio menos la comisión y el costo transaccional (DN-18 a DN-27). Sin configurar nada, la pasarela es la **simulada**: una página del propio núcleo con los botones "Aprobar" y "Rechazar". Al pulsar uno, envía al webhook un evento con la forma y la firma de los de Wompi. Las variables `NUCLEO`, `TURISTA`, `OPERADOR`, `OPERADOR2` y `FECHA` son las de la sección 12.
+
+```bash
+ADMIN=(-H "X-Usuario-Id: 70000000-0000-0000-0000-000000000001" -H "X-Rol: ADMINISTRADOR")
+
+# Una solicitud del snorkel en Playa Cristal, atendida y confirmada (sección 12)
+ID=$(curl -s -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: 21111111-aaaa-4bbb-8ccc-000000000001" \
+  -H "Content-Type: application/json" \
+  -d "{\"ofertaId\":\"b00000000000000000000002\",\"fechaInicio\":\"$FECHA\",\"horaSalida\":\"08:00\",\"personas\":2}" \
+  | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+curl -s -X POST "$NUCLEO/operador/solicitudes/$ID/atencion" "${OPERADOR[@]}" -H "Content-Type: application/json" \
+  -d '{"resultado":"ATENDIDA","precioBase":300000,"politicaCancelacion":"Sin reembolso a menos de 24 horas del servicio","aparteAcordado":true}'
+curl -s -X POST "$NUCLEO/turista/solicitudes/$ID/respuesta" "${TURISTA[@]}" -H "Idempotency-Key: 22222222-aaaa-4bbb-8ccc-000000000001" \
+  -H "Content-Type: application/json" -d '{"decision":"CONFIRMAR"}'
+# {"estado":"CONFIRMADA",...}
+
+# Antes de pagar, la turista no puede opinar sobre la oferta (sección 8)
+curl -s -X POST "http://localhost:8080/api/catalogo/turista/opiniones" "${TURISTA[@]}" -H "Content-Type: application/json" \
+  -d '{"ofertaId":"b00000000000000000000002","calificacion":5,"comentario":"El agua cristalina y el guia muy atento."}'
+# 403 OPINION_NO_HABILITADA
+
+# Abre el pago con su Idempotency-Key (RF-46, ADR-04): el intento 1, por el precio base en centavos (RF-49)
+CLAVE=33333333-aaaa-4bbb-8ccc-000000000001
+curl -s -X POST "$NUCLEO/turista/solicitudes/$ID/pago" "${TURISTA[@]}" -H "Idempotency-Key: $CLAVE"
+# HTTP 201 {"intentoId":"...","numero":1,"estado":"EN_CURSO","referencia":"ST-...","montoCentavos":30000000,
+#  "moneda":"COP","checkout":{"pasarela":"SIMULADA","url":"http://localhost:8080/api/nucleo/pasarela-simulada/ST-...?monto=30000000&solicitud=...",
+#  "urlRedireccion":"http://localhost:8080/turista/solicitudes/..."}}
+# Con la misma clave devuelve la misma respuesta, con Idempotency-Replayed: true, y no abre otro intento
+
+# La URL del checkout se abre en el navegador: muestra $300.000 COP y los botones. Desde la consola se pulsa así:
+URL="http://localhost:8080/api/nucleo/pasarela-simulada/ST-...?monto=30000000&solicitud=$ID"   # la de la respuesta
+curl -s -X POST "${URL%%\?*}/aprobar" -d "${URL#*\?}" | grep -o "Transacción: <code>[^<]*"
+# Transacción: <code>SIM-...
+
+# Unos segundos después el webhook recibe el evento firmado, y en 5 s más queda Pagada (RF-50, RF-52)
+curl -s "$NUCLEO/turista/solicitudes/$ID" "${TURISTA[@]}"      # {"estado":"PAGADA",...}
+curl -s "$NUCLEO/turista/solicitudes/$ID/pagos" "${TURISTA[@]}"
+# [{"numero":1,"estado":"APROBADO","transaccionId":"SIM-...","resueltoEn":"...",...}]
+
+# La dispersión al prestador, en los 15 s siguientes: 4 % de comisión, el costo transaccional configurado
+# (2,65 % + $700 + IVA) y el neto, a la cuenta enmascarada (RF-53, RF-75)
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "SELECT porcentaje_comision, comision, costo_transaccional, monto_neto, estado, cuenta_destino FROM dispersiones"
+#  4.00 | 12000 | 10294 | 277706 | EXITOSA | ******0101
+
+# El aviso al catálogo habilita la opinión (DN-27): ahora sí puede opinar
+curl -s -X POST "http://localhost:8080/api/catalogo/turista/opiniones" "${TURISTA[@]}" -H "Content-Type: application/json" \
+  -d '{"ofertaId":"b00000000000000000000002","calificacion":5,"comentario":"El agua cristalina y el guia muy atento."}'
+# 201 {"id":"...","estado":"EN_MODERACION",...}
+
+# El turista y el prestador reciben la notificación de pagada (RF-57)
+docker compose -f infra/docker-compose.yml logs nucleo | grep -E "SOLICITUD_PAGADA|Dispersión simulada"
+# [WhatsApp simulado] para=******0101 tipo=SOLICITUD_PAGADA solicitud=...
+# Dispersión simulada enviada: dispersion=... cuenta=******0101 monto=277706
+```
+
+**Tres rechazos.** Cada rechazo deja la solicitud con el pago fallido, y el turista abre otro intento con otra clave. Al tercero queda Vencida y libera el cupo (RF-58):
+
+```bash
+# Con una solicitud confirmada nueva ($ID2, como la de arriba, con la caminata b00000000000000000000001 a las 08:00)
+curl -s -X POST "$NUCLEO/turista/solicitudes/$ID2/pago" "${TURISTA[@]}" -H "Idempotency-Key: 33333333-aaaa-4bbb-8ccc-000000000201"
+curl -s -X POST "${URL2%%\?*}/rechazar" -d "${URL2#*\?}" > /dev/null    # URL2: la del checkout de esa respuesta
+curl -s "$NUCLEO/turista/solicitudes/$ID2" "${TURISTA[@]}"     # {"estado":"PAGO_FALLIDO",...}
+# Lo mismo con las claves ...202 y ...203 (intentos 2 y 3); después del tercero:
+curl -s "$NUCLEO/turista/solicitudes/$ID2" "${TURISTA[@]}"     # {"estado":"VENCIDA",...}
+curl -s -X POST "$NUCLEO/turista/solicitudes/$ID2/pago" "${TURISTA[@]}" -H "Idempotency-Key: 33333333-aaaa-4bbb-8ccc-000000000209"
+# 409 SOLICITUD_NO_COBRABLE
+```
+
+Si, después de un rechazo, el turista vuelve atrás en la página y pulsa "Aprobar", ese dinero no paga nada: la solicitud sigue con el pago fallido y queda como pago tardío (DN-22).
+
+**Pago tardío.** El pago se aprueba cuando la ventana ya terminó (RF-50). Para no esperar 3 h, se abre el pago y se adelanta el plazo **solo en la base de la demo**, como en la sección 12:
+
+```bash
+# $ID3: otra solicitud confirmada, con el pago abierto ($URL3) pero sin pulsar todavía
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "UPDATE solicitudes SET vence_en = now() - interval '1 hour', limite_vencimiento = now() - interval '1 minute' WHERE id = '$ID3'"
+# En menos de un minuto queda Vencida; ahora se aprueba el pago
+curl -s -X POST "${URL3%%\?*}/aprobar" -d "${URL3#*\?}" > /dev/null
+curl -s "$NUCLEO/admin/pagos-tardios" "${ADMIN[@]}"
+# [{"solicitudId":"...","referencia":"ST-...","transaccionId":"SIM-...","monto":300000,"avisado":true,...}]
+curl -s "$NUCLEO/turista/solicitudes/$ID3" "${TURISTA[@]}"     # sigue {"estado":"VENCIDA",...}
+docker compose -f infra/docker-compose.yml logs nucleo | grep PAGO_TARDIO
+# [WhatsApp simulado] para=******0099 tipo=PAGO_TARDIO solicitud=...      (el administrador lo reembolsa a mano)
+```
+
+**Dispersión fallida.** La cuenta Daviplata del restaurante está configurada para fallar en la dispersión simulada (DN-26). En la demo los reintentos se hacen a los 10, 20 y 40 s; al cuarto fallo queda Fallida y se avisa al prestador (RF-54):
+
+```bash
+# Una solicitud del restaurante (b00000000000000000000013, "horaReserva":"19:30"), atendida por el operador 2,
+# confirmada y pagada como la primera
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "SELECT estado, intentos, cuenta_destino, ultima_causa FROM dispersiones WHERE cuenta_destino = '******0404'"
+#  PENDIENTE | 2 | ******0404 | La entidad rechazó la cuenta ******0404 (simulado)      (durante los reintentos)
+#  FALLIDA   | 4 | ******0404 | La entidad rechazó la cuenta ******0404 (simulado)      (en algo más de un minuto)
+docker compose -f infra/docker-compose.yml logs nucleo | grep DISPERSION_FALLIDA
+# [WhatsApp simulado] para=******0404 tipo=DISPERSION_FALLIDA solicitud=...
+```
+
+**Comisión.** Solo el administrador la ve y la cambia (RF-82). El cambio aplica a los pagos que se confirmen después, nunca a los anteriores (RF-83):
+
+```bash
+curl -s "$NUCLEO/admin/comision" "${ADMIN[@]}"
+# {"porcentaje":4.00,"vigenteDesde":"2026-01-01T00:00:00Z","historial":[{"porcentaje":4.00,...}]}
+curl -s -X PUT "$NUCLEO/admin/comision" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"porcentaje":5}'
+# {"porcentaje":5.00,"vigenteDesde":"...","historial":[{"porcentaje":5.00,...,"administradorId":"70000000-..."},{"porcentaje":4.00,...}]}
+curl -s -X PUT "$NUCLEO/admin/comision" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"porcentaje":100}'
+# 400 DATO_INVALIDO
+curl -s -o /dev/null -w '%{http_code}\n' "$NUCLEO/admin/comision" "${OPERADOR[@]}"     # 403
+```
+
+Otros casos que se pueden mostrar:
+
+- **Firma inválida:** un evento con otro `checksum` en `POST $NUCLEO/pagos/eventos` responde 401 `EVENTO_NO_AUTENTICO` y no se guarda. El mismo evento válido dos veces responde 200 las dos, con `"duplicado":true` la segunda (DN-21).
+- **Solicitud que no se puede pagar:** una Pendiente o una Atendida responde 409 `SOLICITUD_NO_COBRABLE`, y la de otro turista, 404.
+- **Pago abandonado:** un intento sin resultado a los 30 min queda Abandonado y no cuenta como rechazo: el turista puede abrir otro (DN-20).
+
+### 14. Cuentas
 
 Registro, sesión, restablecimiento de la contraseña, datos personales y supresión (DN-28 a DN-32). Las cuentas de la demo tienen la clave `Demo1234`; el administrador es `admin@samariantour.co` con `SamarianAdmin2026`.
 
@@ -841,7 +996,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/turista/supresion" "${
 
 Las cuentas precargadas también inician sesión, por ejemplo `laura@demo.samariantour.co` con `Demo1234`. Laura (`70000000-...-007`) ya tiene el WhatsApp verificado, así que puede enviar solicitudes como en el paso 12.
 
-### 14. Rutas que no se exponen
+### 15. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404

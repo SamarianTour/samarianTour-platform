@@ -87,6 +87,29 @@ nucleo:
       cron: "0 0 * * * *"
     # La pantalla de confirmación del frontend que lleva la notificación de Atendida (RF-45) [SUPUESTO] (DN-13).
     enlace-confirmacion: http://localhost:8080/turista/solicitudes/{id}
+  pagos:
+    # La pasarela (QAS-06, DN-18): simulada, la del prototipo, o wompi. En Docker Compose se cambia con
+    # NUCLEO_PAGOS_PASARELA en infra/.env.
+    pasarela: simulada
+    # A dónde vuelve el turista después de pagar; no es prueba del pago (RF-51).
+    url-redireccion: http://localhost:8080/turista/solicitudes/{id}
+    eventos:
+      # Cada 5 s procesa los eventos que guardó el webhook [SUPUESTO] (DN-21). Con "-" no corre.
+      cron: "*/5 * * * * *"
+    abandonos:
+      # Cada minuto abandona los intentos sin resultado a los 30 min (DN-20). Con "-" no corre.
+      cron: "30 * * * * *"
+    dispersiones:
+      # Cada 15 s ejecuta las dispersiones pendientes y envía los avisos de pagos [SUPUESTO] (DN-24). Con "-" no corre.
+      cron: "*/15 * * * * *"
+    idempotencia:
+      # Cada hora borra las claves de idempotencia de pagos vencidas (DN-19). Con "-" no corre.
+      cron: "0 30 * * * *"
+    # Wompi (DN-18): las llaves y secretos llegan por variables de entorno desde infra/.env, que no se versiona.
+    wompi:
+      llave-publica: ${WOMPI_LLAVE_PUBLICA:}
+      secreto-integridad: ${WOMPI_SECRETO_INTEGRIDAD:}
+      secreto-eventos: ${WOMPI_SECRETO_EVENTOS:}
 
 resilience4j:
   circuitbreaker:

@@ -1,8 +1,12 @@
 package co.edu.unimagdalena.samariantour.nucleo;
 
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.CambioComisionResponse;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionModeracionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PagoTardioResponse;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.CuentaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.DatosPersonalesRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.InicioSesionRequest;
@@ -14,6 +18,10 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.r
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.SupresionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.TokenRenovacionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.VerificacionWhatsappRequest;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.CheckoutResponse;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.EventoRecibidoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.IntentoPagoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.SesionCobroResponse;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.AtencionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.AvisoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.CondicionesResponse;
@@ -117,7 +125,15 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
                 arguments("Aviso", AvisoResponse.class),
                 arguments("PaginaSolicitudesTurista", PaginaResponse.class),
                 arguments("PaginaColaOperador", PaginaResponse.class),
-                arguments("PaginaAvisos", PaginaResponse.class));
+                arguments("PaginaAvisos", PaginaResponse.class),
+                arguments("SesionCobro", SesionCobroResponse.class),
+                arguments("Checkout", CheckoutResponse.class),
+                arguments("IntentoPago", IntentoPagoResponse.class),
+                arguments("EventoRecibido", EventoRecibidoResponse.class),
+                arguments("ComisionRequest", ComisionRequest.class),
+                arguments("Comision", ComisionResponse.class),
+                arguments("CambioComision", CambioComisionResponse.class),
+                arguments("PagoTardio", PagoTardioResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {

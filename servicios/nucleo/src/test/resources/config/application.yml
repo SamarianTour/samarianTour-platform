@@ -1,0 +1,13 @@
+# Configuración de las pruebas, además de la del servicio (Spring Boot carga config/application.yml con más prioridad).
+# Las tareas programadas de pagos no corren: cada prueba llama al caso de uso cuando lo necesita. Spring guarda los
+# contextos de las pruebas, y sus tareas seguirían corriendo mientras corre otra clase sobre la misma base.
+nucleo:
+  pagos:
+    eventos:
+      cron: "-"
+    abandonos:
+      cron: "-"
+    dispersiones:
+      cron: "-"
+    idempotencia:
+      cron: "-"

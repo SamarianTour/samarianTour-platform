@@ -14,11 +14,11 @@ import java.util.UUID;
  * catálogo ({@code POST /internal/opiniones/avisos}).
  */
 @Component
-public class AvisosCatalogoBandejaAdapter implements AvisosCatalogoPort {
+public class AvisosSupresionBandejaAdapter implements AvisosCatalogoPort {
 
     private final BandejaSalidaApi bandeja;
 
-    public AvisosCatalogoBandejaAdapter(BandejaSalidaApi bandeja) {
+    public AvisosSupresionBandejaAdapter(BandejaSalidaApi bandeja) {
         this.bandeja = bandeja;
     }
 

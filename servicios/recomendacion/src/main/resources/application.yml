@@ -49,6 +49,8 @@ recomendacion:
     actualizacion: PT8H
     # Si la lectura del arranque falla, se reintenta cada 2 minutos mientras no haya ninguna lectura buena (DR-16).
     reintento: PT2M
+    # Las tres lecturas programadas (arranque, cada 8 horas y reintento). Solo las pruebas la ponen en false (DR-16).
+    programadas: true
     ideam:
       # Capa "Alertas_vigentes" del servicio ArcGIS del IDEAM, verificada el 24-10-2026 (DR-14). Sin /query.
       url: https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2

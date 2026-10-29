@@ -39,6 +39,11 @@ public class SolicitudesPagosApiAdapter implements SolicitudesPagosApi {
     }
 
     @Override
+    public ResultadoPago liberarIntentoEnCurso(UUID solicitudId) {
+        return traducir(() -> eventos.liberarIntentoEnCurso(solicitudId));
+    }
+
+    @Override
     public ResultadoPago registrarPagoAprobado(UUID solicitudId) {
         return traducir(() -> eventos.registrarPagoAprobado(solicitudId));
     }

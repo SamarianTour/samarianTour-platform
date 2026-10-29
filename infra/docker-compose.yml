@@ -106,11 +106,17 @@ services:
       # infra/.env con "bash infra/generar-claves.sh".
       NUCLEO_CIFRADO_CLAVE: "${NUCLEO_CIFRADO_CLAVE:?Falta la clave del núcleo, ejecuta bash infra/generar-claves.sh}"
       # Clave privada RSA que firma el token de acceso (DN-29); la genera el mismo script.
+      NUCLEO_JWT_CLAVE_PRIVADA: "${NUCLEO_JWT_CLAVE_PRIVADA:?Falta la clave del token, ejecuta bash infra/generar-claves.sh}"
       # El correo del restablecimiento de la contraseña va a Mailpit (DN-30).
       SPRING_MAIL_HOST: mailpit
-      NUCLEO_JWT_CLAVE_PRIVADA: "${NUCLEO_JWT_CLAVE_PRIVADA:?Falta la clave del token, ejecuta bash infra/generar-claves.sh}"
       # demo: headers que sustituyen al token mientras no exista el JWT (DN-05). Solo para la demostración.
       SPRING_PROFILES_ACTIVE: demo
+      # Pagos (DN-18): la pasarela simulada por defecto; wompi con las llaves del sandbox en infra/.env, que no se
+      # versiona (ver infra/.env.example). Las llaves nunca se escriben en este archivo.
+      NUCLEO_PAGOS_PASARELA: ${PAGOS_PASARELA:-simulada}
+      WOMPI_LLAVE_PUBLICA: ${WOMPI_LLAVE_PUBLICA:-}
+      WOMPI_SECRETO_INTEGRIDAD: ${WOMPI_SECRETO_INTEGRIDAD:-}
+      WOMPI_SECRETO_EVENTOS: ${WOMPI_SECRETO_EVENTOS:-}
     depends_on:
       postgres:
         condition: service_healthy
