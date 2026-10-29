@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * La cuenta del administrador viene con la instalación (RF-01, DN-18). Es una migración de Flyway en Java, y no en SQL,
+ * La cuenta del administrador viene con la instalación (RF-01, DN-28). Es una migración de Flyway en Java, y no en SQL,
  * porque el nombre se guarda cifrado con la clave de cada entorno. Flyway la toma del contexto de Spring y la aplica
  * una sola vez, después de V8. El nombre de la clase es el que Flyway exige ({@code V<n>__<descripcion>}).
  * <p>

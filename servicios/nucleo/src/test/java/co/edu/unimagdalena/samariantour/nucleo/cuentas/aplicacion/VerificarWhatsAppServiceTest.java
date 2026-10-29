@@ -19,7 +19,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.Escenar
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** La verificación del WhatsApp del turista (RF-03, RF-08, DN-18). */
+/** La verificación del WhatsApp del turista (RF-03, RF-08, DN-28). */
 class VerificarWhatsAppServiceTest {
 
     private final EscenarioCuentas escenario = new EscenarioCuentas();

@@ -15,7 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 
 /**
- * La renovación con rotación del token de renovación (RF-04, DN-19). Un token que ya se usó y vuelve a llegar cierra
+ * La renovación con rotación del token de renovación (RF-04, DN-29). Un token que ya se usó y vuelve a llegar cierra
  * la sesión: o lo robaron, o lo usó otro cliente; en los dos casos hay que volver a iniciar sesión.
  */
 public class RenovarSesionService implements RenovarSesionUseCase {

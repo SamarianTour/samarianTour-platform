@@ -23,10 +23,10 @@ public abstract class IntegracionPostgresBase {
         POSTGRES.start();
     }
 
-    /** Clave de cifrado solo para las pruebas (DN-18): 32 bytes en Base64. */
+    /** Clave de cifrado solo para las pruebas (DN-28): 32 bytes en Base64. */
     public static final String CLAVE_CIFRADO = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
 
-    /** Clave RSA del token solo para las pruebas (DN-19), generada al cargar la clase: PKCS#8 en Base64. */
+    /** Clave RSA del token solo para las pruebas (DN-29), generada al cargar la clase: PKCS#8 en Base64. */
     public static final String CLAVE_TOKEN = claveRsaNueva();
 
     @DynamicPropertySource

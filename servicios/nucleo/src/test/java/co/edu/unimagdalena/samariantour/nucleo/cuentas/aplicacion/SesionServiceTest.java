@@ -19,7 +19,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.AH
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Iniciar, renovar y cerrar la sesión (RF-04 a RF-06, DN-19). */
+/** Iniciar, renovar y cerrar la sesión (RF-04 a RF-06, DN-29). */
 class SesionServiceTest {
 
     private final EscenarioCuentas escenario = new EscenarioCuentas();

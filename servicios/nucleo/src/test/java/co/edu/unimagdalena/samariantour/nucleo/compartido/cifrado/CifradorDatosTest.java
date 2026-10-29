@@ -8,7 +8,7 @@ import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** El cifrado en reposo de los datos personales (RNF-08, DN-18). */
+/** El cifrado en reposo de los datos personales (RNF-08, DN-28). */
 class CifradorDatosTest {
 
     private static final String CLAVE = Base64.getEncoder()

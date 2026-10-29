@@ -1,6 +1,6 @@
 package co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion;
 
-/** El código no es el que se envió; quedan los intentos que dice el mensaje (DN-18). */
+/** El código no es el que se envió; quedan los intentos que dice el mensaje (DN-28). */
 public class CodigoIncorrectoException extends ExcepcionDominio {
 
     private final int intentosRestantes;

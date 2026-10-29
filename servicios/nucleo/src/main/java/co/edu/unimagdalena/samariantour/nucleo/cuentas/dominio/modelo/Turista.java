@@ -51,7 +51,7 @@ public final class Turista extends Usuario {
         return true;
     }
 
-    /** Suprime sus datos personales de inmediato, también el WhatsApp (RF-13, DN-21). */
+    /** Suprime sus datos personales de inmediato, también el WhatsApp (RF-13, DN-31). */
     public void suprimir(UUID supresionId, Instant ahora) {
         anonimizar(supresionId, ahora);
         whatsapp = null;

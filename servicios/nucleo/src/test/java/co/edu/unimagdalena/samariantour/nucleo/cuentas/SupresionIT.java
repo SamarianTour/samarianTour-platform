@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Los datos personales (RF-12) y su supresión (RF-13, DN-21) de punta a punta, con PostgreSQL: qué queda en las tablas
+ * Los datos personales (RF-12) y su supresión (RF-13, DN-31) de punta a punta, con PostgreSQL: qué queda en las tablas
  * y el aviso que espera el catálogo en la bandeja.
  */
 @SpringBootTest(properties = {"nucleo.bandeja.publicacion.cron=-", "nucleo.solicitudes.vencimiento.cron=-",

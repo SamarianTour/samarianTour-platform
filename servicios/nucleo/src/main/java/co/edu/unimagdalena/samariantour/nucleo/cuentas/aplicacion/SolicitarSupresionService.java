@@ -16,7 +16,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * La supresión inmediata de los datos del turista (RF-13, DN-21). La anonimización, el cierre de las sesiones y el
+ * La supresión inmediata de los datos del turista (RF-13, DN-31). La anonimización, el cierre de las sesiones y el
  * aviso al catálogo van en una sola transacción: o se cumple todo, o nada.
  */
 public class SolicitarSupresionService implements SolicitarSupresionUseCase {

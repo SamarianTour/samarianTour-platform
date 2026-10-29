@@ -21,7 +21,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.cu
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** El token de acceso JWT RS256 (RF-04, DN-19), validado como lo harán los demás servicios: con la clave pública. */
+/** El token de acceso JWT RS256 (RF-04, DN-29), validado como lo harán los demás servicios: con la clave pública. */
 class JwtRs256AdapterTest {
 
     private static final String CLAVE = claveNueva();

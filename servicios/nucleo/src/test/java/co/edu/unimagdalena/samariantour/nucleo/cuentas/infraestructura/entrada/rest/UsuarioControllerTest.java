@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Las rutas del registro y del WhatsApp (RF-01 a RF-03, DN-05, DN-18). */
+/** Las rutas del registro y del WhatsApp (RF-01 a RF-03, DN-05, DN-28). */
 @WebMvcTest(UsuarioController.class)
 @Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")

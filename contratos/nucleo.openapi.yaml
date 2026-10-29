@@ -98,7 +98,7 @@ paths:
       summary: Inicia sesión con el correo y la contraseña (RF-04, RF-05)
       description: |
         Pública. Entrega un token de acceso (JWT RS256 de 15 minutos, para `Authorization: Bearer`) y un token de
-        renovación (7 días sin usarse; sirve una sola vez) (DN-19). Cinco fallos consecutivos bloquean la cuenta 15
+        renovación (7 días sin usarse; sirve una sola vez) (DN-29). Cinco fallos consecutivos bloquean la cuenta 15
         minutos (RF-05); mientras tanto la contraseña no se revisa.
 
         El token de acceso lleva `sub` (el usuario), `rol`, `sid` (la sesión), `iss` (`samarian-tour-nucleo`),
@@ -154,7 +154,7 @@ paths:
       summary: Pide tokens nuevos con el token de renovación, sin la contraseña (RF-04)
       description: |
         Pública. Entrega un token de acceso nuevo y también un token de renovación nuevo: el usado deja de servir. Si
-        llega un token de renovación que ya se usó, la sesión se cierra, porque es señal de que se filtró (DN-19).
+        llega un token de renovación que ya se usó, la sesión se cierra, porque es señal de que se filtró (DN-29).
       requestBody:
         required: true
         content:
@@ -173,7 +173,7 @@ paths:
       summary: Cierra la sesión (RF-06)
       description: |
         Pública. El token de renovación deja de servir; el token de acceso ya emitido vence solo, en 15 minutos como
-        máximo (DN-19). Responde 204 también con un token que no sirve: la sesión queda cerrada de todas formas.
+        máximo (DN-29). Responde 204 también con un token que no sirve: la sesión queda cerrada de todas formas.
       requestBody:
         required: true
         content:
@@ -191,7 +191,7 @@ paths:
       description: |
         Pública. Responde 202 exista o no una cuenta activa con ese correo, para no revelar qué correos están
         registrados. El enlace lleva a la pantalla del frontend `/restablecer-contrasena?token=...`, vence a los 30
-        minutos y sirve una sola vez (RF-08); pedir otro invalida los anteriores (DN-20). En el piloto el correo llega a
+        minutos y sirve una sola vez (RF-08); pedir otro invalida los anteriores (DN-30). En el piloto el correo llega a
         Mailpit, en `http://localhost:8025`.
       requestBody:
         required: true
@@ -217,7 +217,7 @@ paths:
       summary: Pone la contraseña nueva con el token del enlace del correo (RF-08)
       description: |
         Pública. Gasta el enlace, quita el bloqueo por intentos fallidos y cierra todas las sesiones abiertas de la
-        cuenta (DN-20).
+        cuenta (DN-30).
       requestBody:
         required: true
         content:
@@ -260,7 +260,7 @@ paths:
       summary: Actualiza el nombre y, el turista, su WhatsApp (RF-12)
       description: |
         Reemplaza los dos campos. Un WhatsApp distinto queda sin verificar y recibe un código nuevo (RF-03): hasta
-        verificarlo, el turista no puede enviar solicitudes. El correo no se cambia (DN-21).
+        verificarlo, el turista no puede enviar solicitudes. El correo no se cambia (DN-31).
       parameters:
         - $ref: '#/components/parameters/UsuarioId'
         - $ref: '#/components/parameters/RolCualquiera'
@@ -294,7 +294,7 @@ paths:
       operationId: suprimirCuenta
       summary: El turista elimina sus datos personales, de inmediato (RF-13, Ley 1581)
       description: |
-        Confirma con la contraseña actual (DN-21). La cuenta queda anonimizada y no se puede volver a usar: el nombre,
+        Confirma con la contraseña actual (DN-31). La cuenta queda anonimizada y no se puede volver a usar: el nombre,
         el correo, la contraseña y el WhatsApp se borran, se cierran todas las sesiones y el catálogo recibe el aviso
         para borrar sus opiniones (DC-45). Queda la constancia de la petición y de las aceptaciones de la política
         (RNF-09). Las solicitudes conservan solo el identificador del turista. Con el mismo correo se puede registrar
@@ -376,7 +376,7 @@ paths:
       summary: Envía otro código para verificar el WhatsApp (RF-03)
       description: |
         El código anterior deja de servir. Si el número ya está verificado no envía nada. El código vale 30 minutos
-        (RF-08) y admite 3 intentos [SUPUESTO] (DN-18). Mientras WhatsApp sea simulado, el código sale en el log del
+        (RF-08) y admite 3 intentos [SUPUESTO] (DN-28). Mientras WhatsApp sea simulado, el código sale en el log del
         núcleo.
       parameters:
         - $ref: '#/components/parameters/UsuarioId'
@@ -1402,7 +1402,7 @@ components:
           format: password
           minLength: 8
           maxLength: 72
-          description: Con al menos una letra y un número [SUPUESTO] (DN-18).
+          description: Con al menos una letra y un número [SUPUESTO] (DN-28).
         whatsapp:
           type: string
           description: Obligatorio para el turista y prohibido para el prestador; con indicativo, formato E.164.

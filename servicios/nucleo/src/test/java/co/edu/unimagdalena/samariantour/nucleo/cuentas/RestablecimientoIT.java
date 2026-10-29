@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * El restablecimiento de la contraseña de punta a punta (RF-07, RF-08, DN-20): el correo sale por SMTP a un Mailpit
+ * El restablecimiento de la contraseña de punta a punta (RF-07, RF-08, DN-30): el correo sale por SMTP a un Mailpit
  * real, el mismo del piloto, y el token se lee del correo recibido.
  */
 @SpringBootTest(properties = {"nucleo.bandeja.publicacion.cron=-", "nucleo.solicitudes.vencimiento.cron=-",

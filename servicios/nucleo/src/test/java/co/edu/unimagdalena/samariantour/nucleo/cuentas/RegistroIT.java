@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * El registro de punta a punta (RF-01 a RF-03, RF-09 a RF-11, DN-18): la política, el registro, el código que llega por
+ * El registro de punta a punta (RF-01 a RF-03, RF-09 a RF-11, DN-28): la política, el registro, el código que llega por
  * WhatsApp y la verificación, con PostgreSQL.
  */
 @SpringBootTest(properties = {"nucleo.bandeja.publicacion.cron=-", "nucleo.solicitudes.vencimiento.cron=-",

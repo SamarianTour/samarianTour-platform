@@ -155,7 +155,7 @@ public abstract sealed class Usuario permits Turista, Prestador, OperadorDisponi
     public static final String NOMBRE_SUPRIMIDO = "Titular suprimido";
 
     /**
-     * Borra los datos personales comunes y deja la constancia de la supresión ya ejecutada (RF-13, DN-21). El correo
+     * Borra los datos personales comunes y deja la constancia de la supresión ya ejecutada (RF-13, DN-31). El correo
      * se reemplaza por uno que no existe, para que el titular pueda volver a registrarse con el suyo. Las aceptaciones
      * de la política se conservan: no tienen datos personales y son la evidencia que pide RNF-09.
      */

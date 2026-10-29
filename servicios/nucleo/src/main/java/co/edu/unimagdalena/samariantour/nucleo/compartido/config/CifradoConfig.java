@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * El cifrador de los datos personales (RNF-08, DN-18). La clave llega por {@code NUCLEO_CIFRADO_CLAVE} y no tiene
+ * El cifrador de los datos personales (RNF-08, DN-28). La clave llega por {@code NUCLEO_CIFRADO_CLAVE} y no tiene
  * valor por defecto: sin ella el núcleo no arranca, en lugar de guardar datos sin cifrar.
  */
 @Configuration

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Iniciar, renovar y cerrar la sesión (RF-04 a RF-06, DN-19) y restablecer la contraseña (RF-07, RF-08, DN-20). Son
+ * Iniciar, renovar y cerrar la sesión (RF-04 a RF-06, DN-29) y restablecer la contraseña (RF-07, RF-08, DN-30). Son
  * rutas públicas: quien llega aquí todavía no tiene token, o el suyo venció.
  */
 @RestController

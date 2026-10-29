@@ -2,7 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada;
 
 /**
  * Cierra la sesión: el token de renovación deja de servir (RF-06). El token de acceso ya emitido vence solo, en 15
- * minutos como máximo (DN-19).
+ * minutos como máximo (DN-29).
  */
 public interface CerrarSesionUseCase {
 

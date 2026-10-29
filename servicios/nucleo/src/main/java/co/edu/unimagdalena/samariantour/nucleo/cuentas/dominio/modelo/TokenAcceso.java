@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * El token de acceso firmado (JWT RS256) y cuándo vence (DN-19). Los servicios lo validan con la clave pública, sin
+ * El token de acceso firmado (JWT RS256) y cuándo vence (DN-29). Los servicios lo validan con la clave pública, sin
  * consultar al núcleo.
  */
 public record TokenAcceso(String valor, Instant expiraEn) {

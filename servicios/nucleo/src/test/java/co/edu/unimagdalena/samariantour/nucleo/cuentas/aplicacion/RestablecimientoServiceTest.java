@@ -18,7 +18,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.HA
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Restablecer la contraseña con el enlace del correo (RF-07, RF-08, DN-20). */
+/** Restablecer la contraseña con el enlace del correo (RF-07, RF-08, DN-30). */
 class RestablecimientoServiceTest {
 
     private final EscenarioCuentas escenario = new EscenarioCuentas();

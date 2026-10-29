@@ -7,7 +7,7 @@ import java.util.UUID;
 import java.util.random.RandomGenerator;
 
 /**
- * Un secreto de un solo uso que recibe el cliente, con la forma {@code <id>.<secreto>} (DN-19, DN-20): el token de
+ * Un secreto de un solo uso que recibe el cliente, con la forma {@code <id>.<secreto>} (DN-29, DN-30): el token de
  * renovación de una {@link Sesion} y el enlace para restablecer la contraseña de un {@link CodigoUnUso}. El
  * identificador encuentra lo guardado y el secreto se compara con su hash; el secreto nunca se guarda.
  */

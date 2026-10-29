@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * WhatsApp simulado de las cuentas (DN-18), como el de las solicitudes (DN-13): mientras no exista la integración con
+ * WhatsApp simulado de las cuentas (DN-28), como el de las solicitudes (DN-13): mientras no exista la integración con
  * WhatsApp Business, escribe en el log el número enmascarado y el código, para poder verificarlo en la demo. El código
  * solo aparece aquí porque es simulado; un adaptador real nunca lo escribiría.
  */

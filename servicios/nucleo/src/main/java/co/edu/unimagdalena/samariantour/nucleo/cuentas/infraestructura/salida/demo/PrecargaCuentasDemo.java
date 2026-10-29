@@ -24,7 +24,7 @@ import java.util.UUID;
 
 /**
  * Las cuentas de la demostración, con los mismos identificadores que usan el catálogo, el frontend y la demo de
- * solicitudes (DN-15, DN-18). Solo con el perfil demo. Se crean al arrancar si no existen, todas con la contraseña
+ * solicitudes (DN-15, DN-28). Solo con el perfil demo. Se crean al arrancar si no existen, todas con la contraseña
  * {@value #CONTRASENA} y la política vigente aceptada; los turistas, con su WhatsApp ficticio verificado. Si las
  * dos réplicas arrancan a la vez, la que llega segunda encuentra la cuenta y la salta.
  */

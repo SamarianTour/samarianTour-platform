@@ -11,7 +11,7 @@ import java.util.UUID;
 
 /**
  * Una fila de {@code usuarios} (V8): los cinco roles en una sola tabla. El nombre y el WhatsApp llegan aquí ya cifrados
- * (DN-18). La revisión es la versión de JPA, para el bloqueo optimista (ADR-05).
+ * (DN-28). La revisión es la versión de JPA, para el bloqueo optimista (ADR-05).
  */
 @Entity
 @Table(name = "usuarios")

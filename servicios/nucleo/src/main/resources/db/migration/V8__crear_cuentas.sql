@@ -1,4 +1,4 @@
--- Cuentas, consentimientos, códigos de un solo uso y sesiones (módulo 1, RF-01 a RF-13, DN-18, DN-19).
+-- Cuentas, consentimientos, códigos de un solo uso y sesiones (módulo 1, RF-01 a RF-13, DN-28, DN-29).
 
 -- Cada versión publicada de la política de tratamiento de datos (RF-10, RF-11). La vigente es la más reciente.
 CREATE TABLE politicas_datos (
@@ -10,7 +10,7 @@ CREATE TABLE politicas_datos (
 INSERT INTO politicas_datos (version, fecha_publicacion, url_texto)
 VALUES ('v1', DATE '2026-10-28', '/api/nucleo/politica-datos/v1');
 
--- Una fila por cuenta, con su rol. El nombre y el WhatsApp van cifrados con AES-GCM (RNF-08, DN-18); el correo, en
+-- Una fila por cuenta, con su rol. El nombre y el WhatsApp van cifrados con AES-GCM (RNF-08, DN-28); el correo, en
 -- claro y en minúsculas, porque es con lo que se inicia sesión.
 CREATE TABLE usuarios (
     id                   UUID          PRIMARY KEY,
@@ -72,7 +72,7 @@ CREATE TABLE codigos_un_uso (
 
 CREATE INDEX codigos_un_uso_ultimo ON codigos_un_uso (usuario_id, proposito, emitido_en DESC);
 
--- Sesiones con el hash del token de renovación vigente (RF-04, RF-06, DN-19).
+-- Sesiones con el hash del token de renovación vigente (RF-04, RF-06, DN-29).
 CREATE TABLE sesiones (
     id               UUID          PRIMARY KEY,
     usuario_id       UUID          NOT NULL REFERENCES usuarios (id),

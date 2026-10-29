@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 /**
  * Las reglas de los datos de una cuenta (RF-02, RF-03). Los topes de longitud y los formatos son [SUPUESTO] hasta
- * cerrar el SRS, como DC-19 en el catálogo (DN-18).
+ * cerrar el SRS, como DC-19 en el catálogo (DN-28).
  */
 public final class Validaciones {
 

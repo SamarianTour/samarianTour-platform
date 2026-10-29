@@ -3,7 +3,7 @@
 nucleo:
   # PROVISIONAL [SUPUESTO] (DN-15): lo que tendrá el módulo de prestadores, que todavía está vacío. Los identificadores
   # son los de la demo del catálogo; los números de WhatsApp son ficticios. Los turistas ya son cuentas de verdad
-  # (PrecargaCuentasDemo, DN-18), y su contacto sale de ellas (DN-22).
+  # (PrecargaCuentasDemo, DN-28), y su contacto sale de ellas (DN-32).
   demo:
     prestadores:
       # Agencia y guía: los atiende el operador 1 (RF-32).

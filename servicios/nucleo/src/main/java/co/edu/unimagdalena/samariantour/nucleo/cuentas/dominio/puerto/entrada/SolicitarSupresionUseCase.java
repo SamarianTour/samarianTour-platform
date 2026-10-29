@@ -7,7 +7,7 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.CuentaN
 import java.util.UUID;
 
 /**
- * El turista pide eliminar sus datos personales y se cumple de inmediato (RF-13, Ley 1581, DN-21): la cuenta queda
+ * El turista pide eliminar sus datos personales y se cumple de inmediato (RF-13, Ley 1581, DN-31): la cuenta queda
  * anonimizada, sus sesiones cerradas y el catálogo recibe el aviso para borrar sus opiniones (DC-45). Queda la
  * constancia de la petición.
  */

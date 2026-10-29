@@ -13,7 +13,7 @@ import java.util.UUID;
 import java.util.random.RandomGenerator;
 
 /**
- * Abre o renueva una sesión y emite sus dos tokens (DN-19). Lo usan el inicio de sesión y la renovación; corre dentro
+ * Abre o renueva una sesión y emite sus dos tokens (DN-29). Lo usan el inicio de sesión y la renovación; corre dentro
  * de la transacción de quien lo llama. Del token de renovación solo se guarda el hash.
  */
 public class EmisionSesion {

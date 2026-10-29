@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** La sesión de punta a punta (RF-04 a RF-06, DN-19), con las cuentas de la demo y PostgreSQL. */
+/** La sesión de punta a punta (RF-04 a RF-06, DN-29), con las cuentas de la demo y PostgreSQL. */
 @SpringBootTest(properties = {"nucleo.bandeja.publicacion.cron=-", "nucleo.solicitudes.vencimiento.cron=-",
         "nucleo.solicitudes.notificaciones.cron=-"})
 @AutoConfigureMockMvc

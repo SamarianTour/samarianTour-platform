@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * El contacto del turista, de su cuenta (RF-03, RF-30, RF-44, RF-57, DN-22): solo si está activa y verificó su
+ * El contacto del turista, de su cuenta (RF-03, RF-30, RF-44, RF-57, DN-32): solo si está activa y verificó su
  * WhatsApp. Reemplaza la tabla provisional de la demo (DN-15); el dominio de las solicitudes no cambió.
  */
 @Component

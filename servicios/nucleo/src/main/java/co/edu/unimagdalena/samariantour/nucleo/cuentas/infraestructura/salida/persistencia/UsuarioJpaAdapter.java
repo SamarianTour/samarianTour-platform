@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 /**
  * Las cuentas en {@code usuarios}, {@code aceptaciones_politica} y {@code solicitudes_supresion} (V8, DN-02). Cifra el
- * nombre y el WhatsApp al guardar y los descifra al leer (DN-18): el dominio nunca ve un valor cifrado.
+ * nombre y el WhatsApp al guardar y los descifra al leer (DN-28): el dominio nunca ve un valor cifrado.
  */
 @Component
 public class UsuarioJpaAdapter implements UsuarioRepositoryPort {

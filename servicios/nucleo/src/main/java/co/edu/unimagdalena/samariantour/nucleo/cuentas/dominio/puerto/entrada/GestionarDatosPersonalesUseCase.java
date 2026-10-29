@@ -15,7 +15,7 @@ public interface GestionarDatosPersonalesUseCase {
 
     /**
      * Cambia el nombre y, para el turista, el WhatsApp. Un WhatsApp distinto queda sin verificar y recibe un código
-     * nuevo (RF-03). El correo no se cambia (DN-21).
+     * nuevo (RF-03). El correo no se cambia (DN-31).
      *
      * @throws DatoInvalidoException       si un dato no cumple las reglas
      * @throws CuentaNoEncontradaException si la cuenta no existe o está suprimida

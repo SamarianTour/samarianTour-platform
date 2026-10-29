@@ -3,7 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.SesionInvalidaException;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.SesionIniciada;
 
-/** Da un token de acceso nuevo sin pedir la contraseña, con el token de renovación (RF-04, DN-19). */
+/** Da un token de acceso nuevo sin pedir la contraseña, con el token de renovación (RF-04, DN-29). */
 public interface RenovarSesionUseCase {
 
     /**

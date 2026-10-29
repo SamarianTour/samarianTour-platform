@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-/** Los datos de una cuenta (RF-02, RF-03, DN-18). */
+/** Los datos de una cuenta (RF-02, RF-03, DN-28). */
 class ValidacionesTest {
 
     @ParameterizedTest

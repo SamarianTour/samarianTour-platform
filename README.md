@@ -82,11 +82,11 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 | `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 | `carga` | Junto con `mongo`, agrega 5.000 ofertas sintéticas después de los datos de demostración (`catalogo.carga.ofertas`, DC-48) | Solo en la prueba de carga |
 
-**Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. El núcleo ya emite el JWT (`POST /api/nucleo/cuentas/sesion`, DN-19); cuando los servicios lo validen, los headers desaparecen y solo cambia `compartido/seguridad`.
+**Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. El núcleo ya emite el JWT (`POST /api/nucleo/cuentas/sesion`, DN-29); cuando los servicios lo validen, los headers desaparecen y solo cambia `compartido/seguridad`.
 
 ## Levantar el piloto
 
-La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales y la que firma el token (DN-18, DN-19). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
+La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales y la que firma el token (DN-28, DN-29). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
 
 ```bash
 bash infra/generar-claves.sh
@@ -791,7 +791,7 @@ Con una pendiente, el mismo `UPDATE` la deja Sin respuesta (RF-41). Otros casos 
 
 ### 13. Cuentas
 
-Registro, sesión, restablecimiento de la contraseña, datos personales y supresión (DN-18 a DN-22). Las cuentas de la demo tienen la clave `Demo1234`; el administrador es `admin@samariantour.co` con `SamarianAdmin2026`.
+Registro, sesión, restablecimiento de la contraseña, datos personales y supresión (DN-28 a DN-32). Las cuentas de la demo tienen la clave `Demo1234`; el administrador es `admin@samariantour.co` con `SamarianAdmin2026`.
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo

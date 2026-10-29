@@ -4,7 +4,7 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.Pas
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** BCrypt con el costo por defecto de Spring Security, 10 (RNF-06, DN-18). */
+/** BCrypt con el costo por defecto de Spring Security, 10 (RNF-06, DN-28). */
 @Component
 public class BCryptAdapter implements PasswordHasherPort {
 

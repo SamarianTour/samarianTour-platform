@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** El contacto del turista que las cuentas entregan a los demás módulos (RF-44, RF-57, DN-22). */
+/** El contacto del turista que las cuentas entregan a los demás módulos (RF-44, RF-57, DN-32). */
 class ConsultarContactoServiceTest {
 
     private final EscenarioCuentas escenario = new EscenarioCuentas();

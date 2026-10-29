@@ -40,17 +40,17 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
-            <!-- Solo el hash BCrypt de las contraseñas (RNF-06, DN-18); la autorización sigue siendo la propia (DN-05) -->
+            <!-- Solo el hash BCrypt de las contraseñas (RNF-06, DN-28); la autorización sigue siendo la propia (DN-05) -->
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
         <dependency>
-            <!-- Correo del restablecimiento de la contraseña por SMTP; en el piloto, Mailpit (RF-07, DN-20) -->
+            <!-- Correo del restablecimiento de la contraseña por SMTP; en el piloto, Mailpit (RF-07, DN-30) -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
         <dependency>
-            <!-- Firma del token de acceso JWT RS256 con NimbusJwtEncoder (RF-04, DN-19) -->
+            <!-- Firma del token de acceso JWT RS256 con NimbusJwtEncoder (RF-04, DN-29) -->
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-oauth2-jose</artifactId>
         </dependency>

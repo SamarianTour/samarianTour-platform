@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Lo único que los demás módulos usan de las cuentas (DN-17, DN-22), como {@code solicitudes.api} para pagos. Las
+ * Lo único que los demás módulos usan de las cuentas (DN-17, DN-32), como {@code solicitudes.api} para pagos. Las
  * cuentas no dependen de ningún módulo: son los demás los que las consultan por aquí.
  */
 public interface CuentasApiInterna {

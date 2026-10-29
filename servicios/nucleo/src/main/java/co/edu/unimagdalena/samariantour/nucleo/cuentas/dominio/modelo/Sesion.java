@@ -12,9 +12,9 @@ import java.util.UUID;
  */
 public final class Sesion {
 
-    /** Vida del token de acceso, que los servicios validan sin consultar al núcleo (DN-19). */
+    /** Vida del token de acceso, que los servicios validan sin consultar al núcleo (DN-29). */
     public static final Duration VIGENCIA_ACCESO = Duration.ofMinutes(15);
-    /** Vida del token de renovación desde la última vez que se usó (DN-19). */
+    /** Vida del token de renovación desde la última vez que se usó (DN-29). */
     public static final Duration VIGENCIA_RENOVACION = Duration.ofDays(7);
 
     private final UUID id;

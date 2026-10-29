@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * PROVISIONAL [SUPUESTO] (DN-15): los prestadores, su operador y su WhatsApp, que tendrá el módulo de prestadores,
  * todavía vacío. Se llenan en {@code application-demo.yml} con los identificadores de la demo del catálogo; sin el
- * perfil demo quedan vacíos y ninguna solicitud se puede enviar. El contacto del turista ya sale de su cuenta (DN-22).
+ * perfil demo quedan vacíos y ninguna solicitud se puede enviar. El contacto del turista ya sale de su cuenta (DN-32).
  */
 @ConfigurationProperties("nucleo.demo")
 public record PropiedadesDemo(List<Prestador> prestadores) {

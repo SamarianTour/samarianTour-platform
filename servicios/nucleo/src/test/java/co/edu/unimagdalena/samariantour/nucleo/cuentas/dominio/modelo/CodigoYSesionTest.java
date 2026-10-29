@@ -32,7 +32,7 @@ class CodigoYSesionTest {
     }
 
     @Test
-    @DisplayName("tres códigos equivocados invalidan el código (DN-18)")
+    @DisplayName("tres códigos equivocados invalidan el código (DN-28)")
     void tresIntentos() {
         CodigoUnUso codigo = CodigoUnUso.emitir(UUID.randomUUID(), USUARIO, PropositoCodigo.VERIFICACION_WHATSAPP,
                 "hash", AHORA);

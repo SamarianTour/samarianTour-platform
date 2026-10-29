@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 /**
  * El registro, abierto a cualquiera (RF-01 a RF-03, RF-09 a RF-11); los datos de la propia cuenta, para cualquier rol
- * (RF-12); y la verificación del WhatsApp y la supresión, con el rol TURISTA (RF-03, RF-13, DN-05, DN-21).
+ * (RF-12); y la verificación del WhatsApp y la supresión, con el rol TURISTA (RF-03, RF-13, DN-05, DN-31).
  */
 @RestController
 public class UsuarioController {

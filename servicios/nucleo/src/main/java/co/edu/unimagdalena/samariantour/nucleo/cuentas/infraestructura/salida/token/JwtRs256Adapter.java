@@ -28,7 +28,7 @@ import java.util.Base64;
 import java.util.UUID;
 
 /**
- * Firma el token de acceso con la clave privada RSA del núcleo (RF-04, DN-19), con {@link NimbusJwtEncoder} de Spring
+ * Firma el token de acceso con la clave privada RSA del núcleo (RF-04, DN-29), con {@link NimbusJwtEncoder} de Spring
  * Security. Los demás servicios lo validarán con la clave pública. El token lleva:
  * <ul>
  *   <li>{@code iss}: el emisor, {@code nucleo.jwt.emisor};</li>

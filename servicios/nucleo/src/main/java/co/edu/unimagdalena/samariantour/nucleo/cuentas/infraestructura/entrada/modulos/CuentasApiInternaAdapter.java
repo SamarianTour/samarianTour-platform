@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * La entrada de los demás módulos a las cuentas (DN-22), como un controlador: traduce a los casos de uso y entrega los
+ * La entrada de los demás módulos a las cuentas (DN-32), como un controlador: traduce a los casos de uso y entrega los
  * tipos del {@code api}, nunca los del dominio (regla 11 de {@code ArquitecturaTest}).
  */
 @Component

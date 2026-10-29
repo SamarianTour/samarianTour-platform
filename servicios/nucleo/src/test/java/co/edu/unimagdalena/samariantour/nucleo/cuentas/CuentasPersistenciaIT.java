@@ -33,7 +33,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.tu
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Las cuentas en PostgreSQL (V8, V9, DN-18): cifrado, correo único, bloqueo optimista y las cuentas de la demo. */
+/** Las cuentas en PostgreSQL (V8, V9, DN-28): cifrado, correo único, bloqueo optimista y las cuentas de la demo. */
 @SpringBootTest(properties = {"nucleo.bandeja.publicacion.cron=-", "nucleo.solicitudes.vencimiento.cron=-",
         "nucleo.solicitudes.notificaciones.cron=-"})
 @ActiveProfiles("demo")

@@ -6,7 +6,7 @@ import java.util.random.RandomGenerator;
 
 /**
  * Un código o enlace de un solo uso vence a los 30 minutos de emitido o al usarse (RF-08). Tres intentos con un
- * código equivocado también lo invalidan [SUPUESTO] (DN-18): un código de 6 dígitos no se puede adivinar en tres.
+ * código equivocado también lo invalidan [SUPUESTO] (DN-28): un código de 6 dígitos no se puede adivinar en tres.
  */
 public final class PoliticaCodigoUnUso {
 

@@ -13,7 +13,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Envía los correos de las cuentas por SMTP (RF-07, DN-20). En el piloto el servidor es Mailpit, que los recibe todos
+ * Envía los correos de las cuentas por SMTP (RF-07, DN-30). En el piloto el servidor es Mailpit, que los recibe todos
  * y los muestra en {@code http://localhost:8025} sin entregarlos a nadie. La conexión espera como máximo 3 s
  * (RNF-05, {@code spring.mail.properties}).
  */

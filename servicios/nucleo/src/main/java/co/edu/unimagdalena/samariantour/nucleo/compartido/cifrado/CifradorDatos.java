@@ -11,7 +11,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Cifra en reposo los datos personales (RNF-08, DN-18) con AES-256-GCM: cada valor lleva su propio vector aleatorio y
+ * Cifra en reposo los datos personales (RNF-08, DN-28) con AES-256-GCM: cada valor lleva su propio vector aleatorio y
  * una etiqueta que delata cualquier cambio. El texto guardado es {@code v1:} y el Base64 del vector y el cifrado; el
  * prefijo permite cambiar de algoritmo sin perder lo ya guardado. Lo usan los adaptadores de persistencia de cada
  * módulo; el dominio nunca ve un valor cifrado.

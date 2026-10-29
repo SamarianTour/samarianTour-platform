@@ -23,7 +23,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.AH
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Los datos personales (RF-12) y su supresión inmediata (RF-13, DN-21). */
+/** Los datos personales (RF-12) y su supresión inmediata (RF-13, DN-31). */
 class DatosYSupresionServiceTest {
 
     private final EscenarioCuentas escenario = new EscenarioCuentas();
@@ -120,7 +120,7 @@ class DatosYSupresionServiceTest {
         }
 
         @Test
-        @DisplayName("solo el turista suprime en este PR; una cuenta ya suprimida tampoco (DN-21)")
+        @DisplayName("solo el turista suprime en este PR; una cuenta ya suprimida tampoco (DN-31)")
         void soloTuristaActivo() {
             Usuario guia = escenario.registrar.registrar(new RegistrarUsuarioCommand(Rol.PRESTADOR, "Guía",
                     "guia@correo.co", "Minca2026", null, true, "v1"));
