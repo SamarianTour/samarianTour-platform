@@ -10,3 +10,5 @@ libs/
 contratos/
 frontend/
 **/*.md
+# Salvo los textos que el servicio entrega, como la política de datos del núcleo (DN-28).
+!servicios/*/src/main/resources/**/*.md

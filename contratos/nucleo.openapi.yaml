@@ -4,8 +4,8 @@ info:
   version: 0.3.0
   description: |
     API del núcleo transaccional: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e
-    indicadores. Hoy tiene la moderación y la comisión (módulo 8), las solicitudes de disponibilidad (módulo 4) y los
-    pagos (módulo 5); cada módulo agrega
+    indicadores. Hoy tiene las cuentas (módulo 1), las solicitudes de disponibilidad (módulo 4), los pagos (módulo 5)
+    y la moderación y la comisión (módulo 8); cada módulo agrega
     aquí sus rutas antes de escribir su código (API first), y `ContratoNucleoIT` falla si una ruta existe en el
     contrato y no en los controladores, o al revés.
 
@@ -13,7 +13,8 @@ info:
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
     - Las rutas `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**` exigen la identidad del
       usuario con el rol TURISTA, PRESTADOR, ADMINISTRADOR, OPERADOR_DISPONIBILIDAD o GESTOR_DESTINO,
-      respectivamente (DN-04, DN-05). Sin identidad responden 401 `NO_AUTENTICADO`; con otro rol, 403
+      respectivamente (DN-04, DN-05); `/cuenta/**` admite cualquiera de los cinco. Sin identidad responden 401
+      `NO_AUTENTICADO`; con otro rol, 403
       `ACCESO_DENEGADO`. Las demás rutas son públicas, salvo `/internal/**`, que Nginx no expone.
 servers:
   - url: http://localhost:8080/api/nucleo
@@ -40,6 +41,417 @@ tags:
     description: Módulo 9 (RF-85 a RF-89).
 
 paths:
+  /cuentas/registro:
+    post:
+      tags: [Cuentas]
+      operationId: registrar
+      summary: Un turista o un prestador se registra (RF-01 a RF-03, RF-09 a RF-11)
+      description: |
+        Pública. Exige aceptar la versión vigente de la política de datos, que se lee en `GET /politica-datos/vigente`
+        (RF-09, RF-10). Al turista se le envía por WhatsApp un código de 6 dígitos para verificar su número
+        (`POST /turista/whatsapp/verificacion`); mientras no lo verifique no puede enviar solicitudes (RF-30). El
+        prestador no registra aquí su WhatsApp ni su RNT: son de sus datos de prestador (módulo 7). Las cuentas de
+        administrador, operador y gestor no se registran solas (RF-01, RF-81).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroRequest'
+            example:
+              rol: TURISTA
+              nombre: Laura Gómez
+              correo: laura.gomez@correo.co
+              contrasena: Playa2026
+              whatsapp: '+573001234567'
+              aceptaPolitica: true
+              versionPolitica: v1
+      responses:
+        '201':
+          description: La cuenta creada, activa y con la política aceptada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cuenta'
+              example:
+                id: 3f2b8c1d-6e4a-4b7c-9d2e-1a0f5c8b7e60
+                rol: TURISTA
+                nombre: Laura Gómez
+                correo: laura.gomez@correo.co
+                whatsapp: '+573001234567'
+                whatsappVerificado: false
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '409':
+          description: |
+            `CORREO_YA_REGISTRADO`: otra cuenta tiene el correo, sin importar mayúsculas (RF-02).
+            `POLITICA_NO_VIGENTE`: se aceptó una versión que ya no es la vigente; hay que leer y aceptar la nueva.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: Ya hay una cuenta con el correo laura.gomez@correo.co
+                codigo: CORREO_YA_REGISTRADO
+  /cuentas/sesion:
+    post:
+      tags: [Cuentas]
+      operationId: iniciarSesion
+      summary: Inicia sesión con el correo y la contraseña (RF-04, RF-05)
+      description: |
+        Pública. Entrega un token de acceso (JWT RS256 de 15 minutos, para `Authorization: Bearer`) y un token de
+        renovación (7 días sin usarse; sirve una sola vez) (DN-29). Cinco fallos consecutivos bloquean la cuenta 15
+        minutos (RF-05); mientras tanto la contraseña no se revisa.
+
+        El token de acceso lleva `sub` (el usuario), `rol`, `sid` (la sesión), `iss` (`samarian-tour-nucleo`),
+        `iat` y `exp`. Mientras los servicios no lo validen (PR de seguridad-jwt), las rutas protegidas siguen
+        usando los headers de la demo (DN-05).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InicioSesionRequest'
+            example:
+              correo: laura@demo.samariantour.co
+              contrasena: Demo1234
+      responses:
+        '200':
+          $ref: '#/components/responses/SesionIniciada'
+        '401':
+          description: "`CREDENCIALES_INVALIDAS`: el correo o la contraseña no son correctos; no dice cuál."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                type: about:blank
+                title: Unauthorized
+                status: 401
+                detail: El correo o la contraseña no son correctos
+                codigo: CREDENCIALES_INVALIDAS
+        '403':
+          description: "`CUENTA_DESACTIVADA`: la contraseña es correcta, pero el administrador dio de baja la cuenta (RF-81)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '423':
+          description: "`CUENTA_BLOQUEADA`: cinco fallos consecutivos; `bloqueadaHasta` dice hasta cuándo (RF-05)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                type: about:blank
+                title: Locked
+                status: 423
+                detail: La cuenta está bloqueada por intentos fallidos hasta 2026-10-28T15:15:00Z
+                codigo: CUENTA_BLOQUEADA
+                bloqueadaHasta: '2026-10-28T15:15:00Z'
+  /cuentas/sesion/renovacion:
+    post:
+      tags: [Cuentas]
+      operationId: renovarSesion
+      summary: Pide tokens nuevos con el token de renovación, sin la contraseña (RF-04)
+      description: |
+        Pública. Entrega un token de acceso nuevo y también un token de renovación nuevo: el usado deja de servir. Si
+        llega un token de renovación que ya se usó, la sesión se cierra, porque es señal de que se filtró (DN-29).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRenovacionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SesionIniciada'
+        '401':
+          $ref: '#/components/responses/SesionInvalida'
+  /cuentas/sesion/cierre:
+    post:
+      tags: [Cuentas]
+      operationId: cerrarSesion
+      summary: Cierra la sesión (RF-06)
+      description: |
+        Pública. El token de renovación deja de servir; el token de acceso ya emitido vence solo, en 15 minutos como
+        máximo (DN-29). Responde 204 también con un token que no sirve: la sesión queda cerrada de todas formas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRenovacionRequest'
+      responses:
+        '204':
+          description: Sesión cerrada.
+  /cuentas/contrasena/restablecimiento:
+    post:
+      tags: [Cuentas]
+      operationId: solicitarRestablecimiento
+      summary: Envía al correo un enlace para poner una contraseña nueva (RF-07)
+      description: |
+        Pública. Responde 202 exista o no una cuenta activa con ese correo, para no revelar qué correos están
+        registrados. El enlace lleva a la pantalla del frontend `/restablecer-contrasena?token=...`, vence a los 30
+        minutos y sirve una sola vez (RF-08); pedir otro invalida los anteriores (DN-30). En el piloto el correo llega a
+        Mailpit, en `http://localhost:8025`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolicitudRestablecimientoRequest'
+            example:
+              correo: laura@demo.samariantour.co
+      responses:
+        '202':
+          description: Si el correo es de una cuenta activa, el enlace va en camino.
+        '503':
+          description: "`CORREO_NO_DISPONIBLE`: el servidor de correo no respondió; no se guardó nada y se puede reintentar."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /cuentas/contrasena:
+    post:
+      tags: [Cuentas]
+      operationId: restablecerContrasena
+      summary: Pone la contraseña nueva con el token del enlace del correo (RF-08)
+      description: |
+        Pública. Gasta el enlace, quita el bloqueo por intentos fallidos y cierra todas las sesiones abiertas de la
+        cuenta (DN-30).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuevaContrasenaRequest'
+      responses:
+        '204':
+          description: Contraseña cambiada; hay que iniciar sesión con ella.
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '409':
+          description: "`CODIGO_NO_VIGENTE`: el enlace no existe, venció, ya se usó o se pidió uno más reciente."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /cuenta:
+    get:
+      tags: [Cuentas]
+      operationId: consultarCuenta
+      summary: Los datos personales del usuario identificado, de cualquier rol (RF-12)
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/RolCualquiera'
+      responses:
+        '200':
+          description: Su cuenta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cuenta'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+    put:
+      tags: [Cuentas]
+      operationId: actualizarCuenta
+      summary: Actualiza el nombre y, el turista, su WhatsApp (RF-12)
+      description: |
+        Reemplaza los dos campos. Un WhatsApp distinto queda sin verificar y recibe un código nuevo (RF-03): hasta
+        verificarlo, el turista no puede enviar solicitudes. El correo no se cambia (DN-31).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/RolCualquiera'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatosPersonalesRequest'
+            example:
+              nombre: Laura Gómez Ruiz
+              whatsapp: '+573001234567'
+      responses:
+        '200':
+          description: La cuenta actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cuenta'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+  /turista/supresion:
+    post:
+      tags: [Cuentas]
+      operationId: suprimirCuenta
+      summary: El turista elimina sus datos personales, de inmediato (RF-13, Ley 1581)
+      description: |
+        Confirma con la contraseña actual (DN-31). La cuenta queda anonimizada y no se puede volver a usar: el nombre,
+        el correo, la contraseña y el WhatsApp se borran, se cierran todas las sesiones y el catálogo recibe el aviso
+        para borrar sus opiniones (DC-45). Queda la constancia de la petición y de las aceptaciones de la política
+        (RNF-09). Las solicitudes conservan solo el identificador del turista. Con el mismo correo se puede registrar
+        una cuenta nueva.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupresionRequest'
+      responses:
+        '204':
+          description: Datos suprimidos.
+        '401':
+          description: "`CONTRASENA_INCORRECTA`: la contraseña no es correcta; el fallo cuenta para el bloqueo (RF-05). También `NO_AUTENTICADO`."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+        '423':
+          description: "`CUENTA_BLOQUEADA`: cinco fallos consecutivos (RF-05)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /politica-datos/vigente:
+    get:
+      tags: [Cuentas]
+      operationId: politicaVigente
+      summary: La versión de la política de datos que hay que aceptar para registrarse (RF-09 a RF-11)
+      description: Pública.
+      responses:
+        '200':
+          description: La versión vigente y dónde leer su texto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoliticaDatos'
+              example:
+                version: v1
+                fechaPublicacion: '2026-10-28'
+                urlTexto: /api/nucleo/politica-datos/v1
+  /politica-datos/{version}:
+    get:
+      tags: [Cuentas]
+      operationId: textoPolitica
+      summary: El texto completo de una versión de la política, en Markdown (RF-09, RF-11)
+      description: |
+        Pública. Declara, entre otras cosas, la transferencia del nombre y el WhatsApp del turista al prestador cuando
+        una solicitud queda pagada (RF-11).
+      parameters:
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9.]{1,20}$'
+          example: v1
+      responses:
+        '200':
+          description: El texto de esa versión.
+          content:
+            text/markdown:
+              schema:
+                type: string
+        '404':
+          description: No hay una versión con ese nombre.
+  /turista/whatsapp/codigo:
+    post:
+      tags: [Cuentas]
+      operationId: enviarCodigoWhatsapp
+      summary: Envía otro código para verificar el WhatsApp (RF-03)
+      description: |
+        El código anterior deja de servir. Si el número ya está verificado no envía nada. El código vale 30 minutos
+        (RF-08) y admite 3 intentos [SUPUESTO] (DN-28). Mientras WhatsApp sea simulado, el código sale en el log del
+        núcleo.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '202':
+          description: Código enviado.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+  /turista/whatsapp/verificacion:
+    post:
+      tags: [Cuentas]
+      operationId: verificarWhatsapp
+      summary: El turista confirma su WhatsApp con el código (RF-03)
+      description: Verificar un número ya verificado responde 200 sin cambiar nada.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificacionWhatsappRequest'
+            example:
+              codigo: '048213'
+      responses:
+        '200':
+          description: La cuenta con el WhatsApp verificado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cuenta'
+        '400':
+          description: |
+            `CODIGO_INCORRECTO`: el código no coincide; `intentosRestantes` dice cuántos quedan. Al tercer error el
+            código queda invalidado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: El código no es correcto; quedan 2 intentos
+                codigo: CODIGO_INCORRECTO
+                intentosRestantes: 2
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+        '409':
+          description: "`CODIGO_NO_VIGENTE`: el código venció, ya se usó o agotó sus intentos; hay que pedir otro."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: "El código venció, ya se usó o agotó sus intentos: pide uno nuevo"
+                codigo: CODIGO_NO_VIGENTE
   /admin/moderacion/ofertas/{ofertaId}/decision:
     post:
       tags: [Administración]
@@ -982,6 +1394,13 @@ components:
         rol, la petición responde 403 `ACCESO_DENEGADO`.
       schema:
         $ref: '#/components/schemas/Rol'
+    RolCualquiera:
+      name: X-Rol
+      in: header
+      required: true
+      description: PROVISIONAL (DN-05), igual que `X-Usuario-Id`. Cualquiera de los cinco roles.
+      schema:
+        $ref: '#/components/schemas/Rol'
     TipoPrestador:
       name: X-Tipo-Prestador
       in: header
@@ -991,6 +1410,49 @@ components:
         $ref: '#/components/schemas/TipoPrestador'
 
   responses:
+    SesionIniciada:
+      description: Los tokens de la sesión y la cuenta.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Sesion'
+          example:
+            tokenAcceso: eyJraWQiOiJ...
+            tipoToken: Bearer
+            accesoExpiraEn: '2026-10-28T15:15:00Z'
+            tokenRenovacion: 0b7e3c55-8f0a-4d63-b2a1-7c9d4e5f6a10.q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6j7k8l9z0x1c
+            renovacionExpiraEn: '2026-11-04T15:00:00Z'
+            cuenta:
+              id: 70000000-0000-0000-0000-000000000007
+              rol: TURISTA
+              nombre: Laura
+              correo: laura@demo.samariantour.co
+              whatsapp: '+573105550007'
+              whatsappVerificado: true
+    SesionInvalida:
+      description: "`SESION_INVALIDA`: el token de renovación no existe, venció, se cerró o ya se usó; hay que iniciar sesión."
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            detail: "La sesión venció o se cerró: inicia sesión de nuevo"
+            codigo: SESION_INVALIDA
+    CuentaNoEncontrada:
+      description: La identidad no corresponde a una cuenta de turista.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: No hay una cuenta 3f2b8c1d-6e4a-4b7c-9d2e-1a0f5c8b7e60 que pueda hacer esta operación
+            codigo: CUENTA_NO_ENCONTRADA
     DatoInvalido:
       description: Un dato no cumple las reglas; `detail` empieza por el campo.
       content:
@@ -1157,6 +1619,148 @@ components:
             codigo: CONFLICTO_CONCURRENCIA
 
   schemas:
+    DatosPersonalesRequest:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        whatsapp:
+          type: string
+          description: Obligatorio para el turista; las demás cuentas no lo envían.
+    SupresionRequest:
+      type: object
+      required: [contrasena]
+      properties:
+        contrasena:
+          type: string
+          format: password
+    SolicitudRestablecimientoRequest:
+      type: object
+      required: [correo]
+      properties:
+        correo:
+          type: string
+    NuevaContrasenaRequest:
+      type: object
+      required: [token, contrasena]
+      properties:
+        token:
+          type: string
+          description: El parámetro `token` del enlace que llegó por correo.
+        contrasena:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+    InicioSesionRequest:
+      type: object
+      required: [correo, contrasena]
+      properties:
+        correo:
+          type: string
+          description: Sin importar mayúsculas.
+        contrasena:
+          type: string
+          format: password
+    TokenRenovacionRequest:
+      type: object
+      required: [tokenRenovacion]
+      properties:
+        tokenRenovacion:
+          type: string
+    Sesion:
+      type: object
+      required: [tokenAcceso, tipoToken, accesoExpiraEn, tokenRenovacion, renovacionExpiraEn, cuenta]
+      properties:
+        tokenAcceso:
+          type: string
+          description: "JWT RS256 para `Authorization: Bearer`; vence a los 15 minutos."
+        tipoToken:
+          type: string
+          enum: [Bearer]
+        accesoExpiraEn:
+          type: string
+          format: date-time
+        tokenRenovacion:
+          type: string
+          description: Opaco; sirve una sola vez para pedir tokens nuevos.
+        renovacionExpiraEn:
+          type: string
+          format: date-time
+        cuenta:
+          $ref: '#/components/schemas/Cuenta'
+    RegistroRequest:
+      type: object
+      required: [rol, nombre, correo, contrasena, aceptaPolitica, versionPolitica]
+      properties:
+        rol:
+          type: string
+          enum: [TURISTA, PRESTADOR]
+        nombre:
+          type: string
+          maxLength: 100
+        correo:
+          type: string
+          format: email
+          maxLength: 254
+          description: Se guarda en minúsculas; es con lo que se inicia sesión.
+        contrasena:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: Con al menos una letra y un número [SUPUESTO] (DN-28).
+        whatsapp:
+          type: string
+          description: Obligatorio para el turista y prohibido para el prestador; con indicativo, formato E.164.
+          example: '+573001234567'
+        aceptaPolitica:
+          type: boolean
+          description: Tiene que ser true (RF-09).
+        versionPolitica:
+          type: string
+          description: La versión que se leyó y aceptó; debe ser la vigente (RF-10).
+    Cuenta:
+      type: object
+      description: La cuenta como la ve su titular. Nunca lleva la contraseña.
+      required: [id, rol, nombre, correo]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rol:
+          $ref: '#/components/schemas/Rol'
+        nombre:
+          type: string
+        correo:
+          type: string
+        whatsapp:
+          type: string
+          description: Solo el turista.
+        whatsappVerificado:
+          type: boolean
+          description: Solo el turista. Sin verificar no puede enviar solicitudes (RF-30).
+    VerificacionWhatsappRequest:
+      type: object
+      required: [codigo]
+      properties:
+        codigo:
+          type: string
+          pattern: '^[0-9]{6}$'
+    PoliticaDatos:
+      type: object
+      required: [version, fechaPublicacion, urlTexto]
+      properties:
+        version:
+          type: string
+        fechaPublicacion:
+          type: string
+          format: date
+        urlTexto:
+          type: string
+          description: Dónde se lee el texto completo de esta versión, en Markdown.
     Decision:
       type: string
       enum: [APROBAR, RECHAZAR]
@@ -1803,6 +2407,17 @@ components:
           description: Motivo estable del error. Cada módulo agrega aquí sus códigos.
           enum:
             - DATO_INVALIDO
+            - CORREO_YA_REGISTRADO
+            - POLITICA_NO_VIGENTE
+            - CUENTA_NO_ENCONTRADA
+            - CODIGO_INCORRECTO
+            - CODIGO_NO_VIGENTE
+            - CREDENCIALES_INVALIDAS
+            - CUENTA_BLOQUEADA
+            - CUENTA_DESACTIVADA
+            - SESION_INVALIDA
+            - CORREO_NO_DISPONIBLE
+            - CONTRASENA_INCORRECTA
             - NO_AUTENTICADO
             - ACCESO_DENEGADO
             - CONFLICTO_CONCURRENCIA
@@ -1822,3 +2437,10 @@ components:
             - SOLICITUD_NO_COBRABLE
             - INTENTOS_AGOTADOS
             - EVENTO_NO_AUTENTICO
+        intentosRestantes:
+          type: integer
+          description: Solo con `CODIGO_INCORRECTO`.
+        bloqueadaHasta:
+          type: string
+          format: date-time
+          description: Solo con `CUENTA_BLOQUEADA`.

@@ -7,6 +7,17 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.en
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PagoTardioResponse;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.CuentaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.DatosPersonalesRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.InicioSesionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.NuevaContrasenaRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.PoliticaDatosResponse;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.RegistroRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.SesionResponse;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.SolicitudRestablecimientoRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.SupresionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.TokenRenovacionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.VerificacionWhatsappRequest;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.CheckoutResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.EventoRecibidoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.IntentoPagoResponse;
@@ -87,6 +98,17 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
 
     static Stream<Arguments> esquemasConSuDto() {
         return Stream.of(
+                arguments("DatosPersonalesRequest", DatosPersonalesRequest.class),
+                arguments("SupresionRequest", SupresionRequest.class),
+                arguments("SolicitudRestablecimientoRequest", SolicitudRestablecimientoRequest.class),
+                arguments("NuevaContrasenaRequest", NuevaContrasenaRequest.class),
+                arguments("InicioSesionRequest", InicioSesionRequest.class),
+                arguments("TokenRenovacionRequest", TokenRenovacionRequest.class),
+                arguments("Sesion", SesionResponse.class),
+                arguments("RegistroRequest", RegistroRequest.class),
+                arguments("Cuenta", CuentaResponse.class),
+                arguments("VerificacionWhatsappRequest", VerificacionWhatsappRequest.class),
+                arguments("PoliticaDatos", PoliticaDatosResponse.class),
                 arguments("DecisionOfertaRequest", DecisionOfertaRequest.class),
                 arguments("DecisionOpinionRequest", DecisionOpinionRequest.class),
                 arguments("DecisionModeracion", DecisionModeracionResponse.class),

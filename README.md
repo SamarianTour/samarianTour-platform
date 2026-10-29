@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo) y la moderación de ofertas y opiniones; sus demás módulos están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo), la moderación de ofertas y opiniones, las solicitudes de disponibilidad, los pagos con la pasarela simulada o Wompi sandbox, y las cuentas (registro, sesión con JWT, restablecimiento de la contraseña, datos personales y supresión); sus demás módulos están pendientes.
 
 
 ## Estructura del repositorio
@@ -82,13 +82,18 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 | `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 | `carga` | Junto con `mongo`, agrega 5.000 ofertas sintéticas después de los datos de demostración (`catalogo.carga.ofertas`, DC-48) | Solo en la prueba de carga |
 
-**Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. Los reemplaza el JWT que emitirá el núcleo, y entonces solo cambia `compartido/seguridad`.
+**Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. El núcleo ya emite el JWT (`POST /api/nucleo/cuentas/sesion`, DN-29); cuando los servicios lo validen, los headers desaparecen y solo cambia `compartido/seguridad`.
 
 ## Levantar el piloto
 
+La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales y la que firma el token (DN-28, DN-29). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
+
 ```bash
+bash infra/generar-claves.sh
 docker compose -f infra/docker-compose.yml up --build -d
 ```
+
+Los correos del núcleo (el restablecimiento de la contraseña) llegan a Mailpit, en `http://localhost:8025`; no se entregan a direcciones reales.
 
 Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo, `/api/nucleo/**` hacia las 2 del núcleo y `/api/recomendacion/**` hacia la recomendación. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` del catálogo y del núcleo y las `actuator/**` de los tres servicios no se exponen hacia afuera.
 
@@ -717,7 +722,7 @@ Las alternativas también dejan su línea en el registro de exposición, con `"o
 
 ### 12. Solicitudes de disponibilidad
 
-El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de `application-demo.yml` del núcleo: la turista `90000000-...-001` tiene su WhatsApp verificado, la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-15). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
+El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de las cuentas precargadas y de `application-demo.yml` del núcleo: la turista `90000000-...-001` es una cuenta con el WhatsApp verificado (DN-28, DN-32), la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-15). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
@@ -939,7 +944,59 @@ Otros casos que se pueden mostrar:
 - **Solicitud que no se puede pagar:** una Pendiente o una Atendida responde 409 `SOLICITUD_NO_COBRABLE`, y la de otro turista, 404.
 - **Pago abandonado:** un intento sin resultado a los 30 min queda Abandonado y no cuenta como rechazo: el turista puede abrir otro (DN-20).
 
-### 14. Rutas que no se exponen
+### 14. Cuentas
+
+Registro, sesión, restablecimiento de la contraseña, datos personales y supresión (DN-28 a DN-32). Las cuentas de la demo tienen la clave `Demo1234`; el administrador es `admin@samariantour.co` con `SamarianAdmin2026`.
+
+```bash
+NUCLEO=http://localhost:8080/api/nucleo
+JSON=(-H "Content-Type: application/json")
+
+# La política que hay que aceptar y su texto, que declara la transferencia de datos al prestador (RF-09 a RF-11)
+curl -s "$NUCLEO/politica-datos/vigente"
+curl -s "$NUCLEO/politica-datos/v1"
+
+# Registro de un turista: 201, con el WhatsApp sin verificar. Un correo repetido da 409 CORREO_YA_REGISTRADO
+ID=$(curl -s -X POST "$NUCLEO/cuentas/registro" "${JSON[@]}" -d '{"rol":"TURISTA","nombre":"Maria Perez",
+  "correo":"maria@correo.co","contrasena":"Playa2026","whatsapp":"+573001234567","aceptaPolitica":true,
+  "versionPolitica":"v1"}' | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+TURISTA=(-H "X-Usuario-Id: $ID" -H "X-Rol: TURISTA")
+
+# El código llega por WhatsApp, que por ahora es simulado: sale en el log del núcleo
+CODIGO=$(docker compose -f infra/docker-compose.yml logs nucleo | grep CODIGO_VERIFICACION | tail -1 | sed -E 's/.*codigo=([0-9]+).*/\1/')
+curl -s -X POST "$NUCLEO/turista/whatsapp/verificacion" "${TURISTA[@]}" "${JSON[@]}" -d "{\"codigo\":\"$CODIGO\"}"
+# whatsappVerificado: true; uno equivocado da 400 CODIGO_INCORRECTO con los intentos que quedan
+
+# Inicio de sesión: el JWT de acceso (15 min) y el token de renovación (7 días, de un solo uso)
+SESION=$(curl -s -X POST "$NUCLEO/cuentas/sesion" "${JSON[@]}" -d '{"correo":"maria@correo.co","contrasena":"Playa2026"}')
+echo "$SESION" | sed -E 's/.*"tokenAcceso":"[^.]+\.([^.]+)\..*/\1/' | tr '_-' '/+' | base64 -d 2>/dev/null; echo
+# {"iss":"samarian-tour-nucleo","sub":"<id>","rol":"TURISTA","sid":"<sesión>",...}
+RENOVACION=$(echo "$SESION" | sed -E 's/.*"tokenRenovacion":"([^"]+)".*/\1/')
+curl -s -X POST "$NUCLEO/cuentas/sesion/renovacion" "${JSON[@]}" -d "{\"tokenRenovacion\":\"$RENOVACION\"}"
+# Tokens nuevos. Usar otra vez el mismo token de renovación cierra la sesión: 401 SESION_INVALIDA
+
+# Cinco contraseñas equivocadas seguidas bloquean la cuenta 15 minutos: 423 CUENTA_BLOQUEADA (RF-05)
+
+# Olvidó la contraseña: el enlace llega a Mailpit (http://localhost:8025), vence en 30 min y sirve una vez
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/cuentas/contrasena/restablecimiento" "${JSON[@]}" \
+  -d '{"correo":"maria@correo.co"}'                                     # 202, exista o no el correo
+TOKEN=$(curl -s http://localhost:8025/api/v1/message/latest | grep -o 'token=[^\\" ]*' | head -1 | cut -d= -f2)
+TOKEN=$(printf '%b' "${TOKEN//%/\\x}")
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/cuentas/contrasena" "${JSON[@]}" \
+  -d "{\"token\":\"$TOKEN\",\"contrasena\":\"Caribe2026\"}"       # 204: también cierra las sesiones
+
+# Datos personales, para cualquier rol (RF-12). Cambiar el WhatsApp lo deja sin verificar y envía otro código
+curl -s "$NUCLEO/cuenta" "${TURISTA[@]}"
+curl -s -X PUT "$NUCLEO/cuenta" "${TURISTA[@]}" "${JSON[@]}" -d '{"nombre":"Maria Perez Ruiz","whatsapp":"+573001234567"}'
+
+# Supresión inmediata (RF-13): con la contraseña, anonimiza la cuenta, cierra las sesiones y avisa al catálogo
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/turista/supresion" "${TURISTA[@]}" "${JSON[@]}" \
+  -d '{"contrasena":"Caribe2026"}'                                     # 204; el inicio de sesión ya da 401
+```
+
+Las cuentas precargadas también inician sesión, por ejemplo `laura@demo.samariantour.co` con `Demo1234`. Laura (`70000000-...-007`) ya tiene el WhatsApp verificado, así que puede enviar solicitudes como en el paso 12.
+
+### 15. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404

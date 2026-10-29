@@ -102,6 +102,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_CLAVE:-nucleo-piloto}
       # La bandeja de salida envía los avisos al catálogo por la red interna (DN-06).
       NUCLEO_CATALOGO_URL: http://catalogo:8080/api/catalogo
+      # Clave del cifrado en reposo de los datos personales (DN-28). Sin ella el núcleo no arranca: se genera en
+      # infra/.env con "bash infra/generar-claves.sh".
+      NUCLEO_CIFRADO_CLAVE: "${NUCLEO_CIFRADO_CLAVE:?Falta la clave del núcleo, ejecuta bash infra/generar-claves.sh}"
+      # Clave privada RSA que firma el token de acceso (DN-29); la genera el mismo script.
+      NUCLEO_JWT_CLAVE_PRIVADA: "${NUCLEO_JWT_CLAVE_PRIVADA:?Falta la clave del token, ejecuta bash infra/generar-claves.sh}"
+      # El correo del restablecimiento de la contraseña va a Mailpit (DN-30).
+      SPRING_MAIL_HOST: mailpit
       # demo: headers que sustituyen al token mientras no exista el JWT (DN-05). Solo para la demostración.
       SPRING_PROFILES_ACTIVE: demo
       # Pagos (DN-18): la pasarela simulada por defecto; wompi con las llaves del sandbox en infra/.env, que no se
@@ -124,6 +131,14 @@ services:
     deploy:
       replicas: 2
     mem_limit: 512m
+    restart: unless-stopped
+
+  # Correo del piloto (DN-30): Mailpit recibe todo lo que envía el núcleo y lo muestra en http://localhost:8025.
+  # No entrega nada a direcciones reales.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "8025:8025"
     restart: unless-stopped
 
   # Recomendación (RF-26, RF-27): sin base de datos; lee las ofertas del catálogo y, si está configurado, consulta

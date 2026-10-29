@@ -40,6 +40,21 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
+            <!-- Solo el hash BCrypt de las contraseñas (RNF-06, DN-28); la autorización sigue siendo la propia (DN-05) -->
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Correo del restablecimiento de la contraseña por SMTP; en el piloto, Mailpit (RF-07, DN-30) -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Firma del token de acceso JWT RS256 con NimbusJwtEncoder (RF-04, DN-29) -->
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+        <dependency>
             <!-- Corte de circuito de la consulta al catálogo al crear una solicitud (ADR-04, QAS-03, DN-09) -->
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot3</artifactId>

@@ -1,8 +1,9 @@
 # Perfil demo del núcleo (DN-05, DN-15). Solo para la demostración.
 
 nucleo:
-  # PROVISIONAL [SUPUESTO] (DN-15): lo que tendrán los módulos de prestadores y de cuentas, que todavía están vacíos.
-  # Los identificadores son los de la demo del catálogo y de sus opiniones; los números de WhatsApp son ficticios.
+  # PROVISIONAL [SUPUESTO] (DN-15): lo que tendrá el módulo de prestadores, que todavía está vacío. Los identificadores
+  # son los de la demo del catálogo; los números de WhatsApp son ficticios. Los turistas ya son cuentas de verdad
+  # (PrecargaCuentasDemo, DN-28), y su contacto sale de ellas (DN-32).
   demo:
     prestadores:
       # Agencia y guía: los atiende el operador 1 (RF-32). La cuenta de cobro vigente de cada uno (RF-74) solo la usa la
@@ -40,16 +41,6 @@ nucleo:
     # El administrador recibe por WhatsApp los pagos tardíos para reembolsarlos a mano (RF-50, DN-26).
     administrador:
       whatsapp: "+573005550099"
-    turistas:
-      - id: 90000000-0000-0000-0000-000000000001
-        nombre: Laura Gómez
-        whatsapp: "+573105550001"
-      - id: 90000000-0000-0000-0000-000000000002
-        nombre: Carlos Pérez
-        whatsapp: "+573105550002"
-      - id: 90000000-0000-0000-0000-000000000003
-        nombre: Ana Torres
-        whatsapp: "+573105550003"
 
   # La pasarela simulada de la demo (DN-18, DN-24): reintentos de la dispersión cada 10 s, 20 s y 40 s, para mostrarlos
   # sin esperar minutos, y la cuenta del restaurante, que siempre falla.
