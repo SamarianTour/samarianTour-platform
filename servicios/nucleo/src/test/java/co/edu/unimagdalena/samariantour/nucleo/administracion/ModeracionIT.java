@@ -151,6 +151,20 @@ class ModeracionIT extends IntegracionPostgresBase {
                 .doesNotContain("numeroVersion");
     }
 
+    @Test
+    @DisplayName("aprobar la oferta de la agencia sin RNT activo responde 409 PRESTADOR_NO_HABILITADO (DN-35)")
+    void prestadorSinRnt() throws Exception {
+        CATALOGO.responder("/internal/moderacion/ofertas/" + LANCHA, 200, """
+                {"id": "%s", "tipo": "ACTIVIDAD", "nombre": "Paseo en lancha a Playa Blanca",
+                 "prestadorId": "50000000-0000-0000-0000-000000000005", "numeroVersion": 1,
+                 "enviadaEn": "2026-10-01T13:00:00Z"}""".formatted(LANCHA));
+
+        decidirOferta("{\"numeroVersion\": 1, \"decision\": \"APROBAR\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_HABILITADO"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM decisiones_moderacion", Integer.class)).isZero();
+    }
+
     private ResultActions decidirOferta(String cuerpo) throws Exception {
         return http.perform(comoAdministrador(post("/admin/moderacion/ofertas/{id}/decision", LANCHA))
                 .contentType(MediaType.APPLICATION_JSON).content(cuerpo));

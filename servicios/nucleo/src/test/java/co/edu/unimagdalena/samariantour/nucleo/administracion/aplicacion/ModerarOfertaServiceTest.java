@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.ModeracionYaDecididaException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.NoEstaEnModeracionException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.PrestadorNoHabilitadoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.VersionNoVigenteException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.modelo.Decision;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.modelo.DecisionModeracion;
@@ -93,5 +94,16 @@ class ModerarOfertaServiceTest {
     private DecisionModeracion moderar(int version, Decision decision, String motivo) {
         return escenario.moderarOferta.moderar(new ModerarOfertaCommand(LANCHA, version, decision, motivo,
                 ADMINISTRADOR));
+    }
+
+    @Test
+    @DisplayName("la oferta de un prestador sin RNT activo no se aprueba, pero sí se puede rechazar (RF-79, DN-35)")
+    void prestadorNoHabilitado() {
+        escenario.inhabilitados.add(PRESTADOR);
+
+        assertThatThrownBy(() -> moderar(1, Decision.APROBAR, null))
+                .isInstanceOf(PrestadorNoHabilitadoException.class);
+        assertThat(escenario.avisos).isEmpty();
+        assertThat(moderar(1, Decision.RECHAZAR, "El RNT no está activo").decision()).isEqualTo(Decision.RECHAZAR);
     }
 }

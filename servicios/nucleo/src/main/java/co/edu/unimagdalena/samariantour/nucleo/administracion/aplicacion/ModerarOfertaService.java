@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.administracion.aplicacion;
 
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.ModeracionYaDecididaException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.NoEstaEnModeracionException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.PrestadorNoHabilitadoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.VersionNoVigenteException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.modelo.Decision;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.modelo.DecisionModeracion;
@@ -13,6 +14,7 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.sal
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.salida.DecisionesModeracionRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.salida.ModeracionCatalogoPort;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.salida.NotificacionPort;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.salida.PrestadoresModeracionPort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -28,14 +30,17 @@ public class ModerarOfertaService implements ModerarOfertaUseCase {
     private final ModeracionCatalogoPort catalogo;
     private final AvisosModeracionPort avisos;
     private final NotificacionPort notificacion;
+    private final PrestadoresModeracionPort prestadores;
     private final Clock reloj;
 
     public ModerarOfertaService(DecisionesModeracionRepositoryPort decisiones, ModeracionCatalogoPort catalogo,
-                                AvisosModeracionPort avisos, NotificacionPort notificacion, Clock reloj) {
+                                AvisosModeracionPort avisos, NotificacionPort notificacion,
+                                PrestadoresModeracionPort prestadores, Clock reloj) {
         this.decisiones = decisiones;
         this.catalogo = catalogo;
         this.avisos = avisos;
         this.notificacion = notificacion;
+        this.prestadores = prestadores;
         this.reloj = reloj;
     }
 
@@ -52,6 +57,9 @@ public class ModerarOfertaService implements ModerarOfertaUseCase {
                 .orElseThrow(() -> new NoEstaEnModeracionException("La oferta " + comando.ofertaId()));
         if (oferta.numeroVersion() != comando.numeroVersion()) {
             throw new VersionNoVigenteException(comando.ofertaId(), comando.numeroVersion(), oferta.numeroVersion());
+        }
+        if (nueva.decision() == Decision.APROBAR && !prestadores.estaHabilitado(oferta.prestadorId())) {
+            throw new PrestadorNoHabilitadoException(oferta.prestadorId());
         }
         if (!decisiones.registrar(nueva)) {
             // Otro administrador, quizá en la otra réplica, decidió lo mismo un instante antes.

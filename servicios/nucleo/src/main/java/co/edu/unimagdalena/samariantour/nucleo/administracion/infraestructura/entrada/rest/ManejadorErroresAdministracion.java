@@ -5,6 +5,7 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.ExcepcionDominio;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.ModeracionYaDecididaException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.NoEstaEnModeracionException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.PrestadorNoHabilitadoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.VersionNoVigenteException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -31,6 +32,7 @@ public class ManejadorErroresAdministracion {
             case NoEstaEnModeracionException e -> HttpStatus.NOT_FOUND;
             case VersionNoVigenteException e -> HttpStatus.CONFLICT;
             case ModeracionYaDecididaException e -> HttpStatus.CONFLICT;
+            case PrestadorNoHabilitadoException e -> HttpStatus.CONFLICT;
             case CatalogoNoDisponibleException e -> HttpStatus.SERVICE_UNAVAILABLE;
             default -> HttpStatus.BAD_REQUEST;
         };
