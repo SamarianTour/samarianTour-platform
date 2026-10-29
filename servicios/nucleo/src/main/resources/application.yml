@@ -15,6 +15,15 @@ spring:
     open-in-view: false
   flyway:
     locations: classpath:db/migration
+  mail:
+    # El servidor SMTP (DN-20). En Docker Compose es Mailpit (SPRING_MAIL_HOST=mailpit); fuera de Docker, un Mailpit
+    # local en el puerto 1025. Espera como máximo 3 s, como las demás llamadas salientes (RNF-05).
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.connectiontimeout: 3000
+      mail.smtp.timeout: 3000
+      mail.smtp.writetimeout: 3000
   mvc:
     # Errores en formato RFC 7807 (application/problem+json).
     problemdetails:
@@ -27,6 +36,11 @@ server:
     context-path: /api/nucleo
 
 management:
+  health:
+    mail:
+      # Sin correo el núcleo sigue sirviendo: solo falla el restablecimiento de la contraseña, con 503 (DN-20). Así
+      # Docker no lo marca como enfermo si Mailpit no responde.
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -39,6 +53,21 @@ management:
         http.server.requests: 50ms,100ms,200ms,300ms,500ms,750ms,1s,1500ms,2s,3s
 
 nucleo:
+  cifrado:
+    # Clave AES-256 de los datos personales, 32 bytes en Base64 (RNF-08, DN-18). Llega por NUCLEO_CIFRADO_CLAVE y se
+    # genera con infra/generar-claves.sh. Sin valor por defecto: sin ella el núcleo no arranca.
+    clave:
+  jwt:
+    # Clave privada RSA del token de acceso, PKCS#8 en Base64 de una línea o en PEM (DN-19). Llega por
+    # NUCLEO_JWT_CLAVE_PRIVADA y se genera con infra/generar-claves.sh. Sin valor por defecto: sin ella no arranca.
+    clave-privada:
+    # El emisor (iss) que los demás servicios exigirán en el token.
+    emisor: samarian-tour-nucleo
+  correo:
+    remitente: Samarian Tour <no-responder@samariantour.co>
+  cuentas:
+    # La pantalla del frontend que pide la contraseña nueva; {token} es el secreto del enlace (RF-07, DN-20).
+    enlace-restablecimiento: http://localhost:8080/restablecer-contrasena?token={token}
   catalogo:
     # La API del catálogo por la red interna; en Docker Compose se sobrescribe con NUCLEO_CATALOGO_URL.
     url: http://localhost:8081/api/catalogo
