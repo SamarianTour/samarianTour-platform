@@ -35,7 +35,7 @@ Son **tres servicios** independientes, cada uno en su propio contenedor Docker, 
 
 | Servicio | De qué se encarga | Base de datos | Estado |
 |---|---|---|---|
-| **Núcleo** | Cuentas, login (emite el token JWT), datos de los prestadores y su RNT, solicitudes, pagos y la decisión del administrador al moderar | PostgreSQL | Moderación y solicitudes de disponibilidad; lo demás 🔨 |
+| **Núcleo** | Cuentas, login (emite el token JWT), datos de los prestadores y su RNT, solicitudes, pagos y la decisión del administrador al moderar | PostgreSQL | Moderación, solicitudes de disponibilidad y pagos; lo demás 🔨 |
 | **Catálogo** | Zonas, ofertas, perfiles públicos y opiniones | MongoDB | En construcción |
 | **Recomendación** | Recomendaciones explicadas, por reglas o con IA; alertas del destino (IDEAM) y alternativas en zonas con menos visitantes | Ninguna | Prototipo |
 
@@ -321,7 +321,25 @@ EnviarSolicitudService, en una transacción con la clave de idempotencia
 201 { id, estado: "PENDIENTE", venceEn, historial }   (con la misma clave, la misma respuesta)
 ```
 
-El operador ve su cola (`GET /api/nucleo/operador/solicitudes`), verifica con el prestador fuera de la plataforma y la marca **Atendida** con el precio base, la política de cancelación y el aparte acordado, o **No disponible**. Desde Atendida corre la ventana de 3 h, o hasta las 08:00 si fue de noche, para que Pedro **confirme** o **decline** (`POST /api/nucleo/turista/solicitudes/{id}/respuesta`) y pague. Una tarea programada vence las que no se atendieron en 24 h (Sin respuesta) y las que no se pagaron a tiempo (Vencida), y cada cambio deja su notificación por WhatsApp, simulada en el log por ahora. El pago, con su webhook, llega en la rama de pagos: el núcleo ya tiene la API interna que usará (DN-17).
+El operador ve su cola (`GET /api/nucleo/operador/solicitudes`), verifica con el prestador fuera de la plataforma y la marca **Atendida** con el precio base, la política de cancelación y el aparte acordado, o **No disponible**. Desde Atendida corre la ventana de 3 h, o hasta las 08:00 si fue de noche, para que Pedro **confirme** o **decline** (`POST /api/nucleo/turista/solicitudes/{id}/respuesta`) y pague. Una tarea programada vence las que no se atendieron en 24 h (Sin respuesta) y las que no se pagaron a tiempo (Vencida), y cada cambio deja su notificación por WhatsApp, simulada en el log por ahora.
+
+### Paso 15: Pedro paga y el núcleo avisa al catálogo
+
+El pago es del **núcleo** (DN-18 a DN-27); el catálogo solo recibe el aviso del paso 8.
+
+```
+POST /api/nucleo/turista/solicitudes/{id}/pago      Idempotency-Key: <uuid>
+   ▼
+201 { intentoId, numero, montoCentavos, checkout: { pasarela, url } }   la página de la pasarela simulada o el Web Checkout de Wompi
+   ▼
+Pedro paga en la pasarela; la pasarela envía el evento firmado
+POST /api/nucleo/pagos/eventos   → 200 de inmediato; una tarea lo procesa en los 5 s siguientes
+   ▼
+En una transacción: el intento Aprobado, la solicitud Pagada, la dispersión pendiente al prestador
+y el aviso HABILITACION_OPINION en la bandeja  →  POST /api/catalogo/internal/opiniones/avisos (paso 8)
+```
+
+Si la pasarela rechaza el pago, la solicitud queda con el pago fallido y Pedro puede intentar de nuevo, hasta tres veces. Si el pago llega después de la ventana, la solicitud no se paga: queda como pago tardío para que el administrador lo reembolse.
 
 ## 6. Dónde está cada cosa
 

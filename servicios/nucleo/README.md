@@ -2,7 +2,7 @@
 
 Núcleo transaccional sobre PostgreSQL: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e indicadores. Las decisiones están en [docs/decisiones-nucleo.md](../../docs/decisiones-nucleo.md) (DN-01 en adelante).
 
-Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08) y las solicitudes de disponibilidad (DN-09 a DN-17). Los demás módulos están vacíos, cada uno con un `package-info.java` que dice qué requisitos le tocan.
+Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17) y los pagos (DN-18 a DN-27). Los demás módulos están vacíos, cada uno con un `package-info.java` que dice qué requisitos le tocan.
 
 ## Estructura
 
@@ -12,9 +12,9 @@ co.edu.unimagdalena.samariantour.nucleo
 ├── compartido/          identidad y roles (DN-04, DN-05), reloj, X-Instancia, reintento del ADR-05, cliente del catálogo
 ├── cuentas/             módulo 1 (RF-01 a RF-13)
 ├── solicitudes/         módulo 4 (RF-30 a RF-45): ciclo de vida, ventanas, idempotencia, notificaciones y su api para pagos
-├── pagos/               módulo 5 (RF-46 a RF-58)
+├── pagos/               módulo 5 (RF-46 a RF-58): sesión de cobro, webhook, pagos tardíos, comisión y dispersión
 ├── prestadores/         módulo 7 (RF-62, RF-63, RF-68 a RF-71, RF-73 a RF-75)
-├── administracion/      módulo 8 (RF-76 a RF-83); por ahora la moderación (RF-79, RF-80)
+├── administracion/      módulo 8 (RF-76 a RF-83); por ahora la moderación (RF-79, RF-80), la comisión y los pagos tardíos
 ├── indicadores/         módulo 9 (RF-85 a RF-89)
 └── bandeja/             bandeja de salida hacia el catálogo (DN-06)
 ```
@@ -77,6 +77,22 @@ curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes \
 - **Datos provisionales:** el operador de cada prestador y el WhatsApp de prestadores y turistas están en `application-demo.yml` (DN-15) hasta que existan los módulos de prestadores y cuentas.
 - **Notificaciones:** por ahora, WhatsApp simulado en el log, con el número enmascarado: `docker compose -f infra/docker-compose.yml logs nucleo | grep "WhatsApp simulado"`.
 - **Para pagos:** `solicitudes.api.SolicitudesPagosApi` (DN-17), que se llama dentro de la transacción de pagos.
+
+## Pagos
+
+El turista abre el pago de una solicitud confirmada, paga en la pasarela y el resultado llega por el webhook (DN-18 a DN-27). El recorrido completo, con los rechazos, el pago tardío y la dispersión fallida, está en el README principal ("13. Pagos"):
+
+```bash
+curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes/<id>/pago   -H "X-Usuario-Id: 90000000-0000-0000-0000-000000000001" -H "X-Rol: TURISTA"   -H "Idempotency-Key: 33333333-aaaa-4bbb-8ccc-000000000001"
+# 201 {"numero":1,"estado":"EN_CURSO","montoCentavos":30000000,"checkout":{"pasarela":"SIMULADA","url":"..."},...}
+```
+
+- **La pasarela** se elige con `nucleo.pagos.pasarela`: `simulada` (por defecto, una página del núcleo que envía al webhook eventos con la forma y la firma de Wompi, solo con el perfil demo) o `wompi` (el sandbox, con las llaves en `infra/.env`; ver "Pasarela de pagos" en el README principal). Las dos están detrás de `PaymentGatewayPort` (QAS-06).
+- **El webhook** `POST /pagos/eventos` es público: verifica el checksum (401 si no coincide), guarda el evento y responde 200 de inmediato. Una tarea lo procesa después, con la solicitud en la misma transacción (`SolicitudesPagosApi`, DN-17).
+- **Tareas programadas** (`nucleo.pagos.*.cron`; con `-` no corren): los eventos cada 5 s, los intentos abandonados cada minuto, las dispersiones y los avisos cada 15 s y las claves de idempotencia vencidas cada hora. Las dos réplicas trabajan sin pisarse con `FOR UPDATE SKIP LOCKED`.
+- **Comisión y dispersión:** el 4 % inicial, con historial (`/admin/comision`), y el costo transaccional configurable (`nucleo.pagos.costo-transaccional`, DN-23). La dispersión se reintenta 3 veces; con Wompi también es simulada, porque "Pagos a terceros" exige activarlo en la cuenta del comercio (DN-24).
+- **Datos provisionales:** las cuentas de cobro de los prestadores y el WhatsApp del administrador están en `application-demo.yml` (DN-26). Las cuentas solo salen enmascaradas (RF-75).
+- **Pruebas:** `PagosIT` recorre los pagos con PostgreSQL y eventos firmados; `PasarelaSimuladaIT`, la página y su envío al webhook; `FormatoWompiTest`, las firmas con los vectores de la documentación de Wompi.
 
 ## Moderar
 
