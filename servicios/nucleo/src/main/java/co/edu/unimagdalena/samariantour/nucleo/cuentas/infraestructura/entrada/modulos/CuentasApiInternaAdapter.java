@@ -26,4 +26,9 @@ public class CuentasApiInternaAdapter implements CuentasApiInterna {
         return contactos.turistaContactable(turistaId)
                 .map(turista -> new ContactoTurista(turista.nombre(), turista.whatsapp()));
     }
+
+    @Override
+    public boolean esPrestadorActivo(UUID usuarioId) {
+        return contactos.esPrestadorActivo(usuarioId);
+    }
 }

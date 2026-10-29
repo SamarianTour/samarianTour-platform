@@ -1,6 +1,8 @@
 package co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion;
 
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Rol;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Turista;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Usuario;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.ConsultarContactoUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.UsuarioRepositoryPort;
 
@@ -21,5 +23,13 @@ public class ConsultarContactoService implements ConsultarContactoUseCase {
         return usuarios.porId(turistaId)
                 .filter(Turista.class::isInstance).map(Turista.class::cast)
                 .filter(Turista::puedeEnviarSolicitudes);
+    }
+
+    @Override
+    public boolean esPrestadorActivo(UUID usuarioId) {
+        return usuarios.porId(usuarioId)
+                .filter(usuario -> usuario.rol() == Rol.PRESTADOR)
+                .filter(Usuario::estaActiva)
+                .isPresent();
     }
 }

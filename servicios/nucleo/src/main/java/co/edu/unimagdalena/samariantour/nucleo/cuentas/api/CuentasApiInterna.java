@@ -10,8 +10,11 @@ import java.util.UUID;
 public interface CuentasApiInterna {
 
     /**
-     * El nombre y el WhatsApp del turista, para notificarle (RF-44) y para el prestador cuando la solicitud queda Pagada
-     * (RF-57). Solo si la cuenta está activa y el WhatsApp verificado (RF-03, RF-30); si no, vacío.
+     * El nombre y el WhatsApp del turista, para notificarle (RF-44) y para el prestador cuando la solicitud queda
+     * Pagada (RF-57). Solo si la cuenta está activa y el WhatsApp verificado (RF-03, RF-30); si no, vacío.
      */
     Optional<ContactoTurista> contactoTurista(UUID turistaId);
+
+    /** Si la cuenta existe, es de un prestador y está activa; la usa el registro del prestador (RF-62). */
+    boolean esPrestadorActivo(UUID usuarioId);
 }
