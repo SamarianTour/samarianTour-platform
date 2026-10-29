@@ -9,8 +9,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.EnumSet;
+
 /**
- * Autorización por prefijo de ruta, en un solo lugar para todos los módulos (DN-05): cada prefijo exige un rol.
+ * Autorización por prefijo de ruta, en un solo lugar para todos los módulos (DN-05): cada prefijo exige un rol, y
+ * {@code /cuenta/**} admite cualquiera.
  * Las demás rutas son públicas, y {@code /internal/**} solo es accesible desde la red interna (Nginx la bloquea
  * hacia afuera).
  */
@@ -33,5 +36,7 @@ public class SeguridadConfig implements WebMvcConfigurer {
         registro.addInterceptor(new ExigirRol(resolutor, Rol.TURISTA)).addPathPatterns("/turista/**");
         registro.addInterceptor(new ExigirRol(resolutor, Rol.OPERADOR_DISPONIBILIDAD)).addPathPatterns("/operador/**");
         registro.addInterceptor(new ExigirRol(resolutor, Rol.GESTOR_DESTINO)).addPathPatterns("/gestor/**");
+        // Los datos de la propia cuenta, de cualquier rol (RF-12).
+        registro.addInterceptor(new ExigirRol(resolutor, EnumSet.allOf(Rol.class))).addPathPatterns("/cuenta/**");
     }
 }
