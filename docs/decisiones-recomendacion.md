@@ -189,6 +189,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
   - las dos tareas corren en el único hilo del planificador de Spring, así que el reintento y la actualización de 8 horas nunca se pisan. Con el IDEAM caído, el primer intento hace como mucho 3 consultas antes de que se abra el circuito, y cada reintento, una sola consulta de prueba.
 - **Cortes:** cada consulta se corta a los 5 s, y el circuito `alertas` de Resilience4j, con los mismos valores que el de la IA (DR-06), deja de llamar al IDEAM por 60 s tras 3 fallas seguidas. Las zonas que no alcanzan a consultarse cuentan como fallidas y conservan lo anterior.
 - **Con varias réplicas** no hace falta ShedLock: cada réplica refresca su propia caché, y como solo lee, que el IDEAM reciba una consulta más por réplica no cambia nada.
+- **Apagadas en las pruebas** (fix): la lectura del arranque corría en el hilo del planificador mientras la prueba configuraba el `@MockitoBean` del catálogo, y Mockito no admite configurar un doble mientras otro hilo lo usa (`RecomendacionApiTest` fallaba de vez en cuando con 0 recomendaciones); por eso las pruebas con contexto ponen `recomendacion.alertas.programadas: false` (`src/test/resources/config/application.yml`), que por defecto es `true`.
 
 **DR-17. Las alertas simuladas lo dicen en su fuente** (restricción ética: no presentar un dato inventado como oficial). Toda alerta del archivo simulado tiene una fuente que termina en "(simulado)", por ejemplo "IDEAM (simulado)" o "Parques Nacionales (simulado)". Una prueba lo comprueba.
 
