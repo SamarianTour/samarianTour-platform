@@ -56,7 +56,13 @@ public class AlertasConfig {
         return new ConsultarAlertasService(cache, catalogo, Clock.systemUTC());
     }
 
+    /**
+     * Las lecturas programadas: al arrancar, cada 8 horas y el reintento. Las pruebas con el contexto completo las
+     * apagan con {@code recomendacion.alertas.programadas=false}, para que ningún hilo use un doble de prueba
+     * mientras se configura (DR-16).
+     */
     @Bean
+    @ConditionalOnProperty(name = "recomendacion.alertas.programadas", havingValue = "true", matchIfMissing = true)
     AlertasScheduler alertasScheduler(ActualizarAlertasUseCase actualizarAlertas) {
         return new AlertasScheduler(actualizarAlertas);
     }
