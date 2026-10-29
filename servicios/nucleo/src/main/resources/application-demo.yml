@@ -1,8 +1,9 @@
 # Perfil demo del núcleo (DN-05, DN-15). Solo para la demostración.
 
 nucleo:
-  # PROVISIONAL [SUPUESTO] (DN-15): lo que tendrán los módulos de prestadores y de cuentas, que todavía están vacíos.
-  # Los identificadores son los de la demo del catálogo y de sus opiniones; los números de WhatsApp son ficticios.
+  # PROVISIONAL [SUPUESTO] (DN-15): lo que tendrá el módulo de prestadores, que todavía está vacío. Los identificadores
+  # son los de la demo del catálogo; los números de WhatsApp son ficticios. Los turistas ya son cuentas de verdad
+  # (PrecargaCuentasDemo, DN-18), y su contacto sale de ellas (DN-22).
   demo:
     prestadores:
       # Agencia y guía: los atiende el operador 1 (RF-32).
@@ -19,13 +20,3 @@ nucleo:
       - id: 40000000-0000-0000-0000-000000000004
         operador-id: 60000000-0000-0000-0000-000000000002
         whatsapp: "+573001110404"
-    turistas:
-      - id: 90000000-0000-0000-0000-000000000001
-        nombre: Laura Gómez
-        whatsapp: "+573105550001"
-      - id: 90000000-0000-0000-0000-000000000002
-        nombre: Carlos Pérez
-        whatsapp: "+573105550002"
-      - id: 90000000-0000-0000-0000-000000000003
-        nombre: Ana Torres
-        whatsapp: "+573105550003"
