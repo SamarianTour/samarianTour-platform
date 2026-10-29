@@ -722,7 +722,7 @@ Las alternativas también dejan su línea en el registro de exposición, con `"o
 
 ### 12. Solicitudes de disponibilidad
 
-El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de las cuentas precargadas y de `application-demo.yml` del núcleo: la turista `90000000-...-001` es una cuenta con el WhatsApp verificado (DN-28, DN-32), la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-15). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
+El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de las cuentas y los prestadores precargados: la turista `90000000-...-001` es una cuenta con el WhatsApp verificado (DN-28, DN-32), la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-35). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
@@ -996,7 +996,80 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/turista/supresion" "${
 
 Las cuentas precargadas también inician sesión, por ejemplo `laura@demo.samariantour.co` con `Demo1234`. Laura (`70000000-...-007`) ya tiene el WhatsApp verificado, así que puede enviar solicitudes como en el paso 12.
 
-### 15. Rutas que no se exponen
+### 15. Prestadores
+
+Registro con el RNT, tipo, WhatsApp verificado, cuenta de cobro y la sincronización con el RNT, que retira y restituye el catálogo del prestador (DN-33 a DN-36). El RNT es el simulado de `application-demo.yml`: 910001 a 910004 son los prestadores de la demo, 910005 no está (su agencia quedó inactiva), y 910006 (una guía) y 910007 (un hostal) sirven para registrar prestadores nuevos.
+
+```bash
+NUCLEO=http://localhost:8080/api/nucleo
+JSON=(-H "Content-Type: application/json")
+ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
+AGENCIA=(-H "X-Usuario-Id: 10000000-0000-0000-0000-000000000001" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: AGENCIA_OPERADORA")
+
+# La agencia de la demo: RNT activo con los datos del RNT, y su cuenta de cobro enmascarada (RF-73, RF-75)
+curl -s "$NUCLEO/prestador/registro" "${AGENCIA[@]}"
+# {"numeroRnt":"910001","tipo":"AGENCIA_OPERADORA","categoria":"MICRO_PEQUENO","razonSocial":"MAR Y SELVA EXPEDICIONES S.A.S.",
+#  "estadoRnt":"ACTIVO","ultimaSincronizacion":"...","habilitado":true,"whatsappVerificado":true,...}
+curl -s "$NUCLEO/prestador/cuenta-cobro" "${AGENCIA[@]}"
+# {"tipo":"AHORROS","entidad":"Bancolombia","numeroEnmascarado":"******0101",...}
+
+# Una guía nueva: primero su cuenta de prestador, después su RNT (RF-62, RF-63)
+ID=$(curl -s -X POST "$NUCLEO/cuentas/registro" "${JSON[@]}" -d '{"rol":"PRESTADOR","nombre":"Maria Fernanda Ospino",
+  "correo":"maria.guia@correo.co","contrasena":"Guia2026x","aceptaPolitica":true,"versionPolitica":"v1"}' \
+  | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+GUIA=(-H "X-Usuario-Id: $ID" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE")
+
+# El tipo tiene que coincidir con el RNT (RF-70): 910006 es de un guía, persona natural
+curl -s -X POST "$NUCLEO/prestador/registro" "${GUIA[@]}" "${JSON[@]}" -d '{"numeroRnt":"910006","tipo":"ALOJAMIENTO","numeroEmpleados":3}'
+# 409 TIPO_NO_COINCIDE_CON_RNT; el RNT de otro prestador (910002) da 409 RNT_YA_REGISTRADO
+curl -s -X POST "$NUCLEO/prestador/registro" "${GUIA[@]}" "${JSON[@]}" \
+  -d '{"numeroRnt":"910006","tipo":"GUIA_INDEPENDIENTE","modalidades":["CAMINATA","KAYAK"],"idiomas":["es","en"]}'
+# 201 {"estadoRnt":"ACTIVO","razonSocial":"MARIA FERNANDA OSPINO DIAZ","categoria":"GUIA_INDEPENDIENTE","habilitado":true,...}
+# y en la bandeja, el aviso HABILITACION versión 1 para el catálogo
+
+# Su WhatsApp, verificado con un código que por ahora sale en el log (RF-71)
+curl -s -X PUT "$NUCLEO/prestador/whatsapp" "${GUIA[@]}" "${JSON[@]}" -d '{"whatsapp":"+573001234599"}'
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/prestador/whatsapp/codigo" "${GUIA[@]}"      # 202
+CODIGO=$(docker compose -f infra/docker-compose.yml logs nucleo | grep CODIGO_VERIFICACION_PRESTADOR | tail -1 | sed -E 's/.*codigo=([0-9]+).*/\1/')
+curl -s -X POST "$NUCLEO/prestador/whatsapp/verificacion" "${GUIA[@]}" "${JSON[@]}" -d "{\"codigo\":\"$CODIGO\"}"
+# whatsappVerificado: true; uno equivocado da 400 CODIGO_INCORRECTO con los intentos que quedan
+
+# La cuenta de cobro (RF-74): cada cambio cierra la anterior y queda en la auditoría, siempre enmascarada
+curl -s -X PUT "$NUCLEO/prestador/cuenta-cobro" "${GUIA[@]}" "${JSON[@]}" -d '{"tipo":"NEQUI","numero":"3001234599","titular":"Maria Fernanda Ospino"}'
+curl -s -X PUT "$NUCLEO/prestador/cuenta-cobro" "${GUIA[@]}" "${JSON[@]}" \
+  -d '{"tipo":"AHORROS","entidad":"Bancolombia","numero":"12345678901","titular":"Maria Fernanda Ospino"}'
+# {"tipo":"AHORROS","entidad":"Bancolombia","numeroEnmascarado":"******8901",...}
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "SELECT accion, detalle FROM auditoria_prestadores WHERE prestador_id = '$ID' ORDER BY ocurrido_en"
+# CUENTA_COBRO_REGISTRADA | NEQUI Nequi ******4599
+# CUENTA_COBRO_CAMBIADA   | AHORROS Bancolombia ******8901
+
+# El RNT de la agencia se cae: la demo lo da de baja en el RNT simulado y sincroniza enseguida (RF-76, RF-77)
+curl -s -X DELETE "$NUCLEO/admin/rnt-simulado/910001" "${ADMIN[@]}"
+# {"revisados":6,"retirados":1,"restituidos":0,"sinRespuesta":0,"interrumpida":false}
+curl -s "$NUCLEO/prestador/registro" "${AGENCIA[@]}"                  # "estadoRnt":"INACTIVO","habilitado":false
+docker compose -f infra/docker-compose.yml logs nucleo | grep CATALOGO_RETIRADO_RNT    # el aviso a la agencia (RF-78)
+# A los 15 s el catálogo ya recibió el aviso HABILITACION versión 2: sus ofertas dejan de ser visibles
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/ofertas/b00000000000000000000001"     # 404
+# Y en el minuto siguiente, sus solicitudes no pagadas se cierran (HU-ADM-02): una Pendiente queda No disponible,
+# con el motivo "El prestador ya no tiene el Registro Nacional de Turismo activo" y la notificación al turista
+
+# El RNT vuelve a estar activo: el catálogo restituye las ofertas aprobadas
+curl -s -X PUT "$NUCLEO/admin/rnt-simulado/910001" "${ADMIN[@]}"
+# {"revisados":6,"retirados":0,"restituidos":1,...}; a los 15 s la ficha responde 200 otra vez
+
+# La sincronización corre los lunes a las 3:00; el administrador la ejecuta cuando quiera
+curl -s -X POST "$NUCLEO/admin/rnt/sincronizacion" "${ADMIN[@]}"
+# {"revisados":6,"retirados":0,"restituidos":0,"sinRespuesta":0,"interrumpida":false}
+```
+
+Otros casos que se pueden mostrar:
+
+- **Moderación sin RNT:** aprobar una oferta de la agencia `50000000-...-005`, que tiene el RNT inactivo, responde 409 `PRESTADOR_NO_HABILITADO`; rechazarla sí se puede (DN-35).
+- **El RNT real:** con `RNT_FUENTE=soda` en `infra/.env`, el núcleo consulta el conjunto del RNT en datos.gov.co. Los números de la demo no existen ahí: quedan NO_ENCONTRADO o INACTIVO en la siguiente sincronización. Si la API no responde en 3 s, el prestador conserva su último estado (QAS-03).
+- **Un número que no está en la tabla simulada:** `DELETE $NUCLEO/admin/rnt-simulado/999999` responde 404.
+
+### 16. Rutas que no se exponen
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/internal/avisos"      # 404

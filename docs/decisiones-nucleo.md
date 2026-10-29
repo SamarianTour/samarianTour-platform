@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27) y las cuentas (DN-28 a DN-32); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) y los prestadores (DN-33 a DN-36); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -23,7 +23,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-12 | Claves de idempotencia en enviar y responder | ✅ ADR-04 · 🆕 [SUPUESTO] 422 y 24 h |
 | DN-13 | Notificaciones guardadas en la transacción del cambio | ✅ RF-34, RF-41, RF-44, RF-45, RF-56, RF-57, DN-06 |
 | DN-14 | Vencimientos programados con SKIP LOCKED | ✅ RF-41, RF-55, RF-56 · 🆕 [SUPUESTO] cada minuto |
-| DN-15 | Prestadores y contactos provisionales de la demo | 🆕 [SUPUESTO] |
+| DN-15 | Prestadores y contactos de las solicitudes | reemplazada por DN-35 |
 | DN-16 | Cola del operador | ✅ RF-32, RF-34 a RF-36 |
 | DN-17 | API de las solicitudes para pagos | ✅ documento de diseño, RF-50, RF-55, RF-58 |
 | DN-18 | Pasarela elegida por configuración: la simulada de la demo o Wompi sandbox | ✅ QAS-06, RF-46 a RF-48 · 🆕 [SUPUESTO] página simulada |
@@ -34,13 +34,17 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-23 | Comisión con historial y costo transaccional configurable | ✅ RF-53, RF-82, RF-83 · 🆕 [SUPUESTO] costo y redondeo |
 | DN-24 | Dispersión al prestador con tres reintentos; con Wompi, delegada a la simulada | ✅ RF-53, RF-54, RF-74, RF-75 · 🆕 [SUPUESTO] esperas |
 | DN-25 | Persistencia de pagos (V7) | ✅ DN-02, ADR-05 |
-| DN-26 | Cuentas de cobro y contactos provisionales de la demo | 🆕 [SUPUESTO] |
+| DN-26 | Cuentas de cobro y contactos de pagos | reemplazada por DN-35 |
 | DN-27 | Aviso HABILITACION_OPINION desde solicitudes | ✅ DC-41, DN-06, DN-17 |
 | DN-28 | Modelo de las cuentas, nombre y WhatsApp cifrados, administrador inicial y cuentas de la demo | ✅ RF-01 a RF-03, RF-09 a RF-11, RNF-08, diccionario · 🆕 [SUPUESTO] validaciones y 3 intentos |
 | DN-29 | Sesión: JWT RS256 de 15 min y token de renovación rotativo de 7 días; bloqueo con la fila bloqueada | ✅ RF-04 a RF-06, diagrama de cuentas · 🆕 vigencias |
 | DN-30 | Restablecer la contraseña por correo, con Mailpit en el piloto | ✅ RF-07, RF-08 · 🆕 equipo |
 | DN-31 | Datos personales y supresión inmediata del turista, con anonimización | ✅ RF-12, RF-13, Ley 1581 · 🆕 equipo |
 | DN-32 | API de las cuentas para los demás módulos: el contacto del turista | ✅ diagrama de paquetes, RF-44, RF-57 |
+| DN-33 | Modelo del prestador y verificación con el RNT, simulado o por la API SODA | ✅ RF-62, RF-63, RF-68 a RF-71, RF-73, QAS-03 · 🆕 [SUPUESTO] categorías y validaciones |
+| DN-34 | Cuenta de cobro con historial, cifrada y auditada | ✅ RF-74, RF-75, RNF-08 · 🆕 [SUPUESTO] validaciones |
+| DN-35 | API de los prestadores, regla del RNT en la moderación y prestadores de la demo | ✅ diagrama de paquetes, DC-38 · reemplaza DN-15 y DN-26 |
+| DN-36 | Sincronización semanal con el RNT, retiro, restitución y cierre de las solicitudes no pagadas | ✅ RF-76 a RF-78, HU-ADM-02 · 🆕 [SUPUESTO] horario, lotes y motivo |
 
 ## Persistencia
 
@@ -101,7 +105,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 
   El catálogo lo aplica en los siguientes 15 s. Los identificadores son estables, y el catálogo descarta un aviso repetido (DC-08).
 - **Notificación** (decisión del equipo, provisional): al rechazar, el núcleo notifica el motivo al prestador (RF-79) o al turista (RF-80) por `NotificacionPort`. Mientras no exista un canal de notificaciones, el adaptador solo lo escribe en el log (`[Notificación simulada] ...`). La aprobación no se notifica: el prestador la ve en sus ofertas y el turista, en sus opiniones.
-- **Pendiente:** DC-38 dice que el núcleo no aprueba una oferta si el RNT del prestador no está activo. La consulta interna del catálogo no trae el RNT, y la habilitación es del módulo de prestadores (RF-62, RF-63), que todavía no existe: la regla entra con ese módulo.
+- **RNT activo** (DC-38): el núcleo no aprueba una oferta si el prestador no tiene el RNT activo; responde 409 `PRESTADOR_NO_HABILITADO` y la decisión no se guarda. Lo consulta en el módulo de prestadores (DN-35).
 
 ## Solicitudes de disponibilidad
 
@@ -187,15 +191,11 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 - **Cada minuto** [SUPUESTO] (`nucleo.solicitudes.vencimiento.cron`), `VencimientoProgramado` toma lotes de 50 solicitudes abiertas cuyo vencimiento ya toca, con `FOR UPDATE SKIP LOCKED`: las dos réplicas vencen en paralelo sin tomar la misma y sin ShedLock. Aplica Sin respuesta o Vencida según el estado, con su transición y sus notificaciones en la misma transacción.
 - **`limite_vencimiento`:** lo calcula el dominio en cada cambio: el plazo vigente, o 30 min después si hay un intento de pago en curso. Así la consulta solo compara fechas y la gracia no se repite en SQL (QAS-05).
 - **Con la fila bloqueada,** el operador o el turista que la cambien a la vez esperan, chocan con la revisión y ven el estado real (DN-11).
+- **En la misma vuelta** se cierran las solicitudes no pagadas de los prestadores sin RNT activo (DN-36).
 
-**DN-15. Prestadores y contactos provisionales** [SUPUESTO]. El operador asignado y el WhatsApp de cada prestador son del módulo de prestadores, que todavía está vacío. El contacto del turista ya sale de su cuenta (DN-32); la tabla de turistas que estaba aquí se quitó.
-- **Tabla de la demo:** `PrestadoresPort` y `ContactoPort` tienen adaptadores provisionales que leen `nucleo.demo` en `application-demo.yml`, con los identificadores de la demo del catálogo y de sus opiniones:
-  - la agencia (`10000000-...-001`) y la guía (`20000000-...-002`) las atiende el operador `60000000-...-001`;
-  - el hotel (`30000000-...-003`) y el restaurante (`40000000-...-004`), el `60000000-...-002`;
-  - los turistas `90000000-...-001` a `...003` ya no están en la tabla: son cuentas de la demo (DN-28).
-- **Sin el perfil demo** la tabla queda vacía y ninguna solicitud se puede enviar.
+**DN-15. Prestadores y contactos de las solicitudes** (reemplazada por DN-35). El operador asignado y el WhatsApp de cada prestador eran una tabla provisional de la demo [SUPUESTO]; ahora salen del módulo de prestadores, por `PrestadoresSolicitudesAdapter` sobre `PrestadoresApiInterna`, sin cambios en el dominio. El contacto del turista sale de su cuenta (DN-32).
 - **Errores:** un prestador sin operador responde 409 `PRESTADOR_SIN_OPERADOR` y deja la incidencia en el log, con el prefijo `[INCIDENCIA RF-32]`, el prestador y la oferta, para que el administrador le asigne uno (RF-32). Un turista sin WhatsApp verificado responde 409 `WHATSAPP_NO_VERIFICADO` (RF-30).
-- **Cuando existan los módulos,** se cambian por adaptadores que llamen a su `api`, sin tocar el dominio.
+- **Sin el perfil demo** no hay prestadores con operador hasta que la administración los asigne (RF-81), y ninguna solicitud se puede enviar.
 
 **DN-16. Cola del operador** (RF-32, RF-34 a RF-36).
 - **Asignación estática** (RF-32): cada solicitud queda con el operador vinculado al prestador al crearse. El operador solo ve y atiende las suyas; la de otro operador responde 404, igual que la de otro turista, para no revelar que existe.
@@ -333,12 +333,9 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
 - **Sin claves foráneas a `solicitudes`:** pagos solo guarda su identificador, para no depender de las tablas de otro módulo.
 - **Los avisos** de pagos tardíos y de dispersiones fallidas se marcan en su propia fila (`aviso_enviado_en`), y la tarea de las dispersiones los envía con `SKIP LOCKED`: no hace falta otra cola de notificaciones.
 
-**DN-26. Cuentas de cobro y contactos provisionales** [SUPUESTO], como DN-15. La cuenta de cobro de cada prestador (RF-74) y el WhatsApp del administrador son de los módulos de prestadores y cuentas, todavía vacíos. Por ahora `CuentasCobroPort` y `ContactosPagosPort` leen `nucleo.demo` en `application-demo.yml`:
-- la agencia tiene una cuenta de ahorros Bancolombia; la guía, Nequi; el hotel, una cuenta corriente del Banco de Bogotá, y el restaurante, Daviplata;
-- la cuenta del restaurante está configurada para fallar en la dispersión simulada (`nucleo.pagos.simulada.cuentas-que-fallan`), para mostrar los reintentos y el aviso;
-- el administrador tiene un WhatsApp ficticio.
-
-Sin el perfil demo, la tabla queda vacía y las dispersiones fallan por falta de cuenta.
+**DN-26. Cuentas de cobro y contactos de pagos** (reemplazada por DN-35). La cuenta de cobro y el WhatsApp de cada prestador eran una tabla provisional de la demo [SUPUESTO]; ahora salen del módulo de prestadores, por `PrestadoresPagosAdapter`. Siguen en `application-demo.yml`:
+- el WhatsApp ficticio del administrador (`nucleo.demo.administrador.whatsapp`), porque las cuentas todavía no guardan el de los roles internos;
+- la cuenta que falla en la dispersión simulada (`nucleo.pagos.simulada.cuentas-que-fallan`), la del restaurante, para mostrar los reintentos y el aviso.
 
 **DN-27. Aviso `HABILITACION_OPINION` desde solicitudes** (DC-41, DN-06, DN-17).
 - **Quién lo encola:** el módulo de solicitudes, en `registrarPagoAprobado`, cuando la solicitud queda Pagada, porque es el que conoce al turista y la oferta.
@@ -446,6 +443,87 @@ Con esto quedan hechos los dos pendientes de DN-17.
 - **Solicitudes la usa:** su `ContactoPort` lo implementa `CuentasModuloAdapter`, que reemplaza la tabla de turistas de la demo (DN-15).
 - **Pendiente:** crear y desactivar cuentas internas (RF-81) se hará con el módulo de administración. Ya existe el código `ESTABLECER_CONTRASENA`, y `POST /cuentas/contrasena` lo acepta.
 
+## Prestadores
+
+**DN-33. Modelo del prestador y verificación con el RNT** (RF-62, RF-63, RF-68 a RF-71, RF-73, QAS-03, RNF-04, diccionario de clases). Es el módulo `prestadores`, con los casos de uso del diagrama de paquetes. Solo depende de `cuentas.api`.
+- **Migración V10:** crea `prestadores` (el id es el de la cuenta en `usuarios`), `cuentas_cobro` y `auditoria_prestadores`.
+- **Registro** (`POST /prestador/registro`, rol PRESTADOR):
+  - exige una cuenta activa de prestador (404 `CUENTA_NO_ENCONTRADA`) y se registra una sola vez (409 `PRESTADOR_YA_REGISTRADO`);
+  - lleva el número de RNT (solo dígitos, de 1 a 10) y el tipo con sus campos (RF-68, RF-69);
+  - un RNT es de un solo prestador [SUPUESTO]: otro con el mismo número responde 409 `RNT_YA_REGISTRADO`, también si dos llegan a la vez (restricción única de V10).
+- **El tipo y sus campos** [SUPUESTO]: el guía independiente declara al menos una modalidad (`CAMINATA`, `BICICLETA`, `KAYAK` u `OTRA`) y un idioma de dos letras, y no lleva empleados; los demás tipos llevan de 1 a 100.000 empleados. `PUT /prestador/tipo` los cambia.
+- **La categoría** (RF-72, RF-89, diagrama de paquetes): el guía es su propia categoría; los demás son micro y pequeño hasta 50 empleados, mediano hasta 200 y grande desde 201.
+- **El tipo tiene que coincidir con el RNT** (RF-70): si no coincide, 409 `TIPO_NO_COINCIDE_CON_RNT`. Las categorías del RNT que admite cada tipo son [SUPUESTO] hasta validarlas con el Ministerio:
+  - alojamiento: establecimientos de alojamiento turístico, viviendas turísticas y otros hospedajes no permanentes;
+  - restaurante: establecimientos de gastronomía;
+  - agencia operadora: agencias de viajes;
+  - guía independiente: guías de turismo y, además, persona natural ("No Comerciante" en el RNT). Así se reutiliza la verificación del RNT, sin un proceso aparte (RF-70).
+  - Se comparan sin tildes ni mayúsculas.
+- **Estados** (`EstadoRnt`):
+  - encontrado, ACTIVO, con la razón social, el municipio y la categoría del RNT;
+  - no encontrado, NO_ENCONTRADO si nunca apareció, o INACTIVO si alguna vez estuvo (`visto_en_rnt`);
+  - si la fuente no responde, VERIFICACION_PENDIENTE al registrarse; después conserva el último estado conocido (QAS-03).
+  - Solo el ACTIVO está habilitado para publicar. `GET /prestador/registro` muestra el estado con la fecha de la última sincronización (RF-73), y `PUT /prestador/rnt` cambia el número y lo vuelve a verificar.
+- **Dos fuentes del RNT**, por `nucleo.rnt.fuente` (RNF-04):
+  - `simulada`, por defecto: una tabla en `application-demo.yml` con los números ficticios de la demo, que no existen en el RNT real;
+  - `soda`: el conjunto del RNT del Ministerio en datos.gov.co (`thwd-ivmp`), con `?codigo_rnt=`. Solo publica los registros activos. Espera 3 s como máximo (RNF-05); si no responde, el resultado es "no disponible", nunca un error. Con `nucleo.rnt.soda.token-aplicacion`, Socrata permite más consultas.
+  - El RNT se consulta antes de abrir la transacción.
+- **La réplica del catálogo** (DC-02): cada cambio de habilitación encola en la bandeja `{tipo: HABILITACION, prestadorId, rntActivo, version}`, con `idAviso` `habilitacion-<id>-v<versión>`, en la misma transacción. La versión solo crece; el catálogo ignora una igual o menor a la que tiene. Un prestador nuevo empieza deshabilitado en el catálogo, así que solo se avisa cuando su RNT queda activo.
+- **WhatsApp del prestador** (RF-71):
+  - `PUT /prestador/whatsapp` lo guarda cifrado (RNF-08), en formato E.164, y sin verificar;
+  - `POST /prestador/whatsapp/codigo` (202) envía un código y `POST /prestador/whatsapp/verificacion` lo confirma. Las reglas son las de las cuentas (DN-28): 6 dígitos, 30 minutos y 3 intentos, y solo se guarda su hash. Cada módulo tiene su propio código: no comparten dominio;
+  - un código vencido o agotado responde 409 `CODIGO_NO_VIGENTE`; uno equivocado, 400 `CODIGO_INCORRECTO` con los intentos que quedan; sin número, 409 `WHATSAPP_NO_CONFIGURADO`;
+  - solo el número verificado recibe notificaciones; nunca es público.
+- **El WhatsApp es simulado,** como en DN-28: el log muestra el número enmascarado y el código.
+
+**DN-34. Cuenta de cobro con historial y auditoría** (RF-74, RF-75, RNF-08, RNF-09).
+- **`PUT /prestador/cuenta-cobro`** registra o cambia la cuenta donde recibe la dispersión:
+  - cada cambio cierra la vigente y crea otra, así que el historial queda completo; un índice único parcial asegura una sola vigente aunque dos réplicas registren a la vez;
+  - repetir los mismos datos no crea otra;
+  - el número y el titular van cifrados (RNF-08).
+- **Tipos:** `AHORROS`, `CORRIENTE`, `NEQUI` y `DAVIPLATA`. El diccionario dice `BANCARIA`; aquí se distingue ahorros de corriente, como en pagos, que es quien dispersa.
+- **Validaciones** [SUPUESTO]:
+  - en las billeteras el número es el celular (`3` y 9 dígitos), y la entidad es la billetera;
+  - en las bancarias, de 6 a 20 dígitos, y la entidad es obligatoria;
+  - entidad y titular de hasta 100 caracteres.
+- **Solo enmascarada** (RF-75): `GET /prestador/cuenta-cobro` muestra los últimos 4 dígitos (`******0101`); 404 `CUENTA_COBRO_NO_REGISTRADA` si no tiene. Completa solo sale por la API interna, hacia la dispersión de pagos.
+- **Auditoría** (`auditoria_prestadores`): `CUENTA_COBRO_REGISTRADA` o `CUENTA_COBRO_CAMBIADA`, con el tipo, la entidad y el número enmascarado; nunca el número completo.
+
+**DN-35. API de los prestadores para los demás módulos y prestadores de la demo** (diagrama de paquetes, DN-15, DN-26, DC-38).
+- **La API:** `prestadores.api.PrestadoresApiInterna`, implementada por `PrestadoresApiInternaAdapter`, que entrega tipos del `api`, nunca del dominio:
+  - `consultar(id)`: el tipo, la categoría, si está habilitado, el operador asignado y el WhatsApp verificado;
+  - `cuentaCobroVigente(id)`: la cuenta completa, solo para la dispersión;
+  - `sincronizarRnt()`: la sincronización de DN-36.
+- **Reemplaza las tablas provisionales:**
+  - en solicitudes, `PrestadoresSolicitudesAdapter` da el operador y el WhatsApp del prestador (DN-15);
+  - en pagos, `PrestadoresPagosAdapter` da la cuenta de cobro y el WhatsApp del prestador (DN-26). El del administrador queda en `nucleo.demo.administrador.whatsapp`, porque las cuentas todavía no guardan el WhatsApp de los roles internos.
+- **Moderación** (DC-38, cierra el pendiente de DN-08): la administración no aprueba una oferta de un prestador sin el RNT activo, o sin registrar: 409 `PRESTADOR_NO_HABILITADO`, sin guardar la decisión. Sí la puede rechazar.
+- **Prestadores de la demo** (`PrecargaPrestadoresDemo`, perfil `demo`, después de las cuentas):
+  - los 5 de la demo del catálogo, con su RNT de la tabla simulada (910001 a 910005), su WhatsApp verificado y su operador;
+  - la agencia, la guía, el hotel y el restaurante están activos y tienen cuenta de cobro: ahorros Bancolombia, Nequi, corriente Banco de Bogotá y Daviplata. La del restaurante sigue fallando en la dispersión simulada (DN-24);
+  - la agencia `50000000-...-005` está INACTIVA, sin operador ni cuenta: su 910005 no está en la tabla;
+  - la habilitación arranca con la versión que el catálogo ya tiene de ellos (1 los activos y 2 la inactiva), para que el primer cambio llegue con una versión mayor;
+  - la tabla simulada trae además 910006 (una guía) y 910007 (un hostal) para registrar prestadores nuevos.
+- **Asignar el operador** (RF-81) queda para la administración: por ahora solo lo tienen los de la demo.
+
+**DN-36. Sincronización semanal con el RNT, retiro y restitución** (RF-76 a RF-78, HU-ADM-01, HU-ADM-02, QAS-03).
+- **Cuándo:**
+  - cada semana, los lunes a las 3:00 de Colombia [SUPUESTO] (`nucleo.administracion.sincronizacion-rnt.cron`);
+  - y cuando el administrador quiera, con `POST /admin/rnt/sincronizacion`, que responde al terminar con los revisados, retirados, restituidos y sin respuesta.
+  - La dispara la administración (módulo 8), pero el trabajo es de los prestadores, por `PrestadoresApiInterna.sincronizarRnt()`.
+- **Por cada prestador:** consulta el RNT fuera de la transacción y aplica el resultado como en DN-33: encontrado queda ACTIVO; no encontrado, INACTIVO o NO_ENCONTRADO; si no responde, conserva su estado.
+  - Si cambia la habilitación, el aviso HABILITACION va en la misma transacción: el catálogo retira sus ofertas de la vista pública o restituye las aprobadas (RF-77).
+  - Si se le retira, recibe un WhatsApp (RF-78), solo si tiene el número verificado. Es el simulado: `tipo=CATALOGO_RETIRADO_RNT`.
+- **Dos réplicas:** toman a los prestadores en lotes de 20 [SUPUESTO] con `FOR UPDATE SKIP LOCKED` y marcan `sincronizacion_tomada_en`, así ninguno se revisa dos veces en la misma sincronización. Si un prestador cambia mientras se consulta su RNT, se salta y lo revisa la siguiente.
+- **Si el RNT se cae** (QAS-03): tras 3 consultas fallidas seguidas [SUPUESTO] la sincronización se detiene y lo informa (`interrumpida`); cada prestador conserva su último estado.
+- **Las solicitudes no pagadas se cierran** (HU-ADM-02):
+  - lo hace el módulo de solicitudes, con los vencimientos, cada minuto (DN-14): busca los prestadores con solicitudes abiertas y, si alguno no está habilitado, cierra las suyas;
+  - una PENDIENTE queda NO_DISPONIBLE y una ATENDIDA, CONFIRMADA o con el pago fallido, VENCIDA, con el actor SISTEMA y el motivo "El prestador ya no tiene el Registro Nacional de Turismo activo" [SUPUESTO];
+  - el turista recibe la notificación de siempre y, si había cupo apartado, el prestador la de cupo liberado (DN-13);
+  - la que tiene un intento de pago en curso espera su resultado: si se aprueba, queda PAGADA; si no, se cierra en la vuelta siguiente;
+  - así no depende de quién le quitó la habilitación (la sincronización o un cambio de número) y, si una réplica cae a mitad, la siguiente vuelta termina. V11 agrega el índice de las abiertas por prestador.
+- **Para la demo**, con el RNT simulado: `DELETE /admin/rnt-simulado/{numero}` lo da de baja y `PUT` lo restituye, y los dos sincronizan enseguida. No son parte del contrato, como la pasarela simulada. Las bajas quedan en `rnt_simulado_bajas` (V12), así las dos réplicas las ven; con el RNT real esa tabla queda vacía.
+
 ## Estructura y despliegue
 
 **DN-07. Estructura del servicio y despliegue en el piloto.**
@@ -464,7 +542,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
    - `IdempotenciaPort` vive en el módulo de solicitudes: el ADR-04 lo pide para enviar y responder; generar la sesión de cobro (RF-46) lo agregará pagos con su propio puerto o con `EjecucionIdempotente` (DN-12);
    - se agregan `TransaccionPort` (DN-11), `NotificacionRepositoryPort` y `AvisoPlataformaPort` (DN-13), y la API `solicitudes.api` para pagos (DN-17);
    - `NotificationPort` es solo el envío por WhatsApp; las notificaciones se guardan antes en la transacción del cambio y las envía una tarea programada (DN-13);
-   - `PrestadoresPort` y `ContactoPort` tienen adaptadores provisionales de la demo (DN-15).
+   - `PrestadoresPort` usa `PrestadoresApiInterna` (DN-35) y `ContactoPort`, `CuentasApiInterna` (DN-32); se agrega `CerrarSolicitudesSinRntUseCase` (DN-36).
 6. **Diccionario de clases, SolicitudDisponibilidad:**
    - la asignación es estática (RF-32 del SRS v1.1): no hay `tomar`, `liberar`, el máximo de 5 tomadas ni la liberación a las 2 h;
    - los campos de RF-30 de cada tipo están en `CamposDelTipo`: `horaSalida`, `horaReserva`, `fechaSalida` y `numeroUnidades` (DN-09);
@@ -474,7 +552,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
 8. **Diagrama de paquetes, módulo 03 (pagos):**
    - los adaptadores de entrada son `PagoController`, `WebhookPasarelaController`, `DispersionScheduler`, la tarea de los eventos y `PagosAdministracionApi`, que usa la administración para la comisión y los pagos tardíos (`/admin/comision`, `/admin/pagos-tardios`);
    - `PaymentGatewayPort` tiene dos adaptadores, `simulada` (con su página de pago) y `wompi`; el de Wompi delega la dispersión a la simulada mientras Pagos a terceros no esté activo (DN-18, DN-24);
-   - se agregan `IntentoPagoRepositoryPort`, `EventoPasarelaRepositoryPort`, `PagoTardioRepositoryPort`, `ComisionRepositoryPort`, `DispersionRepositoryPort`, `TransaccionPort`, `IdempotenciaPort` (DN-19), `SolicitudesPort` (sobre `SolicitudesPagosApi`), `CuentasCobroPort` y `ContactosPagosPort` (provisionales, DN-26) y `AvisoPagoPort`;
+   - se agregan `IntentoPagoRepositoryPort`, `EventoPasarelaRepositoryPort`, `PagoTardioRepositoryPort`, `ComisionRepositoryPort`, `DispersionRepositoryPort`, `TransaccionPort`, `IdempotenciaPort` (DN-19), `SolicitudesPort` (sobre `SolicitudesPagosApi`), `CuentasCobroPort` y `ContactosPagosPort` (sobre `PrestadoresApiInterna`, DN-35) y `AvisoPagoPort`;
    - el intento tiene el estado ABANDONADO (DN-20), y el aviso `HABILITACION_OPINION` lo encola solicitudes, no pagos (DN-27).
 9. **Diccionario de clases, pagos:** `IntentoPago`, `EventoPasarela`, `PagoTardio`, `ConfiguracionComision` y `Dispersion` con los campos de DN-20 a DN-25; el costo transaccional es un parámetro del prototipo (DN-23).
 10. **Diagrama de despliegue:** el webhook `/api/nucleo/pagos/eventos` es público, y para el sandbox de Wompi se publica con un túnel (README, sección de pagos).
@@ -489,3 +567,13 @@ Con esto quedan hechos los dos pendientes de DN-17.
    - `Usuario` agrega `cambiarNombre`, `cambiarContrasena` y la anonimización, y `Turista`, `verificarWhatsapp`, `cambiarWhatsapp` y `suprimir`.
 13. **Diagrama entidad-relación:** agregar `usuarios`, `politicas_datos`, `aceptaciones_politica`, `solicitudes_supresion`, `codigos_un_uso` y `sesiones` (V8).
 14. **Diagrama de despliegue:** Mailpit en el piloto (DN-30).
+15. **Diagrama de paquetes, módulo de prestadores:**
+   - los adaptadores de entrada son `PrestadorController` y `PrestadoresApiInternaAdapter`, que implementa `PrestadoresApiInterna` para solicitudes, pagos y administración (DN-35);
+   - se agregan `ConfigurarWhatsAppPrestadorUseCase` y `SincronizarRntUseCase` (DN-33, DN-36), y los puertos `CuentasPort` (sobre `CuentasApiInterna`), `HasherPort`, `NotificacionPrestadorPort`, `CuentaCobroRepositoryPort`, `AuditoriaPort` y `TransaccionPort`;
+   - `RntVerificationPort` tiene dos adaptadores, el simulado y el de la API SODA (DN-33); `EventoSalidaPort` deja el aviso HABILITACION en la bandeja.
+16. **Diagrama de paquetes, módulo de administración:** se agregan `SincronizarRntAdminUseCase`, `RntAdminController`, la tarea semanal y los puertos `PrestadoresModeracionPort` y `SincronizacionRntPort`, sobre `PrestadoresApiInterna` (DN-35, DN-36).
+17. **Diccionario de clases, prestadores:**
+   - `Prestador` agrega `vistoEnRnt` (INACTIVO frente a NO_ENCONTRADO), la razón social, el municipio y la categoría del RNT, el código de verificación del WhatsApp (`CodigoWhatsapp`) y la versión de la habilitación (DN-33);
+   - `CuentaCobro` tiene `AHORROS` y `CORRIENTE` en lugar de `BANCARIA`, la entidad, el titular y su vigencia (DN-34);
+   - `SolicitudDisponibilidad` agrega `cerrarPorRntInactivo` (DN-36).
+18. **Diagrama entidad-relación:** agregar `prestadores`, `cuentas_cobro` y `auditoria_prestadores` (V10), el índice de V11 y `rnt_simulado_bajas` (V12).
