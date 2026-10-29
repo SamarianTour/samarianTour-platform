@@ -10,4 +10,7 @@ public interface ConsultarContactoUseCase {
 
     /** El turista, si está activo y verificó su WhatsApp; si no, vacío (RF-30). */
     Optional<Turista> turistaContactable(UUID turistaId);
+
+    /** Si la cuenta existe, es de un prestador y está activa (RF-62). */
+    boolean esPrestadorActivo(UUID usuarioId);
 }

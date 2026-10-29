@@ -332,6 +332,285 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problema'
+  /prestador/registro:
+    post:
+      tags: [Prestadores]
+      operationId: registrarPrestador
+      summary: El prestador registra su RNT y su tipo, y el núcleo lo valida contra el RNT (RF-62, RF-63, RF-68 a RF-70)
+      description: |
+        Exige una cuenta de prestador activa (módulo de cuentas). El RNT se consulta en la fuente configurada (DN-33):
+        encontrado, autocompleta la razón social y el municipio, queda ACTIVO y se avisa al catálogo que puede publicar
+        (aviso HABILITACION, DC-02); no encontrado, queda NO_ENCONTRADO; si la fuente no responde en 3 s, queda
+        VERIFICACION_PENDIENTE y se revalida en la siguiente sincronización. El tipo tiene que coincidir con la
+        categoría del RNT, y el guía independiente, además, ser persona natural (RF-70).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroPrestadorRequest'
+            example:
+              numeroRnt: '910006'
+              tipo: GUIA_INDEPENDIENTE
+              modalidades: [CAMINATA, KAYAK]
+              idiomas: [es, en]
+      responses:
+        '201':
+          description: El prestador registrado, con lo que dijo el RNT.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestador'
+              example:
+                id: 20000000-0000-0000-0000-000000000002
+                numeroRnt: '910006'
+                tipo: GUIA_INDEPENDIENTE
+                modalidades: [CAMINATA, KAYAK]
+                idiomas: [es, en]
+                categoria: GUIA_INDEPENDIENTE
+                razonSocial: MARIA FERNANDA OSPINO DIAZ
+                municipio: SANTA MARTA
+                estadoRnt: ACTIVO
+                ultimaSincronizacion: '2026-10-29T15:00:00Z'
+                habilitado: true
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+        '409':
+          $ref: '#/components/responses/ConflictoPrestador'
+    get:
+      tags: [Prestadores]
+      operationId: consultarPrestador
+      summary: Sus datos y su estado RNT con la fecha de la última sincronización (RF-73)
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      responses:
+        '200':
+          description: El prestador.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestador'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+  /prestador/rnt:
+    put:
+      tags: [Prestadores]
+      operationId: cambiarRnt
+      summary: Cambia el número de RNT y lo vuelve a validar (RF-62, RF-63)
+      description: Como en el registro. Si la habilitación cambia, se avisa al catálogo (DC-02).
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioRntRequest'
+      responses:
+        '200':
+          description: El prestador con el RNT nuevo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestador'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+        '409':
+          $ref: '#/components/responses/ConflictoPrestador'
+  /prestador/whatsapp:
+    put:
+      tags: [Prestadores]
+      operationId: configurarWhatsappPrestador
+      summary: Configura el WhatsApp de contacto, que nunca es público (RF-71)
+      description: |
+        Un número nuevo queda sin verificar y recibe un código de 6 dígitos por WhatsApp, que vale 30 minutos y admite
+        3 intentos (DN-33). Mientras no lo verifique, el prestador no recibe la notificación de una solicitud Pagada
+        (RF-57). Con WhatsApp simulado, el código sale en el log del núcleo.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsappPrestadorRequest'
+            example:
+              whatsapp: '+573001110202'
+      responses:
+        '200':
+          description: El prestador con el número sin verificar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestador'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+  /prestador/whatsapp/codigo:
+    post:
+      tags: [Prestadores]
+      operationId: enviarCodigoWhatsappPrestador
+      summary: Envía otro código para verificar el WhatsApp (RF-71)
+      description: El anterior deja de servir. Con el número ya verificado no envía nada.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      responses:
+        '202':
+          description: Código enviado.
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+        '409':
+          description: "`WHATSAPP_NO_CONFIGURADO`: todavía no configuró su número."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /prestador/whatsapp/verificacion:
+    post:
+      tags: [Prestadores]
+      operationId: verificarWhatsappPrestador
+      summary: El prestador confirma su WhatsApp con el código (RF-71)
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodigoWhatsappRequest'
+      responses:
+        '200':
+          description: El prestador con el WhatsApp verificado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestador'
+        '400':
+          description: "`CODIGO_INCORRECTO`, con `intentosRestantes`; al tercero el código queda invalidado."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+        '409':
+          description: "`CODIGO_NO_VIGENTE`: el código venció, se usó o agotó sus intentos; hay que pedir otro."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /prestador/cuenta-cobro:
+    put:
+      tags: [Prestadores]
+      operationId: registrarCuentaCobro
+      summary: Registra la cuenta bancaria o la billetera donde recibe la dispersión (RF-74, RF-75)
+      description: |
+        Se registra una vez, no en cada pago. Si cambia, la anterior queda en el historial y el cambio en la auditoría
+        (DN-34); registrar los mismos datos no cambia nada. El número y el titular se guardan cifrados (RNF-08) y la
+        respuesta solo muestra los últimos 4 dígitos: completo solo lo usa la dispersión (RF-75). Nequi y Daviplata
+        usan como número el celular y no piden entidad.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CuentaCobroRequest'
+            example:
+              tipo: AHORROS
+              entidad: Bancolombia
+              numero: '40112233440101'
+              titular: Mar y Selva Expediciones S.A.S.
+      responses:
+        '200':
+          $ref: '#/components/responses/CuentaCobroVigente'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+    get:
+      tags: [Prestadores]
+      operationId: consultarCuentaCobro
+      summary: La cuenta de cobro vigente, con el número enmascarado (RF-75)
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      responses:
+        '200':
+          $ref: '#/components/responses/CuentaCobroVigente'
+        '404':
+          description: "`CUENTA_COBRO_NO_REGISTRADA`: todavía no registró una."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /prestador/tipo:
+    put:
+      tags: [Prestadores]
+      operationId: cambiarTipoPrestador
+      summary: Cambia el tipo y sus campos condicionales (RF-68, RF-69)
+      description: |
+        El guía independiente declara modalidades e idiomas y no empleados; los demás tipos, empleados (DN-33). El tipo
+        tiene que coincidir con la categoría de su RNT.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+        - $ref: '#/components/parameters/TipoPrestador'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatosTipoRequest'
+            example:
+              tipo: AGENCIA_OPERADORA
+              numeroEmpleados: 14
+      responses:
+        '200':
+          description: El prestador con su tipo nuevo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestador'
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '404':
+          $ref: '#/components/responses/PrestadorNoRegistrado'
+        '409':
+          $ref: '#/components/responses/ConflictoPrestador'
   /politica-datos/vigente:
     get:
       tags: [Cuentas]
@@ -1336,6 +1615,40 @@ paths:
           $ref: '#/components/responses/NoAutenticado'
         '403':
           $ref: '#/components/responses/AccesoDenegado'
+  /admin/rnt/sincronizacion:
+    post:
+      tags: [Administración]
+      operationId: sincronizarRnt
+      summary: Ejecuta ahora la sincronización con el RNT (RF-76 a RF-78)
+      description: |
+        Además de la semanal (los lunes a las 3:00 de Colombia, DN-36). Compara a cada prestador con el
+        RNT: encontrado queda ACTIVO; no encontrado, INACTIVO si alguna vez estuvo y NO_ENCONTRADO si nunca. El que
+        pierde la habilitación sale del catálogo con un aviso HABILITACION y recibe un WhatsApp (RF-77, RF-78); el que
+        la recupera vuelve con sus ofertas aprobadas. Si el RNT no responde, cada prestador conserva su último estado y
+        tras tres fallos seguidos se detiene (QAS-03). Responde cuando termina. En el minuto siguiente, las solicitudes
+        no pagadas de los retirados se cierran (HU-ADM-02): las PENDIENTE quedan NO_DISPONIBLE y las ATENDIDA,
+        CONFIRMADA o PAGO_FALLIDO, VENCIDA, con el actor SISTEMA; la que tiene un intento de pago en curso espera su
+        resultado.
+      parameters:
+        - $ref: '#/components/parameters/UsuarioId'
+        - $ref: '#/components/parameters/Rol'
+      responses:
+        '200':
+          description: Lo que hizo la sincronización.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SincronizacionRnt'
+              example:
+                revisados: 5
+                retirados: 1
+                restituidos: 0
+                sinRespuesta: 0
+                interrumpida: false
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
 
 components:
   parameters:
@@ -1410,6 +1723,39 @@ components:
         $ref: '#/components/schemas/TipoPrestador'
 
   responses:
+    CuentaCobroVigente:
+      description: La cuenta vigente, con el número enmascarado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CuentaCobro'
+          example:
+            tipo: AHORROS
+            entidad: Bancolombia
+            numeroEnmascarado: '******0101'
+            titular: Mar y Selva Expediciones S.A.S.
+            vigenteDesde: '2026-10-29T15:00:00Z'
+    PrestadorNoRegistrado:
+      description: "`PRESTADOR_NO_REGISTRADO`: todavía no registró su RNT."
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+    ConflictoPrestador:
+      description: |
+        `PRESTADOR_YA_REGISTRADO`: ya registró su RNT (para cambiarlo, `PUT /prestador/rnt`).
+        `RNT_YA_REGISTRADO`: otro prestador ya tiene ese número.
+        `TIPO_NO_COINCIDE_CON_RNT`: el tipo no corresponde a la categoría del RNT, o el guía no es persona natural.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: El tipo RESTAURANTE no corresponde al RNT, que es de la categoría AGENCIAS DE VIAJES (comerciante)
+            codigo: TIPO_NO_COINCIDE_CON_RNT
     SesionIniciada:
       description: Los tokens de la sesión y la cuenta.
       content:
@@ -1482,6 +1828,7 @@ components:
         `MODERACION_YA_DECIDIDA`: ya se tomó la decisión contraria sobre esa versión u opinión.
         `VERSION_NO_VIGENTE`: la versión en moderación es otra, porque el prestador editó la oferta; hay que volver a
         cargar la cola.
+        `PRESTADOR_NO_HABILITADO`: solo al aprobar una oferta, si su prestador no tiene el RNT activo (DN-35).
       content:
         application/problem+json:
           schema:
@@ -1619,6 +1966,156 @@ components:
             codigo: CONFLICTO_CONCURRENCIA
 
   schemas:
+    RegistroPrestadorRequest:
+      type: object
+      required: [numeroRnt, tipo]
+      properties:
+        numeroRnt:
+          type: string
+          pattern: '^[0-9]{1,10}$'
+        tipo:
+          $ref: '#/components/schemas/TipoPrestador'
+        numeroEmpleados:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Obligatorio, salvo para el guía independiente, que no lo envía.
+        modalidades:
+          type: array
+          description: Solo el guía independiente, al menos una (RF-69).
+          items:
+            type: string
+            enum: [CAMINATA, BICICLETA, KAYAK, OTRA]
+        idiomas:
+          type: array
+          description: Solo el guía independiente, al menos uno, con códigos de dos letras (RF-69).
+          items:
+            type: string
+            pattern: '^[a-z]{2}$'
+    DatosTipoRequest:
+      type: object
+      required: [tipo]
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoPrestador'
+        numeroEmpleados:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Obligatorio, salvo para el guía independiente, que no lo envía.
+        modalidades:
+          type: array
+          description: Solo el guía independiente, al menos una (RF-69).
+          items:
+            type: string
+            enum: [CAMINATA, BICICLETA, KAYAK, OTRA]
+        idiomas:
+          type: array
+          description: Solo el guía independiente, al menos uno, con códigos de dos letras (RF-69).
+          items:
+            type: string
+            pattern: '^[a-z]{2}$'
+    WhatsappPrestadorRequest:
+      type: object
+      required: [whatsapp]
+      properties:
+        whatsapp:
+          type: string
+          description: Con el indicativo del país, formato E.164.
+    CodigoWhatsappRequest:
+      type: object
+      required: [codigo]
+      properties:
+        codigo:
+          type: string
+          pattern: '^[0-9]{6}$'
+    CuentaCobroRequest:
+      type: object
+      required: [tipo, numero, titular]
+      properties:
+        tipo:
+          type: string
+          enum: [AHORROS, CORRIENTE, NEQUI, DAVIPLATA]
+        entidad:
+          type: string
+          maxLength: 100
+          description: El banco; obligatorio para AHORROS y CORRIENTE.
+        numero:
+          type: string
+          description: De 6 a 20 dígitos, o el celular (10 dígitos que empiezan por 3) para Nequi y Daviplata.
+        titular:
+          type: string
+          maxLength: 100
+    CuentaCobro:
+      type: object
+      required: [tipo, entidad, numeroEnmascarado, titular, vigenteDesde]
+      properties:
+        tipo:
+          type: string
+          enum: [AHORROS, CORRIENTE, NEQUI, DAVIPLATA]
+        entidad:
+          type: string
+        numeroEnmascarado:
+          type: string
+          description: Solo los últimos 4 dígitos.
+        titular:
+          type: string
+        vigenteDesde:
+          type: string
+          format: date-time
+    CambioRntRequest:
+      type: object
+      required: [numeroRnt]
+      properties:
+        numeroRnt:
+          type: string
+          pattern: '^[0-9]{1,10}$'
+    Prestador:
+      type: object
+      description: Los datos del prestador como los ve él mismo; nunca salen en el catálogo.
+      required: [id, numeroRnt, tipo, categoria, estadoRnt, habilitado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        numeroRnt:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/TipoPrestador'
+        numeroEmpleados:
+          type: integer
+        modalidades:
+          type: array
+          items:
+            type: string
+        idiomas:
+          type: array
+          items:
+            type: string
+        categoria:
+          type: string
+          enum: [GUIA_INDEPENDIENTE, MICRO_PEQUENO, MEDIANO, GRANDE]
+          description: Por tamaño (RF-72, RF-89).
+        razonSocial:
+          type: string
+          description: La del RNT; vacía mientras no se encuentre.
+        municipio:
+          type: string
+        estadoRnt:
+          type: string
+          enum: [ACTIVO, INACTIVO, NO_ENCONTRADO, VERIFICACION_PENDIENTE]
+        ultimaSincronizacion:
+          type: string
+          format: date-time
+          description: La última vez que el RNT respondió (RF-73).
+        habilitado:
+          type: boolean
+          description: Si puede publicar en el catálogo, con el RNT activo (RF-77).
+        whatsapp:
+          type: string
+          description: Su canal de contacto; nunca es público (RF-71).
+        whatsappVerificado:
+          type: boolean
     DatosPersonalesRequest:
       type: object
       required: [nombre]
@@ -2180,7 +2677,8 @@ components:
       type: string
       description: |
         Los nueve estados del ciclo de vida (SRS 3.1.3, DN-09). Terminales: NO_DISPONIBLE, SIN_RESPUESTA, DECLINADA,
-        VENCIDA y PAGADA.
+        VENCIDA y PAGADA. Si el prestador pierde el RNT activo, las no pagadas pasan a NO_DISPONIBLE (las PENDIENTE) o
+        a VENCIDA (las demás), con el actor SISTEMA (RF-77, DN-36).
       enum: [PENDIENTE, ATENDIDA, NO_DISPONIBLE, SIN_RESPUESTA, CONFIRMADA, DECLINADA, PAGO_FALLIDO, PAGADA, VENCIDA]
     TipoOferta:
       type: string
@@ -2387,6 +2885,25 @@ components:
         avisado:
           type: boolean
           description: Si ya se avisó al administrador por WhatsApp.
+    SincronizacionRnt:
+      type: object
+      required: [revisados, retirados, restituidos, sinRespuesta, interrumpida]
+      properties:
+        revisados:
+          type: integer
+          description: Los prestadores revisados.
+        retirados:
+          type: integer
+          description: Los que perdieron la habilitación y salieron del catálogo (RF-77).
+        restituidos:
+          type: integer
+          description: Los que la recuperaron y volvieron al catálogo.
+        sinRespuesta:
+          type: integer
+          description: Los que conservaron su último estado porque el RNT no respondió (QAS-03).
+        interrumpida:
+          type: boolean
+          description: Si se detuvo porque el RNT dejó de responder.
     Problema:
       type: object
       description: ProblemDetail (RFC 7807) con la propiedad `codigo`.
@@ -2418,6 +2935,13 @@ components:
             - SESION_INVALIDA
             - CORREO_NO_DISPONIBLE
             - CONTRASENA_INCORRECTA
+            - PRESTADOR_YA_REGISTRADO
+            - PRESTADOR_NO_REGISTRADO
+            - RNT_YA_REGISTRADO
+            - TIPO_NO_COINCIDE_CON_RNT
+            - WHATSAPP_NO_CONFIGURADO
+            - CUENTA_COBRO_NO_REGISTRADA
+            - PRESTADOR_NO_HABILITADO
             - NO_AUTENTICADO
             - ACCESO_DENEGADO
             - CONFLICTO_CONCURRENCIA

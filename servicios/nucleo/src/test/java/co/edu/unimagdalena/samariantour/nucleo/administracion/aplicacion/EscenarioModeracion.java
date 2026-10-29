@@ -14,10 +14,12 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** Los servicios de moderación con dobles en memoria del catálogo, el historial, la bandeja y las notificaciones. */
@@ -78,8 +80,11 @@ class EscenarioModeracion {
         }
     };
 
+    /** Los prestadores con el RNT inactivo: sus ofertas no se aprueban (DN-35). */
+    final Set<UUID> inhabilitados = new HashSet<>();
+
     final ModerarOfertaService moderarOferta = new ModerarOfertaService(decisiones, catalogo, avisos::add,
-            notificacion, Clock.fixed(AHORA, ZoneOffset.UTC));
+            notificacion, prestadorId -> !inhabilitados.contains(prestadorId), Clock.fixed(AHORA, ZoneOffset.UTC));
     final ModerarOpinionService moderarOpinion = new ModerarOpinionService(decisiones, catalogo, avisos::add,
             notificacion, Clock.fixed(AHORA, ZoneOffset.UTC));
 

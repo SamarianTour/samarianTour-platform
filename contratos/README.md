@@ -5,7 +5,7 @@ API first: los contratos OpenAPI se escriben antes del código de cada servicio.
 | Archivo | Contenido | Estado |
 |---|---|---|
 | `catalogo.openapi.yaml` | API del catálogo: búsqueda, ficha, zonas, ofertas del prestador, opiniones, moderación, avisos internos y consultas internas de ofertas | Endpoints del prototipo |
-| `nucleo.openapi.yaml` | API del núcleo: seguridad por rol y errores comunes; la moderación del administrador, las solicitudes de disponibilidad del turista y del operador, y los pagos: la sesión de cobro y los intentos del turista, el webhook de la pasarela, la comisión y los pagos tardíos del administrador | Moderación, solicitudes y pagos |
+| `nucleo.openapi.yaml` | API del núcleo: seguridad por rol y errores comunes; las cuentas; la moderación y la sincronización del RNT del administrador; el registro, el WhatsApp y la cuenta de cobro del prestador; las solicitudes de disponibilidad del turista y del operador, y los pagos: la sesión de cobro y los intentos del turista, el webhook de la pasarela, la comisión y los pagos tardíos del administrador | Cuentas, prestadores, moderación, RNT, solicitudes y pagos |
 | `recomendacion.openapi.yaml` | API pública de la recomendación: `POST /recomendaciones` (de 3 a 5 ofertas explicadas, por reglas o con IA), `GET /zonas/{zonaId}/alertas` y `GET /alertas` (alertas del destino) y `GET /ofertas/{ofertaId}/alternativas` (alternativas por alta afluencia) | Endpoints del prototipo |
 | `internos/` | Avisos de la bandeja de salida, consulta interna de ofertas y registro de exposición | Pendiente |
 

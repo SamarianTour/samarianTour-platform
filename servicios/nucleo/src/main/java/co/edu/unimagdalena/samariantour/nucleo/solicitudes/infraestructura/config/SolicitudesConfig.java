@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.conf
 
 import co.edu.unimagdalena.samariantour.nucleo.compartido.concurrencia.EjecutorConReintento;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.AtenderSolicitudService;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.CerrarSolicitudesSinRntService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ConsultarColaOperadorService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ConsultarSolicitudesTuristaService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.EjecucionIdempotente;
@@ -11,6 +12,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.PurgarClav
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ResponderCondicionesService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.VencerSolicitudesService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.AtenderSolicitudUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.CerrarSolicitudesSinRntUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarColaOperadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarSolicitudesTuristaUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.EnviarNotificacionesUseCase;
@@ -84,6 +86,15 @@ public class SolicitudesConfig {
                                                NotificacionRepositoryPort notificaciones, TransaccionPort transaccion,
                                                Clock reloj) {
         return new VencerSolicitudesService(solicitudes, notificaciones, transaccion, reloj);
+    }
+
+    @Bean
+    CerrarSolicitudesSinRntUseCase cerrarSolicitudesSinRnt(SolicitudRepositoryPort solicitudes,
+                                                           NotificacionRepositoryPort notificaciones,
+                                                           PrestadoresPort prestadores, TransaccionPort transaccion,
+                                                           Clock reloj) {
+        return new CerrarSolicitudesSinRntService(solicitudes, notificaciones, prestadores, transaccion, reloj,
+                VencerSolicitudesService.TAMANO_LOTE);
     }
 
     @Bean

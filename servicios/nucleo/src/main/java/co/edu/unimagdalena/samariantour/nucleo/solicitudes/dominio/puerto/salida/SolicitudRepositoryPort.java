@@ -52,4 +52,14 @@ public interface SolicitudRepositoryPort {
      * atendiendo.
      */
     List<SolicitudDisponibilidad> tomarPorVencer(Instant ahora, int limite);
+
+    /** Los prestadores con alguna solicitud abierta (RF-77). */
+    List<UUID> prestadoresConAbiertas();
+
+    /**
+     * Toma para esta transacción hasta {@code limite} solicitudes abiertas del prestador sin un intento de pago en
+     * curso, bloqueadas hasta el final de la transacción; las que otra transacción tiene bloqueadas se saltan
+     * ({@code FOR UPDATE SKIP LOCKED}).
+     */
+    List<SolicitudDisponibilidad> tomarAbiertasDelPrestador(UUID prestadorId, int limite);
 }

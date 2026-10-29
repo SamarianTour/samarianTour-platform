@@ -252,5 +252,15 @@ class VencimientosIT extends IntegracionPostgresBase {
         public List<SolicitudDisponibilidad> tomarPorVencer(Instant ahora, int limite) {
             return real.tomarPorVencer(ahora, limite);
         }
+
+        @Override
+        public List<UUID> prestadoresConAbiertas() {
+            return real.prestadoresConAbiertas();
+        }
+
+        @Override
+        public List<SolicitudDisponibilidad> tomarAbiertasDelPrestador(UUID prestadorId, int limite) {
+            return real.tomarAbiertasDelPrestador(prestadorId, limite);
+        }
     }
 }

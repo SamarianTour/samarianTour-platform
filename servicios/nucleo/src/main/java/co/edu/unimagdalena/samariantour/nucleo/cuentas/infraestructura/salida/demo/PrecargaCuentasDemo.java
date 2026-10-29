@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -30,6 +31,7 @@ import java.util.UUID;
  */
 @Component
 @Profile("demo")
+@Order(1)
 public class PrecargaCuentasDemo implements ApplicationRunner {
 
     public static final String CONTRASENA = "Demo1234";

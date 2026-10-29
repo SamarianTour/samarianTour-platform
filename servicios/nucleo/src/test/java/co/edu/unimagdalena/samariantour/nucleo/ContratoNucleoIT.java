@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.en
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PagoTardioResponse;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.SincronizacionRntResponse;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.CuentaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.DatosPersonalesRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.InicioSesionRequest;
@@ -22,6 +23,14 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.res
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.EventoRecibidoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.IntentoPagoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.SesionCobroResponse;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.CambioRntRequest;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.CodigoWhatsappRequest;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.CuentaCobroRequest;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.CuentaCobroResponse;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.DatosTipoRequest;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.PrestadorResponse;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.RegistroPrestadorRequest;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.WhatsappPrestadorRequest;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.AtencionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.AvisoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest.dto.CondicionesResponse;
@@ -98,6 +107,14 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
 
     static Stream<Arguments> esquemasConSuDto() {
         return Stream.of(
+                arguments("CuentaCobroRequest", CuentaCobroRequest.class),
+                arguments("CuentaCobro", CuentaCobroResponse.class),
+                arguments("WhatsappPrestadorRequest", WhatsappPrestadorRequest.class),
+                arguments("CodigoWhatsappRequest", CodigoWhatsappRequest.class),
+                arguments("RegistroPrestadorRequest", RegistroPrestadorRequest.class),
+                arguments("DatosTipoRequest", DatosTipoRequest.class),
+                arguments("CambioRntRequest", CambioRntRequest.class),
+                arguments("Prestador", PrestadorResponse.class),
                 arguments("DatosPersonalesRequest", DatosPersonalesRequest.class),
                 arguments("SupresionRequest", SupresionRequest.class),
                 arguments("SolicitudRestablecimientoRequest", SolicitudRestablecimientoRequest.class),
@@ -133,7 +150,8 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
                 arguments("ComisionRequest", ComisionRequest.class),
                 arguments("Comision", ComisionResponse.class),
                 arguments("CambioComision", CambioComisionResponse.class),
-                arguments("PagoTardio", PagoTardioResponse.class));
+                arguments("PagoTardio", PagoTardioResponse.class),
+                arguments("SincronizacionRnt", SincronizacionRntResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {

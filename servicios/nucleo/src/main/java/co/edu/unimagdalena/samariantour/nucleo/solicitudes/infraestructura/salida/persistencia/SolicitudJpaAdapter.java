@@ -120,6 +120,16 @@ public class SolicitudJpaAdapter implements SolicitudRepositoryPort {
         return conHistorial(solicitudes.tomarPorVencer(ahora, limite));
     }
 
+    @Override
+    public List<UUID> prestadoresConAbiertas() {
+        return solicitudes.prestadoresConAbiertas();
+    }
+
+    @Override
+    public List<SolicitudDisponibilidad> tomarAbiertasDelPrestador(UUID prestadorId, int limite) {
+        return conHistorial(solicitudes.tomarAbiertasDelPrestador(prestadorId, limite));
+    }
+
     private static void copiarEstado(SolicitudDisponibilidad solicitud, SolicitudEntity fila) {
         CondicionesOfrecidas condiciones = solicitud.condiciones();
         fila.cambiarEstado(solicitud.estado().name(), condiciones == null ? null : condiciones.precioBase(),

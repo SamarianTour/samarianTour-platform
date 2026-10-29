@@ -4,11 +4,16 @@ import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.compartido.concurrencia.ConflictoConcurrenciaException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.SolicitudDuplicadaException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CamposDelTipo;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.DatosOfertaCopiados;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.DecisionTurista;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.EstadoSolicitud;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.OfertaSolicitable;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.SolicitudDisponibilidad;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.TransicionSolicitud;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.CerrarSolicitudesSinRntUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.SolicitudRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.TransaccionPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,10 +33,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.AHORA;
+import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.CABO_SAN_JUAN;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.MIERCOLES;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.OPERADOR;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.OTRO_OPERADOR;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.SIETE;
+import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.TAYRONA;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.TURISTA;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.cabana;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.caminata;
@@ -52,6 +59,9 @@ class SolicitudesPersistenciaIT extends IntegracionPostgresBase {
 
     @Autowired
     private TransaccionPort transaccion;
+
+    @Autowired
+    private CerrarSolicitudesSinRntUseCase cerrarSinRnt;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -247,6 +257,35 @@ class SolicitudesPersistenciaIT extends IntegracionPostgresBase {
         assertThat(primera.get(5, TimeUnit.SECONDS)).hasSize(2);
         assertThat(segunda).as("las otras dos que ya vencieron; no la que vence más tarde").hasSize(2)
                 .doesNotContainAnyElementsOf(primera.get());
+    }
+
+    @Test
+    @DisplayName("sin RNT activo: cierra las abiertas del prestador, salvo la que tiene un intento de pago en curso")
+    void cierraLasDeUnPrestadorSinRnt() {
+        // Un prestador que no se registró no está habilitado (DN-35); los de la demo pueden estar en la base.
+        UUID sinRnt = UUID.randomUUID();
+        OfertaSolicitable caminata = new OfertaSolicitable(CABO_SAN_JUAN, new DatosOfertaCopiados(TipoOferta.ACTIVIDAD,
+                "Caminata de un prestador sin RNT", sinRnt, TAYRONA), List.of(SIETE), 12);
+        SolicitudDisponibilidad pendiente = SolicitudDisponibilidad.crear(UUID.randomUUID(), TURISTA, caminata,
+                MIERCOLES, CamposDelTipo.actividad(SIETE), 2, null, OPERADOR, AHORA);
+        insertar(pendiente);
+        UUID otroTurista = UUID.randomUUID();
+        SolicitudDisponibilidad pagando = SolicitudDisponibilidad.crear(UUID.randomUUID(), otroTurista, caminata,
+                MIERCOLES, CamposDelTipo.actividad(SIETE), 2, null, OPERADOR, AHORA);
+        pagando.atender(OPERADOR, condiciones(), AHORA.plus(Duration.ofHours(1)));
+        pagando.responder(otroTurista, DecisionTurista.CONFIRMAR, AHORA.plus(Duration.ofHours(2)));
+        pagando.marcarIntentoEnCurso(AHORA.plus(Duration.ofHours(2)));
+        insertar(pagando);
+        assertThat(repositorio.prestadoresConAbiertas()).containsExactly(sinRnt);
+
+        assertThat(cerrarSinRnt.cerrar()).isEqualTo(1);
+
+        SolicitudDisponibilidad cerrada = buscar(pendiente.id());
+        assertThat(cerrada.estado()).isEqualTo(EstadoSolicitud.NO_DISPONIBLE);
+        assertThat(cerrada.historial().getLast().motivo()).isEqualTo(SolicitudDisponibilidad.MOTIVO_RNT_INACTIVO);
+        assertThat(buscar(pagando.id()).estado()).isEqualTo(EstadoSolicitud.CONFIRMADA);
+        assertThat(jdbc.queryForObject("SELECT tipo FROM notificaciones_solicitud WHERE solicitud_id = ?",
+                String.class, pendiente.id())).isEqualTo("SOLICITUD_NO_DISPONIBLE");
     }
 
     private void insertar(SolicitudDisponibilidad solicitud) {
