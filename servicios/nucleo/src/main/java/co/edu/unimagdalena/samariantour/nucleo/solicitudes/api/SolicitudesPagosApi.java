@@ -14,14 +14,24 @@ import java.util.UUID;
 public interface SolicitudesPagosApi {
 
     /**
-     * La solicitud a cobrar: solo si es de ese turista y está Confirmada o con el pago fallido; si no, vacío.
+     * La solicitud de ese turista, en cualquier estado: pagos decide si la cobra (Confirmada o con el pago fallido).
+     * Vacío si no existe o es de otro turista.
      */
     Optional<SolicitudParaCobro> consultarParaCobro(UUID solicitudId, UUID turistaId);
 
     /** Un intento de pago empezó en la pasarela (RF-55). */
     ResultadoPago marcarIntentoEnCurso(UUID solicitudId);
 
-    /** El webhook confirmó el pago (RF-50). Sobre una solicitud ya vencida no la revive: responde PAGO_TARDIO. */
+    /**
+     * El intento de pago quedó abandonado, sin resultado de la pasarela (DN-20): deja de aplazar el vencimiento. No
+     * cuenta como rechazo.
+     */
+    ResultadoPago liberarIntentoEnCurso(UUID solicitudId);
+
+    /**
+     * El webhook confirmó el pago (RF-50): Pagada, y en la misma transacción se encola el aviso HABILITACION_OPINION al
+     * catálogo (DC-41). Sobre una solicitud ya vencida no la revive: responde PAGO_TARDIO.
+     */
     ResultadoPago registrarPagoAprobado(UUID solicitudId);
 
     /** El webhook informó un rechazo (RF-58). */

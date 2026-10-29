@@ -38,8 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * La API que usará el módulo de pagos (DN-17), probada como la llamará: dentro de una transacción que abre pagos. Hasta
- * que exista ese módulo, la transacción la abre la prueba.
+ * La API que usa el módulo de pagos (DN-17), probada como la llama: dentro de una transacción que abre pagos; aquí la
+ * abre la prueba.
  */
 @SpringBootTest(properties = {"nucleo.bandeja.publicacion.cron=-", "nucleo.solicitudes.vencimiento.cron=-",
         "nucleo.solicitudes.notificaciones.cron=-"})
@@ -91,6 +91,7 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
 
     @BeforeEach
     void vaciar() {
+        jdbc.update("DELETE FROM bandeja_salida");
         jdbc.update("DELETE FROM notificaciones_solicitud");
         jdbc.update("DELETE FROM transiciones_solicitud");
         jdbc.update("DELETE FROM solicitudes");
@@ -99,10 +100,11 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
     }
 
     @Test
-    @DisplayName("para cobrar: la confirmada del turista, con su precio y su ventana; otra persona o estado, vacío")
+    @DisplayName("para cobrar: la del turista en cualquier estado, con su precio y su plazo; la de otro, vacía")
     void consultarParaCobro() {
         SolicitudDisponibilidad solicitud = guardar(confirmada());
         SolicitudDisponibilidad sinConfirmar = guardar(atendidaOtroDia());
+        SolicitudDisponibilidad pendiente = guardar(pendienteOtroDia());
 
         SolicitudParaCobro cobro = pagos.consultarParaCobro(solicitud.id(), TURISTA).orElseThrow();
 
@@ -111,7 +113,13 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
         assertThat(cobro.venceEn()).isEqualTo(finVentana);
         assertThat(cobro.ofertaId()).isEqualTo(solicitud.ofertaId());
         assertThat(pagos.consultarParaCobro(solicitud.id(), OTRO_TURISTA)).isEmpty();
-        assertThat(pagos.consultarParaCobro(sinConfirmar.id(), TURISTA)).isEmpty();
+        assertThat(pagos.consultarParaCobro(UUID.randomUUID(), TURISTA)).isEmpty();
+        assertThat(pagos.consultarParaCobro(sinConfirmar.id(), TURISTA)).hasValueSatisfying(atendida ->
+                assertThat(atendida.estado()).isEqualTo("ATENDIDA"));
+        assertThat(pagos.consultarParaCobro(pendiente.id(), TURISTA)).hasValueSatisfying(sinPrecio -> {
+            assertThat(sinPrecio.estado()).isEqualTo("PENDIENTE");
+            assertThat(sinPrecio.precioBase()).isNull();
+        });
     }
 
     @Test
@@ -127,6 +135,30 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
         assertThat(estado(solicitud)).isEqualTo(EstadoSolicitud.PAGADA);
         assertThat(jdbc.queryForList("SELECT tipo FROM notificaciones_solicitud", String.class))
                 .containsExactly("SOLICITUD_PAGADA", "SOLICITUD_PAGADA");
+        // El turista ya puede opinar de la oferta: el aviso va a la bandeja en la misma transacción (DC-41).
+        assertThat(jdbc.queryForList("SELECT destino || ' ' || (cuerpo ->> 'tipo') || ' ' || (cuerpo ->> 'turistaId') "
+                + "|| ' ' || (cuerpo ->> 'ofertaId') FROM bandeja_salida WHERE id_aviso = ?", String.class,
+                "habilitacion-opinion-" + id))
+                .containsExactly("OPINIONES HABILITACION_OPINION " + TURISTA + " " + solicitud.ofertaId());
+    }
+
+    @Test
+    @DisplayName("un intento abandonado deja de aplazar el vencimiento; sin intento en curso no cambia nada (DN-20)")
+    void liberarIntento() {
+        SolicitudDisponibilidad solicitud = guardar(confirmada());
+        enTransaccionDePagos(() -> pagos.marcarIntentoEnCurso(solicitud.id()));
+        assertThat(jdbc.queryForObject("SELECT limite_vencimiento FROM solicitudes", Instant.class))
+                .isEqualTo(finVentana.plus(Duration.ofMinutes(30)));
+
+        assertThat(enTransaccionDePagos(() -> pagos.liberarIntentoEnCurso(solicitud.id())))
+                .isEqualTo(ResultadoPago.APLICADO);
+
+        assertThat(jdbc.queryForObject("SELECT intento_pago_en_curso FROM solicitudes", Boolean.class)).isFalse();
+        assertThat(jdbc.queryForObject("SELECT limite_vencimiento FROM solicitudes", Instant.class))
+                .isEqualTo(finVentana);
+        assertThat(enTransaccionDePagos(() -> pagos.liberarIntentoEnCurso(solicitud.id())))
+                .isEqualTo(ResultadoPago.SIN_CAMBIOS);
+        assertThat(estado(solicitud)).isEqualTo(EstadoSolicitud.CONFIRMADA);
     }
 
     @Test
@@ -141,6 +173,7 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
 
         assertThat(estado(solicitud)).isEqualTo(EstadoSolicitud.CONFIRMADA);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notificaciones_solicitud", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM bandeja_salida", Integer.class)).isZero();
     }
 
     @Test
@@ -155,6 +188,7 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
 
         assertThat(estado(solicitud)).isEqualTo(EstadoSolicitud.VENCIDA);
         assertThat(jdbc.queryForObject("SELECT intentos_pago_fallidos FROM solicitudes", Integer.class)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM bandeja_salida", Integer.class)).isZero();
     }
 
     @Test
@@ -167,6 +201,7 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
                 .isEqualTo(ResultadoPago.PAGO_TARDIO);
 
         assertThat(estado(solicitud)).isEqualTo(EstadoSolicitud.VENCIDA);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM bandeja_salida", Integer.class)).isZero();
     }
 
     @Test
@@ -183,6 +218,14 @@ class SolicitudesPagosApiIT extends IntegracionPostgresBase {
         assertThatThrownBy(() -> enTransaccionDePagos(() -> pagos.registrarPagoAprobado(UUID.randomUUID())))
                 .isInstanceOf(EventoPagoNoAplicableException.class)
                 .extracting(e -> ((EventoPagoNoAplicableException) e).codigo()).isEqualTo("SOLICITUD_NO_ENCONTRADA");
+    }
+
+    private static SolicitudDisponibilidad pendienteOtroDia() {
+        SolicitudDisponibilidad solicitud = SolicitudDisponibilidad.crear(UUID.randomUUID(), TURISTA,
+                SolicitudesDePrueba.caminata(), SolicitudesDePrueba.MIERCOLES.plusDays(2),
+                CamposDelTipo.actividad(SolicitudesDePrueba.SIETE), 2, null, SolicitudesDePrueba.OPERADOR, AHORA);
+        solicitud.extraerNotificaciones();
+        return solicitud;
     }
 
     private static SolicitudDisponibilidad atendidaOtroDia() {

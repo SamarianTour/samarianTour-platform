@@ -13,15 +13,19 @@ import java.util.UUID;
  */
 public interface RegistrarEventoPagoUseCase {
 
-    /**
-     * @return vacío si no existe, no es de ese turista o no está Confirmada ni con el pago fallido
-     */
+    /** @return la solicitud de ese turista en cualquier estado; vacío si no existe o es de otro */
     Optional<DatosCobro> consultarParaCobro(UUID solicitudId, UUID turistaId);
 
     /** Empieza un intento en la pasarela: el vencimiento espera su resultado hasta 30 min (RF-55). */
     ResultadoEventoPago marcarIntentoEnCurso(UUID solicitudId);
 
-    /** El webhook confirmó el pago (RF-50): Pagada, o pago tardío si ya venció. */
+    /** El intento quedó abandonado (DN-20): deja de aplazar el vencimiento. */
+    ResultadoEventoPago liberarIntentoEnCurso(UUID solicitudId);
+
+    /**
+     * El webhook confirmó el pago (RF-50): Pagada, con el aviso HABILITACION_OPINION al catálogo en la misma
+     * transacción (DC-41), o pago tardío si ya venció.
+     */
     ResultadoEventoPago registrarPagoAprobado(UUID solicitudId);
 
     /** El webhook informó un rechazo (RF-58): Pago fallido, o Vencida al tercero o fuera de la ventana. */
