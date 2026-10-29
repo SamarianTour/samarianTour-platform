@@ -1621,7 +1621,7 @@ paths:
       operationId: sincronizarRnt
       summary: Ejecuta ahora la sincronización con el RNT (RF-76 a RF-78)
       description: |
-        Además de la semanal (los lunes a las 3:00 de Colombia [SUPUESTO], DN-36). Compara a cada prestador con el
+        Además de la semanal (los lunes a las 3:00 de Colombia, DN-36). Compara a cada prestador con el
         RNT: encontrado queda ACTIVO; no encontrado, INACTIVO si alguna vez estuvo y NO_ENCONTRADO si nunca. El que
         pierde la habilitación sale del catálogo con un aviso HABILITACION y recibe un WhatsApp (RF-77, RF-78); el que
         la recupera vuelve con sus ofertas aprobadas. Si el RNT no responde, cada prestador conserva su último estado y

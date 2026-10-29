@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * La sincronización semanal con el RNT (RF-76, DN-36), los lunes a las 3:00 de Colombia [SUPUESTO]
+ * La sincronización semanal con el RNT (RF-76, DN-36), los lunes a las 3:00 de Colombia
  * ({@code nucleo.administracion.sincronizacion-rnt.cron}). Corre en las dos réplicas sin candado: los prestadores se
  * reparten con {@code FOR UPDATE SKIP LOCKED}. Con {@code -} no corre.
  */

@@ -97,7 +97,7 @@ nucleo:
     enlace-confirmacion: http://localhost:8080/turista/solicitudes/{id}
   administracion:
     sincronizacion-rnt:
-      # Los lunes a las 3:00 de Colombia compara a los prestadores con el RNT [SUPUESTO] (RF-76, DN-36). Con "-" no
+      # Los lunes a las 3:00 de Colombia compara a los prestadores con el RNT (RF-76, DN-36). Con "-" no
       # corre.
       cron: "0 0 3 * * MON"
   pagos:

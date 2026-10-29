@@ -25,9 +25,9 @@ import java.util.UUID;
  */
 public class SincronizarRntService implements SincronizarRntUseCase {
 
-    /** Los prestadores que toma cada transacción [SUPUESTO]. */
+    /** Los prestadores que toma cada transacción. */
     static final int LOTE = 20;
-    /** Las consultas fallidas seguidas tras las que se considera caído el RNT [SUPUESTO]. */
+    /** Las consultas fallidas seguidas tras las que se considera caído el RNT. */
     static final int FALLOS_SEGUIDOS = 3;
 
     private final PrestadorRepositoryPort prestadores;

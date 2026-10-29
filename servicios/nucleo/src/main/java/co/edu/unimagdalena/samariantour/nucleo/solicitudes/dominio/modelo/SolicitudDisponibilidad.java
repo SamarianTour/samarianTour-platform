@@ -50,7 +50,7 @@ public final class SolicitudDisponibilidad {
     public static final int LONGITUD_MAXIMA_MOTIVO = 500;
     /** Tres intentos de pago en total: dos reintentos después del primero (RF-58). */
     public static final int INTENTOS_PAGO = 3;
-    /** El motivo que ve el turista cuando se cierra porque el prestador perdió el RNT [SUPUESTO] (RF-77, DN-36). */
+    /** El motivo que ve el turista cuando se cierra porque el prestador perdió el RNT (RF-77, DN-36). */
     public static final String MOTIVO_RNT_INACTIVO = "El prestador ya no tiene el Registro Nacional de Turismo activo";
 
     private static final Map<EstadoSolicitud, Set<EstadoSolicitud>> TRANSICIONES = new EnumMap<>(Map.of(

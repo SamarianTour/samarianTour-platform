@@ -44,7 +44,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-33 | Modelo del prestador y verificación con el RNT, simulado o por la API SODA | ✅ RF-62, RF-63, RF-68 a RF-71, RF-73, QAS-03 · 🆕 [SUPUESTO] categorías y validaciones |
 | DN-34 | Cuenta de cobro con historial, cifrada y auditada | ✅ RF-74, RF-75, RNF-08 · 🆕 [SUPUESTO] validaciones |
 | DN-35 | API de los prestadores, regla del RNT en la moderación y prestadores de la demo | ✅ diagrama de paquetes, DC-38 · reemplaza DN-15 y DN-26 |
-| DN-36 | Sincronización semanal con el RNT, retiro, restitución y cierre de las solicitudes no pagadas | ✅ RF-76 a RF-78, HU-ADM-02 · 🆕 [SUPUESTO] horario, lotes y motivo |
+| DN-36 | Sincronización semanal con el RNT, retiro, restitución y cierre de las solicitudes no pagadas | ✅ RF-76 a RF-78, HU-ADM-02 · 🆕 equipo: horario, lotes y motivo |
 
 ## Persistencia
 
@@ -508,17 +508,17 @@ Con esto quedan hechos los dos pendientes de DN-17.
 
 **DN-36. Sincronización semanal con el RNT, retiro y restitución** (RF-76 a RF-78, HU-ADM-01, HU-ADM-02, QAS-03).
 - **Cuándo:**
-  - cada semana, los lunes a las 3:00 de Colombia [SUPUESTO] (`nucleo.administracion.sincronizacion-rnt.cron`);
+  - cada semana, los lunes a las 3:00 de Colombia (`nucleo.administracion.sincronizacion-rnt.cron`);
   - y cuando el administrador quiera, con `POST /admin/rnt/sincronizacion`, que responde al terminar con los revisados, retirados, restituidos y sin respuesta.
   - La dispara la administración (módulo 8), pero el trabajo es de los prestadores, por `PrestadoresApiInterna.sincronizarRnt()`.
 - **Por cada prestador:** consulta el RNT fuera de la transacción y aplica el resultado como en DN-33: encontrado queda ACTIVO; no encontrado, INACTIVO o NO_ENCONTRADO; si no responde, conserva su estado.
   - Si cambia la habilitación, el aviso HABILITACION va en la misma transacción: el catálogo retira sus ofertas de la vista pública o restituye las aprobadas (RF-77).
   - Si se le retira, recibe un WhatsApp (RF-78), solo si tiene el número verificado. Es el simulado: `tipo=CATALOGO_RETIRADO_RNT`.
-- **Dos réplicas:** toman a los prestadores en lotes de 20 [SUPUESTO] con `FOR UPDATE SKIP LOCKED` y marcan `sincronizacion_tomada_en`, así ninguno se revisa dos veces en la misma sincronización. Si un prestador cambia mientras se consulta su RNT, se salta y lo revisa la siguiente.
-- **Si el RNT se cae** (QAS-03): tras 3 consultas fallidas seguidas [SUPUESTO] la sincronización se detiene y lo informa (`interrumpida`); cada prestador conserva su último estado.
+- **Dos réplicas:** toman a los prestadores en lotes de 20 con `FOR UPDATE SKIP LOCKED` y marcan `sincronizacion_tomada_en`, así ninguno se revisa dos veces en la misma sincronización. Si un prestador cambia mientras se consulta su RNT, se salta y lo revisa la siguiente.
+- **Si el RNT se cae** (QAS-03): tras 3 consultas fallidas seguidas la sincronización se detiene y lo informa (`interrumpida`); cada prestador conserva su último estado.
 - **Las solicitudes no pagadas se cierran** (HU-ADM-02):
   - lo hace el módulo de solicitudes, con los vencimientos, cada minuto (DN-14): busca los prestadores con solicitudes abiertas y, si alguno no está habilitado, cierra las suyas;
-  - una PENDIENTE queda NO_DISPONIBLE y una ATENDIDA, CONFIRMADA o con el pago fallido, VENCIDA, con el actor SISTEMA y el motivo "El prestador ya no tiene el Registro Nacional de Turismo activo" [SUPUESTO];
+  - una PENDIENTE queda NO_DISPONIBLE y una ATENDIDA, CONFIRMADA o con el pago fallido, VENCIDA, con el actor SISTEMA y el motivo "El prestador ya no tiene el Registro Nacional de Turismo activo";
   - el turista recibe la notificación de siempre y, si había cupo apartado, el prestador la de cupo liberado (DN-13);
   - la que tiene un intento de pago en curso espera su resultado: si se aprueba, queda PAGADA; si no, se cierra en la vuelta siguiente;
   - así no depende de quién le quitó la habilitación (la sincronización o un cambio de número) y, si una réplica cae a mitad, la siguiente vuelta termina. V11 agrega el índice de las abiertas por prestador.
