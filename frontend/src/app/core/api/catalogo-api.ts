@@ -2073,6 +2073,8 @@ export interface operations {
                 };
             };
             400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
             409: components["responses"]["ConflictoConcurrencia"];
         };
     };
@@ -2102,6 +2104,8 @@ export interface operations {
                 };
             };
             400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
         };
     };
     consultarOfertaInterna: {
@@ -2125,6 +2129,8 @@ export interface operations {
                     "application/json": components["schemas"]["OfertaInterna"];
                 };
             };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
             404: components["responses"]["OfertaNoEncontrada"];
         };
     };
@@ -2149,6 +2155,8 @@ export interface operations {
                     "application/json": components["schemas"]["OfertaEnModeracion"];
                 };
             };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
             404: components["responses"]["OfertaNoEncontrada"];
         };
     };
@@ -2292,6 +2300,8 @@ export interface operations {
                     "application/json": components["schemas"]["OpinionEnModeracion"];
                 };
             };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
             404: components["responses"]["OpinionNoEncontrada"];
         };
     };
@@ -2318,6 +2328,8 @@ export interface operations {
                 };
             };
             400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
             409: components["responses"]["ConflictoConcurrencia"];
         };
     };

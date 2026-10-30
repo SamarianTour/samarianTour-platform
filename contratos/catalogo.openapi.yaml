@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Samarian Tour · Catálogo
-  version: 0.2.0
+  version: 0.3.0
   description: |
     API del servicio de catálogo. Este contrato cubre los endpoints del prototipo: búsqueda y ficha de ofertas,
     zonas y su gestión por el administrador, las ofertas del prestador (publicar, editar, retirar y listar las propias) y sus fotos, su perfil
@@ -13,7 +13,8 @@ info:
     - Las rutas `/prestador/**`, `/admin/**` y `/turista/**` exigen el token de acceso del núcleo (`tokenAcceso`)
       con el rol PRESTADOR, ADMINISTRADOR o TURISTA, respectivamente (DC-01, DC-13). Sin token válido responden 401
       `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`. Las demás rutas son públicas, salvo `/internal/**` y
-      `/actuator/**`, que Nginx no expone. Una ruta con `;` responde 400.
+      `/actuator/**`, que Nginx no expone; las internas exigen además el token del servicio que llama
+      (`tokenServicio`). Una ruta con `;` responde 400.
 servers:
   - url: http://localhost:8080/api/catalogo
     description: Piloto con Docker Compose, detrás de Nginx
@@ -28,7 +29,8 @@ tags:
     description: Moderación y gestión de zonas. Exige el token de acceso con el rol ADMINISTRADOR.
   - name: Interno
     description: |
-      Avisos del núcleo y consultas del núcleo y de la recomendación. Nginx no expone estas rutas hacia afuera.
+      Avisos del núcleo y consultas del núcleo y de la recomendación. Nginx no expone estas rutas hacia afuera, y además
+      exigen el token del servicio que llama (`tokenServicio`, DN-38).
 
 paths:
   /ofertas:
@@ -637,6 +639,8 @@ paths:
     post:
       tags: [Interno]
       operationId: recibirAviso
+      security:
+        - tokenServicio: []
       summary: Aviso del núcleo, de moderación o de habilitación RNT (RF-77, RF-79)
       description: |
         Es idempotente (DC-04): cada aviso trae un `idAviso` y un aviso repetido no se vuelve a aplicar.
@@ -684,6 +688,10 @@ paths:
                 $ref: '#/components/schemas/AvisoResultado'
         '400':
           $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
         '409':
           $ref: '#/components/responses/ConflictoConcurrencia'
 
@@ -691,6 +699,8 @@ paths:
     get:
       tags: [Interno]
       operationId: consultarOfertasVisibles
+      security:
+        - tokenServicio: []
       summary: Ofertas visibles para la recomendación (RF-26, RF-29, RET-02)
       description: |
         Base de conocimiento cerrada de la recomendación (DC-36). Aplica la misma visibilidad, el mismo orden (por
@@ -718,11 +728,17 @@ paths:
                 $ref: '#/components/schemas/PaginaOfertasVisibles'
         '400':
           $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
 
   /internal/ofertas/{id}:
     get:
       tags: [Interno]
       operationId: consultarOfertaInterna
+      security:
+        - tokenServicio: []
       summary: Oferta que el turista pide en una solicitud (RF-30)
       description: |
         El núcleo la consulta al crear la solicitud, con corte de circuito de 3 s (ADR-04), y copia el nombre, el
@@ -738,6 +754,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfertaInterna'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/OfertaNoEncontrada'
 
@@ -745,6 +765,8 @@ paths:
     get:
       tags: [Interno]
       operationId: consultarOfertaEnModeracion
+      security:
+        - tokenServicio: []
       summary: Oferta en moderación que el núcleo va a aprobar o rechazar (RF-79)
       description: |
         El núcleo la consulta antes de decidir (DC-38): con el prestador aplica sus reglas de aprobación y notifica
@@ -759,6 +781,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfertaEnModeracion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/OfertaNoEncontrada'
 
@@ -884,6 +910,8 @@ paths:
     get:
       tags: [Interno]
       operationId: consultarOpinionEnModeracion
+      security:
+        - tokenServicio: []
       summary: Opinión en moderación que el núcleo va a aprobar o rechazar (RF-80)
       description: |
         El núcleo la consulta antes de decidir, para saber a qué turista notificar (DC-44). Si la opinión no existe
@@ -897,6 +925,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OpinionEnModeracion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/OpinionNoEncontrada'
 
@@ -904,6 +936,8 @@ paths:
     post:
       tags: [Interno]
       operationId: recibirAvisoOpinion
+      security:
+        - tokenServicio: []
       summary: Aviso del núcleo sobre opiniones (RF-60, RF-80, Ley 1581)
       description: |
         Llegan por la misma bandeja de salida que los avisos de ofertas y con las mismas reglas (DC-04): cada aviso
@@ -949,6 +983,10 @@ paths:
                 $ref: '#/components/schemas/AvisoResultado'
         '400':
           $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
         '409':
           $ref: '#/components/responses/ConflictoConcurrencia'
 
@@ -965,6 +1003,16 @@ components:
         prestador que todavía no registró su RNT en el núcleo no lo trae y no puede gestionar ofertas (403
         `ACCESO_DENEGADO`). Sin token, o con uno vencido, falsificado o de otro emisor, la ruta responde 401
         `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`.
+    tokenServicio:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        El token con el que otro servicio llama a `/internal/**` (DN-38), en `Authorization: Bearer <token>`. Lo
+        firma el servicio que llama con su propia clave (RS256) y lleva `iss` y `sub` (`nucleo` o `recomendacion`),
+        `aud: catalogo` y `exp` de 5 minutos. Cada ruta admite solo al servicio que la usa: la recomendación,
+        `GET /internal/ofertas`; el núcleo, todas las demás. Sin token, o con el de un usuario, uno falsificado o
+        para otro servicio, 401 `NO_AUTENTICADO`; con el de un servicio que no le toca, 403 `ACCESO_DENEGADO`.
   parameters:
     ZonaId:
       name: zonaId
