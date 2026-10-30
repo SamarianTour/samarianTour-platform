@@ -19,8 +19,9 @@ import java.util.Arrays;
  * {@code libs/seguridad-jwt}: cada prefijo exige un rol del token de acceso y {@code /cuenta/**} admite los cinco.
  * Sin token, 401 {@code NO_AUTENTICADO}; con otro rol, 403 {@code ACCESO_DENEGADO}.
  *
- * <p>Las demás rutas son públicas. {@code /internal/**} y {@code /actuator/**} solo se alcanzan desde la red de Docker:
- * Nginx las bloquea hacia afuera. La autenticación entre servicios queda pendiente (DN-37).
+ * <p>Las demás rutas son públicas. {@code /actuator/**} solo se alcanza desde la red de Docker: Nginx la bloquea hacia
+ * afuera. El núcleo todavía no tiene rutas {@code /internal/**}; cuando las tenga (el registro de exposición de la
+ * recomendación), irán en su propia cadena con el token de servicio, como en el catálogo (DN-38).
  */
 @Configuration
 public class SeguridadConfig {

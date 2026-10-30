@@ -1,5 +1,9 @@
 package co.edu.unimagdalena.samariantour.catalogo;
 
+import co.edu.unimagdalena.samariantour.seguridadjwt.ClavesRsa;
+import co.edu.unimagdalena.samariantour.seguridadjwt.EmisorTokenServicio;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.bson.Document;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,9 +11,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.time.Clock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,15 +54,35 @@ class CatalogoApplicationIT extends IntegracionMongoBase {
     }
 
     @Test
-    @DisplayName("con el perfil mongo responden las consultas internas del núcleo y de la recomendación")
+    @DisplayName("con el perfil mongo responden las consultas internas, cada una con el token del servicio que la usa")
     void consultasInternasConMongo() {
-        var visibles = http.getForEntity("/internal/ofertas?tipo=PAQUETE", String.class);
+        var visibles = http.exchange("/internal/ofertas?tipo=PAQUETE", HttpMethod.GET,
+                con(firmadoPor(ServiciosInternos.RECOMENDACION, TokensDePrueba.EMISOR_RECOMENDACION,
+                        TokensDePrueba.CLAVE_PRIVADA_RECOMENDACION)), String.class);
         assertThat(visibles.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(visibles.getBody()).contains("\"contenido\"");
 
-        var inexistente = http.getForEntity("/internal/ofertas/b00000000000000000000099", String.class);
+        var inexistente = http.exchange("/internal/ofertas/b00000000000000000000099", HttpMethod.GET,
+                con(firmadoPor(ServiciosInternos.NUCLEO, TokensDePrueba.EMISOR, TokensDePrueba.CLAVE_PRIVADA)),
+                String.class);
         assertThat(inexistente.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(inexistente.getBody()).contains("OFERTA_NO_ENCONTRADA");
+
+        // Sin el token de servicio no se llega, aunque la petición venga de la red de Docker (DN-38).
+        assertThat(http.getForEntity("/internal/ofertas?tipo=PAQUETE", String.class).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    /** El token como lo firma el servicio de verdad, con {@link EmisorTokenServicio}. */
+    private static String firmadoPor(String servicio, String emisor, String clavePrivada) {
+        return new EmisorTokenServicio(servicio, emisor, ClavesRsa.privada(clavePrivada), Clock.systemUTC())
+                .token(ServiciosInternos.CATALOGO);
+    }
+
+    private static HttpEntity<Void> con(String token) {
+        HttpHeaders cabeceras = new HttpHeaders();
+        cabeceras.setBearerAuth(token);
+        return new HttpEntity<>(cabeceras);
     }
 
     @Test

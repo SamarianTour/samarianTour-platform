@@ -12,6 +12,7 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.AvisoSupresionTurista;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.ResultadoAviso;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest({ModeracionOpinionesController.class, AvisoOpinionesController.class})
 @ActiveProfiles("demo")
 class ModeracionOpinionesControllerTest {
+
+    /** El token con el que el núcleo llama a las rutas internas (DN-38). */
+    private static final String COMO_NUCLEO =
+            TokensDePrueba.bearerServicio(ServiciosInternos.NUCLEO, ServiciosInternos.CATALOGO);
 
     private static final UUID TURISTA = UUID.fromString("80000000-0000-0000-0000-000000000008");
     private static final String ADMINISTRADOR = "60000000-0000-0000-0000-000000000006";
@@ -94,12 +99,14 @@ class ModeracionOpinionesControllerTest {
         when(pendientes.consultar("d00000000000000000000001"))
                 .thenThrow(new OpinionNoEncontradaException("d00000000000000000000001"));
 
-        http.perform(get("/internal/moderacion/opiniones/d0000000000000000000000b"))
+        http.perform(get("/internal/moderacion/opiniones/d0000000000000000000000b")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.turistaId").value(TURISTA.toString()))
                 .andExpect(jsonPath("$.ofertaId").value("b00000000000000000000004"))
                 .andExpect(jsonPath("$.estado").value("EN_MODERACION"));
-        http.perform(get("/internal/moderacion/opiniones/d00000000000000000000001"))
+        http.perform(get("/internal/moderacion/opiniones/d00000000000000000000001")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo").value("OPINION_NO_ENCONTRADA"));
     }
@@ -133,7 +140,9 @@ class ModeracionOpinionesControllerTest {
                 "{\"idAviso\": \"a1\", \"tipo\": \"OTRO\"}",
                 "{\"idAviso\": \"a1\", \"tipo\": \"SUPRESION_TURISTA\", \"turistaId\": \"no-es-uuid\"}",
                 "{\"idAviso\": \"a1\", \"tipo\": \"MODERACION_OPINION\", \"opinionId\": \"d1\", \"decision\": \"RECHAZAR\"}"}) {
-            http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+            http.perform(post("/internal/opiniones/avisos")
+                            .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                            .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
         }
@@ -141,7 +150,9 @@ class ModeracionOpinionesControllerTest {
     }
 
     private void avisar(String cuerpo, String resultado) throws Exception {
-        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+        http.perform(post("/internal/opiniones/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultado").value(resultado));
     }

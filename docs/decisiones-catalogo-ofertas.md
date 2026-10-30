@@ -81,7 +81,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 - Traen un `idAviso`. El catálogo consulta si ya fue procesado al inicio y lo marca al final. Si dos réplicas procesan el mismo aviso a la vez, las operaciones asignan valores absolutos y el segundo registro choca con el `_id` único y se ignora.
 - Los avisos de habilitación traen la `version` de DC-02, y los de moderación el número de versión de DC-05.
 - Cada aviso termina en uno de tres resultados: `APLICADO` (cambió el catálogo), `IGNORADO` (llegó tarde o ya no aplica: versión vieja, versión reemplazada, oferta inexistente o retirada) o `DUPLICADO` (ya se había procesado). En los tres casos el aviso queda registrado y el catálogo responde con éxito, para que el núcleo no lo reintente sin fin.
-- Nginx responde 404 a `/api/catalogo/internal/**` desde afuera, y 400 a una ruta con `;`, que antes esquivaba ese bloqueo (DN-37). Dentro de la red de Docker todavía no hay autenticación entre servicios: queda pendiente, con un token propio de cada servicio (DN-37).
+- Nginx responde 404 a `/api/catalogo/internal/**` desde afuera, y 400 a una ruta con `;`, que antes esquivaba ese bloqueo (DN-37). Dentro de la red de Docker, cada ruta interna exige además el token del servicio que la usa: el núcleo o la recomendación (DN-38).
 
 ## Versiones y moderación
 
@@ -320,7 +320,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - `prestadorId` va para que la recomendación arme el registro de exposición que mide el sesgo por prestador (RET-02).
 - **No** van calificaciones, opiniones, comisión ni el tamaño del prestador: así la recomendación no puede favorecer a nadie por esos datos (RET-02). El catálogo no prioriza a ningún prestador; la rotación entre ofertas de igual afinidad es de la recomendación (`PoliticaRotacion`).
 
-Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y la autenticación entre servicios queda pendiente (DN-37).
+Las dos rutas no exigen rol de usuario: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y adentro piden el token de servicio de quien las usa (DN-38).
 
 ## Búsqueda por texto
 
@@ -495,4 +495,4 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 
 ## Fuera del alcance del prototipo
 
-La pantalla de moderación del administrador, que vive en el núcleo; las alternativas por alta afluencia, que son de la recomendación (RF-29); autenticación entre servicios; la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.
+La pantalla de moderación del administrador, que vive en el núcleo; las alternativas por alta afluencia, que son de la recomendación (RF-29); la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.

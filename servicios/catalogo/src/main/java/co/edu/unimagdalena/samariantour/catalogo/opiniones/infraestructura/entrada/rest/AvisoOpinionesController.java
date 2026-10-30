@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Avisos del núcleo sobre opiniones: habilitación por solicitud pagada (DC-41), decisión del administrador (DC-44) y
- * supresión de un turista (DC-45). Nginx no expone {@code /internal/**} hacia afuera (DC-04).
+ * supresión de un turista (DC-45). Nginx no expone {@code /internal/**} hacia afuera, y solo el núcleo
+ * entra, con su token de servicio (DC-04, DN-38).
  *
  * <p>Los tres resultados (APLICADO, IGNORADO y DUPLICADO) responden 200, para que el núcleo no reintente el aviso.
  */

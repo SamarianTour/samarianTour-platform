@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Avisos del núcleo: moderación y habilitación RNT (RF-77, RF-79). Nginx no expone {@code /internal/**} hacia afuera;
- * la autenticación entre servicios queda pendiente del JWT (DC-04).
+ * Avisos del núcleo: moderación y habilitación RNT (RF-77, RF-79). Nginx no expone {@code /internal/**} hacia afuera,
+ * y solo el núcleo entra, con su token de servicio (DC-04, DN-38).
  *
  * <p>Los tres resultados (APLICADO, IGNORADO y DUPLICADO) responden 200, para que el núcleo no reintente el aviso.
  */

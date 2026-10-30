@@ -59,6 +59,8 @@ services:
       # Clave pública del token del núcleo: el catálogo lo valida sin consultarlo (DN-37). La deriva de la privada
       # el mismo script de las claves.
       SEGURIDAD_JWT_CLAVE_PUBLICA: "${NUCLEO_JWT_CLAVE_PUBLICA:?Falta la clave pública del token, ejecuta bash infra/generar-claves.sh}"
+      # Con ella valida el token de servicio con el que la recomendación lee /internal/ofertas (DN-38).
+      SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA: "${RECOMENDACION_JWT_CLAVE_PUBLICA:?Falta la clave de la recomendación, ejecuta bash infra/generar-claves.sh}"
     depends_on:
       mongo:
         condition: service_healthy
@@ -107,7 +109,8 @@ services:
       # Clave del cifrado en reposo de los datos personales (DN-28). Sin ella el núcleo no arranca: se genera en
       # infra/.env con "bash infra/generar-claves.sh".
       NUCLEO_CIFRADO_CLAVE: "${NUCLEO_CIFRADO_CLAVE:?Falta la clave del núcleo, ejecuta bash infra/generar-claves.sh}"
-      # Clave privada RSA que firma el token de acceso (DN-29); la genera el mismo script.
+      # Clave privada RSA que firma el token de acceso (DN-29) y el token de servicio hacia el catálogo (DN-38); la
+      # genera el mismo script.
       NUCLEO_JWT_CLAVE_PRIVADA: "${NUCLEO_JWT_CLAVE_PRIVADA:?Falta la clave del token, ejecuta bash infra/generar-claves.sh}"
       # El correo del restablecimiento de la contraseña va a Mailpit (DN-30).
       SPRING_MAIL_HOST: mailpit
@@ -171,6 +174,8 @@ services:
       RECOMENDACION_ALERTAS_IDEAM_URL: ${IDEAM_ALERTAS_URL:-https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2}
       # Clave pública del token del núcleo, como en el catálogo (DR-22, DN-37).
       SEGURIDAD_JWT_CLAVE_PUBLICA: "${NUCLEO_JWT_CLAVE_PUBLICA:?Falta la clave pública del token, ejecuta bash infra/generar-claves.sh}"
+      # Su propia clave privada, para el token de servicio con el que lee /internal/ofertas del catálogo (DN-38).
+      RECOMENDACION_JWT_CLAVE_PRIVADA: "${RECOMENDACION_JWT_CLAVE_PRIVADA:?Falta la clave de la recomendación, ejecuta bash infra/generar-claves.sh}"
     depends_on:
       catalogo:
         condition: service_healthy

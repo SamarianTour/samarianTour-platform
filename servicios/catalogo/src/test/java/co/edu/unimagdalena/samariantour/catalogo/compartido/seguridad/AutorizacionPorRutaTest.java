@@ -134,7 +134,7 @@ class AutorizacionPorRutaTest {
             return identidad.rol() + " " + identidad.usuarioId() + " " + identidad.tipoPrestador();
         }
 
-        @GetMapping({"/publica/prueba", "/internal/prueba"})
+        @GetMapping("/publica/prueba")
         String publica() {
             return "ok";
         }
