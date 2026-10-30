@@ -27,6 +27,7 @@ public final class CatalogoSimulado implements AutoCloseable {
 
     private final HttpServer servidor;
     private final List<Peticion> recibidas = new CopyOnWriteArrayList<>();
+    private final List<String> autorizaciones = new CopyOnWriteArrayList<>();
     private volatile int estado = 200;
     private volatile Duration demora = Duration.ZERO;
     private final Map<String, Respuesta> porRuta = new ConcurrentHashMap<>();
@@ -44,6 +45,7 @@ public final class CatalogoSimulado implements AutoCloseable {
             String cuerpo = new String(intercambio.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             String ruta = intercambio.getRequestURI().getPath().substring(PREFIJO.length());
             recibidas.add(new Peticion(ruta, cuerpo));
+            autorizaciones.add(String.valueOf(intercambio.getRequestHeaders().getFirst("Authorization")));
             try {
                 Thread.sleep(demora.toMillis());
             } catch (InterruptedException e) {
@@ -81,8 +83,14 @@ public final class CatalogoSimulado implements AutoCloseable {
         return List.copyOf(recibidas);
     }
 
+    /** El header {@code Authorization} de cada petición recibida, en orden; {@code "null"} si no lo trajo. */
+    public List<String> autorizaciones() {
+        return List.copyOf(autorizaciones);
+    }
+
     public void reiniciar() {
         recibidas.clear();
+        autorizaciones.clear();
         porRuta.clear();
         estado = 200;
         demora = Duration.ZERO;

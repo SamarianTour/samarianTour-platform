@@ -8,6 +8,11 @@ import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.modelo.AvisoSalie
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.modelo.EstadoAviso;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.puerto.entrada.PublicarAvisosUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.puerto.salida.BandejaSalidaRepositoryPort;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ClavesRsa;
+import co.edu.unimagdalena.samariantour.seguridadjwt.DecodificadorTokenServicio.Llamador;
+import co.edu.unimagdalena.samariantour.seguridadjwt.DecodificadorTokenServicio;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -101,7 +106,7 @@ class BandejaSalidaIT extends IntegracionPostgresBase {
     }
 
     @Test
-    @DisplayName("publica cada aviso en la entrada de su destino y lo marca enviado")
+    @DisplayName("publica cada aviso en su destino, con el token de servicio del núcleo, y lo marca enviado")
     void publicar() {
         enTransaccion("sup-1", supresion("sup-1"));
         Map<String, Object> habilitacion = new LinkedHashMap<>();
@@ -116,6 +121,13 @@ class BandejaSalidaIT extends IntegracionPostgresBase {
         // PostgreSQL devuelve el JSONB con su propio formato: mismo contenido, con espacios y otro orden de claves.
         assertThat(CATALOGO.recibidas()).anySatisfy(peticion -> assertThat(peticion.cuerpo())
                 .contains("\"idAviso\": \"hab-1\"").contains("\"tipo\": \"HABILITACION\""));
+        // El catálogo solo acepta los avisos con el token de servicio del núcleo (DN-38).
+        DecodificadorTokenServicio catalogo = new DecodificadorTokenServicio(ServiciosInternos.CATALOGO, List.of(
+                new Llamador(ServiciosInternos.NUCLEO, TokensDePrueba.EMISOR,
+                        ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA))));
+        assertThat(CATALOGO.autorizaciones()).hasSize(2).allSatisfy(autorizacion -> assertThat(
+                catalogo.decode(autorizacion.substring("Bearer ".length())).getSubject())
+                .isEqualTo(ServiciosInternos.NUCLEO));
         assertThat(bandeja.buscar("sup-1").orElseThrow().estado()).isEqualTo(EstadoAviso.ENVIADO);
         assertThat(bandeja.buscar("hab-1").orElseThrow().enviadoEn()).isNotNull();
         assertThat(publicar.publicarLote()).isZero();
