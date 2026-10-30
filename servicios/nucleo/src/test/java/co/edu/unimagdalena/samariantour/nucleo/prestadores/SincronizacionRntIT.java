@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.SincronizarRntUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.NotificacionPrestadorPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.salida.rnt.RntSimuladoAdapter;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -82,8 +84,9 @@ class SincronizacionRntIT extends IntegracionPostgresBase {
                 .andExpect(jsonPath("$.restituidos").value(0))
                 .andExpect(jsonPath("$.interrumpida").value(false));
 
-        http.perform(get("/prestador/registro").header("X-Usuario-Id", AGENCIA)
-                        .header("X-Rol", "PRESTADOR").header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+        http.perform(get("/prestador/registro")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador(AGENCIA, "AGENCIA_OPERADORA")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoRnt").value("INACTIVO"))
                 .andExpect(jsonPath("$.habilitado").value(false));
@@ -108,8 +111,9 @@ class SincronizacionRntIT extends IntegracionPostgresBase {
                 .andExpect(jsonPath("$.sinRespuesta").value(0));
         verify(whatsapp, never()).avisarRetiroCatalogo(anyString(), anyString());
 
-        http.perform(post("/admin/rnt/sincronizacion").header("X-Usuario-Id", AGENCIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+        http.perform(post("/admin/rnt/sincronizacion")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador(AGENCIA, "AGENCIA_OPERADORA")))
                 .andExpect(status().isForbidden());
         http.perform(comoAdministrador(delete("/admin/rnt-simulado/999999")))
                 .andExpect(status().isNotFound());
@@ -121,7 +125,8 @@ class SincronizacionRntIT extends IntegracionPostgresBase {
     }
 
     private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006")
-                .header("X-Rol", "ADMINISTRADOR");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearer("60000000-0000-0000-0000-000000000006", "ADMINISTRADOR"));
     }
 }

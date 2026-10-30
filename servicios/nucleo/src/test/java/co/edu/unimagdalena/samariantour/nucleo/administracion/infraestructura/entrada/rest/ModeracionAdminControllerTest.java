@@ -10,12 +10,12 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.ent
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.entrada.ModerarOpinionUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.entrada.comando.ModerarOfertaCommand;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.puerto.entrada.comando.ModerarOpinionCommand;
-import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.IdentidadPorHeaders;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -36,7 +36,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Las rutas de moderación del administrador (RF-79, RF-80, DN-08). */
 @WebMvcTest(ModeracionAdminController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class ModeracionAdminControllerTest {
 
@@ -131,7 +130,8 @@ class ModeracionAdminControllerTest {
     @DisplayName("solo el administrador: otro rol responde 403")
     void soloAdministrador() throws Exception {
         http.perform(post("/admin/moderacion/ofertas/{id}/decision", LANCHA)
-                        .header("X-Usuario-Id", "70000000-0000-0000-0000-000000000007").header("X-Rol", "TURISTA")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearer("70000000-0000-0000-0000-000000000007", "TURISTA"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"numeroVersion\": 1, \"decision\": \"APROBAR\"}"))
                 .andExpect(status().isForbidden())
@@ -147,6 +147,7 @@ class ModeracionAdminControllerTest {
     }
 
     private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", ADMINISTRADOR.toString()).header("X-Rol", "ADMINISTRADOR");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR.toString(), "ADMINISTRADOR"));
     }
 }

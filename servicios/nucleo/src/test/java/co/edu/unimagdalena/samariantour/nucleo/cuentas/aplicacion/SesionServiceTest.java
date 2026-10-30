@@ -49,6 +49,24 @@ class SesionServiceTest {
         }
 
         @Test
+        @DisplayName("el token del prestador lleva su tipo cuando ya registró su RNT, y renovar lo actualiza (DN-37)")
+        void tipoDelPrestador() {
+            Usuario guia = escenario.registrar.registrar(new RegistrarUsuarioCommand(Rol.PRESTADOR, "Guía",
+                    "guia@correo.co", "Minca2026", null, true, "v1"));
+
+            SesionIniciada sinRegistro = escenario.iniciarSesion.iniciar("guia@correo.co", "Minca2026");
+            assertThat(sinRegistro.acceso().valor())
+                    .isEqualTo("jwt:" + guia.id() + ":" + sinRegistro.renovacion().id());
+
+            escenario.tiposPrestador.put(guia.id(), "GUIA_INDEPENDIENTE");
+            SesionIniciada renovada = escenario.renovarSesion.renovar(sinRegistro.renovacion().valor());
+            assertThat(renovada.acceso().valor()).endsWith(":GUIA_INDEPENDIENTE");
+            // Al turista nunca se le pregunta el tipo.
+            assertThat(escenario.iniciarSesion.iniciar("laura@correo.co", "Playa2026").acceso().valor())
+                    .doesNotEndWith("GUIA_INDEPENDIENTE");
+        }
+
+        @Test
         @DisplayName("un correo que no existe y una contraseña equivocada responden lo mismo")
         void credencialesInvalidas() {
             assertThatThrownBy(() -> escenario.iniciarSesion.iniciar("nadie@correo.co", "Playa2026"))

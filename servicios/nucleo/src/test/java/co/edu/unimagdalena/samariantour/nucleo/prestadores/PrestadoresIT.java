@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.prestadores;
 
 import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.NotificacionPrestadorPort;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -17,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,6 +60,7 @@ class PrestadoresIT extends IntegracionPostgresBase {
         jdbc.update("DELETE FROM cuentas_cobro WHERE prestador_id " + deEstasPruebas);
         jdbc.update("DELETE FROM prestadores WHERE id " + deEstasPruebas);
         jdbc.update("DELETE FROM codigos_un_uso WHERE usuario_id " + deEstasPruebas);
+        jdbc.update("DELETE FROM sesiones WHERE usuario_id " + deEstasPruebas);
         jdbc.update("DELETE FROM aceptaciones_politica WHERE usuario_id " + deEstasPruebas);
         jdbc.update("DELETE FROM usuarios WHERE correo LIKE '%" + DOMINIO + "'");
     }
@@ -80,6 +85,31 @@ class PrestadoresIT extends IntegracionPostgresBase {
         http.perform(como(get("/prestador/registro"), guia))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ultimaSincronizacion").exists());
+    }
+
+    @Test
+    @DisplayName("con su sesión real: el token no trae tipo hasta registrar el RNT; al renovar lo trae (DN-37)")
+    void tipoEnElToken() throws Exception {
+        UUID guia = cuenta("token");
+        String sesion = http.perform(post("/cuentas/sesion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"correo\": \"token" + DOMINIO + "\", \"contrasena\": \"Minca2026\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String acceso = campo(sesion, "tokenAcceso");
+        assertThat(reclamos(acceso)).contains("\"rol\":\"PRESTADOR\"").doesNotContain("tipoPrestador");
+
+        http.perform(post("/prestador/registro").header(HttpHeaders.AUTHORIZATION, "Bearer " + acceso)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"numeroRnt": "910006", "tipo": "GUIA_INDEPENDIENTE", "modalidades": ["CAMINATA"],
+                         "idiomas": ["es"]}"""))
+                .andExpect(status().isCreated());
+        String renovada = http.perform(post("/cuentas/sesion/renovacion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tokenRenovacion\": \"" + campo(sesion, "tokenRenovacion") + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(reclamos(campo(renovada, "tokenAcceso"))).contains("\"sub\":\"" + guia + "\"")
+                .contains("\"tipoPrestador\":\"GUIA_INDEPENDIENTE\"");
     }
 
     @Test
@@ -184,8 +214,16 @@ class PrestadoresIT extends IntegracionPostgresBase {
         return UUID.fromString(respuesta.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1"));
     }
 
+    private static String campo(String json, String nombre) {
+        return json.replaceAll(".*\"" + nombre + "\":\"([^\"]+)\".*", "$1");
+    }
+
+    /** La parte central del JWT, en claro: los reclamos que firmó el núcleo. */
+    private static String reclamos(String jwt) {
+        return new String(Base64.getUrlDecoder().decode(jwt.split("\\.")[1]), StandardCharsets.UTF_8);
+    }
+
     private static MockHttpServletRequestBuilder como(MockHttpServletRequestBuilder peticion, UUID prestador) {
-        return peticion.header("X-Usuario-Id", prestador.toString()).header("X-Rol", "PRESTADOR")
-                .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(prestador, null));
     }
 }

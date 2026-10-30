@@ -1,39 +1,47 @@
 package co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad;
 
+import co.edu.unimagdalena.samariantour.seguridadjwt.AutenticacionToken;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ReclamosToken;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Usuario que hace la petición: los mismos datos que traerá el JWT del núcleo. El tipo de prestador llega como texto
+ * Usuario que hace la petición, tal como lo dice su token de acceso (DN-37). El tipo de prestador llega como texto
  * porque el paquete compartido no conoce los tipos de los módulos: cada módulo lo convierte al suyo.
  *
- * @param tipoPrestador solo para el rol {@link Rol#PRESTADOR}; null en los demás roles
+ * @param tipoPrestador solo del prestador que ya registró su RNT; null en los demás casos
  */
 public record Identidad(UUID usuarioId, Rol rol, String tipoPrestador) {
-
-    /** Atributo de la petición donde {@link ExigirRol} deja la identidad ya verificada. */
-    static final String ATRIBUTO = Identidad.class.getName();
 
     public Identidad {
         Objects.requireNonNull(usuarioId, "usuarioId");
         Objects.requireNonNull(rol, "rol");
-        if ((rol == Rol.PRESTADOR) != (tipoPrestador != null)) {
-            throw new IllegalArgumentException("El tipo de prestador existe si y solo si el rol es PRESTADOR");
+        if (tipoPrestador != null && rol != Rol.PRESTADOR) {
+            throw new IllegalArgumentException("Solo el prestador tiene tipo");
         }
     }
 
     /**
-     * La identidad que {@link ExigirRol} verificó para esta petición. Solo existe en las rutas que exigen un rol
-     * ({@code /prestador/**}, {@code /admin/**} y {@code /turista/**}).
+     * La identidad del token que Spring Security ya validó para esta petición. Las rutas de cada rol siempre la
+     * tienen ({@code SeguridadConfig}).
      *
-     * @throws NoAutenticadoException si la ruta no exige identidad
+     * @throws NoAutenticadoException si la petición no trae un token válido
      */
     public static Identidad de(HttpServletRequest peticion) {
-        if (peticion.getAttribute(ATRIBUTO) instanceof Identidad identidad) {
-            return identidad;
+        if (peticion.getUserPrincipal() instanceof AutenticacionToken autenticacion) {
+            ReclamosToken reclamos = autenticacion.getPrincipal();
+            return new Identidad(reclamos.usuarioId(), rol(reclamos.rol()), reclamos.tipoPrestador());
         }
         throw new NoAutenticadoException("Esta ruta no recibe la identidad del usuario");
+    }
+
+    private static Rol rol(String nombre) {
+        return Arrays.stream(Rol.values())
+                .filter(rol -> rol.name().equals(nombre))
+                .findFirst()
+                .orElseThrow(() -> new AccesoDenegadoException("El rol " + nombre + " no existe en el núcleo"));
     }
 }

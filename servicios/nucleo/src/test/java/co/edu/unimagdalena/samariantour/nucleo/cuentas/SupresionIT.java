@@ -3,12 +3,14 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas;
 import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.compartido.cifrado.CifradorDatos;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Usuario;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -126,6 +128,6 @@ class SupresionIT extends IntegracionPostgresBase {
 
     private static MockHttpServletRequestBuilder como(MockHttpServletRequestBuilder peticion, UUID usuario,
                                                       String rol) {
-        return peticion.header("X-Usuario-Id", usuario.toString()).header("X-Rol", rol);
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(usuario, rol));
     }
 }
