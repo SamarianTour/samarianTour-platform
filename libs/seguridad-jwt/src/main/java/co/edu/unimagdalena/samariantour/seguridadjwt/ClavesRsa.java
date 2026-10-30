@@ -18,10 +18,14 @@ public final class ClavesRsa {
     private ClavesRsa() {
     }
 
-    /** @throws IllegalArgumentException si falta o no es una clave pública RSA en X.509 */
+    /** La pública del núcleo. @throws IllegalArgumentException si falta o no es una clave pública RSA en X.509 */
     public static RSAPublicKey publica(String texto) {
-        byte[] der = der(texto, "Falta la clave pública del token (SEGURIDAD_JWT_CLAVE_PUBLICA); se genera con "
-                + "infra/generar-claves.sh");
+        return publica(texto, "SEGURIDAD_JWT_CLAVE_PUBLICA");
+    }
+
+    /** @param variable la variable de entorno de donde sale, para el mensaje si falta */
+    public static RSAPublicKey publica(String texto, String variable) {
+        byte[] der = der(texto, "Falta la clave pública (" + variable + "); se genera con infra/generar-claves.sh");
         try {
             return (RSAPublicKey) fabrica().generatePublic(new X509EncodedKeySpec(der));
         } catch (GeneralSecurityException | ClassCastException e) {
@@ -29,10 +33,14 @@ public final class ClavesRsa {
         }
     }
 
-    /** @throws IllegalArgumentException si falta o no es una clave privada RSA en PKCS#8 */
+    /** La privada del núcleo. @throws IllegalArgumentException si falta o no es una clave privada RSA en PKCS#8 */
     public static RSAPrivateCrtKey privada(String texto) {
-        byte[] der = der(texto, "Falta la clave privada del token (NUCLEO_JWT_CLAVE_PRIVADA); se genera con "
-                + "infra/generar-claves.sh");
+        return privada(texto, "NUCLEO_JWT_CLAVE_PRIVADA");
+    }
+
+    /** @param variable la variable de entorno de donde sale, para el mensaje si falta */
+    public static RSAPrivateCrtKey privada(String texto, String variable) {
+        byte[] der = der(texto, "Falta la clave privada (" + variable + "); se genera con infra/generar-claves.sh");
         try {
             return (RSAPrivateCrtKey) fabrica().generatePrivate(new PKCS8EncodedKeySpec(der));
         } catch (GeneralSecurityException | ClassCastException e) {

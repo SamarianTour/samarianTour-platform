@@ -17,6 +17,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -31,14 +32,19 @@ import java.util.function.Consumer;
 public final class TokensDePrueba {
 
     public static final String EMISOR = "samarian-tour-nucleo";
+    public static final String EMISOR_RECOMENDACION = "samarian-tour-recomendacion";
 
     private static final KeyPair CLAVES = generar();
     private static final KeyPair OTRAS_CLAVES = generar();
+    private static final KeyPair CLAVES_RECOMENDACION = generar();
 
     /** La clave pública, en X.509 y Base64, como la de {@code SEGURIDAD_JWT_CLAVE_PUBLICA}. */
     public static final String CLAVE_PUBLICA = base64(CLAVES.getPublic().getEncoded());
     /** La clave privada, en PKCS#8 y Base64, como la de {@code NUCLEO_JWT_CLAVE_PRIVADA}. */
     public static final String CLAVE_PRIVADA = base64(CLAVES.getPrivate().getEncoded());
+    /** La pareja con la que firma la recomendación sus tokens de servicio (DN-38). */
+    public static final String CLAVE_PUBLICA_RECOMENDACION = base64(CLAVES_RECOMENDACION.getPublic().getEncoded());
+    public static final String CLAVE_PRIVADA_RECOMENDACION = base64(CLAVES_RECOMENDACION.getPrivate().getEncoded());
 
     private TokensDePrueba() {
     }
@@ -70,6 +76,33 @@ public final class TokensDePrueba {
         JwtClaimsSet.Builder datos = datos(usuarioId, rol, null);
         ajuste.accept(datos);
         return "Bearer " + firmar(datos.build(), CLAVES);
+    }
+
+    /**
+     * {@code Bearer <token>} de servicio, como lo firma {@link EmisorTokenServicio}: {@code nucleo} con la clave del
+     * núcleo y {@code recomendacion} con la suya.
+     */
+    public static String bearerServicio(String servicio, String audiencia) {
+        return "Bearer " + firmar(datosServicio(servicio, audiencia).build(), clavesDe(servicio));
+    }
+
+    /** Un token de servicio con la forma correcta pero firmado con otra clave. */
+    public static String bearerServicioConOtraClave(String servicio, String audiencia) {
+        return "Bearer " + firmar(datosServicio(servicio, audiencia).build(), OTRAS_CLAVES);
+    }
+
+    private static JwtClaimsSet.Builder datosServicio(String servicio, String audiencia) {
+        Instant ahora = Instant.now();
+        return JwtClaimsSet.builder()
+                .issuer(ServiciosInternos.RECOMENDACION.equals(servicio) ? EMISOR_RECOMENDACION : EMISOR)
+                .subject(servicio)
+                .audience(List.of(audiencia))
+                .issuedAt(ahora)
+                .expiresAt(ahora.plus(EmisorTokenServicio.VIGENCIA));
+    }
+
+    private static KeyPair clavesDe(String servicio) {
+        return ServiciosInternos.RECOMENDACION.equals(servicio) ? CLAVES_RECOMENDACION : CLAVES;
     }
 
     private static JwtClaimsSet.Builder datos(Object usuarioId, String rol, String tipo) {
