@@ -24,3 +24,14 @@ agregar NUCLEO_CIFRADO_CLAVE "$(openssl rand -base64 32)"
 # la escribe en PEM PKCS#8; pkcs8 la pasa a DER sin cambiar el formato (con -outform DER, genpkey usaría PKCS#1).
 agregar NUCLEO_JWT_CLAVE_PRIVADA "$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null \
   | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A)"
+
+# Clave pública que corresponde a la privada (DN-37): con ella el catálogo y la recomendación validan el token. X.509
+# en Base64, de una línea. Se calcula siempre de la privada que está en .env, así que también completa un .env creado
+# antes y nunca queda desalineada si la privada cambia.
+privada="$(grep '^NUCLEO_JWT_CLAVE_PRIVADA=' .env | tail -n 1 | cut -d= -f2-)"
+publica="$(printf '%s' "$privada" | openssl base64 -d -A | openssl pkey -inform DER -pubout -outform DER \
+  | openssl base64 -A)"
+sed -i '/^NUCLEO_JWT_CLAVE_PUBLICA=/d' .env
+[ -z "$(tail -c 1 .env)" ] || echo >> .env
+printf 'NUCLEO_JWT_CLAVE_PUBLICA=%s\n' "$publica" >> .env
+echo "NUCLEO_JWT_CLAVE_PUBLICA: derivada de la privada"
