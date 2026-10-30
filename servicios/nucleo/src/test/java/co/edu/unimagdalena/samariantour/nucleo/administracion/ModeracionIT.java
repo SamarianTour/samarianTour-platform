@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.administracion;
 import co.edu.unimagdalena.samariantour.nucleo.CatalogoSimulado;
 import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.puerto.entrada.PublicarAvisosUseCase;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -171,7 +173,8 @@ class ModeracionIT extends IntegracionPostgresBase {
     }
 
     private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006")
-                .header("X-Rol", "ADMINISTRADOR");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearer("60000000-0000-0000-0000-000000000006", "ADMINISTRADOR"));
     }
 }

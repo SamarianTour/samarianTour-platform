@@ -20,13 +20,13 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.PublicarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -63,7 +63,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OfertaPrestadorController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class OfertaPrestadorControllerTest {
 
@@ -164,21 +163,23 @@ class OfertaPrestadorControllerTest {
     }
 
     @Test
-    @DisplayName("sin los headers de identidad responde 401 NO_AUTENTICADO y no llama al caso de uso")
+    @DisplayName("sin un token válido responde 401 NO_AUTENTICADO y no llama al caso de uso")
     void sinIdentidad() throws Exception {
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
-                        .header("X-Usuario-Id", "no-es-un-uuid").header("X-Rol", "PRESTADOR")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador("no-es-un-uuid", "AGENCIA_OPERADORA")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
+        // Los headers que sustituían al token en la demo ya no identifican a nadie.
+        http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
+                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
                         .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
-        http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
-                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.detail", containsString("X-Rol")));
 
         verifyNoInteractions(gestionarOferta);
     }
@@ -187,11 +188,24 @@ class OfertaPrestadorControllerTest {
     @DisplayName("un usuario con otro rol no entra a las rutas del prestador: 403 ACCESO_DENEGADO")
     void otroRol() throws Exception {
         for (String rol : new String[] {"TURISTA", "ADMINISTRADOR"}) {
-            http.perform(get("/prestador/ofertas").header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", rol))
+            http.perform(get("/prestador/ofertas")
+                            .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(PRESTADOR, rol)))
                     .andExpect(status().isForbidden())
                     .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                     .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
         }
+
+        verifyNoInteractions(gestionarOferta);
+    }
+
+    @Test
+    @DisplayName("un prestador que no registró su RNT no trae tipo en el token: 403 y no llama al caso de uso")
+    void sinTipo() throws Exception {
+        http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(PRESTADOR, null)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"))
+                .andExpect(jsonPath("$.detail", containsString("RNT")));
 
         verifyNoInteractions(gestionarOferta);
     }
@@ -214,8 +228,8 @@ class OfertaPrestadorControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON).content(ACTIVIDAD)
-                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "HOTEL"))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador(PRESTADOR.toString(), "HOTEL")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail", containsString("tipoPrestador")));
 
@@ -436,8 +450,7 @@ class OfertaPrestadorControllerTest {
 
     private static MockHttpServletRequestBuilder comoAgencia(MockHttpServletRequestBuilder peticion) {
         return peticion.contentType(MediaType.APPLICATION_JSON)
-                .header("X-Usuario-Id", PRESTADOR.toString())
-                .header("X-Rol", "PRESTADOR")
-                .header("X-Tipo-Prestador", "AGENCIA_OPERADORA");
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearerPrestador(PRESTADOR.toString(), "AGENCIA_OPERADORA"));
     }
 }

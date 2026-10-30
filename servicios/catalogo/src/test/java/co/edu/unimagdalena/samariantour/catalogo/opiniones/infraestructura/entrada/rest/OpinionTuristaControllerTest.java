@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.excepcion.OfertaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.excepcion.OpinionDuplicadaException;
@@ -15,11 +14,12 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.ListarOpinionesTuristaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.PublicarOpinionUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.PublicarOpinionCommand;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -42,7 +42,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest({OpinionTuristaController.class, OpinionPublicaController.class})
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class OpinionTuristaControllerTest {
 
@@ -72,7 +71,7 @@ class OpinionTuristaControllerTest {
     }
 
     private static MockHttpServletRequestBuilder comoLaura(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", LAURA.toString()).header("X-Rol", "TURISTA");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(LAURA.toString(), "TURISTA"));
     }
 
     @Test
@@ -128,7 +127,7 @@ class OpinionTuristaControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
         http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON).content(CUERPO)
-                        .header("X-Usuario-Id", LAURA.toString()).header("X-Rol", "ADMINISTRADOR"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(LAURA.toString(), "ADMINISTRADOR")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
 

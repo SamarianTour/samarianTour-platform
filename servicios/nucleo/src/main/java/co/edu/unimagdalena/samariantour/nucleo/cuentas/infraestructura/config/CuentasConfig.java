@@ -31,6 +31,7 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.Not
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.PasswordHasherPort;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.PoliticaDatosRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.SesionRepositoryPort;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.TipoPrestadorPort;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.TokenPort;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.UsuarioRepositoryPort;
 import org.springframework.context.annotation.Bean;
@@ -64,9 +65,10 @@ public class CuentasConfig {
     }
 
     @Bean
-    EmisionSesion emisionSesion(SesionRepositoryPort sesiones, PasswordHasherPort hasher, TokenPort tokens) {
+    EmisionSesion emisionSesion(SesionRepositoryPort sesiones, PasswordHasherPort hasher, TokenPort tokens,
+                                TipoPrestadorPort tiposPrestador) {
         // El token de renovación se adivinaría con un generador predecible.
-        return new EmisionSesion(sesiones, hasher, tokens, new SecureRandom());
+        return new EmisionSesion(sesiones, hasher, tokens, tiposPrestador, new SecureRandom());
     }
 
     @Bean

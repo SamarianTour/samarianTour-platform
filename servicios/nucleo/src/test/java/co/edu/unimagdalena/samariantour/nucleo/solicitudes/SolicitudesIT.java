@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes;
 
 import co.edu.unimagdalena.samariantour.nucleo.CatalogoSimulado;
 import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -281,10 +283,10 @@ class SolicitudesIT extends IntegracionPostgresBase {
     }
 
     private static MockHttpServletRequestBuilder comoTurista(MockHttpServletRequestBuilder peticion, String id) {
-        return peticion.header("X-Usuario-Id", id).header("X-Rol", "TURISTA");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(id, "TURISTA"));
     }
 
     private static MockHttpServletRequestBuilder comoOperador(MockHttpServletRequestBuilder peticion, String id) {
-        return peticion.header("X-Usuario-Id", id).header("X-Rol", "OPERADOR_DISPONIBILIDAD");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(id, "OPERADOR_DISPONIBILIDAD"));
     }
 }

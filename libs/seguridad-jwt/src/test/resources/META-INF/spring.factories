@@ -1,0 +1,1 @@
+org.springframework.boot.env.EnvironmentPostProcessor=co.edu.unimagdalena.samariantour.seguridadjwt.ClavesDePrueba

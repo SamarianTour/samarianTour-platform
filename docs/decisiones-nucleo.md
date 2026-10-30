@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) y los prestadores (DN-33 a DN-36); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) y el token de acceso en los tres servicios (DN-37); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -13,7 +13,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-02 | Persistencia con Spring Data JPA, con el dominio separado de las entidades | 🆕 equipo, ADR-02 |
 | DN-03 | Siempre PostgreSQL: no hay perfil con los datos en memoria | 🆕 equipo |
 | DN-04 | Los cinco roles del SRS | ✅ SRS, roles de usuario |
-| DN-05 | Identidad provisional por headers y autorización por prefijo de ruta, como el catálogo | ✅ DC-01, DC-13, DC-15 |
+| DN-05 | Autorización por prefijo de ruta, como el catálogo; la identidad por headers la reemplazó DN-37 | ✅ DC-01, DC-13, DC-15 |
 | DN-06 | Bandeja de salida hacia el catálogo | ✅ documento de diseño, DC-04 |
 | DN-07 | Estructura del servicio y despliegue en el piloto | ✅ diagrama de paquetes, diagrama de despliegue |
 | DN-08 | Moderación de ofertas y opiniones: el núcleo decide y avisa al catálogo | ✅ RF-79, RF-80, DC-38, DC-44 |
@@ -45,6 +45,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-34 | Cuenta de cobro con historial, cifrada y auditada | ✅ RF-74, RF-75, RNF-08 · 🆕 [SUPUESTO] validaciones |
 | DN-35 | API de los prestadores, regla del RNT en la moderación y prestadores de la demo | ✅ diagrama de paquetes, DC-38 · reemplaza DN-15 y DN-26 |
 | DN-36 | Sincronización semanal con el RNT, retiro, restitución y cierre de las solicitudes no pagadas | ✅ RF-76 a RF-78, HU-ADM-02 · 🆕 equipo: horario, lotes y motivo |
+| DN-37 | El token de acceso en los tres servicios con Spring Security y `libs/seguridad-jwt`, el tipo del prestador en el token y el cierre de las rutas que esquivaban a Nginx | ✅ QAS-04, diagrama de paquetes · 🆕 equipo: fuente del tipo, clave por variable, sin headers |
 
 ## Persistencia
 
@@ -61,11 +62,36 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 
 **DN-04. Los cinco roles del SRS** (`compartido/seguridad/Rol`): `TURISTA`, `PRESTADOR`, `ADMINISTRADOR`, `OPERADOR_DISPONIBILIDAD` y `GESTOR_DESTINO`. El catálogo solo distingue los tres primeros. Los nombres son los que debe llevar el token.
 
-**DN-05. Identidad provisional y autorización por prefijo, como el catálogo** (DC-01, DC-13, DC-15).
-- Mientras no exista `libs/seguridad-jwt`, la identidad llega en los headers `X-Usuario-Id`, `X-Rol` y, para el prestador, `X-Tipo-Prestador`, solo con el perfil `demo` (`IdentidadPorHeaders`). El JWT la reemplaza con otra implementación de `ResolutorIdentidad`; lo demás no cambia.
-- Cada prefijo exige un rol (`SeguridadConfig`): `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**`; `/cuenta/**` admite los cinco (DN-31). Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`.
-- El núcleo ya emite el token (DN-29). En el PR de `seguridad-jwt`, la validación del token en los tres servicios pasa a Spring Security (servidor de recursos con la clave pública), como dice el diagrama de paquetes (`compartido/seguridad: Spring Security + libs/seguridad-jwt`), y reemplaza a `ExigirRol` con los mismos 401 y 403.
-- `compartido` es una copia del del catálogo (identidad, reloj, `X-Instancia`, reintento ante conflictos del ADR-05). Cada servicio se despliega por separado, así que no comparten código; la única biblioteca común será `libs/seguridad-jwt`.
+**DN-05. Autorización por prefijo, como el catálogo** (DC-01, DC-13, DC-15).
+- Cada prefijo exige un rol: `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**`; `/cuenta/**` admite los cinco (DN-31). Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`.
+- La identidad llegaba en los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador`, solo con el perfil `demo`, y la verificaba `ExigirRol`. **La reemplazó DN-37:** ahora sale del token de acceso y la verifica Spring Security, con los mismos 401 y 403.
+- `compartido` es una copia del del catálogo (identidad, reloj, `X-Instancia`, reintento ante conflictos del ADR-05). Cada servicio se despliega por separado, así que no comparten código; la única biblioteca común es `libs/seguridad-jwt` (DN-37).
+
+**DN-37. El token de acceso en los tres servicios, con Spring Security y `libs/seguridad-jwt`** (QAS-04, RN-04, diagrama de paquetes: interacción 5, `libs/seguridad-jwt` "validación RS256 y roles; la usan los 3" y `compartido/seguridad` "Spring Security + libs/seguridad-jwt").
+- **La librería** (`libs/seguridad-jwt`, un módulo Maven que usan los tres servicios):
+  - `DecodificadorToken`: valida el token localmente, con la clave pública del núcleo. Solo admite RS256 firmado con esa clave (`none`, HS256 u otra clave se rechazan), exige `iss` (`samarian-tour-nucleo`), `exp` (con 60 s de tolerancia), `sub` como UUID y `rol`, y `tipoPrestador` solo con el rol PRESTADOR;
+  - `ReclamosToken`: los nombres de los reclamos, que el núcleo usa al firmar, y su lectura;
+  - `SeguridadJwt`: la configuración común. Es un servidor de recursos sin estado: no hay sesión del servidor, ni cookie, ni CSRF, ni formulario de inicio de sesión;
+  - `RespuestasSeguridad`: 401 `NO_AUTENTICADO` con `WWW-Authenticate: Bearer` (RFC 6750) y 403 `ACCESO_DENEGADO`, en ProblemDetail como los demás errores. El detalle no dice por qué se rechazó un token, para no orientar a quien intenta falsificarlo;
+  - su test-jar trae `TokensDePrueba`, que firma tokens para las pruebas de los servicios con un par de claves generado al arrancar (no hay claves en el repositorio), y `ClavesDePrueba`, que entrega esas claves a cada contexto de Spring de las pruebas.
+- **En cada servicio**, `compartido/config/SeguridadConfig` (en la recomendación, `compartido/seguridad`) aplica la configuración común y sus reglas por prefijo. Reemplaza a `ExigirRol` y a los headers del prototipo (`IdentidadPorHeaders`), que ya no identifican a nadie, ni siquiera con el perfil `demo`:
+  - núcleo: `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**` exigen su rol; `/cuenta/**` admite los cinco. Valida con la pública que sale de su propia clave privada, así que no necesita otra variable;
+  - catálogo: `/turista/**`, `/prestador/**` y `/admin/**` (DC-01, DC-13). Un token válido de un rol que el catálogo no distingue, como el del operador, recibe 403 en esas rutas y sirve en las públicas;
+  - recomendación: todas sus rutas son públicas, pero un token que llegue se valida y el cortafuegos rechaza las rutas que esquivan a Nginx (DR-22);
+  - los controladores no cambian: siguen leyendo `Identidad.de(peticion)`, que ahora sale del token.
+- **El tipo del prestador va en el token.** Es del módulo de prestadores, pero el token lo firman las cuentas, que no pueden depender de prestadores porque prestadores ya depende de ellas: sería un ciclo.
+  - Por eso `cuentas.api.FuenteTipoPrestador` declara lo que las cuentas necesitan y prestadores lo implementa (`FuenteTipoPrestadorAdapter`); las cuentas lo usan por `TipoPrestadorPort`. La dependencia sigue yendo de prestadores hacia `cuentas.api`.
+  - El tipo se lee en cada emisión. El prestador que todavía no registró su RNT no lo trae: entra a las rutas del núcleo, pero el catálogo no lo deja gestionar ofertas (403 `ACCESO_DENEGADO`). Después de registrarlo, o de cambiar de tipo, renovar la sesión trae el token nuevo.
+- **La clave pública** llega al catálogo y a la recomendación en `SEGURIDAD_JWT_CLAVE_PUBLICA`, desde `NUCLEO_JWT_CLAVE_PUBLICA` de `infra/.env`. `infra/generar-claves.sh` la calcula siempre desde la privada, así que completa un `infra/.env` de antes y nunca queda desalineada. Sin ella esos servicios no arrancan. Validar sin consultar al núcleo hace que el catálogo siga atendiendo aunque el núcleo esté caído; cambiar la clave exige reiniciar.
+- **Las rutas que esquivaban a Nginx.** Nginx comparaba la ruta sin quitar lo que sigue a un `;`, y Tomcat sí lo quita: `/api/catalogo/internal;x/avisos` llegaba al catálogo como `/internal/avisos`. Así, cualquiera podía enviarle avisos falsos (aprobar ofertas, retirar o restituir prestadores, borrar opiniones) y leer la salud del núcleo. Ahora hay dos barreras:
+  - Nginx responde 400 a toda ruta con `;` o `%3B` antes del `?`, y bloquea `internal` y `actuator` de los tres servicios con una sola regla sobre la ruta ya normalizada. También bloquea `/api/recomendacion/internal/`, que antes no estaba;
+  - el cortafuegos de Spring Security, activo en los tres servicios, rechaza con 400 las rutas con `;`, `%2F`, `%25`, `..` o `//`;
+  - `NginxRutasInternasIT` levanta Nginx con `infra/nginx/nginx.conf` y un eco detrás, y comprueba que ninguna de esas rutas llega al servicio; con la configuración anterior fallan 7 de sus casos.
+- **Pendiente:**
+  - **Autenticación entre servicios.** `/internal/**` sigue protegida solo por la red de Docker. Ya no se alcanza desde afuera, pero un contenedor comprometido dentro de esa red podría llamarla. La solución prevista es un token propio de cada servicio que llama, firmado con su clave y con audiencia (`aud`) y vigencia corta, que el que recibe exige en `/internal/**`. Nunca se reenvía el token del usuario: la bandeja corre sin usuario, y una ruta interna que aceptara su token quedaría abierta a cualquier turista.
+  - **TLS.** El token viaja en `Authorization` y el diseño pone HTTPS en Nginx (puerto 443); el `docker-compose` del piloto sirve HTTP en el 8080.
+  - **El frontend actual** enviaba los headers desde el selector "Usuario demo", así que sus páginas del prestador y las opiniones del turista responden 401 hasta el frontend nuevo, que inicia sesión.
+- **Limitación aceptada, no pendiente:** cerrar la sesión no invalida el token de acceso ya emitido, que vence solo en 15 minutos como máximo (DN-29). Revocarlo al instante obligaría al catálogo y a la recomendación a consultar al núcleo en cada petición, contra la validación local del diseño, y el catálogo dejaría de atender si el núcleo cae.
 
 ## Bandeja de salida
 
@@ -391,7 +417,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
 - **Token de acceso** (`JwtRs256Adapter`):
   - es un JWT RS256 de **15 minutos**, firmado con `NimbusJwtEncoder` de Spring Security;
   - lleva `iss` (`samarian-tour-nucleo`), `sub` (el usuario), `rol`, `sid` (la sesión), `iat`, `exp` y, en la cabecera, `kid` (la huella de la clave);
-  - los demás servicios lo validarán con la clave pública, sin consultar al núcleo (PR de `seguridad-jwt`);
+  - los tres servicios lo validan con la clave pública, sin consultar al núcleo (DN-37);
   - la clave privada llega en `NUCLEO_JWT_CLAVE_PRIVADA`, en PKCS#8 y Base64, generada por `infra/generar-claves.sh`. Las dos réplicas usan la misma.
 - **Token de renovación:**
   - es opaco, `<sesión>.<secreto>`, y de la sesión solo se guarda el hash del secreto;
@@ -406,9 +432,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - con un correo inexistente igual se compara contra un hash ficticio, para que el tiempo de respuesta no lo delate;
   - una cuenta desactivada solo se informa después de verificar la contraseña (403 `CUENTA_DESACTIVADA`).
 - **Cierre** (RF-06): revoca la sesión; el token de acceso ya emitido vence solo, en 15 minutos como máximo. Con un token que no sirve también responde 204.
-- **Pendiente para el PR de `seguridad-jwt`:**
-  - el token todavía no lleva el tipo de prestador, que el catálogo necesita y que es del módulo de prestadores;
-  - mientras tanto, las rutas protegidas siguen leyendo los headers de la demo (DN-05).
+- **El tipo de prestador** va en el token desde DN-37, y las rutas protegidas ya no leen los headers de la demo.
 
 **DN-30. Restablecer la contraseña por correo, con Mailpit en el piloto** (RF-07, RF-08, decisión del equipo).
 - **`POST /cuentas/contrasena/restablecimiento` `{correo}`:**
@@ -529,7 +553,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
 **DN-07. Estructura del servicio y despliegue en el piloto.**
 - **Paquetes:** `co.edu.unimagdalena.samariantour.nucleo`, con un paquete por módulo (`cuentas`, `solicitudes`, `pagos`, `prestadores`, `administracion`, `indicadores` y `bandeja`) y `compartido`, cada módulo hexagonal como en el catálogo. Cada `package-info.java` dice qué requisitos le tocan. Las 9 primeras reglas de `ArquitecturaTest` son las del catálogo, con JPA, Hibernate y PostgreSQL en lugar de MongoDB; la 10 y la 11 cuidan el `api` de cada módulo (DN-17), y la 12, que pagos use las solicitudes solo por su `api` y no dependa de la administración (DN-18).
 - **API:** prefijo `/api/nucleo` y errores en RFC 7807. El contrato es `contratos/nucleo.openapi.yaml`; `ContratoNucleoIT` falla si una ruta está en un lado y no en el otro, o si un esquema de respuesta no tiene los mismos campos que su DTO. Un cuerpo que no es JSON válido o un parámetro con el tipo equivocado responde 400 `DATO_INVALIDO` en cualquier módulo (`ManejadorPeticionIlegible`).
-- **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados), Mailpit (DN-30) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. El núcleo exige `NUCLEO_CIFRADO_CLAVE` y `NUCLEO_JWT_CLAVE_PRIVADA` en `infra/.env` (`bash infra/generar-claves.sh`); sin ellas Compose no arranca. Nginx enruta `/api/nucleo/` y bloquea `/api/nucleo/internal/` y `/api/nucleo/actuator/`. El CI construye también la imagen del núcleo.
+- **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados), Mailpit (DN-30) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. El núcleo exige `NUCLEO_CIFRADO_CLAVE` y `NUCLEO_JWT_CLAVE_PRIVADA` en `infra/.env`, y el catálogo y la recomendación, `NUCLEO_JWT_CLAVE_PUBLICA` (`bash infra/generar-claves.sh`); sin ellas Compose no arranca. Nginx enruta `/api/nucleo/`, bloquea `internal` y `actuator` de los tres servicios y rechaza las rutas con `;` (DN-37). El CI construye también la imagen del núcleo.
 - **Métricas:** como el catálogo (DC-48), `/actuator/prometheus` con los umbrales de latencia de cada ruta, solo desde la red de Docker.
 
 ## Cambios pendientes en los documentos de diseño
@@ -577,3 +601,5 @@ Con esto quedan hechos los dos pendientes de DN-17.
    - `CuentaCobro` tiene `AHORROS` y `CORRIENTE` en lugar de `BANCARIA`, la entidad, el titular y su vigencia (DN-34);
    - `SolicitudDisponibilidad` agrega `cerrarPorRntInactivo` (DN-36).
 18. **Diagrama entidad-relación:** agregar `prestadores`, `cuentas_cobro` y `auditoria_prestadores` (V10), el índice de V11 y `rnt_simulado_bajas` (V12).
+19. **Diagrama de paquetes, `libs/seguridad-jwt` y `compartido/seguridad`:** la librería tiene `DecodificadorToken`, `ReclamosToken`, `SeguridadJwt`, `RespuestasSeguridad`, `AutenticacionToken` y `ClavesRsa`, y su test-jar, `TokensDePrueba`; cada `compartido/seguridad` tiene `Identidad` y `SeguridadConfig` (DN-37). El módulo de cuentas agrega `TipoPrestadorPort` y `cuentas.api.FuenteTipoPrestador`, que implementa prestadores (`FuenteTipoPrestadorAdapter`).
+20. **Documento de diseño y diagrama de despliegue:** la autenticación entre servicios y el TLS de Nginx siguen pendientes (DN-37); la validación del token es local en los tres servicios, como dice la interacción 5.

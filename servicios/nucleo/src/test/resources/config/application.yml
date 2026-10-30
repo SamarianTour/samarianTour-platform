@@ -11,3 +11,7 @@ nucleo:
       cron: "-"
     idempotencia:
       cron: "-"
+  # La clave privada que genera TokensDePrueba (libs/seguridad-jwt, test-jar): el núcleo firma y valida con la misma
+  # pareja que las pruebas usan para firmar los tokens (DN-37).
+  jwt:
+    clave-privada: ${seguridad.jwt.pruebas.clave-privada}

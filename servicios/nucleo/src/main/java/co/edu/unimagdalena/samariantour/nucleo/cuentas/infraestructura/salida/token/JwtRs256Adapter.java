@@ -4,6 +4,8 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Sesion;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.TokenAcceso;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Usuario;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.TokenPort;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ClavesRsa;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ReclamosToken;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -17,22 +19,19 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Component;
 
-import java.security.KeyFactory;
-import java.security.GeneralSecurityException;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.UUID;
 
 /**
  * Firma el token de acceso con la clave privada RSA del núcleo (RF-04, DN-29), con {@link NimbusJwtEncoder} de Spring
- * Security. Los demás servicios lo validarán con la clave pública. El token lleva:
+ * Security. Los tres servicios lo validan con la clave pública ({@code libs/seguridad-jwt}, DN-37). El token lleva,
+ * con los nombres de {@link ReclamosToken}:
  * <ul>
  *   <li>{@code iss}: el emisor, {@code nucleo.jwt.emisor};</li>
  *   <li>{@code sub}: el identificador del usuario, y {@code rol}: uno de los cinco (DN-04);</li>
+ *   <li>{@code tipoPrestador}: solo el del prestador que ya registró su RNT (DN-37);</li>
  *   <li>{@code sid}: la sesión, para poder cerrarla (RF-06);</li>
  *   <li>{@code iat} y {@code exp}: 15 minutos de vida;</li>
  *   <li>en la cabecera, {@code kid}: la huella de la clave, para cambiarla sin invalidar los tokens vigentes.</li>
@@ -52,9 +51,11 @@ public class JwtRs256Adapter implements TokenPort {
      */
     public JwtRs256Adapter(@Value("${nucleo.jwt.clave-privada:}") String clavePrivada,
                            @Value("${nucleo.jwt.emisor}") String emisor) {
-        RSAKey clave = claveRsa(clavePrivada);
+        RSAPrivateCrtKey privada = ClavesRsa.privada(clavePrivada);
+        this.clavePublica = ClavesRsa.publicaDe(privada);
+        RSAKey clave;
         try {
-            this.clavePublica = clave.toRSAPublicKey();
+            clave = new RSAKey.Builder(clavePublica).privateKey(privada).keyIDFromThumbprint().build();
         } catch (JOSEException e) {
             throw new IllegalArgumentException("La clave del token no es una clave RSA válida", e);
         }
@@ -64,40 +65,25 @@ public class JwtRs256Adapter implements TokenPort {
     }
 
     @Override
-    public TokenAcceso emitirAcceso(Usuario usuario, UUID sesionId, Instant ahora) {
+    public TokenAcceso emitirAcceso(Usuario usuario, String tipoPrestador, UUID sesionId, Instant ahora) {
         Instant expira = ahora.plus(Sesion.VIGENCIA_ACCESO);
-        JwtClaimsSet datos = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder datos = JwtClaimsSet.builder()
                 .issuer(emisor)
                 .subject(usuario.id().toString())
-                .claim("rol", usuario.rol().name())
-                .claim("sid", sesionId.toString())
+                .claim(ReclamosToken.ROL, usuario.rol().name())
+                .claim(ReclamosToken.SESION, sesionId.toString())
                 .issuedAt(ahora)
-                .expiresAt(expira)
-                .build();
+                .expiresAt(expira);
+        if (tipoPrestador != null) {
+            datos.claim(ReclamosToken.TIPO_PRESTADOR, tipoPrestador);
+        }
         JwsHeader cabecera = JwsHeader.with(SignatureAlgorithm.RS256).keyId(idClave).build();
-        return new TokenAcceso(firmador.encode(JwtEncoderParameters.from(cabecera, datos)).getTokenValue(), expira);
+        return new TokenAcceso(firmador.encode(JwtEncoderParameters.from(cabecera, datos.build())).getTokenValue(),
+                expira);
     }
 
-    /** La clave pública que valida los tokens; la usarán los demás servicios (PR de seguridad-jwt). */
+    /** La clave pública que valida los tokens. */
     public RSAPublicKey clavePublica() {
         return clavePublica;
-    }
-
-    private static RSAKey claveRsa(String texto) {
-        if (texto == null || texto.isBlank()) {
-            throw new IllegalArgumentException("Falta la clave privada del token (NUCLEO_JWT_CLAVE_PRIVADA); se genera "
-                    + "con infra/generar-claves.sh");
-        }
-        String base64 = texto.replaceAll("-----[A-Z ]+-----", "").replaceAll("\\s", "");
-        try {
-            KeyFactory fabrica = KeyFactory.getInstance("RSA");
-            RSAPrivateCrtKey privada = (RSAPrivateCrtKey) fabrica.generatePrivate(
-                    new PKCS8EncodedKeySpec(Base64.getDecoder().decode(base64)));
-            RSAPublicKey publica = (RSAPublicKey) fabrica.generatePublic(
-                    new RSAPublicKeySpec(privada.getModulus(), privada.getPublicExponent()));
-            return new RSAKey.Builder(publica).privateKey(privada).keyIDFromThumbprint().build();
-        } catch (GeneralSecurityException | IllegalArgumentException | ClassCastException | JOSEException e) {
-            throw new IllegalArgumentException("La clave del token no es una clave privada RSA en PKCS#8", e);
-        }
     }
 }

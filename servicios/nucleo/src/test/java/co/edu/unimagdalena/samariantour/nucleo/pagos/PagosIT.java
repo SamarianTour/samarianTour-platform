@@ -8,6 +8,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.NotificacionRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.SolicitudRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.TransaccionPort;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -387,8 +389,10 @@ class PagosIT extends IntegracionPostgresBase {
         http.perform(comoAdministrador(put("/admin/comision")).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"porcentaje\": 150}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
-        http.perform(get("/admin/comision").header("X-Usuario-Id", UUID.randomUUID())
-                .header("X-Rol", "OPERADOR_DISPONIBILIDAD")).andExpect(status().isForbidden());
+        http.perform(get("/admin/comision")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearer(UUID.randomUUID(), "OPERADOR_DISPONIBILIDAD")))
+                .andExpect(status().isForbidden());
         webhook(PagosDePrueba.evento("T-2", referenciaDespues, PRECIO_CENTAVOS, "APPROVED", json));
         eventos.procesarPendientes();
 
@@ -449,10 +453,10 @@ class PagosIT extends IntegracionPostgresBase {
     }
 
     private static MockHttpServletRequestBuilder comoTurista(MockHttpServletRequestBuilder peticion, UUID turista) {
-        return peticion.header("X-Usuario-Id", turista).header("X-Rol", "TURISTA");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA"));
     }
 
     private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", ADMINISTRADOR).header("X-Rol", "ADMINISTRADOR");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR"));
     }
 }

@@ -1,4 +1,4 @@
-# El contexto de construcción es la raíz del repositorio (necesita el pom padre).
+# El contexto de construcción es la raíz del repositorio (necesita el pom padre y libs/seguridad-jwt).
 **/target/
 .git/
 .github/
@@ -6,7 +6,6 @@
 .vscode/
 docs/
 infra/
-libs/
 contratos/
 frontend/
 **/*.md

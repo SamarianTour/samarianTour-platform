@@ -1,15 +1,15 @@
 package co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.ComisionConfigurada;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.ComisionInvalidaException;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.PagoTardioRegistrado;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.PagosAdministracionApi;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -31,7 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** La comisión y los pagos tardíos del administrador, por {@code pagos.api} (RF-50, RF-82, RF-83, DN-23). */
 @WebMvcTest(PagosAdminController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class PagosAdminControllerTest {
 
@@ -51,7 +50,8 @@ class PagosAdminControllerTest {
         when(pagos.historialComision()).thenReturn(List.of(new ComisionConfigurada(new BigDecimal("4.00"), ENERO,
                 null)));
 
-        http.perform(get("/admin/comision").header("X-Usuario-Id", ADMINISTRADOR).header("X-Rol", "ADMINISTRADOR"))
+        http.perform(get("/admin/comision")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.porcentaje").value(4.0))
                 .andExpect(jsonPath("$.vigenteDesde").value("2026-01-01T00:00:00Z"))
@@ -65,7 +65,8 @@ class PagosAdminControllerTest {
                 new ComisionConfigurada(new BigDecimal("5.50"), HOY, ADMINISTRADOR),
                 new ComisionConfigurada(new BigDecimal("4.00"), ENERO, null)));
 
-        http.perform(put("/admin/comision").header("X-Usuario-Id", ADMINISTRADOR).header("X-Rol", "ADMINISTRADOR")
+        http.perform(put("/admin/comision")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"porcentaje\": 5.5}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.porcentaje").value(5.5))
@@ -74,7 +75,8 @@ class PagosAdminControllerTest {
 
         when(pagos.actualizarComision(any(), any()))
                 .thenThrow(new ComisionInvalidaException("porcentaje: debe estar entre 0 y menos de 100"));
-        http.perform(put("/admin/comision").header("X-Usuario-Id", ADMINISTRADOR).header("X-Rol", "ADMINISTRADOR")
+        http.perform(put("/admin/comision")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"porcentaje\": 150}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"))
@@ -88,8 +90,8 @@ class PagosAdminControllerTest {
         when(pagos.pagosTardios()).thenReturn(List.of(new PagoTardioRegistrado(UUID.randomUUID(), solicitud,
                 "ST-1", "T-1", 300_000, HOY, true)));
 
-        http.perform(get("/admin/pagos-tardios").header("X-Usuario-Id", ADMINISTRADOR)
-                        .header("X-Rol", "ADMINISTRADOR"))
+        http.perform(get("/admin/pagos-tardios")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].solicitudId").value(solicitud.toString()))
                 .andExpect(jsonPath("$[0].monto").value(300_000))
@@ -99,8 +101,10 @@ class PagosAdminControllerTest {
     @Test
     @DisplayName("solo el administrador: el operador no ve la comisión (SRS, perfil del operador)")
     void soloElAdministrador() throws Exception {
-        http.perform(get("/admin/comision").header("X-Usuario-Id", UUID.randomUUID())
-                .header("X-Rol", "OPERADOR_DISPONIBILIDAD")).andExpect(status().isForbidden());
+        http.perform(get("/admin/comision")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearer(UUID.randomUUID(), "OPERADOR_DISPONIBILIDAD")))
+                .andExpect(status().isForbidden());
         verifyNoInteractions(pagos);
     }
 }

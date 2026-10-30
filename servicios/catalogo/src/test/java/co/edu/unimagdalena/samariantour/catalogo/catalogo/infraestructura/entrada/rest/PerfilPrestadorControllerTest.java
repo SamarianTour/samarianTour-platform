@@ -6,13 +6,13 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarPerfilPublicoUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.GuardarPerfilCommand;
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -38,7 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PerfilPrestadorController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class PerfilPrestadorControllerTest {
 
@@ -143,7 +142,7 @@ class PerfilPrestadorControllerTest {
         http.perform(get("/prestador/perfil"))
                 .andExpect(status().isUnauthorized());
         http.perform(get("/prestador/perfil")
-                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "TURISTA"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(PRESTADOR.toString(), "TURISTA")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
 
@@ -155,7 +154,8 @@ class PerfilPrestadorControllerTest {
     }
 
     private static MockHttpServletRequestBuilder comoPrestador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
-                .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearerPrestador(PRESTADOR.toString(), "GUIA_INDEPENDIENTE"));
     }
 }

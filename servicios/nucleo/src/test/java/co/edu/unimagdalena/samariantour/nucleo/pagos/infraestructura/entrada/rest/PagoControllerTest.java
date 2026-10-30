@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.ClaveIdempotenciaReutilizadaException;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.EventoNoAutenticoException;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.IntentosAgotadosException;
@@ -14,12 +13,14 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.SesionCobro;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.SesionGenerada;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.GenerarSesionCobroUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.RecibirEventoPasarelaUseCase;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -44,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Las rutas de pagos del turista y el webhook (RF-46, RF-50, ADR-04, DN-19, DN-21). */
 @WebMvcTest({PagoController.class, WebhookPasarelaController.class})
-@Import({IdentidadPorHeaders.class, RespuestasIdempotentesPagos.class})
+@Import(RespuestasIdempotentesPagos.class)
 @ActiveProfiles("demo")
 class PagoControllerTest {
 
@@ -72,8 +73,9 @@ class PagoControllerTest {
                 llamada.<Function<SesionGenerada, RespuestaGuardada>>getArgument(3)
                         .apply(new SesionGenerada(intento, sesion)), false));
 
-        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD).header("X-Usuario-Id", TURISTA)
-                        .header("X-Rol", "TURISTA").header("Idempotency-Key", CLAVE))
+        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
+                        .header("Idempotency-Key", CLAVE))
                 .andExpect(status().isCreated())
                 .andExpect(header().doesNotExist("Idempotency-Replayed"))
                 .andExpect(jsonPath("$.intentoId").value(intento.id().toString()))
@@ -96,13 +98,15 @@ class PagoControllerTest {
         when(cobros.generar(any(), any(), any(), any())).thenReturn(new ResultadoIdempotente(
                 new RespuestaGuardada(201, "{\"intentoId\":\"original\"}"), true));
 
-        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD).header("X-Usuario-Id", TURISTA)
-                        .header("X-Rol", "TURISTA").header("Idempotency-Key", CLAVE))
+        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
+                        .header("Idempotency-Key", CLAVE))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Idempotency-Replayed", "true"))
                 .andExpect(jsonPath("$.intentoId").value("original"));
-        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD).header("X-Usuario-Id", TURISTA)
-                        .header("X-Rol", "TURISTA").header("Idempotency-Key", "no-es-uuid"))
+        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
+                        .header("Idempotency-Key", "no-es-uuid"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
     }
@@ -119,8 +123,9 @@ class PagoControllerTest {
         for (String[] esperado : List.of(new String[]{"404", "SOLICITUD_NO_ENCONTRADA"},
                 new String[]{"409", "INTENTOS_AGOTADOS"}, new String[]{"409", "PLAZO_VENCIDO"},
                 new String[]{"422", "CLAVE_IDEMPOTENCIA_REUTILIZADA"})) {
-            http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD).header("X-Usuario-Id", TURISTA)
-                            .header("X-Rol", "TURISTA").header("Idempotency-Key", CLAVE))
+            http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
+                            .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
+                            .header("Idempotency-Key", CLAVE))
                     .andExpect(status().is(Integer.parseInt(esperado[0])))
                     .andExpect(jsonPath("$.codigo").value(esperado[1]));
         }
@@ -129,8 +134,10 @@ class PagoControllerTest {
     @Test
     @DisplayName("solo el turista: otro rol 403 y sin identidad 401, sin llegar al caso de uso")
     void soloElTurista() throws Exception {
-        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD).header("X-Usuario-Id", UUID.randomUUID())
-                .header("X-Rol", "OPERADOR_DISPONIBILIDAD").header("Idempotency-Key", CLAVE))
+        http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearer(UUID.randomUUID(), "OPERADOR_DISPONIBILIDAD"))
+                        .header("Idempotency-Key", CLAVE))
                 .andExpect(status().isForbidden());
         http.perform(get("/turista/solicitudes/{id}/pagos", SOLICITUD)).andExpect(status().isUnauthorized());
         verifyNoInteractions(cobros);

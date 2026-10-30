@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.CatalogoNoDisponibleException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.ClaveIdempotenciaReutilizadaException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.PrestadorSinOperadorException;
@@ -17,6 +16,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ResponderCondicionesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.comando.EnviarSolicitudCommand;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.comando.ResponderCondicionesCommand;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +26,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -56,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Las rutas del turista (RF-30 a RF-33, RF-42, RF-43) y su idempotencia (DN-12). */
 @WebMvcTest(SolicitudTuristaController.class)
 @ExtendWith(OutputCaptureExtension.class)
-@Import({IdentidadPorHeaders.class, RespuestasIdempotentes.class})
+@Import(RespuestasIdempotentes.class)
 @ActiveProfiles("demo")
 class SolicitudTuristaControllerTest {
 
@@ -264,8 +265,8 @@ class SolicitudTuristaControllerTest {
     @Test
     @DisplayName("solo el rol TURISTA: un operador recibe 403 y sin identidad, 401")
     void roles() throws Exception {
-        http.perform(get("/turista/solicitudes").header("X-Usuario-Id", UUID.randomUUID().toString())
-                        .header("X-Rol", "OPERADOR_DISPONIBILIDAD"))
+        http.perform(get("/turista/solicitudes").header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearer(UUID.randomUUID(), "OPERADOR_DISPONIBILIDAD")))
                 .andExpect(status().isForbidden());
         http.perform(get("/turista/solicitudes")).andExpect(status().isUnauthorized());
     }
@@ -278,6 +279,6 @@ class SolicitudTuristaControllerTest {
     }
 
     private static MockHttpServletRequestBuilder comoTurista(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", TURISTA.toString()).header("X-Rol", "TURISTA");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA.toString(), "TURISTA"));
     }
 }

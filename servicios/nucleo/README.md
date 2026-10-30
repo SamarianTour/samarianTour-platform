@@ -2,15 +2,15 @@
 
 Núcleo transaccional sobre PostgreSQL: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e indicadores. Las decisiones están en [docs/decisiones-nucleo.md](../../docs/decisiones-nucleo.md) (DN-01 en adelante).
 
-Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) y los prestadores con la sincronización del RNT (DN-33 a DN-36). Los indicadores están vacíos, con un `package-info.java` que dice qué requisitos le tocan.
+Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores con la sincronización del RNT (DN-33 a DN-36) y la validación del token de acceso con Spring Security y `libs/seguridad-jwt` (DN-37). Los indicadores están vacíos, con un `package-info.java` que dice qué requisitos le tocan.
 
 ## Estructura
 
 ```
 co.edu.unimagdalena.samariantour.nucleo
 ├── NucleoApplication
-├── compartido/          identidad y roles (DN-04, DN-05), reloj, X-Instancia, reintento del ADR-05, cliente del catálogo,
-│                        cifrado de los datos personales (DN-28)
+├── compartido/          identidad del token y reglas por prefijo (DN-04, DN-05, DN-37), reloj, X-Instancia, reintento
+│                        del ADR-05, cliente del catálogo, cifrado de los datos personales (DN-28)
 ├── cuentas/             módulo 1 (RF-01 a RF-13): registro, sesión con JWT, restablecimiento, datos personales,
 │                        supresión y su api para los demás módulos
 ├── solicitudes/         módulo 4 (RF-30 a RF-45): ciclo de vida, ventanas, idempotencia, notificaciones y su api para pagos
@@ -31,7 +31,22 @@ Cada módulo es hexagonal como en el catálogo (`dominio`, `aplicacion`, `infrae
 mvn -pl servicios/nucleo -am verify
 ```
 
-Las pruebas de integración (`*IT`) usan un PostgreSQL de Testcontainers (y `RestablecimientoIT`, un Mailpit), así que necesitan Docker. Generan sus propias claves de cifrado y del token. En Windows hay que correrlas desde PowerShell: desde Git Bash, Testcontainers no encuentra Docker.
+Las pruebas de integración (`*IT`) usan un PostgreSQL de Testcontainers (y `RestablecimientoIT`, un Mailpit), así que necesitan Docker. Generan sus propias claves de cifrado; los tokens los firma `TokensDePrueba`, del test-jar de `libs/seguridad-jwt`, con un par de claves que se crea al arrancar. En Windows hay que correrlas desde PowerShell: desde Git Bash, Testcontainers no encuentra Docker.
+
+## Seguridad
+
+Las rutas `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**` exigen el token de acceso con su rol, y `/cuenta/**` el de cualquiera (DN-05, DN-37). Las reglas están en `compartido/config/SeguridadConfig`, con Spring Security y `libs/seguridad-jwt`; los controladores leen `Identidad.de(peticion)`. Sin token válido, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`.
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/nucleo/cuentas/sesion -H "Content-Type: application/json" \
+  -d '{"correo":"laura.gomez@demo.samariantour.co","contrasena":"Demo1234"}' | sed -E 's/.*"tokenAcceso":"([^"]+)".*/\1/')
+curl -s http://localhost:8080/api/nucleo/cuenta -H "Authorization: Bearer $TOKEN"
+```
+
+- **El núcleo valida sus propios tokens** con la clave pública que sale de `NUCLEO_JWT_CLAVE_PRIVADA`; el catálogo y la recomendación, con `NUCLEO_JWT_CLAVE_PUBLICA`.
+- **El tipo del prestador** lo aporta el módulo de prestadores por `cuentas.api.FuenteTipoPrestador`, sin que las cuentas dependan de él. Tras registrar el RNT o cambiar de tipo, renovar la sesión trae el token con el tipo.
+- **Pruebas:** `AutorizacionPorRutaTest` es la batería de acceso cruzado de QAS-04 (cada rol en cada prefijo, tokens vencidos, de otra clave o de otro emisor, rutas con `;`). Las pruebas firman los tokens con `TokensDePrueba.bearer(usuario, rol)`.
+- **Pendiente:** la autenticación entre servicios en `/internal/**` y el TLS de Nginx (DN-37).
 
 ## Enviar un aviso al catálogo
 
@@ -66,11 +81,11 @@ El servicio de aplicación llama al puerto dentro de su método `@Transactional`
 
 ## Solicitudes de disponibilidad
 
-El turista envía la solicitud con su `Idempotency-Key`, el operador la atiende y el turista confirma (DN-09 a DN-16). El recorrido completo con `curl` está en el README principal ("12. Solicitudes de disponibilidad"):
+El turista envía la solicitud con su `Idempotency-Key`, el operador la atiende y el turista confirma (DN-09 a DN-16). El recorrido completo con `curl` está en el README principal ("12. Solicitudes de disponibilidad"). `$TOKEN` es el token de acceso de la turista (ver "Seguridad"):
 
 ```bash
 curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes \
-  -H "X-Usuario-Id: 90000000-0000-0000-0000-000000000001" -H "X-Rol: TURISTA" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Idempotency-Key: 11111111-aaaa-4bbb-8ccc-000000000001" -H "Content-Type: application/json" \
   -d "{\"ofertaId\":\"b00000000000000000000001\",\"fechaInicio\":\"$(date -d '+3 days' +%F)\",\"horaSalida\":\"07:00\",\"personas\":2}"
 ```
@@ -87,7 +102,7 @@ curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes \
 El turista abre el pago de una solicitud confirmada, paga en la pasarela y el resultado llega por el webhook (DN-18 a DN-27). El recorrido completo, con los rechazos, el pago tardío y la dispersión fallida, está en el README principal ("13. Pagos"):
 
 ```bash
-curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes/<id>/pago   -H "X-Usuario-Id: 90000000-0000-0000-0000-000000000001" -H "X-Rol: TURISTA"   -H "Idempotency-Key: 33333333-aaaa-4bbb-8ccc-000000000001"
+curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes/<id>/pago   -H "Authorization: Bearer $TOKEN"   -H "Idempotency-Key: 33333333-aaaa-4bbb-8ccc-000000000001"
 # 201 {"numero":1,"estado":"EN_CURSO","montoCentavos":30000000,"checkout":{"pasarela":"SIMULADA","url":"..."},...}
 ```
 
@@ -102,9 +117,9 @@ curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes/<id>/pago  
 
 Registro, sesión, restablecimiento de la contraseña, datos personales y supresión (DN-28 a DN-32). El recorrido completo con `curl` está en el README principal ("14. Cuentas"). Lo esencial:
 
-- **Claves:** el núcleo no arranca sin `NUCLEO_CIFRADO_CLAVE` (cifra el nombre y el WhatsApp) ni `NUCLEO_JWT_CLAVE_PRIVADA` (firma el token). `bash infra/generar-claves.sh` las agrega a `infra/.env` solo si faltan. **No cambies la clave de cifrado de una base con datos**: lo cifrado con la anterior deja de leerse.
+- **Claves:** el núcleo no arranca sin `NUCLEO_CIFRADO_CLAVE` (cifra el nombre y el WhatsApp) ni `NUCLEO_JWT_CLAVE_PRIVADA` (firma el token). `bash infra/generar-claves.sh` las agrega a `infra/.env` solo si faltan, y deriva de la privada la pública que usan el catálogo y la recomendación (DN-37). **No cambies la clave de cifrado de una base con datos**: lo cifrado con la anterior deja de leerse.
 - **Cuentas de la demo:** las 13 de `PrecargaCuentasDemo`, con la clave `Demo1234` (por ejemplo `laura@demo.samariantour.co`); el administrador de V9 es `admin@samariantour.co` / `SamarianAdmin2026`.
-- **Sesión:** `POST /cuentas/sesion` da un JWT RS256 de 15 min y un token de renovación de 7 días que rota en cada uso (DN-29). Las rutas protegidas todavía leen los headers de la demo; el token lo validarán los servicios en el PR de `seguridad-jwt`.
+- **Sesión:** `POST /cuentas/sesion` da un JWT RS256 de 15 min y un token de renovación de 7 días que rota en cada uso (DN-29). El token del prestador lleva su tipo cuando ya registró el RNT (DN-37).
 - **WhatsApp y correo simulados:** el código de verificación sale en el log (`docker compose -f infra/docker-compose.yml logs nucleo | grep CODIGO_VERIFICACION`) y el correo de restablecimiento llega a Mailpit, en `http://localhost:8025`.
 - **Para otros módulos:** `cuentas.api.CuentasApiInterna`. Las cuentas no dependen de ningún módulo.
 
@@ -121,10 +136,10 @@ Registro con el RNT, tipo, WhatsApp verificado, cuenta de cobro y sincronizació
 
 ## Moderar
 
-Con el piloto levantado, el administrador decide sobre la versión que le muestra la lista de moderación del catálogo:
+Con el piloto levantado, el administrador decide sobre la versión que le muestra la lista de moderación del catálogo. `$TOKEN_ADMIN` es su token, que se pide como en "Seguridad" con `admin@samariantour.co` y `SamarianAdmin2026`:
 
 ```bash
-curl -s -X POST http://localhost:8080/api/nucleo/admin/moderacion/ofertas/b00000000000000000000017/decision   -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR"   -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
+curl -s -X POST http://localhost:8080/api/nucleo/admin/moderacion/ofertas/b00000000000000000000017/decision   -H "Authorization: Bearer $TOKEN_ADMIN"   -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
 ```
 
 La decisión queda en `decisiones_moderacion` y su aviso, en la bandeja; en los siguientes 15 s la oferta aparece en el catálogo. Los errores (404, 409, 503) y las decisiones repetidas están en DN-08 y en `contratos/nucleo.openapi.yaml`. Las notificaciones de rechazo, por ahora, solo salen en el log: `docker compose -f infra/docker-compose.yml logs nucleo | grep "Notificación simulada"`.

@@ -40,9 +40,14 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
-            <!-- Solo el hash BCrypt de las contraseñas (RNF-06, DN-28); la autorización sigue siendo la propia (DN-05) -->
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-crypto</artifactId>
+            <!-- Autorización por prefijo de ruta con el token de acceso (DN-37); también el hash BCrypt (DN-28) -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Validación del token RS256 y sus roles, común a los tres servicios (DN-37) -->
+            <groupId>co.edu.unimagdalena.samariantour</groupId>
+            <artifactId>seguridad-jwt</artifactId>
         </dependency>
         <dependency>
             <!-- Correo del restablecimiento de la contraseña por SMTP; en el piloto, Mailpit (RF-07, DN-30) -->
@@ -87,6 +92,13 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- TokensDePrueba: firma tokens para las pruebas -->
+            <groupId>co.edu.unimagdalena.samariantour</groupId>
+            <artifactId>seguridad-jwt</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -79,7 +79,7 @@ Una oferta lleva de 1 a 6 fotos y la primera es la portada (DC-47).
 
 No hay inicio de sesión. La cabecera tiene el selector **Usuario demo** con los dos turistas (Laura y Andrés) y los cinco prestadores de los datos de demostración; el elegido se guarda en `localStorage`. Está en la cabecera y no en el panel del prestador porque el turista lo necesita en la ficha y en "Mis opiniones".
 
-Un interceptor agrega la identidad solo a las rutas que la exigen y solo si el usuario tiene ese rol: `X-Usuario-Id`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador` a `/api/catalogo/prestador/**`, y `X-Usuario-Id` y `X-Rol: TURISTA` a `/api/catalogo/turista/**`. Con un turista elegido, el panel del prestador pide elegir un prestador; con un prestador elegido, la ficha pide elegir un turista para opinar. Cuando exista el JWT del núcleo, se reemplazan `core/identidad` y el selector.
+Un interceptor agrega la identidad solo a las rutas que la exigen y solo si el usuario tiene ese rol: `X-Usuario-Id`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador` a `/api/catalogo/prestador/**`, y `X-Usuario-Id` y `X-Rol: TURISTA` a `/api/catalogo/turista/**`. Con un turista elegido, el panel del prestador pide elegir un prestador; con un prestador elegido, la ficha pide elegir un turista para opinar. **Desde DN-37 el backend ya no acepta esos headers:** las rutas del prestador y del turista exigen el token de acceso del núcleo (`POST /api/nucleo/cuentas/sesion`, en `Authorization: Bearer`), así que responden 401 con este selector. Falta reemplazar `core/identidad` y el selector por el inicio de sesión, con las cuentas de la demo (`Demo1234`); lo hará el frontend nuevo. El catálogo público, la ficha y las recomendaciones no cambian.
 
 ## Errores de la API
 

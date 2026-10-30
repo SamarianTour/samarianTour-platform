@@ -5,11 +5,13 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.Conta
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.CuentasCobroPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.api.PrestadoresApiInterna;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.PrestadoresPort;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -51,15 +53,17 @@ class PrestadoresDemoIT extends IntegracionPostgresBase {
     @Test
     @DisplayName("la agencia de la demo ve su RNT activo, su categoría y su cuenta enmascarada")
     void agencia() throws Exception {
-        http.perform(get("/prestador/registro").header("X-Usuario-Id", AGENCIA.toString())
-                        .header("X-Rol", "PRESTADOR").header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+        http.perform(get("/prestador/registro")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador(AGENCIA.toString(), "AGENCIA_OPERADORA")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoRnt").value("ACTIVO"))
                 .andExpect(jsonPath("$.razonSocial").value("MAR Y SELVA EXPEDICIONES S.A.S."))
                 .andExpect(jsonPath("$.categoria").value("MICRO_PEQUENO"))
                 .andExpect(jsonPath("$.whatsappVerificado").value(true));
-        http.perform(get("/prestador/cuenta-cobro").header("X-Usuario-Id", AGENCIA.toString())
-                        .header("X-Rol", "PRESTADOR").header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+        http.perform(get("/prestador/cuenta-cobro")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador(AGENCIA.toString(), "AGENCIA_OPERADORA")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numeroEnmascarado").value("******0101"));
     }

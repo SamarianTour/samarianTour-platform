@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.CodigoIncorrectoException;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.CodigoNoVigenteException;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.CuentaNoEncontradaException;
@@ -10,11 +9,12 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.Re
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.SolicitarSupresionUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.VerificarWhatsAppUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.comando.RegistrarUsuarioCommand;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,7 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Las rutas del registro y del WhatsApp (RF-01 a RF-03, DN-05, DN-28). */
 @WebMvcTest(UsuarioController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class UsuarioControllerTest {
 
@@ -102,19 +101,19 @@ class UsuarioControllerTest {
     @Test
     @DisplayName("pedir otro código es solo del turista: 202 para él, 403 para un prestador")
     void soloTurista() throws Exception {
-        http.perform(post("/turista/whatsapp/codigo").header("X-Usuario-Id", TURISTA.toString())
-                        .header("X-Rol", "TURISTA"))
+        http.perform(post("/turista/whatsapp/codigo")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA.toString(), "TURISTA")))
                 .andExpect(status().isAccepted());
         verify(verificarWhatsApp).enviarCodigo(TURISTA);
 
-        http.perform(post("/turista/whatsapp/codigo").header("X-Usuario-Id", UUID.randomUUID().toString())
-                        .header("X-Rol", "PRESTADOR").header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+        http.perform(post("/turista/whatsapp/codigo").header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearerPrestador(UUID.randomUUID(), "GUIA_INDEPENDIENTE")))
                 .andExpect(status().isForbidden());
     }
 
     private ResultActions verificar() throws Exception {
         return http.perform(post("/turista/whatsapp/verificacion")
-                .header("X-Usuario-Id", TURISTA.toString()).header("X-Rol", "TURISTA")
+                .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA.toString(), "TURISTA"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"codigo\": \"123456\"}"));
     }
 }

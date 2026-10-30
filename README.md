@@ -2,7 +2,7 @@
 
 Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven multimódulo con arquitectura basada en servicios (`nucleo`, `catalogo`, `recomendacion`) y arquitectura hexagonal dentro de cada módulo de cada servicio (ADR-02).
 
-> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway, la identidad provisional y la bandeja de salida que envía los avisos al catálogo), la moderación de ofertas y opiniones, las solicitudes de disponibilidad, los pagos con la pasarela simulada o Wompi sandbox, y las cuentas (registro, sesión con JWT, restablecimiento de la contraseña, datos personales y supresión); sus demás módulos están pendientes.
+> En construcción. El prototipo es el servicio de catálogo: búsqueda y ficha de ofertas, zonas y su gestión por el administrador, publicación, edición, retiro y listado de ofertas por el prestador, las fotos de sus ofertas, su perfil público con fotos, opiniones de los turistas, y moderación por avisos del núcleo. Guarda los datos en MongoDB (perfil `mongo`) o en memoria (perfil `memoria`). El servicio de recomendación sugiere de 3 a 5 ofertas del catálogo, cada una explicada, con un motor por reglas o con IA. El frontend en Angular cubre esas funciones para el turista y el prestador, salvo la gestión del perfil, la subida de fotos de las ofertas y la gestión de zonas, que por ahora son solo por la API, y la moderación, que el administrador hace en el núcleo. Del núcleo está la base (PostgreSQL con Flyway y la bandeja de salida que envía los avisos al catálogo), la moderación de ofertas y opiniones, las solicitudes de disponibilidad, los pagos con la pasarela simulada o Wompi sandbox, las cuentas (registro, sesión con JWT, restablecimiento de la contraseña, datos personales y supresión) y los prestadores con su RNT; sus demás módulos están pendientes. Los tres servicios validan el token de acceso del núcleo con `libs/seguridad-jwt` (Spring Security).
 
 
 ## Estructura del repositorio
@@ -12,7 +12,7 @@ Plataforma de gestión sostenible del turismo en Santa Marta. Monorepo Maven mul
 | `servicios/catalogo` | Servicio de catálogo (MongoDB). Módulos `catalogo` y `opiniones`, más `compartido`. |
 | `servicios/nucleo` | Núcleo transaccional (PostgreSQL). Base del servicio y bandeja de salida hacia el catálogo; módulos pendientes. Ver [servicios/nucleo/README.md](servicios/nucleo/README.md). |
 | `servicios/recomendacion` | Recomendación (sin base de datos propia): ofertas explicadas, por reglas o con IA. Ver [su README](servicios/recomendacion/README.md). |
-| `libs/seguridad-jwt` | Validación del JWT RS256 y roles, compartida por los tres servicios. Pendiente. |
+| `libs/seguridad-jwt` | Validación del token de acceso RS256 del núcleo y sus roles, compartida por los tres servicios (DN-37). Su test-jar firma tokens para las pruebas. |
 | `contratos/` | Contratos OpenAPI (API first): `catalogo.openapi.yaml`, `nucleo.openapi.yaml` y `recomendacion.openapi.yaml`. |
 | `frontend/` | Aplicación Angular: catálogo y ficha para el turista, y panel del prestador. Ver [frontend/README.md](frontend/README.md). |
 | `infra/` | Docker Compose, Nginx, precarga de MongoDB y la prueba de carga de la búsqueda (`infra/carga`). |
@@ -79,14 +79,14 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 | `memoria` | Adaptadores en la memoria del proceso, con datos de demostración de Santa Marta | Por defecto, sin Docker |
 | `mongo` | Adaptadores de MongoDB; crea los índices al arrancar | Docker Compose y pruebas de integración (`mvn verify`) |
 | `minio` | Las fotos en MinIO (DC-39); sin él, en una carpeta local (`catalogo.fotos.carpeta`, por defecto en la carpeta temporal) | Docker Compose |
-| `demo` | Los headers que sustituyen al token del prestador y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
+| `demo` | Junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 | `carga` | Junto con `mongo`, agrega 5.000 ofertas sintéticas después de los datos de demostración (`catalogo.carga.ofertas`, DC-48) | Solo en la prueba de carga |
 
-**Identidad provisional.** Mientras no exista `libs/seguridad-jwt`, el usuario se identifica con los mismos datos que traerá el JWT, en headers: `X-Usuario-Id` (UUID), `X-Rol` (`TURISTA`, `PRESTADOR` o `ADMINISTRADOR`) y, solo para el rol `PRESTADOR`, `X-Tipo-Prestador` (`AGENCIA_OPERADORA`, `GUIA_INDEPENDIENTE`, `ALOJAMIENTO` o `RESTAURANTE`). Cada prefijo exige un rol: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA; sin identidad responden 401 `NO_AUTENTICADO` y con otro rol 403 `ACCESO_DENEGADO`. Cualquiera puede enviar los headers, así que solo se aceptan con el perfil `demo`. El núcleo ya emite el JWT (`POST /api/nucleo/cuentas/sesion`, DN-29); cuando los servicios lo validen, los headers desaparecen y solo cambia `compartido/seguridad`.
+**Identidad: el token del núcleo.** Las rutas `/prestador/**`, `/admin/**` y `/turista/**` exigen el token de acceso que entrega el núcleo al iniciar sesión (`POST /api/nucleo/cuentas/sesion`), en `Authorization: Bearer <token>` (DC-01, DN-37). El catálogo lo valida con la clave pública del núcleo (`SEGURIDAD_JWT_CLAVE_PUBLICA`), sin consultarlo, con `libs/seguridad-jwt`. Del token usa el usuario, el rol y, del prestador, su tipo, que decide qué ofertas publica. Sin token válido responden 401 `NO_AUTENTICADO`, y con otro rol, 403 `ACCESO_DENEGADO`. Los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador` del prototipo ya no identifican a nadie. Para correr el catálogo solo, fuera de Docker, se le pasa la clave pública que genera `infra/generar-claves.sh`.
 
 ## Levantar el piloto
 
-La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales y la que firma el token (DN-28, DN-29). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
+La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales, la privada que firma el token y la pública con la que el catálogo y la recomendación lo validan (DN-28, DN-29, DN-37). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten y recalcula la pública desde la privada, así que también completa un `infra/.env` de antes; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
 
 ```bash
 bash infra/generar-claves.sh
@@ -95,7 +95,7 @@ docker compose -f infra/docker-compose.yml up --build -d
 
 Los correos del núcleo (el restablecimiento de la contraseña) llegan a Mailpit, en `http://localhost:8025`; no se entregan a direcciones reales.
 
-Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo, `/api/nucleo/**` hacia las 2 del núcleo y `/api/recomendacion/**` hacia la recomendación. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` del catálogo y del núcleo y las `actuator/**` de los tres servicios no se exponen hacia afuera.
+Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo, `/api/nucleo/**` hacia las 2 del núcleo y `/api/recomendacion/**` hacia la recomendación. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` y `actuator/**` de los tres servicios no se exponen hacia afuera, y una ruta con `;` responde 400: era la forma de esquivar ese bloqueo (DN-37).
 
 Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. El núcleo guarda sus datos en PostgreSQL, sin puertos publicados; al arrancar, Flyway crea o actualiza el esquema (DN-01), y cada 15 s el núcleo envía al catálogo los avisos de su bandeja de salida (DN-06). Nginx arranca cuando el catálogo y el núcleo responden su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
 
@@ -251,13 +251,15 @@ Con el piloto levantado, abre `http://localhost:8080`.
 
 1. **Catálogo.** La página inicial lista las ofertas visibles. Filtra por tipo, zona, tipo de actividad, precio, esfuerzo físico máximo ("hasta el nivel") y accesibilidad. Los filtros quedan en la URL: `http://localhost:8080/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005` abre las actividades del Parque Tayrona. Si nada coincide aparece "Limpiar filtros".
 2. **Ficha.** Entra a "Tayrona: mar y selva" (un paquete): muestra sus actividades con enlace, el esfuerzo calculado, la zona con sus buenas prácticas, el perfil del prestador y el mapa con el enlace "Cómo llegar". Una oferta que no es visible, como `http://localhost:8080/ofertas/b00000000000000000000016`, muestra "Esta oferta ya no está disponible".
-3. **Publicar.** En el selector **Usuario demo** de la cabecera elige **Guía**, entra a "Soy prestador" y luego a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
+3. **Publicar.** *Hasta que el frontend inicie sesión (pasos 3 a 7, 9 y 10, ver la nota al final), estos pasos se hacen por consola: secciones 3, 4 y 8.* En el selector **Usuario demo** de la cabecera elige **Guía**, entra a "Soy prestador" y luego a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
 4. **Aprobar desde el núcleo.** La interfaz del administrador todavía no existe, así que la decisión se envía con `curl` al núcleo (DN-08). El identificador de la oferta está en la URL de "Ver detalle" (`/prestador/ofertas/<id>`):
 
    ```bash
    ID=<id de la oferta>
+   TOKEN_ADMIN=$(curl -s -X POST http://localhost:8080/api/nucleo/cuentas/sesion -H "Content-Type: application/json" \
+     -d '{"correo":"admin@samariantour.co","contrasena":"SamarianAdmin2026"}' | sed -E 's/.*"tokenAcceso":"([^"]+)".*/\1/')
    curl -s -X POST "http://localhost:8080/api/nucleo/admin/moderacion/ofertas/$ID/decision" \
-     -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR" \
+     -H "Authorization: Bearer $TOKEN_ADMIN" \
      -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
    ```
 
@@ -270,7 +272,7 @@ Con el piloto levantado, abre `http://localhost:8080`.
 9. **Opinar.** En **Usuario demo** elige a **Laura**, que ya pagó el snorkel en Playa Cristal. En su ficha, en "Dejar una opinión", elige las estrellas, escribe el comentario y envíalo: aparece "Tu opinión quedó en moderación". En "Mis opiniones" la opinión está "En moderación". Si Laura intenta opinar sobre una oferta que no pagó, la ficha responde "Solo puedes opinar sobre ofertas que hayas pagado"; si vuelve a opinar sobre la misma, "Ya opinaste sobre esta oferta".
 10. **Aprobar la opinión desde el núcleo.** Como con las ofertas, la decisión se envía con `curl` al núcleo; los comandos están en el paso 8 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
 
-La identidad es provisional: el selector "Usuario demo" de la cabecera, con dos turistas y cinco prestadores, sustituye al inicio de sesión mientras no exista el JWT del núcleo.
+**Nota sobre la identidad.** El selector "Usuario demo" de la cabecera enviaba los headers que sustituían al token. Desde que los servicios validan el token del núcleo (DN-37), esos headers ya no identifican a nadie, así que en esta interfaz las páginas del prestador y las opiniones del turista responden 401. El frontend nuevo inicia sesión con las cuentas de la demo; mientras llega, esos pasos se hacen por consola. El catálogo público, la ficha, las opiniones aprobadas, las zonas y las recomendaciones funcionan igual.
 
 ## Demostración paso a paso por consola
 
@@ -278,7 +280,19 @@ La misma demostración contra la API, sin la interfaz. Los comandos están en `b
 
 ```bash
 BASE=http://localhost:8080/api/catalogo
+NUCLEO=http://localhost:8080/api/nucleo
+
+# Las rutas del prestador, del turista y del administrador piden el token de acceso del núcleo (DN-37). "como" inicia
+# sesión con una cuenta (las de la demo tienen la clave Demo1234) y devuelve el header con su token. El token vale 15
+# minutos: si una petición responde 401, se vuelve a definir la variable que lo guarda.
+como() {
+  curl -s -X POST "$NUCLEO/cuentas/sesion" -H "Content-Type: application/json" \
+    -d "{\"correo\":\"$1\",\"contrasena\":\"${2:-Demo1234}\"}" \
+    | sed -E 's/.*"tokenAcceso":"([^"]+)".*/Authorization: Bearer \1/'
+}
 ```
+
+Las cuentas de la demo son `agencia`, `guia`, `hotel`, `restaurante` y `agencia-sin-rnt` (prestadores), `operador1` y `operador2`, `gestor`, y los turistas `laura`, `andres`, `laura.gomez`, `carlos.perez` y `ana.torres`, todas `@demo.samariantour.co`. El administrador es `admin@samariantour.co` con `SamarianAdmin2026`.
 
 ### 1. Búsqueda con filtros, repartida entre las réplicas
 
@@ -325,7 +339,7 @@ Los datos están en MongoDB, así que el flujo funciona con las dos réplicas: l
 Publicar una actividad como el guía independiente de la demostración. Primero sube su foto: una oferta lleva de 1 a 6 (DC-47).
 
 ```bash
-GUIA=(-H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE")
+GUIA=(-H "$(como guia@demo.samariantour.co)")
 
 # Cualquier foto JPG, PNG o WebP de hasta 5 MB; responde 201 con su id y la dirección de cada tamaño
 FOTO=$(curl -s -X POST "$BASE/prestador/fotos" "${GUIA[@]}" -F "foto=@mi-foto.jpg" | sed -E 's/^\{"id":"([^"]+)".*/\1/')
@@ -361,7 +375,7 @@ El administrador la aprueba en el núcleo (DN-08). El núcleo comprueba con el c
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
-ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
+ADMIN=(-H "$(como admin@samariantour.co SamarianAdmin2026)")
 
 curl -s -X POST "$NUCLEO/admin/moderacion/ofertas/$ID/decision" "${ADMIN[@]}" \
   -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
@@ -380,22 +394,16 @@ curl -s "$BASE/ofertas?zonaId=a00000000000000000000007&tipoActividad=AVISTAMIENT
 ```bash
 # Las ofertas del guía en cualquier estado, con su versión publicada y la pendiente
 curl -s "$BASE/prestador/ofertas" \
-  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
-  -H "X-Rol: PRESTADOR" \
-  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+  "${GUIA[@]}"
 
 # Una oferta propia completa: las dos versiones con todos sus campos, aunque nunca se haya publicado (DC-50).
 # La de otro prestador responde 403 PRESTADOR_NO_AUTORIZADO
 curl -s "$BASE/prestador/ofertas/$ID" \
-  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
-  -H "X-Rol: PRESTADOR" \
-  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+  "${GUIA[@]}"
 
 # Retirar la oferta recién publicada: 204. El retiro es definitivo
 curl -s -o /dev/null -w '%{http_code}\n' -X PATCH "$BASE/prestador/ofertas/$ID/retiro" \
-  -H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" \
-  -H "X-Rol: PRESTADOR" \
-  -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE"
+  "${GUIA[@]}"
 
 # Ya no es visible para el turista (404), pero sigue en las ofertas propias como "retirada": true
 curl -s "$BASE/ofertas/$ID"
@@ -425,8 +433,7 @@ El administrador ve lo que espera su decisión: primero el paseo en lancha, que 
 
 ```bash
 curl -s "$BASE/admin/moderacion/ofertas" \
-  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" \
-  -H "X-Rol: ADMINISTRADOR"
+  "${ADMIN[@]}"
 
 # El núcleo consulta la oferta que va a decidir, desde la red de Docker
 docker compose -f infra/docker-compose.yml exec -T nginx \
@@ -437,7 +444,7 @@ Rechazar el paseo en lancha exige motivo. El núcleo se lo notifica al prestador
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
-ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
+ADMIN=(-H "$(como admin@samariantour.co SamarianAdmin2026)")
 LANCHA="$NUCLEO/admin/moderacion/ofertas/b00000000000000000000017/decision"
 
 curl -s -X POST "$LANCHA" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "RECHAZAR"}'
@@ -463,7 +470,7 @@ Si el catálogo no responde, el núcleo no decide nada y responde 503 `CATALOGO_
 El guía completa su perfil y sube una foto. Se publica de inmediato, sin moderación. El catálogo guarda una versión nueva de la foto, enderezada y sin metadatos, en dos tamaños (DC-39):
 
 ```bash
-GUIA=(-H "X-Usuario-Id: 20000000-0000-0000-0000-000000000002" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE")
+GUIA=(-H "$(como guia@demo.samariantour.co)")
 
 curl -s -X PUT "$BASE/prestador/perfil" "${GUIA[@]}" -H "Content-Type: application/json" \
   -d '{"nombreComercial":"Aves de Minca","descripcion":"Guía independiente de Minca, especializado en aves"}'
@@ -486,11 +493,12 @@ Andrés es un turista de la demostración. Todavía no pagó el recorrido por el
 
 ```bash
 TURISTA=80000000-0000-0000-0000-000000000008
+ANDRES=(-H "$(como andres@demo.samariantour.co)")
 OFERTA=b00000000000000000000006
 OPINION='{"ofertaId":"b00000000000000000000006","calificacion":5,"comentario":"Caminamos por el centro con calma y nos explicaron la historia de cada plaza."}'
 
 curl -s -X POST "$BASE/turista/opiniones" -H "Content-Type: application/json" \
-  -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA" -d "$OPINION"
+  "${ANDRES[@]}" -d "$OPINION"
 # 403 OPINION_NO_HABILITADA
 ```
 
@@ -508,18 +516,18 @@ Ahora sí puede opinar. La opinión queda en moderación y todavía no se ve en 
 
 ```bash
 OPINION_ID=$(curl -s -X POST "$BASE/turista/opiniones" -H "Content-Type: application/json" \
-  -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA" -d "$OPINION" | sed -E 's/^\{"id":"([^"]+)".*/\1/')
+  "${ANDRES[@]}" -d "$OPINION" | sed -E 's/^\{"id":"([^"]+)".*/\1/')
 echo "$OPINION_ID"
 
 curl -s "$BASE/ofertas/$OFERTA/opiniones"                 # sin opiniones aprobadas todavía
-curl -s "$BASE/turista/opiniones" -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA"   # EN_MODERACION
+curl -s "$BASE/turista/opiniones" "${ANDRES[@]}"   # EN_MODERACION
 ```
 
 El administrador la ve en su cola, con el nombre de la oferta, y el núcleo consulta a quién notificar antes de decidir:
 
 ```bash
 curl -s "$BASE/admin/moderacion/opiniones" \
-  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR"
+  "${ADMIN[@]}"
 
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s "http://catalogo:8080/api/catalogo/internal/moderacion/opiniones/$OPINION_ID"
@@ -529,7 +537,7 @@ El administrador decide en el núcleo, que se lo avisa al catálogo. Al aprobarl
 
 ```bash
 curl -s -X POST "http://localhost:8080/api/nucleo/admin/moderacion/opiniones/$OPINION_ID/decision" \
-  -H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR" \
+  "${ADMIN[@]}" \
   -H "Content-Type: application/json" -d '{"decision": "APROBAR"}'
 # para rechazar: '{"decision": "RECHAZAR", "motivo": "..."}'; el núcleo le notifica el motivo al turista
 
@@ -547,7 +555,7 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
 # {"resultado":"APLICADO"}
 
 curl -s "$BASE/ofertas/$OFERTA/opiniones"                 # totalOpiniones: 0
-curl -s "$BASE/turista/opiniones" -H "X-Usuario-Id: $TURISTA" -H "X-Rol: TURISTA"   # totalElementos: 0
+curl -s "$BASE/turista/opiniones" "${ANDRES[@]}"   # totalElementos: 0
 ```
 
 La precarga trae 9 opiniones aprobadas en cuatro ofertas (por ejemplo `curl -s "$BASE/ofertas/b00000000000000000000001/opiniones"`), 2 en moderación y 1 rechazada. Laura (`70000000-0000-0000-0000-000000000007`) ya pagó el snorkel en Playa Cristal y el avistamiento de aves en Minca, así que puede opinar sobre ellos sin habilitarla por consola.
@@ -572,7 +580,7 @@ curl -s -X PUT "$BASE/prestador/ofertas/$ID" "${GUIA[@]}" -H "Content-Type: appl
         "idiomasAtencion": ["es", "en"]}'
 
 # La foto de otro prestador no sirve: 400 DATO_INVALIDO en "fotos". Tampoco una oferta sin fotos
-AGENCIA=(-H "X-Usuario-Id: 10000000-0000-0000-0000-000000000001" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: AGENCIA_OPERADORA")
+AGENCIA=(-H "$(como agencia@demo.samariantour.co)")
 curl -s -X PUT "$BASE/prestador/ofertas/b00000000000000000000001" "${AGENCIA[@]}" -H "Content-Type: application/json" \
   -d '{"tipo": "ACTIVIDAD", "nombre": "Caminata", "descripcion": "Sendero", "precioReferencia": 150000,
        "zonaId": "a00000000000000000000005", "capacidadMaxima": 12, "fotos": ["'"$FOTO"'"],
@@ -586,7 +594,7 @@ Una foto que nadie usa durante 24 horas se borra: las que se subieron y no se pu
 El administrador registra las zonas, las marca como área protegida o de alta afluencia, escribe sus buenas prácticas y las inactiva; una zona nunca se elimina (DC-49). Escribe directo en el catálogo, sin pasar por el núcleo.
 
 ```bash
-ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
+ADMIN=(-H "$(como admin@samariantour.co SamarianAdmin2026)")
 ZONA='{"nombre": "Isla de Salamanca", "descripcion": "Parque de manglares entre Barranquilla y Santa Marta",
        "ubicacion": {"latitud": 10.98, "longitud": -74.47}'
 
@@ -722,12 +730,12 @@ Las alternativas también dejan su línea en el registro de exposición, con `"o
 
 ### 12. Solicitudes de disponibilidad
 
-El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Los headers de la demo son los de las cuentas y los prestadores precargados: la turista `90000000-...-001` es una cuenta con el WhatsApp verificado (DN-28, DN-32), la agencia de la caminata a Cabo San Juan la atiende el operador `60000000-...-001`, y el hotel y el restaurante, el `60000000-...-002` (DN-35). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
+El turista pide disponibilidad sobre una oferta, el operador de disponibilidad la verifica con el prestador y la atiende con un precio, y el turista confirma (DN-09 a DN-16). Las sesiones son las de las cuentas precargadas: la turista `laura.gomez` (`90000000-...-001`) tiene el WhatsApp verificado (DN-28, DN-32), la agencia de la caminata a Cabo San Juan la atiende `operador1`, y el hotel y el restaurante, `operador2` (DN-35). Cada tipo de oferta lleva sus campos (RF-30): la actividad y el paquete, `horaSalida`; el alojamiento, `fechaSalida` y `numeroUnidades`; el restaurante, `horaReserva`.
 
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
-TURISTA=(-H "X-Usuario-Id: 90000000-0000-0000-0000-000000000001" -H "X-Rol: TURISTA")
-OPERADOR=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000001" -H "X-Rol: OPERADOR_DISPONIBILIDAD")
+TURISTA=(-H "$(como laura.gomez@demo.samariantour.co)")
+OPERADOR=(-H "$(como operador1@demo.samariantour.co)")
 FECHA=$(date -d "+3 days" +%F)        # al menos 2 días calendario después del envío (RF-30)
 # En la aplicación, cada operación genera su UUID antes del primer intento; aquí van fijos para repetirlos
 CLAVE=11111111-aaaa-4bbb-8ccc-000000000001
@@ -782,7 +790,7 @@ curl -s -X POST "$NUCLEO/operador/solicitudes/$ID2/atencion" "${OPERADOR[@]}" -H
 # {"estado":"NO_DISPONIBLE",...}
 
 # Un alojamiento y un restaurante, con los campos de su tipo (RF-30); los atiende el operador 2
-OPERADOR2=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000002" -H "X-Rol: OPERADOR_DISPONIBILIDAD")
+OPERADOR2=(-H "$(como operador2@demo.samariantour.co)")
 SALIDA=$(date -d "+5 days" +%F)       # posterior a la fecha de inicio
 curl -s -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: 11111111-aaaa-4bbb-8ccc-000000000007" \
   -H "Content-Type: application/json" \
@@ -830,7 +838,7 @@ Con una pendiente, el mismo `UPDATE` la deja Sin respuesta (RF-41). Otros casos 
 El turista paga una solicitud confirmada en la pasarela, el resultado llega por el webhook y la solicitud queda Pagada. Después se dispersa al prestador el precio menos la comisión y el costo transaccional (DN-18 a DN-27). Sin configurar nada, la pasarela es la **simulada**: una página del propio núcleo con los botones "Aprobar" y "Rechazar". Al pulsar uno, envía al webhook un evento con la forma y la firma de los de Wompi. Las variables `NUCLEO`, `TURISTA`, `OPERADOR`, `OPERADOR2` y `FECHA` son las de la sección 12.
 
 ```bash
-ADMIN=(-H "X-Usuario-Id: 70000000-0000-0000-0000-000000000001" -H "X-Rol: ADMINISTRADOR")
+ADMIN=(-H "$(como admin@samariantour.co SamarianAdmin2026)")
 
 # Una solicitud del snorkel en Playa Cristal, atendida y confirmada (sección 12)
 ID=$(curl -s -X POST "$NUCLEO/turista/solicitudes" "${TURISTA[@]}" -H "Idempotency-Key: 21111111-aaaa-4bbb-8ccc-000000000001" \
@@ -932,7 +940,7 @@ docker compose -f infra/docker-compose.yml logs nucleo | grep DISPERSION_FALLIDA
 curl -s "$NUCLEO/admin/comision" "${ADMIN[@]}"
 # {"porcentaje":4.00,"vigenteDesde":"2026-01-01T00:00:00Z","historial":[{"porcentaje":4.00,...}]}
 curl -s -X PUT "$NUCLEO/admin/comision" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"porcentaje":5}'
-# {"porcentaje":5.00,"vigenteDesde":"...","historial":[{"porcentaje":5.00,...,"administradorId":"70000000-..."},{"porcentaje":4.00,...}]}
+# {"porcentaje":5.00,"vigenteDesde":"...","historial":[{"porcentaje":5.00,...,"administradorId":"60000000-..."},{"porcentaje":4.00,...}]}
 curl -s -X PUT "$NUCLEO/admin/comision" "${ADMIN[@]}" -H "Content-Type: application/json" -d '{"porcentaje":100}'
 # 400 DATO_INVALIDO
 curl -s -o /dev/null -w '%{http_code}\n' "$NUCLEO/admin/comision" "${OPERADOR[@]}"     # 403
@@ -960,20 +968,25 @@ curl -s "$NUCLEO/politica-datos/v1"
 ID=$(curl -s -X POST "$NUCLEO/cuentas/registro" "${JSON[@]}" -d '{"rol":"TURISTA","nombre":"Maria Perez",
   "correo":"maria@correo.co","contrasena":"Playa2026","whatsapp":"+573001234567","aceptaPolitica":true,
   "versionPolitica":"v1"}' | sed -E 's/^\{"id":"([^"]+)".*/\1/')
-TURISTA=(-H "X-Usuario-Id: $ID" -H "X-Rol: TURISTA")
+
+# Inicio de sesión: el JWT de acceso (15 min) y el token de renovación (7 días, de un solo uso)
+SESION=$(curl -s -X POST "$NUCLEO/cuentas/sesion" "${JSON[@]}" -d '{"correo":"maria@correo.co","contrasena":"Playa2026"}')
+echo "$SESION" | sed -E 's/.*"tokenAcceso":"[^.]+\.([^.]+)\..*/\1/' | tr '_-' '/+' | base64 -d 2>/dev/null; echo
+# {"iss":"samarian-tour-nucleo","sub":"<id>","rol":"TURISTA","sid":"<sesión>",...}
+TURISTA=(-H "Authorization: Bearer $(echo "$SESION" | sed -E 's/.*"tokenAcceso":"([^"]+)".*/\1/')")
 
 # El código llega por WhatsApp, que por ahora es simulado: sale en el log del núcleo
 CODIGO=$(docker compose -f infra/docker-compose.yml logs nucleo | grep CODIGO_VERIFICACION | tail -1 | sed -E 's/.*codigo=([0-9]+).*/\1/')
 curl -s -X POST "$NUCLEO/turista/whatsapp/verificacion" "${TURISTA[@]}" "${JSON[@]}" -d "{\"codigo\":\"$CODIGO\"}"
 # whatsappVerificado: true; uno equivocado da 400 CODIGO_INCORRECTO con los intentos que quedan
 
-# Inicio de sesión: el JWT de acceso (15 min) y el token de renovación (7 días, de un solo uso)
-SESION=$(curl -s -X POST "$NUCLEO/cuentas/sesion" "${JSON[@]}" -d '{"correo":"maria@correo.co","contrasena":"Playa2026"}')
-echo "$SESION" | sed -E 's/.*"tokenAcceso":"[^.]+\.([^.]+)\..*/\1/' | tr '_-' '/+' | base64 -d 2>/dev/null; echo
-# {"iss":"samarian-tour-nucleo","sub":"<id>","rol":"TURISTA","sid":"<sesión>",...}
+# Sin el token, la misma ruta da 401 NO_AUTENTICADO; con un token alterado o vencido, también
+curl -s -o /dev/null -w '%{http_code}\n' "$NUCLEO/cuenta"                                         # 401
+curl -s -o /dev/null -w '%{http_code}\n' "$NUCLEO/cuenta" -H "Authorization: Bearer ${TURISTA[1]##* }x"  # 401
+
+# Renovar da tokens nuevos. Usar otra vez el mismo token de renovación cierra la sesión: 401 SESION_INVALIDA
 RENOVACION=$(echo "$SESION" | sed -E 's/.*"tokenRenovacion":"([^"]+)".*/\1/')
 curl -s -X POST "$NUCLEO/cuentas/sesion/renovacion" "${JSON[@]}" -d "{\"tokenRenovacion\":\"$RENOVACION\"}"
-# Tokens nuevos. Usar otra vez el mismo token de renovación cierra la sesión: 401 SESION_INVALIDA
 
 # Cinco contraseñas equivocadas seguidas bloquean la cuenta 15 minutos: 423 CUENTA_BLOQUEADA (RF-05)
 
@@ -984,6 +997,9 @@ TOKEN=$(curl -s http://localhost:8025/api/v1/message/latest | grep -o 'token=[^\
 TOKEN=$(printf '%b' "${TOKEN//%/\\x}")
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/cuentas/contrasena" "${JSON[@]}" \
   -d "{\"token\":\"$TOKEN\",\"contrasena\":\"Caribe2026\"}"       # 204: también cierra las sesiones
+# El token de acceso que ya se entregó sigue sirviendo hasta que vence (15 min como máximo, DN-29); se inicia sesión
+# con la contraseña nueva
+TURISTA=(-H "$(como maria@correo.co Caribe2026)")
 
 # Datos personales, para cualquier rol (RF-12). Cambiar el WhatsApp lo deja sin verificar y envía otro código
 curl -s "$NUCLEO/cuenta" "${TURISTA[@]}"
@@ -1003,8 +1019,8 @@ Registro con el RNT, tipo, WhatsApp verificado, cuenta de cobro y la sincronizac
 ```bash
 NUCLEO=http://localhost:8080/api/nucleo
 JSON=(-H "Content-Type: application/json")
-ADMIN=(-H "X-Usuario-Id: 60000000-0000-0000-0000-000000000006" -H "X-Rol: ADMINISTRADOR")
-AGENCIA=(-H "X-Usuario-Id: 10000000-0000-0000-0000-000000000001" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: AGENCIA_OPERADORA")
+ADMIN=(-H "$(como admin@samariantour.co SamarianAdmin2026)")
+AGENCIA=(-H "$(como agencia@demo.samariantour.co)")
 
 # La agencia de la demo: RNT activo con los datos del RNT, y su cuenta de cobro enmascarada (RF-73, RF-75)
 curl -s "$NUCLEO/prestador/registro" "${AGENCIA[@]}"
@@ -1017,7 +1033,7 @@ curl -s "$NUCLEO/prestador/cuenta-cobro" "${AGENCIA[@]}"
 ID=$(curl -s -X POST "$NUCLEO/cuentas/registro" "${JSON[@]}" -d '{"rol":"PRESTADOR","nombre":"Maria Fernanda Ospino",
   "correo":"maria.guia@correo.co","contrasena":"Guia2026x","aceptaPolitica":true,"versionPolitica":"v1"}' \
   | sed -E 's/^\{"id":"([^"]+)".*/\1/')
-GUIA=(-H "X-Usuario-Id: $ID" -H "X-Rol: PRESTADOR" -H "X-Tipo-Prestador: GUIA_INDEPENDIENTE")
+GUIA=(-H "$(como maria.guia@correo.co Guia2026x)")
 
 # El tipo tiene que coincidir con el RNT (RF-70): 910006 es de un guía, persona natural
 curl -s -X POST "$NUCLEO/prestador/registro" "${GUIA[@]}" "${JSON[@]}" -d '{"numeroRnt":"910006","tipo":"ALOJAMIENTO","numeroEmpleados":3}'
@@ -1026,6 +1042,12 @@ curl -s -X POST "$NUCLEO/prestador/registro" "${GUIA[@]}" "${JSON[@]}" \
   -d '{"numeroRnt":"910006","tipo":"GUIA_INDEPENDIENTE","modalidades":["CAMINATA","KAYAK"],"idiomas":["es","en"]}'
 # 201 {"estadoRnt":"ACTIVO","razonSocial":"MARIA FERNANDA OSPINO DIAZ","categoria":"GUIA_INDEPENDIENTE","habilitado":true,...}
 # y en la bandeja, el aviso HABILITACION versión 1 para el catálogo
+
+# Su token no traía el tipo, porque no había registrado el RNT (DN-37): el catálogo no la deja gestionar ofertas.
+# Una sesión nueva, o renovar la que tiene, trae un token con "tipoPrestador":"GUIA_INDEPENDIENTE"
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/prestador/ofertas" "${GUIA[@]}"                # 403 ACCESO_DENEGADO
+GUIA=(-H "$(como maria.guia@correo.co Guia2026x)")
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/prestador/ofertas" "${GUIA[@]}"                # 200
 
 # Su WhatsApp, verificado con un código que por ahora sale en el log (RF-71)
 curl -s -X PUT "$NUCLEO/prestador/whatsapp" "${GUIA[@]}" "${JSON[@]}" -d '{"whatsapp":"+573001234599"}'
@@ -1081,13 +1103,17 @@ curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/health"              # 
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/actuator/prometheus"          # 404: las métricas solo dentro de Docker
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/api/recomendacion/actuator/health  # 404
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/api/nucleo/internal/x            # 404
+
+# Con ";" en la ruta, la forma de esquivar el bloqueo de Nginx, responde 400 sin llegar al servicio (DN-37)
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/internal;x/ofertas/b00000000000000000000014"   # 400
+curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:8080/api/nucleo/actuator;x/health"  # 400
 ```
 
-Otros casos que se pueden mostrar:
+Otros casos que se pueden mostrar, con la publicación de la sección 3:
 
-- **Sin identidad:** el mismo `POST` sin los headers responde 401 `NO_AUTENTICADO`.
-- **Rol equivocado:** el mismo `POST` con `X-Rol: TURISTA` responde 403 `ACCESO_DENEGADO`; un prestador que pide `/turista/opiniones` recibe lo mismo.
-- **RNT inactivo:** con `X-Usuario-Id: 50000000-0000-0000-0000-000000000005`, `X-Rol: PRESTADOR` y `X-Tipo-Prestador: AGENCIA_OPERADORA` responde 403 `RNT_INACTIVO`.
+- **Sin token:** el mismo `POST` sin `Authorization` responde 401 `NO_AUTENTICADO`, igual que con un token vencido o alterado.
+- **Rol equivocado:** el mismo `POST` con el token de un turista (`"${ANDRES[@]}"`, sección 8) responde 403 `ACCESO_DENEGADO`; un prestador que pide `/turista/opiniones` recibe lo mismo.
+- **RNT inactivo:** con el token de `agencia-sin-rnt@demo.samariantour.co` responde 403 `RNT_INACTIVO`.
 - **Tipo no permitido:** el guía que publica un `ALOJAMIENTO` recibe 403 `TIPO_OFERTA_NO_PERMITIDO`.
 - **Edición:** antes de retirarla, un `PUT $BASE/prestador/ofertas/$ID` con otro precio crea la versión 2 en moderación; la ficha sigue mostrando la versión aprobada hasta que llegue su aviso.
 - **Oferta retirada:** después del retiro, ese mismo `PUT` responde 409 `OFERTA_NO_EDITABLE`.

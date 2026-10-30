@@ -2,12 +2,12 @@ package co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entra
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.SubirFotoUseCase;
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -25,7 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(FotoPrestadorController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class FotoPrestadorControllerTest {
 
@@ -83,14 +82,15 @@ class FotoPrestadorControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
         http.perform(multipart("/prestador/fotos").file(imagen)
-                        .header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "TURISTA"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(PRESTADOR.toString(), "TURISTA")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
         verifyNoInteractions(fotos);
     }
 
     private static MockHttpServletRequestBuilder comoPrestador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
-                .header("X-Tipo-Prestador", "AGENCIA_OPERADORA");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearerPrestador(PRESTADOR.toString(), "AGENCIA_OPERADORA"));
     }
 }

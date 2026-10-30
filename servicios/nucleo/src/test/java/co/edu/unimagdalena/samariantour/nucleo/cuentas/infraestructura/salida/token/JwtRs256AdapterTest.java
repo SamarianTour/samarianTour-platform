@@ -3,6 +3,8 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.salida.t
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Rol;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.TokenAcceso;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Usuario;
+import co.edu.unimagdalena.samariantour.seguridadjwt.DecodificadorToken;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ReclamosToken;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,7 +23,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.cu
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** El token de acceso JWT RS256 (RF-04, DN-29), validado como lo harán los demás servicios: con la clave pública. */
+/** El token de acceso JWT RS256 (RF-04, DN-29), validado como lo hacen los servicios: con la clave pública (DN-37). */
 class JwtRs256AdapterTest {
 
     private static final String CLAVE = claveNueva();
@@ -36,7 +38,7 @@ class JwtRs256AdapterTest {
         // El JWT guarda las fechas en segundos.
         Instant ahora = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 
-        TokenAcceso token = adaptador.emitirAcceso(usuario, sesion, ahora);
+        TokenAcceso token = adaptador.emitirAcceso(usuario, null, sesion, ahora);
 
         Jwt jwt = NimbusJwtDecoder.withPublicKey(adaptador.clavePublica()).build().decode(token.valor());
         assertThat(jwt.getSubject()).isEqualTo(usuario.id().toString());
@@ -45,13 +47,28 @@ class JwtRs256AdapterTest {
         assertThat(jwt.getClaimAsString("iss")).isEqualTo(EMISOR);
         assertThat(jwt.getExpiresAt()).isEqualTo(token.expiraEn()).isEqualTo(ahora.plus(Duration.ofMinutes(15)));
         assertThat(jwt.getHeaders()).containsEntry("alg", "RS256").containsKey("kid");
+        assertThat(jwt.hasClaim("tipoPrestador")).isFalse();
+    }
+
+    @Test
+    @DisplayName("el token del prestador lleva su tipo, y los demás servicios lo validan con libs/seguridad-jwt")
+    void prestadorValidadoComoEnLosServicios() {
+        JwtRs256Adapter adaptador = new JwtRs256Adapter(CLAVE, EMISOR);
+        Usuario guia = cuenta(Rol.PRESTADOR, "guia@correo.co");
+        UUID sesion = UUID.randomUUID();
+
+        TokenAcceso token = adaptador.emitirAcceso(guia, "GUIA_INDEPENDIENTE", sesion, Instant.now());
+
+        Jwt jwt = DecodificadorToken.crear(adaptador.clavePublica(), EMISOR).decode(token.valor());
+        assertThat(ReclamosToken.de(jwt)).isEqualTo(
+                new ReclamosToken(guia.id(), "PRESTADOR", "GUIA_INDEPENDIENTE", sesion.toString()));
     }
 
     @Test
     @DisplayName("un token firmado con otra clave no valida; sin clave, el núcleo no arranca")
     void otraClaveOSinClave() {
         String token = new JwtRs256Adapter(CLAVE, EMISOR)
-                .emitirAcceso(cuenta(Rol.TURISTA, "t@correo.co"), UUID.randomUUID(), Instant.now()).valor();
+                .emitirAcceso(cuenta(Rol.TURISTA, "t@correo.co"), null, UUID.randomUUID(), Instant.now()).valor();
         JwtRs256Adapter otro = new JwtRs256Adapter(claveNueva(), EMISOR);
 
         assertThatThrownBy(() -> NimbusJwtDecoder.withPublicKey(otro.clavePublica()).build().decode(token))

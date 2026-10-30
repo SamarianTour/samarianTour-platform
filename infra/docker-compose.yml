@@ -54,9 +54,11 @@ services:
       CATALOGO_FOTOS_LIMPIEZA_CRON: ${FOTOS_LIMPIEZA_CRON:-0 17 * * * *}
       # mongo: los datos viven en MongoDB y las réplicas comparten el estado.
       # minio: las fotos viven en MinIO, compartido por las réplicas (DC-39).
-      # demo: headers que sustituyen al token del prestador y carga de los datos de demostración
-      # si las colecciones están vacías. El perfil demo es solo para la demostración.
+      # demo: carga los datos de demostración si las colecciones están vacías. Solo para la demostración.
       SPRING_PROFILES_ACTIVE: mongo,minio,demo
+      # Clave pública del token del núcleo: el catálogo lo valida sin consultarlo (DN-37). La deriva de la privada
+      # el mismo script de las claves.
+      SEGURIDAD_JWT_CLAVE_PUBLICA: "${NUCLEO_JWT_CLAVE_PUBLICA:?Falta la clave pública del token, ejecuta bash infra/generar-claves.sh}"
     depends_on:
       mongo:
         condition: service_healthy
@@ -109,7 +111,8 @@ services:
       NUCLEO_JWT_CLAVE_PRIVADA: "${NUCLEO_JWT_CLAVE_PRIVADA:?Falta la clave del token, ejecuta bash infra/generar-claves.sh}"
       # El correo del restablecimiento de la contraseña va a Mailpit (DN-30).
       SPRING_MAIL_HOST: mailpit
-      # demo: headers que sustituyen al token mientras no exista el JWT (DN-05). Solo para la demostración.
+      # demo: las cuentas, los prestadores y las solicitudes de la demostración (DN-28, DN-35). Solo para la
+      # demostración; la identidad siempre sale del token (DN-37).
       SPRING_PROFILES_ACTIVE: demo
       # Pagos (DN-18): la pasarela simulada por defecto; wompi con las llaves del sandbox en infra/.env, que no se
       # versiona (ver infra/.env.example). Las llaves nunca se escriben en este archivo.
@@ -166,6 +169,8 @@ services:
       # visualizador.ideam.gov.co, como la de Groq.
       RECOMENDACION_ALERTAS_FUENTE: ${ALERTAS_FUENTE:-ideam}
       RECOMENDACION_ALERTAS_IDEAM_URL: ${IDEAM_ALERTAS_URL:-https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2}
+      # Clave pública del token del núcleo, como en el catálogo (DR-22, DN-37).
+      SEGURIDAD_JWT_CLAVE_PUBLICA: "${NUCLEO_JWT_CLAVE_PUBLICA:?Falta la clave pública del token, ejecuta bash infra/generar-claves.sh}"
     depends_on:
       catalogo:
         condition: service_healthy

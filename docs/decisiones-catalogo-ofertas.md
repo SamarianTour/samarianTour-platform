@@ -10,7 +10,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 
 | # | Decisión | Origen |
 |---|---|---|
-| DC-01 | La identidad del prestador viene del token; en el prototipo, de headers | ✅ reparto Núcleo/Catálogo |
+| DC-01 | La identidad viene del token de acceso del núcleo, validado aquí con su clave pública | ✅ reparto Núcleo/Catálogo, DN-37 |
 | DC-02 | Réplica `PrestadorCatalogo` con la habilitación RNT | ✅ RF-77, reparto Núcleo/Catálogo |
 | DC-03 | Copia `rntPrestadorActivo` en cada oferta | 🆕 QAS-07 |
 | DC-04 | Avisos del núcleo idempotentes y no expuestos | ✅ ADR-02, ADR-04 |
@@ -63,7 +63,9 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 
 ## Identidad y habilitación del prestador
 
-**DC-01. La identidad viene del token.** El catálogo autoriza con el id del usuario, su rol y, si es prestador, su tipo, tomados del JWT que emite el núcleo. En el prototipo no hay JWT todavía, así que los envían los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador`, marcados en el código como **sustituto del token**. Cuando exista `libs/seguridad-jwt`, solo cambia el adaptador de `compartido/seguridad` (`ResolutorIdentidad`). El tipo de prestador **no** se guarda en el catálogo, para no tener dos fuentes de verdad.
+**DC-01. La identidad viene del token.** El catálogo autoriza con el id del usuario, su rol y, si es prestador, su tipo, tomados del token de acceso que emite el núcleo (`Authorization: Bearer`). Lo valida aquí mismo, con la clave pública del núcleo (`SEGURIDAD_JWT_CLAVE_PUBLICA`) y `libs/seguridad-jwt`, sin consultarlo (DN-37). El tipo de prestador **no** se guarda en el catálogo, para no tener dos fuentes de verdad.
+- El prestador que todavía no registró su RNT en el núcleo no trae tipo en el token: puede completar su perfil y subir fotos, pero las rutas de `/prestador/ofertas` responden 403 `ACCESO_DENEGADO` hasta que lo registre y renueve la sesión.
+- En el prototipo la identidad llegaba en los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador`, solo con el perfil `demo`. Desde DN-37 ya no identifican a nadie.
 - Cualquiera puede enviar esos headers, así que solo se aceptan con el perfil `demo` (DC-27). Sin ese perfil, las rutas que exigen identidad responden 401 `NO_AUTENTICADO`.
 - Roles que el catálogo distingue: `TURISTA`, `PRESTADOR` y `ADMINISTRADOR`. El tipo de prestador solo se exige con el rol `PRESTADOR`.
 
@@ -79,7 +81,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 - Traen un `idAviso`. El catálogo consulta si ya fue procesado al inicio y lo marca al final. Si dos réplicas procesan el mismo aviso a la vez, las operaciones asignan valores absolutos y el segundo registro choca con el `_id` único y se ignora.
 - Los avisos de habilitación traen la `version` de DC-02, y los de moderación el número de versión de DC-05.
 - Cada aviso termina en uno de tres resultados: `APLICADO` (cambió el catálogo), `IGNORADO` (llegó tarde o ya no aplica: versión vieja, versión reemplazada, oferta inexistente o retirada) o `DUPLICADO` (ya se había procesado). En los tres casos el aviso queda registrado y el catálogo responde con éxito, para que el núcleo no lo reintente sin fin.
-- Nginx responde 404 a `/api/catalogo/internal/**` desde afuera. Dentro de la red de Docker todavía no hay autenticación entre servicios; queda pendiente para cuando exista el JWT.
+- Nginx responde 404 a `/api/catalogo/internal/**` desde afuera, y 400 a una ruta con `;`, que antes esquivaba ese bloqueo (DN-37). Dentro de la red de Docker todavía no hay autenticación entre servicios: queda pendiente, con un token propio de cada servicio (DN-37).
 
 ## Versiones y moderación
 
@@ -118,7 +120,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 
 ## API
 
-**DC-13. Autorización por prefijo de ruta.** Cada prefijo exige un rol y se verifica en un solo lugar (`ExigirRol`, registrado en `compartido/config/SeguridadConfig`) antes de llegar al controlador: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA. Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`. La búsqueda, la ficha y las zonas son públicas, y `/internal/**` solo es accesible desde la red interna. El controlador lee la identidad ya verificada con `Identidad.de(peticion)`.
+**DC-13. Autorización por prefijo de ruta.** Cada prefijo exige un rol y se verifica en un solo lugar (`compartido/config/SeguridadConfig`, con Spring Security, DN-37) antes de llegar al controlador: `/prestador/**` PRESTADOR, `/admin/**` ADMINISTRADOR y `/turista/**` TURISTA. Sin identidad, 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`. La búsqueda, la ficha y las zonas son públicas, y `/internal/**` solo es accesible desde la red interna. El controlador lee la identidad ya verificada con `Identidad.de(peticion)`.
 
 | Controlador | Endpoint |
 |---|---|
@@ -135,7 +137,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | `AvisoOpinionesController` (módulo opiniones) | `POST /internal/opiniones/avisos` |
 
 - En el prototipo todos los casos de uso tienen endpoint; el contrato está en `contratos/catalogo.openapi.yaml`. Retirar no lleva cuerpo y responde 204; retirar una oferta ya retirada no cambia nada y también responde 204. Listar las ofertas propias usa la paginación de DC-14 y devuelve la oferta como la ve su prestador (`OfertaPrestador`), incluidas las retiradas.
-- Cuando llegue `libs/seguridad-jwt`, la identidad saldrá del token y `ExigirRol` puede pasar a Spring Security sin tocar los controladores, que solo leen `Identidad.de(peticion)`.
+- Con `libs/seguridad-jwt` la identidad sale del token y `ExigirRol` pasó a Spring Security sin tocar los controladores, que solo leen `Identidad.de(peticion)` (DN-37).
 
 **DC-14. Paginación.** `page` empieza en 0, como en Spring Data; `size` vale 20 por defecto y como máximo 100. El tope protege la latencia de QAS-07. Un `page` negativo o un `size` fuera de 1 a 100 responde 400. El orden es estable para que no se repitan ni se salten resultados entre páginas: la búsqueda pública ordena por precio y luego por id; las ofertas del prestador, por id.
 
@@ -258,7 +260,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 |---|---|---|
 | `memoria` | Los adaptadores de salida en la memoria del proceso (`infraestructura/salida/memoria`), con los datos de demostración de Santa Marta | Por defecto, y en las pruebas que no necesitan MongoDB |
 | `mongo` | Los adaptadores de salida de MongoDB (`infraestructura/salida/persistencia`) y la creación de sus índices (DC-33) | En Docker Compose y en las pruebas de integración |
-| `demo` | Los headers que sustituyen al token del prestador (DC-01) y, junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
+| `demo` | Junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 | `carga` | Junto con `mongo`, el catálogo sintético de 5.000 ofertas después de los datos de demostración (DC-48) | Solo en la prueba de carga |
 
 - Docker Compose activa `mongo` y `demo` (`SPRING_PROFILES_ACTIVE=mongo,demo`).
@@ -318,7 +320,7 @@ El paquete se cobra por persona porque está hecho de actividades, que se cobran
 - `prestadorId` va para que la recomendación arme el registro de exposición que mide el sesgo por prestador (RET-02).
 - **No** van calificaciones, opiniones, comisión ni el tamaño del prestador: así la recomendación no puede favorecer a nadie por esos datos (RET-02). El catálogo no prioriza a ningún prestador; la rotación entre ofertas de igual afinidad es de la recomendación (`PoliticaRotacion`).
 
-Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y la autenticación entre servicios llega con el JWT.
+Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuera, como en DC-04, y la autenticación entre servicios queda pendiente (DN-37).
 
 ## Búsqueda por texto
 
@@ -493,4 +495,4 @@ Las dos rutas no exigen rol: Nginx bloquea `/api/catalogo/internal/` hacia afuer
 
 ## Fuera del alcance del prototipo
 
-La pantalla de moderación del administrador, que vive en el núcleo; las alternativas por alta afluencia, que son de la recomendación (RF-29); JWT real; autenticación entre servicios; la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.
+La pantalla de moderación del administrador, que vive en el núcleo; las alternativas por alta afluencia, que son de la recomendación (RF-29); autenticación entre servicios; la regla de modalidades del guía (RF-69); Prometheus, Grafana y las alertas de RNF-13; la medición de extremo a extremo en red móvil de QAS-07.

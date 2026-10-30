@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.SinTiempoParaConfirmarException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.SolicitudNoEncontradaException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.AvisoPlataforma;
@@ -13,6 +12,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.TipoNo
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.AtenderSolicitudUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarColaOperadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.comando.AtenderSolicitudCommand;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,6 +21,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -51,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Las rutas del operador de disponibilidad (RF-34 a RF-40). */
 @WebMvcTest(SolicitudOperadorController.class)
-@Import({IdentidadPorHeaders.class, SolicitudOperadorControllerTest.RelojFijo.class})
+@Import(SolicitudOperadorControllerTest.RelojFijo.class)
 @ActiveProfiles("demo")
 class SolicitudOperadorControllerTest {
 
@@ -174,12 +175,14 @@ class SolicitudOperadorControllerTest {
     @Test
     @DisplayName("solo el rol OPERADOR_DISPONIBILIDAD")
     void rol() throws Exception {
-        http.perform(get("/operador/solicitudes").header("X-Usuario-Id", OPERADOR.toString())
-                        .header("X-Rol", "TURISTA"))
+        http.perform(get("/operador/solicitudes")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(OPERADOR.toString(), "TURISTA")))
                 .andExpect(status().isForbidden());
     }
 
     private static MockHttpServletRequestBuilder comoOperador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", OPERADOR.toString()).header("X-Rol", "OPERADOR_DISPONIBILIDAD");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearer(OPERADOR.toString(), "OPERADOR_DISPONIBILIDAD"));
     }
 }

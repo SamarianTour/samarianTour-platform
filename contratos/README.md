@@ -9,6 +9,8 @@ API first: los contratos OpenAPI se escriben antes del código de cada servicio.
 | `recomendacion.openapi.yaml` | API pública de la recomendación: `POST /recomendaciones` (de 3 a 5 ofertas explicadas, por reglas o con IA), `GET /zonas/{zonaId}/alertas` y `GET /alertas` (alertas del destino) y `GET /ofertas/{ofertaId}/alternativas` (alternativas por alta afluencia) | Endpoints del prototipo |
 | `internos/` | Avisos de la bandeja de salida, consulta interna de ofertas y registro de exposición | Pendiente |
 
+**Seguridad.** El catálogo y el núcleo declaran el esquema `tokenAcceso` (`Authorization: Bearer`, el JWT del núcleo) y lo exigen en las rutas de cada rol, con `security: [tokenAcceso: []]` en cada operación; las demás no lo piden (DN-37). Los parámetros `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador` del prototipo ya no existen. Las rutas de la recomendación son públicas.
+
 Los avisos internos del núcleo al catálogo (`POST /internal/avisos` para las ofertas y `POST /internal/opiniones/avisos` para las opiniones) y las consultas internas (`GET /internal/ofertas/{id}`, `GET /internal/moderacion/ofertas/{id}` y `GET /internal/moderacion/opiniones/{id}` para el núcleo, y `GET /internal/ofertas` para la recomendación) están por ahora dentro de `catalogo.openapi.yaml`; pasan a `internos/` cuando se escriban los contratos del núcleo y de la recomendación.
 
 El registro de exposición de la recomendación (RET-02) todavía no tiene contrato: mientras el núcleo no tenga esa ruta, la recomendación lo escribe en su log (DR-08 de `docs/decisiones-recomendacion.md`).

@@ -1,7 +1,7 @@
 package co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad;
 
 /**
- * Los roles del SRS (DN-04). El núcleo los emite en el token; en el prototipo llegan en un header (DN-05). El catálogo
+ * Los roles del SRS (DN-04). El núcleo los emite en el token de acceso (DN-37), con estos nombres. El catálogo
  * solo distingue los tres primeros.
  */
 public enum Rol {

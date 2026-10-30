@@ -1,12 +1,14 @@
 package co.edu.unimagdalena.samariantour.catalogo;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.almacenamiento.ImagenesDePrueba;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -86,8 +88,7 @@ class DemostracionApiTest {
 
         String fotoId = subirFoto(GUIA, "GUIA_INDEPENDIENTE");
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE"))
                         .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.pendiente.numero").value(1))
@@ -106,8 +107,9 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.pendiente.estadoModeracion").value("EN_MODERACION"))
                 .andExpect(jsonPath("$.pendiente.contenido.puntoEncuentro").value("Plaza principal de Minca"))
                 .andExpect(jsonPath("$.pendiente.contenido.idiomasAtencion[1]").value("en"));
-        http.perform(get("/prestador/ofertas/" + id).header("X-Usuario-Id", "10000000-0000-0000-0000-000000000001")
-                        .header("X-Rol", "PRESTADOR").header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+        http.perform(get("/prestador/ofertas/" + id)
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(
+                                "10000000-0000-0000-0000-000000000001", "AGENCIA_OPERADORA")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
 
@@ -130,8 +132,7 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.fotos[0].url").value("/fotos/" + fotoId + "/galeria"));
 
         http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE"))
                         .content(NUEVA_ACTIVIDAD.formatted(fotoId).replace("75000", "82000")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.publicada.numero").value(1))
@@ -145,8 +146,7 @@ class DemostracionApiTest {
     void retiro() throws Exception {
         String fotoId = subirFoto(GUIA, "GUIA_INDEPENDIENTE");
         String creada = http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE"))
                         .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -159,26 +159,23 @@ class DemostracionApiTest {
         http.perform(get("/ofertas/" + id)).andExpect(status().isOk());
 
         http.perform(patch("/prestador/ofertas/" + id + "/retiro")
-                        .header("X-Usuario-Id", "10000000-0000-0000-0000-000000000001").header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(
+                                "10000000-0000-0000-0000-000000000001", "AGENCIA_OPERADORA")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
         http.perform(patch("/prestador/ofertas/" + id + "/retiro")
-                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE")))
                 .andExpect(status().isNoContent());
 
         http.perform(get("/ofertas/" + id)).andExpect(status().isNotFound());
         http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007").param("size", "100"))
                 .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
         http.perform(get("/prestador/ofertas").param("size", "100")
-                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[?(@.id == '%s')].retirada".formatted(id), contains(true)));
         http.perform(put("/prestador/ofertas/" + id).contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE"))
                         .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_EDITABLE"));
@@ -191,8 +188,7 @@ class DemostracionApiTest {
         // Subir una foto no publica nada, así que no exige el RNT; publicar sí.
         String fotoId = subirFoto(sinRnt, "AGENCIA_OPERADORA");
         http.perform(post("/prestador/ofertas").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", sinRnt).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "AGENCIA_OPERADORA")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(sinRnt, "AGENCIA_OPERADORA"))
                         .content(NUEVA_ACTIVIDAD.formatted(fotoId)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("RNT_INACTIVO"));
@@ -247,8 +243,8 @@ class DemostracionApiTest {
             + "núcleo consulta la que va a decidir")
     void moderacion() throws Exception {
         http.perform(get("/admin/moderacion/ofertas")
-                        .header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006")
-                        .header("X-Rol", "ADMINISTRADOR"))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearer("60000000-0000-0000-0000-000000000006", "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[0].id").value("b00000000000000000000017"))
                 .andExpect(jsonPath("$.contenido[0].publicada").doesNotExist())
@@ -277,7 +273,7 @@ class DemostracionApiTest {
                 """.formatted(oferta);
 
         http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", turista).header("X-Rol", "TURISTA").content(opinion))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA")).content(opinion))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("OPINION_NO_HABILITADA"));
 
@@ -287,22 +283,22 @@ class DemostracionApiTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("APLICADO"));
 
         String creada = http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", turista).header("X-Rol", "TURISTA").content(opinion))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA")).content(opinion))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.estado").value("EN_MODERACION"))
                 .andExpect(jsonPath("$.nombreOferta").value("Recorrido a pie por el Centro Histórico"))
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(creada, "$.id");
         http.perform(post("/turista/opiniones").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Usuario-Id", turista).header("X-Rol", "TURISTA").content(opinion))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA")).content(opinion))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("OPINION_DUPLICADA"));
 
         http.perform(get("/ofertas/" + oferta + "/opiniones"))
                 .andExpect(jsonPath("$.contenido[*].id", not(hasItem(id))));
         http.perform(get("/admin/moderacion/opiniones").param("size", "100")
-                        .header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006")
-                        .header("X-Rol", "ADMINISTRADOR"))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearer("60000000-0000-0000-0000-000000000006", "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[*].id", hasItem(id)));
         http.perform(get("/internal/moderacion/opiniones/" + id))
@@ -322,7 +318,8 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.contenido[0].id").value(id))
                 .andExpect(jsonPath("$.resumen.totalOpiniones").value(1))
                 .andExpect(jsonPath("$.resumen.promedioCalificacion").value(4.0));
-        http.perform(get("/turista/opiniones").header("X-Usuario-Id", turista).header("X-Rol", "TURISTA"))
+        http.perform(get("/turista/opiniones")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA")))
                 .andExpect(jsonPath("$.contenido[0].estado").value("APROBADA"));
 
         http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content("""
@@ -331,7 +328,8 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.resultado").value("APLICADO"));
         http.perform(get("/ofertas/" + oferta + "/opiniones"))
                 .andExpect(jsonPath("$.resumen.totalOpiniones").value(0));
-        http.perform(get("/turista/opiniones").header("X-Usuario-Id", turista).header("X-Rol", "TURISTA"))
+        http.perform(get("/turista/opiniones")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA")))
                 .andExpect(jsonPath("$.totalElementos").value(0));
     }
 
@@ -454,22 +452,22 @@ class DemostracionApiTest {
     }
 
     private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", "60000000-0000-0000-0000-000000000006").header("X-Rol", "ADMINISTRADOR");
+        return peticion
+                .header(HttpHeaders.AUTHORIZATION,
+                        TokensDePrueba.bearer("60000000-0000-0000-0000-000000000006", "ADMINISTRADOR"));
     }
 
     private String subirFoto(String prestadorId, String tipoPrestador) throws Exception {
         String foto = http.perform(multipart("/prestador/fotos")
                         .file(new MockMultipartFile("foto", "foto.jpg", "image/jpeg", ImagenesDePrueba.jpg(800, 600)))
-                        .header("X-Usuario-Id", prestadorId).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", tipoPrestador))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(prestadorId, tipoPrestador)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(foto, "$.id");
     }
 
     private static MockHttpServletRequestBuilder comoGuia(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", GUIA).header("X-Rol", "PRESTADOR")
-                .header("X-Tipo-Prestador", "GUIA_INDEPENDIENTE");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearerPrestador(GUIA, "GUIA_INDEPENDIENTE"));
     }
 
     @Test

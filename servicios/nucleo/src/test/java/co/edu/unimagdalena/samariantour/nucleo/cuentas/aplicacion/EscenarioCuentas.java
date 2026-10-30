@@ -160,11 +160,16 @@ class EscenarioCuentas {
         }
     };
 
-    /** Un token de acceso falso que deja ver a quién y a qué sesión se emitió. */
-    final TokenPort tokens = (usuario, sesionId, emitido) ->
-            new TokenAcceso("jwt:" + usuario.id() + ":" + sesionId, emitido.plus(Sesion.VIGENCIA_ACCESO));
+    /** Un token de acceso falso que deja ver a quién y a qué sesión se emitió y, al final, el tipo del prestador. */
+    final TokenPort tokens = (usuario, tipoPrestador, sesionId, emitido) -> new TokenAcceso(
+            "jwt:" + usuario.id() + ":" + sesionId + (tipoPrestador == null ? "" : ":" + tipoPrestador),
+            emitido.plus(Sesion.VIGENCIA_ACCESO));
 
-    final EmisionSesion emisionSesion = new EmisionSesion(repositorioSesiones, HASHER, tokens, new Random(7));
+    /** El tipo de los prestadores que ya registraron su RNT, como lo daría el módulo de prestadores (DN-37). */
+    final Map<UUID, String> tiposPrestador = new LinkedHashMap<>();
+
+    final EmisionSesion emisionSesion = new EmisionSesion(repositorioSesiones, HASHER, tokens,
+            prestadorId -> Optional.ofNullable(tiposPrestador.get(prestadorId)), new Random(7));
 
     final IniciarSesionService iniciarSesion = new IniciarSesionService(repositorio, HASHER, emisionSesion, reloj);
 

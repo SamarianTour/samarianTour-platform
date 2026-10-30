@@ -9,6 +9,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.Solici
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.NotificacionRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.SolicitudRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.TransaccionPort;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterAll;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -119,7 +121,7 @@ class PasarelaSimuladaIT extends IntegracionPostgresBase {
     void aprobarEnLaPagina() throws Exception {
         SolicitudDisponibilidad solicitud = guardar(PagosDePrueba.confirmada(MIERCOLES));
         JsonNode sesion = json.readTree(http.perform(post("/turista/solicitudes/{id}/pago", solicitud.id())
-                        .header("X-Usuario-Id", TURISTA).header("X-Rol", "TURISTA")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
                         .header("Idempotency-Key", UUID.randomUUID()))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         String referencia = sesion.path("referencia").asText();

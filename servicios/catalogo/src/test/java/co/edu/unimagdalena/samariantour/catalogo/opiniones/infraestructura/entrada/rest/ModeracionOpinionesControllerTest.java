@@ -1,6 +1,5 @@
 package co.edu.unimagdalena.samariantour.catalogo.opiniones.infraestructura.entrada.rest;
 
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.excepcion.OpinionNoEncontradaException;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.modelo.Opinion;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.modelo.OpinionConOferta;
@@ -13,11 +12,12 @@ import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.AvisoSupresionTurista;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.opiniones.dominio.puerto.entrada.comando.ResultadoAviso;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,7 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest({ModeracionOpinionesController.class, AvisoOpinionesController.class})
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class ModeracionOpinionesControllerTest {
 
@@ -67,7 +66,7 @@ class ModeracionOpinionesControllerTest {
                 Paginacion.de(null, null), 1));
 
         http.perform(get("/admin/moderacion/opiniones")
-                        .header("X-Usuario-Id", ADMINISTRADOR).header("X-Rol", "ADMINISTRADOR"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido", hasSize(1)))
                 .andExpect(jsonPath("$.contenido[0].id").value("d0000000000000000000000b"))
@@ -82,7 +81,7 @@ class ModeracionOpinionesControllerTest {
     @DisplayName("la cola es solo para el administrador: un turista recibe 403 ACCESO_DENEGADO")
     void soloAdministrador() throws Exception {
         http.perform(get("/admin/moderacion/opiniones")
-                        .header("X-Usuario-Id", TURISTA.toString()).header("X-Rol", "TURISTA"))
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA.toString(), "TURISTA")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
         verifyNoInteractions(pendientes);

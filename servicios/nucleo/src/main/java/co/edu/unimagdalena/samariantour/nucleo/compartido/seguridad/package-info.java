@@ -1,7 +1,6 @@
 /**
- * Seguridad: identidad del usuario (id, rol y, para el prestador, su tipo) y autorización por prefijo de ruta
- * ({@link co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.ExigirRol}). En la versión final la identidad
- * sale del JWT (libs/seguridad-jwt); en el prototipo la sustituyen headers que solo se aceptan con el perfil demo
- * (DN-05).
+ * Seguridad: la identidad del usuario (id, rol y, para el prestador, su tipo), que sale del token de acceso validado
+ * por Spring Security con {@code libs/seguridad-jwt} (DN-37), y los errores 401 y 403 de los controladores. Las reglas
+ * por prefijo de ruta están en {@code compartido/config/SeguridadConfig}.
  */
 package co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad;

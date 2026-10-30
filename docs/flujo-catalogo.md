@@ -102,7 +102,7 @@ Mientras una edición espera moderación, el turista sigue viendo la última apr
 
 ### ¿Quién hace la petición?
 
-En la versión final, el token JWT del núcleo trae id, rol y tipo de prestador. En el prototipo llegan en headers (`X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador`) que simulan el token y solo se aceptan con el perfil `demo`; los avisos del núcleo se simulan con `curl`.
+El token de acceso del núcleo (`Authorization: Bearer`, que se obtiene al iniciar sesión) trae el id, el rol y el tipo de prestador; el catálogo lo valida con la clave pública del núcleo, sin consultarlo (DC-01, DN-37). En el prototipo los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador` hacían ese papel; ya no se aceptan.
 
 ## 5. Flujo completo, paso a paso
 
@@ -128,7 +128,7 @@ Un aviso repetido se detecta en el paso 2; un aviso viejo lo descarta `aplicarHa
 
 ```
 POST /api/catalogo/prestador/ofertas
-Headers: X-Usuario-Id: Laura, X-Rol: PRESTADOR, X-Tipo-Prestador: GUIA_INDEPENDIENTE
+Authorization: Bearer <token de Laura: rol PRESTADOR, tipoPrestador GUIA_INDEPENDIENTE>
 Cuerpo: { tipo: "ACTIVIDAD", nombre: "Avistamiento de aves", zonaId: "minca", precio: 80000, ... }
 ```
 
@@ -222,7 +222,7 @@ POST /api/catalogo/internal/opiniones/avisos
 
 ```
 POST /api/catalogo/turista/opiniones
-Headers: X-Usuario-Id: Pedro, X-Rol: TURISTA
+Authorization: Bearer <token de Pedro: rol TURISTA>
 Cuerpo: { ofertaId: ..., calificacion: 5, comentario: "Vimos tucanes desde el primer mirador." }
 ```
 
@@ -368,7 +368,7 @@ Base: `servicios/catalogo/src/main/java/co/edu/unimagdalena/samariantour/catalog
 | Opiniones: casos de uso | `opiniones/aplicacion/`: `PublicarOpinionService`, `LeerOpinionesOfertaService`, `ListarOpinionesTuristaService`, `ListarOpinionesPendientesService`, `AplicarAvisoOpinionService` |
 | Opiniones: controladores, MongoDB y datos de demostración | `opiniones/infraestructura/entrada/rest/`, `opiniones/infraestructura/salida/persistencia/`, `opiniones/infraestructura/salida/demo/DatosOpiniones` |
 | Header X-Instancia | `compartido/config/InstanciaHeaderFilter` |
-| Simulación del token | `compartido/seguridad/` |
+| Validación del token del núcleo | `compartido/seguridad/` y `compartido/config/SeguridadConfig` (con `libs/seguridad-jwt`) |
 | Reglas de arquitectura | `src/test/.../ArquitecturaTest.java` |
 
 La recomendación está en `servicios/recomendacion/` (ver su [README](../servicios/recomendacion/README.md)), y las solicitudes, en `servicios/nucleo/` (ver su [README](../servicios/nucleo/README.md)).
