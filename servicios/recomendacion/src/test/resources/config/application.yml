@@ -2,5 +2,8 @@
 # @WebMvcTest). Sin las lecturas programadas de alertas, ningún hilo del planificador usa un @MockitoBean mientras la
 # prueba lo configura, ni llama al catálogo real (DR-16). La lógica de las alertas se prueba directamente.
 recomendacion:
+  # La clave de la recomendación que genera TokensDePrueba (libs/seguridad-jwt, test-jar), para su token de servicio.
+  jwt:
+    clave-privada: ${seguridad.jwt.pruebas.clave-privada-recomendacion}
   alertas:
     programadas: false

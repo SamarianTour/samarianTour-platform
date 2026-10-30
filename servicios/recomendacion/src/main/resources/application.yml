@@ -27,6 +27,11 @@ management:
         include: health
 
 recomendacion:
+  # El token de servicio con el que lee /internal/ofertas del catálogo (DN-38, DR-23). La clave privada es solo suya y
+  # llega en RECOMENDACION_JWT_CLAVE_PRIVADA; la genera infra/generar-claves.sh. Sin ella no arranca.
+  jwt:
+    emisor: samarian-tour-recomendacion
+    clave-privada: ${RECOMENDACION_JWT_CLAVE_PRIVADA:}
   catalogo:
     # En Docker Compose se sobrescribe con RECOMENDACION_CATALOGO_URL (http://catalogo:8080/api/catalogo).
     url: http://localhost:8080/api/catalogo
