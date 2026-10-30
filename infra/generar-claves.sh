@@ -17,21 +17,34 @@ agregar() {
   fi
 }
 
+# La pública que corresponde a una privada que ya está en .env: X.509 en Base64, de una línea. Se calcula siempre, así
+# que también completa un .env creado antes y nunca queda desalineada si la privada cambia.
+derivar_publica() {
+  local privada_nombre="$1" publica_nombre="$2" privada publica
+  privada="$(grep "^${privada_nombre}=" .env | tail -n 1 | cut -d= -f2-)"
+  publica="$(printf '%s' "$privada" | openssl base64 -d -A | openssl pkey -inform DER -pubout -outform DER \
+    | openssl base64 -A)"
+  sed -i "/^${publica_nombre}=/d" .env
+  [ -z "$(tail -c 1 .env)" ] || echo >> .env
+  printf '%s=%s\n' "$publica_nombre" "$publica" >> .env
+  echo "${publica_nombre}: derivada de la privada"
+}
+
+# Una clave privada RSA de 2048 bits: PKCS#8 en Base64, en una sola línea. genpkey la escribe en PEM PKCS#8; pkcs8 la
+# pasa a DER sin cambiar el formato (con -outform DER, genpkey usaría PKCS#1).
+clave_rsa() {
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null \
+    | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A
+}
+
 # Cifrado en reposo del nombre y el WhatsApp de las cuentas (RNF-08): 32 bytes aleatorios en Base64.
 agregar NUCLEO_CIFRADO_CLAVE "$(openssl rand -base64 32)"
 
-# Clave privada RSA de 2048 bits que firma el token de acceso (DN-29): PKCS#8 en Base64, en una sola línea. genpkey
-# la escribe en PEM PKCS#8; pkcs8 la pasa a DER sin cambiar el formato (con -outform DER, genpkey usaría PKCS#1).
-agregar NUCLEO_JWT_CLAVE_PRIVADA "$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null \
-  | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A)"
+# El núcleo firma con su privada el token de acceso (DN-29) y su token de servicio (DN-38); con la pública, el catálogo
+# y la recomendación validan el token de acceso, y el catálogo, el de servicio del núcleo (DN-37).
+agregar NUCLEO_JWT_CLAVE_PRIVADA "$(clave_rsa)"
+derivar_publica NUCLEO_JWT_CLAVE_PRIVADA NUCLEO_JWT_CLAVE_PUBLICA
 
-# Clave pública que corresponde a la privada (DN-37): con ella el catálogo y la recomendación validan el token. X.509
-# en Base64, de una línea. Se calcula siempre de la privada que está en .env, así que también completa un .env creado
-# antes y nunca queda desalineada si la privada cambia.
-privada="$(grep '^NUCLEO_JWT_CLAVE_PRIVADA=' .env | tail -n 1 | cut -d= -f2-)"
-publica="$(printf '%s' "$privada" | openssl base64 -d -A | openssl pkey -inform DER -pubout -outform DER \
-  | openssl base64 -A)"
-sed -i '/^NUCLEO_JWT_CLAVE_PUBLICA=/d' .env
-[ -z "$(tail -c 1 .env)" ] || echo >> .env
-printf 'NUCLEO_JWT_CLAVE_PUBLICA=%s\n' "$publica" >> .env
-echo "NUCLEO_JWT_CLAVE_PUBLICA: derivada de la privada"
+# La recomendación firma su token de servicio con su propia privada, y el catálogo lo valida con la pública (DN-38).
+agregar RECOMENDACION_JWT_CLAVE_PRIVADA "$(clave_rsa)"
+derivar_publica RECOMENDACION_JWT_CLAVE_PRIVADA RECOMENDACION_JWT_CLAVE_PUBLICA
