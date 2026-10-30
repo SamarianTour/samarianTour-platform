@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) y el token de acceso en los tres servicios (DN-37); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37) y el token de servicio en las rutas internas (DN-38); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -46,6 +46,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-35 | API de los prestadores, regla del RNT en la moderación y prestadores de la demo | ✅ diagrama de paquetes, DC-38 · reemplaza DN-15 y DN-26 |
 | DN-36 | Sincronización semanal con el RNT, retiro, restitución y cierre de las solicitudes no pagadas | ✅ RF-76 a RF-78, HU-ADM-02 · 🆕 equipo: horario, lotes y motivo |
 | DN-37 | El token de acceso en los tres servicios con Spring Security y `libs/seguridad-jwt`, el tipo del prestador en el token y el cierre de las rutas que esquivaban a Nginx | ✅ QAS-04, diagrama de paquetes · 🆕 equipo: fuente del tipo, clave por variable, sin headers |
+| DN-38 | El token de servicio en las rutas internas: firmado por quien llama, con audiencia, y cada ruta solo para el servicio que la usa | ✅ QAS-04, documento de diseño · 🆕 equipo: clave propia de la recomendación, 5 minutos |
 
 ## Persistencia
 
@@ -88,10 +89,25 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
   - el cortafuegos de Spring Security, activo en los tres servicios, rechaza con 400 las rutas con `;`, `%2F`, `%25`, `..` o `//`;
   - `NginxRutasInternasIT` levanta Nginx con `infra/nginx/nginx.conf` y un eco detrás, y comprueba que ninguna de esas rutas llega al servicio; con la configuración anterior fallan 7 de sus casos.
 - **Pendiente:**
-  - **Autenticación entre servicios.** `/internal/**` sigue protegida solo por la red de Docker. Ya no se alcanza desde afuera, pero un contenedor comprometido dentro de esa red podría llamarla. La solución prevista es un token propio de cada servicio que llama, firmado con su clave y con audiencia (`aud`) y vigencia corta, que el que recibe exige en `/internal/**`. Nunca se reenvía el token del usuario: la bandeja corre sin usuario, y una ruta interna que aceptara su token quedaría abierta a cualquier turista.
+  - **Autenticación entre servicios:** resuelta en DN-38.
   - **TLS.** El token viaja en `Authorization` y el diseño pone HTTPS en Nginx (puerto 443); el `docker-compose` del piloto sirve HTTP en el 8080.
   - **El frontend actual** enviaba los headers desde el selector "Usuario demo", así que sus páginas del prestador y las opiniones del turista responden 401 hasta el frontend nuevo, que inicia sesión.
 - **Limitación aceptada, no pendiente:** cerrar la sesión no invalida el token de acceso ya emitido, que vence solo en 15 minutos como máximo (DN-29). Revocarlo al instante obligaría al catálogo y a la recomendación a consultar al núcleo en cada petición, contra la validación local del diseño, y el catálogo dejaría de atender si el núcleo cae.
+
+**DN-38. El token de servicio en las rutas internas** (QAS-04; documento de diseño: "autenticación entre servicios"; cierra el pendiente de DN-37). Nginx ya no deja llegar a `/internal/**` desde afuera (DN-37), pero dentro de la red de Docker cualquier contenedor podía llamarla. Ahora cada ruta interna exige el token del servicio que la usa.
+- **El token** (`EmisorTokenServicio`, en `libs/seguridad-jwt`):
+  - lo firma el servicio que llama, con **su propia** clave privada (RS256): el núcleo con la que ya firma el token de acceso, y la recomendación con una nueva, `RECOMENDACION_JWT_CLAVE_PRIVADA`, que nunca tiene la del núcleo. Si se filtrara la de la recomendación, solo serviría para lo que el catálogo le permite a ella;
+  - lleva `iss` y `sub` del que llama (`nucleo`, `recomendacion`), `aud` del que recibe (`catalogo`) y `exp` de 5 minutos. Se reutiliza hasta que le falta un minuto;
+  - no lleva `rol`, así que ninguna ruta de usuario lo acepta;
+  - lo agrega un interceptor del cliente HTTP, y solo a las peticiones a `/internal/**`: la recomendación usa el mismo cliente para las zonas, que son públicas.
+- **Nunca se reenvía el token del usuario.** La bandeja de salida corre sin usuario, y una ruta interna que aceptara su token quedaría abierta a cualquier turista. Al catálogo le basta saber que quien pide la oferta es el núcleo, que ya verificó el permiso del usuario.
+- **En el catálogo**, `/internal/**` tiene su propia cadena de Spring Security, que va antes que la de los usuarios (`DecodificadorTokenServicio`):
+  - acepta el token si lo firmó uno de los servicios admitidos con su clave, su `aud` es `catalogo`, su `sub` es el del emisor y no trae `rol`. Las claves públicas son la del núcleo (`SEGURIDAD_JWT_CLAVE_PUBLICA`) y la de la recomendación (`SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA`);
+  - cada ruta admite solo al servicio que la usa: la recomendación, `GET /internal/ofertas`; el núcleo, `GET /internal/ofertas/{id}`, `POST /internal/avisos`, `POST /internal/opiniones/avisos` y `GET /internal/moderacion/**`. Cualquier otra ruta interna se niega;
+  - sin token, o con el de un usuario (aun el del administrador), uno de otra clave o uno para otro servicio, 401 `NO_AUTENTICADO`; con el de un servicio al que no le toca esa ruta, 403 `ACCESO_DENEGADO`.
+- **El núcleo** todavía no tiene rutas internas. El registro de exposición de la recomendación (DR-08) será la primera, y tendrá su cadena como la del catálogo.
+- **Claves:** `infra/generar-claves.sh` agrega el par de la recomendación y deriva su pública; Compose pasa la privada a la recomendación y la pública al catálogo. Las pruebas firman con `TokensDePrueba.bearerServicio`, con una pareja de la recomendación generada al arrancar.
+- **Pruebas:** `RutasInternasTest` (cada servicio en cada ruta interna, tokens de usuario, de otra clave y para otro servicio), `TokenServicioTest` (firma, reutilización, rechazos y el interceptor), `CatalogoApplicationIT` (con el token como lo firma cada servicio, y 401 sin él) y `BandejaSalidaIT` (los avisos salen con el token del núcleo).
 
 ## Bandeja de salida
 
@@ -602,4 +618,5 @@ Con esto quedan hechos los dos pendientes de DN-17.
    - `SolicitudDisponibilidad` agrega `cerrarPorRntInactivo` (DN-36).
 18. **Diagrama entidad-relación:** agregar `prestadores`, `cuentas_cobro` y `auditoria_prestadores` (V10), el índice de V11 y `rnt_simulado_bajas` (V12).
 19. **Diagrama de paquetes, `libs/seguridad-jwt` y `compartido/seguridad`:** la librería tiene `DecodificadorToken`, `ReclamosToken`, `SeguridadJwt`, `RespuestasSeguridad`, `AutenticacionToken` y `ClavesRsa`, y su test-jar, `TokensDePrueba`; cada `compartido/seguridad` tiene `Identidad` y `SeguridadConfig` (DN-37). El módulo de cuentas agrega `TipoPrestadorPort` y `cuentas.api.FuenteTipoPrestador`, que implementa prestadores (`FuenteTipoPrestadorAdapter`).
-20. **Documento de diseño y diagrama de despliegue:** la autenticación entre servicios y el TLS de Nginx siguen pendientes (DN-37); la validación del token es local en los tres servicios, como dice la interacción 5.
+20. **Documento de diseño y diagrama de despliegue:** el TLS de Nginx sigue pendiente (DN-37); la validación del token es local en los tres servicios, como dice la interacción 5.
+21. **Diagrama de paquetes, `libs/seguridad-jwt` y las interacciones entre servicios:** la librería agrega `EmisorTokenServicio`, `DecodificadorTokenServicio` y `ServiciosInternos`; las flechas 1, 2 y 3 llevan el token de servicio del que llama, y el catálogo tiene una cadena de seguridad para `/internal/**` (DN-38).

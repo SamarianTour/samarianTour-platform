@@ -46,7 +46,8 @@ curl -s http://localhost:8080/api/nucleo/cuenta -H "Authorization: Bearer $TOKEN
 - **El núcleo valida sus propios tokens** con la clave pública que sale de `NUCLEO_JWT_CLAVE_PRIVADA`; el catálogo y la recomendación, con `NUCLEO_JWT_CLAVE_PUBLICA`.
 - **El tipo del prestador** lo aporta el módulo de prestadores por `cuentas.api.FuenteTipoPrestador`, sin que las cuentas dependan de él. Tras registrar el RNT o cambiar de tipo, renovar la sesión trae el token con el tipo.
 - **Pruebas:** `AutorizacionPorRutaTest` es la batería de acceso cruzado de QAS-04 (cada rol en cada prefijo, tokens vencidos, de otra clave o de otro emisor, rutas con `;`). Las pruebas firman los tokens con `TokensDePrueba.bearer(usuario, rol)`.
-- **Pendiente:** la autenticación entre servicios en `/internal/**` y el TLS de Nginx (DN-37).
+- **Entre servicios:** el cliente del catálogo agrega a cada petición a `/internal/**` el token de servicio del núcleo, firmado con su misma clave (`EmisorTokenServicio`, DN-38).
+- **Pendiente:** el TLS de Nginx (DN-37).
 
 ## Enviar un aviso al catálogo
 

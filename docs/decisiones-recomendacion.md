@@ -3,7 +3,7 @@
 Registro de las decisiones tomadas para el prototipo del servicio `recomendacion` (RF-26 y RF-27: recomendaciones explicadas, por reglas o con IA; RF-28: alertas del destino; RF-29: alternativas por alta afluencia). Complementa el diagrama de paquetes detallado (módulo 09) y el registro del catálogo ([decisiones-catalogo-ofertas.md](decisiones-catalogo-ofertas.md)); donde los contradice, se indica en la sección final.
 
 - **Estado:** vigente, octubre de 2026. Pendiente de rectificar contra el SRS cuando termine su revisión.
-- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21); DR-22 es de `feature/seguridad-jwt`.
+- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21); DR-22 es de `feature/seguridad-jwt` y DR-23, de `feature/seguridad-servicios`.
 - **Convención:** ✅ decisión que sale de un requisito o de una decisión anterior (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -31,6 +31,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `recomendacion
 | DR-19 | Las alternativas no usan la IA | 🆕 DR-11 |
 | DR-20 | La exposición dice de qué consulta sale | ✅ RET-02 |
 | DR-22 | Spring Security con el token del núcleo, sin rutas que exijan rol | ✅ diagrama de paquetes, DN-37 |
+| DR-23 | La recomendación lee el catálogo con su propio token de servicio | ✅ DN-38 |
 | DR-21 | Alertas en español e inglés; la fuente no se traduce | ✅ DR-02 |
 
 ## Motores
@@ -221,6 +222,10 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 - Aun así, un token que llegue se valida, y uno vencido o falsificado responde 401; y el cortafuegos de Spring Security rechaza con 400 las rutas con `;` que esquivaban a Nginx.
 - Cuando una ruta necesite al turista, como el registro de exposición en el núcleo (DR-08), basta con agregar su regla.
 
+**DR-23. La recomendación lee el catálogo con su propio token de servicio** (DN-38). `GET /internal/ofertas` del catálogo exige el token de la recomendación, que ella firma con su propia clave privada (`RECOMENDACION_JWT_CLAVE_PRIVADA`, `compartido/seguridad/TokenServicioConfig`) y el catálogo valida con la pública.
+- Lo agrega un interceptor del cliente del catálogo solo a `/internal/**`: las lecturas de `/zonas`, que son públicas, salen sin él.
+- El token dura 5 minutos y se reutiliza; firmarlo no consulta a nadie, así que no agrega un punto de falla a la consulta (ADR-04).
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Diagrama del módulo 09:**
@@ -244,4 +249,4 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 
 ## Fuera del alcance de esta rama
 
-El registro de exposición en el núcleo; la autenticación entre servicios; otros tipos de alerta del IDEAM (lluvias, deslizamientos, oleaje), que hoy solo da la fuente simulada porque no tienen un servicio consultable por ubicación (DR-14); el frontend de alertas y alternativas, a cargo de otra persona del equipo.
+El registro de exposición en el núcleo; otros tipos de alerta del IDEAM (lluvias, deslizamientos, oleaje), que hoy solo da la fuente simulada porque no tienen un servicio consultable por ubicación (DR-14); el frontend de alertas y alternativas, a cargo de otra persona del equipo.

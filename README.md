@@ -86,7 +86,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 
 ## Levantar el piloto
 
-La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales, la privada que firma el token y la pública con la que el catálogo y la recomendación lo validan (DN-28, DN-29, DN-37). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten y recalcula la pública desde la privada, así que también completa un `infra/.env` de antes; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
+La primera vez, genera las claves del núcleo en `infra/.env` (que no se versiona): la que cifra los datos personales, la privada que firma el token y la pública con la que el catálogo y la recomendación lo validan, y el par de la recomendación para su token de servicio (DN-28, DN-29, DN-37, DN-38). Sin ellas Compose se detiene con un mensaje que lo recuerda. El script solo agrega las que falten y recalcula la pública desde la privada, así que también completa un `infra/.env` de antes; **no cambies la clave de cifrado de una base con datos**, porque lo ya cifrado deja de leerse.
 
 ```bash
 bash infra/generar-claves.sh
@@ -95,7 +95,7 @@ docker compose -f infra/docker-compose.yml up --build -d
 
 Los correos del núcleo (el restablecimiento de la contraseña) llegan a Mailpit, en `http://localhost:8025`; no se entregan a direcciones reales.
 
-Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo, `/api/nucleo/**` hacia las 2 del núcleo y `/api/recomendacion/**` hacia la recomendación. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` y `actuator/**` de los tres servicios no se exponen hacia afuera, y una ruta con `;` responde 400: era la forma de esquivar ese bloqueo (DN-37).
+Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/catalogo/**` hacia las 2 réplicas del catálogo, `/api/nucleo/**` hacia las 2 del núcleo y `/api/recomendacion/**` hacia la recomendación. La imagen de Nginx se construye con `frontend/Dockerfile`, que compila la aplicación Angular. Cada respuesta trae el header `X-Instancia` con el hostname del contenedor que la atendió, y los errores salen como `application/problem+json` (RFC 7807). Las rutas `internal/**` y `actuator/**` de los tres servicios no se exponen hacia afuera, y una ruta con `;` responde 400: era la forma de esquivar ese bloqueo (DN-37). Dentro de la red de Docker, `internal/**` exige además el token del servicio que llama (DN-38).
 
 Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. El núcleo guarda sus datos en PostgreSQL, sin puertos publicados; al arrancar, Flyway crea o actualiza el esquema (DN-01), y cada 15 s el núcleo envía al catálogo los avisos de su bandeja de salida (DN-06). Nginx arranca cuando el catálogo y el núcleo responden su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
 
@@ -411,20 +411,31 @@ curl -s "$BASE/ofertas/$ID"
 
 ### 5. Consultas internas del núcleo y de la recomendación
 
-El núcleo consulta la oferta al crear una solicitud, y la recomendación lee las ofertas visibles. Como los avisos, solo responden dentro de la red de Docker:
+El núcleo consulta la oferta al crear una solicitud, y la recomendación lee las ofertas visibles. Como los avisos, solo responden dentro de la red de Docker y con el token del servicio que las usa (DN-38). `infra/token-servicio.sh` firma ese token con la clave de `infra/.env`, como lo haría el servicio; vale 5 minutos, así que si una llamada responde 401 se vuelve a pedir:
 
 ```bash
+COMO_NUCLEO=(-H "Authorization: Bearer $(bash infra/token-servicio.sh nucleo)")
+COMO_RECOMENDACION=(-H "Authorization: Bearer $(bash infra/token-servicio.sh recomendacion)")
+
+# Sin token, ni desde la red de Docker se llega: 401. Con el token de la recomendación, una oferta da 403: es del núcleo
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s -o /dev/null -w '%{http_code}\n' http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000001
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s -o /dev/null -w '%{http_code}\n' "${COMO_RECOMENDACION[@]}" \
+  http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000001
+
 # Lo que la solicitud copia (nombre, tipo, zona, prestador) y lo que valida (horarios de salida y capacidad)
 docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000001
+  curl -s "${COMO_NUCLEO[@]}" http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000001
 
 # Oferta aprobada de un prestador con el RNT inactivo: no se puede pedir, 404
 docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000016
+  curl -s "${COMO_NUCLEO[@]}" http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000016
 
 # Paquetes visibles del Parque Tayrona, con la alta afluencia de la zona, los tipos de actividad y el esfuerzo
 docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s "http://catalogo:8080/api/catalogo/internal/ofertas?zonaId=a00000000000000000000005&tipo=PAQUETE"
+  curl -s "${COMO_RECOMENDACION[@]}" \
+  "http://catalogo:8080/api/catalogo/internal/ofertas?zonaId=a00000000000000000000005&tipo=PAQUETE"
 ```
 
 ### 6. Moderación
@@ -435,9 +446,10 @@ El administrador ve lo que espera su decisión: primero el paseo en lancha, que 
 curl -s "$BASE/admin/moderacion/ofertas" \
   "${ADMIN[@]}"
 
-# El núcleo consulta la oferta que va a decidir, desde la red de Docker
+# El núcleo consulta la oferta que va a decidir, desde la red de Docker y con su token de servicio (sección 5)
 docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
+  curl -s "${COMO_NUCLEO[@]}" \
+  http://catalogo:8080/api/catalogo/internal/moderacion/ofertas/b00000000000000000000017
 ```
 
 Rechazar el paseo en lancha exige motivo. El núcleo se lo notifica al prestador; por ahora la notificación solo sale en su log:
@@ -502,12 +514,12 @@ curl -s -X POST "$BASE/turista/opiniones" -H "Content-Type: application/json" \
 # 403 OPINION_NO_HABILITADA
 ```
 
-Cuando una solicitud queda pagada, el núcleo habilita al turista con un aviso (sección 13). Para mostrarlo sin pagar, se envía a mano desde la red de Docker:
+Cuando una solicitud queda pagada, el núcleo habilita al turista con un aviso (sección 13). Para mostrarlo sin pagar, se envía a mano desde la red de Docker, con el token de servicio del núcleo (`COMO_NUCLEO`, sección 5):
 
 ```bash
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s -X POST http://catalogo:8080/api/catalogo/internal/opiniones/avisos \
-  -H "Content-Type: application/json" \
+  "${COMO_NUCLEO[@]}" -H "Content-Type: application/json" \
   -d "{\"idAviso\":\"pago-$TURISTA-$OFERTA\",\"tipo\":\"HABILITACION_OPINION\",\"turistaId\":\"$TURISTA\",\"ofertaId\":\"$OFERTA\"}"
 # {"resultado":"APLICADO"}
 ```
@@ -530,7 +542,8 @@ curl -s "$BASE/admin/moderacion/opiniones" \
   "${ADMIN[@]}"
 
 docker compose -f infra/docker-compose.yml exec -T nginx \
-  curl -s "http://catalogo:8080/api/catalogo/internal/moderacion/opiniones/$OPINION_ID"
+  curl -s "${COMO_NUCLEO[@]}" \
+  "http://catalogo:8080/api/catalogo/internal/moderacion/opiniones/$OPINION_ID"
 ```
 
 El administrador decide en el núcleo, que se lo avisa al catálogo. Al aprobarla, en los siguientes 15 s aparece en la ficha, con el resumen de calificaciones:
@@ -550,7 +563,7 @@ Cuando el núcleo ejecuta la supresión de los datos de un turista (Ley 1581), e
 ```bash
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s -X POST http://catalogo:8080/api/catalogo/internal/opiniones/avisos \
-  -H "Content-Type: application/json" \
+  "${COMO_NUCLEO[@]}" -H "Content-Type: application/json" \
   -d "{\"idAviso\":\"supresion-$TURISTA\",\"tipo\":\"SUPRESION_TURISTA\",\"turistaId\":\"$TURISTA\"}"
 # {"resultado":"APLICADO"}
 

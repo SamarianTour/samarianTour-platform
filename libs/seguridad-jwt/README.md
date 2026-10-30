@@ -9,6 +9,8 @@ Librería compartida por los tres servicios: valida el token de acceso RS256 que
 | `AutenticacionToken` | El usuario autenticado, con la autoridad `ROLE_<rol>` que comparan las reglas `hasRole`. |
 | `SeguridadJwt` | La configuración común de Spring Security: servidor de recursos sin estado, sin sesión, cookie, CSRF ni formulario. Cada servicio agrega después sus reglas por prefijo. |
 | `RespuestasSeguridad` | 401 `NO_AUTENTICADO` con `WWW-Authenticate: Bearer` y 403 `ACCESO_DENEGADO`, en ProblemDetail. |
+| `EmisorTokenServicio` | Firma el token con el que un servicio llama a `/internal/**` de otro (`aud`, 5 minutos, reutilizado) y lo agrega con un interceptor del cliente HTTP, solo a las rutas internas (DN-38). |
+| `DecodificadorTokenServicio` | Valida ese token: emisor admitido con su clave, `aud` de este servicio, `sub` del emisor y sin `rol`. `SeguridadJwt.aplicarServicios` arma con él la cadena de `/internal/**`, con la autoridad `SERVICIO_<nombre>`. |
 | `ClavesRsa` | Lee las claves en Base64 de una línea o en PEM, como las genera `infra/generar-claves.sh`. |
 
 ## Uso en un servicio
