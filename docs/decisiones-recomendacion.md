@@ -3,7 +3,7 @@
 Registro de las decisiones tomadas para el prototipo del servicio `recomendacion` (RF-26 y RF-27: recomendaciones explicadas, por reglas o con IA; RF-28: alertas del destino; RF-29: alternativas por alta afluencia). Complementa el diagrama de paquetes detallado (módulo 09) y el registro del catálogo ([decisiones-catalogo-ofertas.md](decisiones-catalogo-ofertas.md)); donde los contradice, se indica en la sección final.
 
 - **Estado:** vigente, octubre de 2026. Pendiente de rectificar contra el SRS cuando termine su revisión.
-- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21).
+- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21); DR-22 es de `feature/seguridad-jwt`.
 - **Convención:** ✅ decisión que sale de un requisito o de una decisión anterior (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -30,6 +30,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `recomendacion
 | DR-18 | Regla de alternativas por alta afluencia | ✅ RF-29, módulo 09 · 🆕 [SUPUESTO] criterios |
 | DR-19 | Las alternativas no usan la IA | 🆕 DR-11 |
 | DR-20 | La exposición dice de qué consulta sale | ✅ RET-02 |
+| DR-22 | Spring Security con el token del núcleo, sin rutas que exijan rol | ✅ diagrama de paquetes, DN-37 |
 | DR-21 | Alertas en español e inglés; la fuente no se traduce | ✅ DR-02 |
 
 ## Motores
@@ -212,6 +213,13 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 **DR-19. Las alternativas no usan la IA.** Es una regla de sostenibilidad, determinista y explicable, y así no gasta el cupo de Groq (DR-11). La explicación sale de una plantilla en español e inglés (`?idioma=es|en`) con la zona y los criterios que cumple, por ejemplo: "Mismo tipo de oferta en Minca y Sierra Nevada, una zona con menos visitantes; también de senderismo, con esfuerzo igual o menor y precio parecido." Los nombres de los tipos y niveles los comparten las dos plantillas (`Etiquetas`, en el dominio).
 
 **DR-20. La exposición dice de qué consulta sale** (RET-02). Las alternativas también se registran con `ExposicionPort`, y cada registro lleva `origen`: `RECOMENDACION` o `ALTERNATIVAS`, para que la métrica de sesgo pueda separarlas (las alternativas no las pide el turista con sus filtros). Las alternativas se registran con `motor: REGLAS`. Si no aplica, no se muestra nada y no se registra.
+
+## Seguridad
+
+**DR-22. Spring Security con el token del núcleo, sin rutas que exijan rol** (diagrama de paquetes: `compartido` "JWT"; DN-37). La recomendación usa `libs/seguridad-jwt` como los otros dos servicios (`compartido/seguridad/SeguridadConfig`), con la clave pública del núcleo en `SEGURIDAD_JWT_CLAVE_PUBLICA`.
+- Todas sus rutas son públicas según su contrato: la consulta, las alternativas y las alertas no dependen de quién pregunta.
+- Aun así, un token que llegue se valida, y uno vencido o falsificado responde 401; y el cortafuegos de Spring Security rechaza con 400 las rutas con `;` que esquivaban a Nginx.
+- Cuando una ruta necesite al turista, como el registro de exposición en el núcleo (DR-08), basta con agregar su regla.
 
 ## Cambios pendientes en los documentos de diseño
 
