@@ -6,6 +6,13 @@ spring:
     problemdetails:
       enabled: true
 
+# El token de acceso lo emite el núcleo; la recomendación lo valida con su clave pública, sin consultarlo (DR-22).
+seguridad:
+  jwt:
+    emisor: samarian-tour-nucleo
+    # X.509 en Base64; la genera infra/generar-claves.sh. Sin ella la recomendación no arranca.
+    clave-publica: ${SEGURIDAD_JWT_CLAVE_PUBLICA:}
+
 server:
   port: 8080
   servlet:

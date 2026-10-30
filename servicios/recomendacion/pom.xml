@@ -21,6 +21,16 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
+            <!-- Valida el token del núcleo y rechaza las rutas que esquivan a Nginx -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Validación del token RS256 y sus roles, común a los tres servicios -->
+            <groupId>co.edu.unimagdalena.samariantour</groupId>
+            <artifactId>seguridad-jwt</artifactId>
+        </dependency>
+        <dependency>
             <!-- Solo se expone /actuator/health, para el healthcheck de Docker Compose -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -43,6 +53,13 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- ClavesDePrueba: entrega la clave pública a los contextos de las pruebas -->
+            <groupId>co.edu.unimagdalena.samariantour</groupId>
+            <artifactId>seguridad-jwt</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>
