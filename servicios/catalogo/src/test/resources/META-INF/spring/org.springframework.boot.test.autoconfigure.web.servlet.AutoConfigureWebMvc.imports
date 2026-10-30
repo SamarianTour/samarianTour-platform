@@ -1,0 +1,3 @@
+# Las pruebas de un solo controlador (@WebMvcTest) cargan también las reglas de seguridad reales (DC-01): sin ellas,
+# Spring Security pondría las suyas por defecto y ninguna ruta respondería como en el servicio.
+co.edu.unimagdalena.samariantour.catalogo.compartido.config.SeguridadConfig

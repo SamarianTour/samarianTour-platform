@@ -4,7 +4,7 @@ spring:
   profiles:
     # Por defecto los datos viven en la memoria del proceso (perfil memoria); el perfil mongo usa los adaptadores
     # de MongoDB.
-    # El perfil demo, que acepta los headers que sustituyen al token, nunca se activa por defecto.
+    # El perfil demo, que carga los datos de la demostración, nunca se activa por defecto.
     default: memoria
   data:
     mongodb:
@@ -22,6 +22,13 @@ spring:
       # Una foto pesa como máximo 5 MB (DC-39); el resto de la petición son unos pocos bytes.
       max-file-size: 5MB
       max-request-size: 6MB
+
+# El token de acceso lo emite el núcleo; el catálogo lo valida con su clave pública, sin consultarlo (DC-01).
+seguridad:
+  jwt:
+    emisor: samarian-tour-nucleo
+    # X.509 en Base64; la genera infra/generar-claves.sh. Sin ella el catálogo no arranca.
+    clave-publica: ${SEGURIDAD_JWT_CLAVE_PUBLICA:}
 
 server:
   port: 8080

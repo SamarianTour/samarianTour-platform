@@ -6,12 +6,12 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Coorden
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.DatosZona;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Zona;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarZonasUseCase;
-import co.edu.unimagdalena.samariantour.catalogo.compartido.seguridad.IdentidadPorHeaders;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -40,7 +40,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** El administrador gestiona las zonas (HU-ADM-06, DC-49). */
 @WebMvcTest(ZonaAdminController.class)
-@Import(IdentidadPorHeaders.class)
 @ActiveProfiles("demo")
 class ZonaAdminControllerTest {
 
@@ -147,8 +146,9 @@ class ZonaAdminControllerTest {
         http.perform(post("/admin/zonas").contentType(MediaType.APPLICATION_JSON).content(MINCA_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
-        http.perform(get("/admin/zonas").header("X-Usuario-Id", PRESTADOR.toString()).header("X-Rol", "PRESTADOR")
-                        .header("X-Tipo-Prestador", "AGENCIA_OPERADORA"))
+        http.perform(get("/admin/zonas")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                TokensDePrueba.bearerPrestador(PRESTADOR.toString(), "AGENCIA_OPERADORA")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
         verifyNoInteractions(zonas);
@@ -159,6 +159,6 @@ class ZonaAdminControllerTest {
     }
 
     private static MockHttpServletRequestBuilder comoAdministrador(MockHttpServletRequestBuilder peticion) {
-        return peticion.header("X-Usuario-Id", ADMINISTRADOR).header("X-Rol", "ADMINISTRADOR");
+        return peticion.header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR"));
     }
 }
