@@ -12,6 +12,7 @@
     <description>Plataforma de gestión sostenible del turismo en Santa Marta (monorepo)</description>
 
     <modules>
+        <module>libs/seguridad-jwt</module>
         <module>servicios/catalogo</module>
         <module>servicios/nucleo</module>
         <module>servicios/recomendacion</module>
@@ -33,6 +34,7 @@
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
+        <maven-jar-plugin.version>3.4.1</maven-jar-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -44,6 +46,19 @@
                 <version>${spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- La validación del token, común a los tres servicios; el test-jar firma tokens en sus pruebas -->
+            <dependency>
+                <groupId>co.edu.unimagdalena.samariantour</groupId>
+                <artifactId>seguridad-jwt</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>co.edu.unimagdalena.samariantour</groupId>
+                <artifactId>seguridad-jwt</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>
@@ -95,6 +110,11 @@
                         <!-- Conserva los nombres de parámetros (los usa Spring en @PathVariable/@RequestParam) -->
                         <parameters>true</parameters>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

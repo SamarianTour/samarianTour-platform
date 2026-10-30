@@ -7,11 +7,14 @@ WORKDIR /build
 
 # Primero solo los pom, para que la capa de dependencias se reutilice mientras no cambien.
 COPY pom.xml .
+COPY libs/seguridad-jwt/pom.xml libs/seguridad-jwt/
 COPY servicios/catalogo/pom.xml servicios/catalogo/
 COPY servicios/nucleo/pom.xml servicios/nucleo/
 COPY servicios/recomendacion/pom.xml servicios/recomendacion/
 RUN mvn -B -q -pl servicios/nucleo -am dependency:go-offline
 
+# La validación del token, común a los tres servicios (DN-37).
+COPY libs/seguridad-jwt/src libs/seguridad-jwt/src
 COPY servicios/nucleo/src servicios/nucleo/src
 # Las pruebas corren en CI (Testcontainers necesita Docker, que no hay dentro de la construcción).
 RUN mvn -B -q -pl servicios/nucleo -am -DskipTests package
