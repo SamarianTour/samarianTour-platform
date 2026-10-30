@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Samarian Tour · Núcleo
-  version: 0.3.0
+  version: 0.4.0
   description: |
     API del núcleo transaccional: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e
     indicadores. Hoy tiene las cuentas (módulo 1), las solicitudes de disponibilidad (módulo 4), los pagos (módulo 5)
@@ -11,11 +11,11 @@ info:
 
     - Las rutas no incluyen el prefijo `/api/nucleo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
-    - Las rutas `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**` exigen la identidad del
-      usuario con el rol TURISTA, PRESTADOR, ADMINISTRADOR, OPERADOR_DISPONIBILIDAD o GESTOR_DESTINO,
-      respectivamente (DN-04, DN-05); `/cuenta/**` admite cualquiera de los cinco. Sin identidad responden 401
-      `NO_AUTENTICADO`; con otro rol, 403
-      `ACCESO_DENEGADO`. Las demás rutas son públicas, salvo `/internal/**`, que Nginx no expone.
+    - Las rutas `/turista/**`, `/prestador/**`, `/admin/**`, `/operador/**` y `/gestor/**` exigen el token de
+      acceso (`tokenAcceso`) con el rol TURISTA, PRESTADOR, ADMINISTRADOR, OPERADOR_DISPONIBILIDAD o
+      GESTOR_DESTINO, respectivamente (DN-04, DN-37); `/cuenta/**` admite cualquiera de los cinco. Sin token
+      válido responden 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`. Las demás rutas son públicas,
+      salvo `/internal/**` y `/actuator/**`, que Nginx no expone. Una ruta con `;` responde 400.
 servers:
   - url: http://localhost:8080/api/nucleo
     description: Piloto con Docker Compose, detrás de Nginx
@@ -107,8 +107,7 @@ paths:
         minutos (RF-05); mientras tanto la contraseña no se revisa.
 
         El token de acceso lleva `sub` (el usuario), `rol`, `sid` (la sesión), `iss` (`samarian-tour-nucleo`),
-        `iat` y `exp`. Mientras los servicios no lo validen (PR de seguridad-jwt), las rutas protegidas siguen
-        usando los headers de la demo (DN-05).
+        `iat`, `exp` y, del prestador que ya registró su RNT, `tipoPrestador` (ver `tokenAcceso`, DN-37).
       requestBody:
         required: true
         content:
@@ -245,9 +244,8 @@ paths:
       tags: [Cuentas]
       operationId: consultarCuenta
       summary: Los datos personales del usuario identificado, de cualquier rol (RF-12)
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/RolCualquiera'
+      security:
+        - tokenAcceso: []
       responses:
         '200':
           description: Su cuenta.
@@ -266,9 +264,8 @@ paths:
       description: |
         Reemplaza los dos campos. Un WhatsApp distinto queda sin verificar y recibe un código nuevo (RF-03): hasta
         verificarlo, el turista no puede enviar solicitudes. El correo no se cambia (DN-31).
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/RolCualquiera'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -304,9 +301,8 @@ paths:
         para borrar sus opiniones (DC-45). Queda la constancia de la petición y de las aceptaciones de la política
         (RNF-09). Las solicitudes conservan solo el identificador del turista. Con el mismo correo se puede registrar
         una cuenta nueva.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -343,10 +339,8 @@ paths:
         (aviso HABILITACION, DC-02); no encontrado, queda NO_ENCONTRADO; si la fuente no responde en 3 s, queda
         VERIFICACION_PENDIENTE y se revalida en la siguiente sincronización. El tipo tiene que coincidir con la
         categoría del RNT, y el guía independiente, además, ser persona natural (RF-70).
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -391,10 +385,8 @@ paths:
       tags: [Prestadores]
       operationId: consultarPrestador
       summary: Sus datos y su estado RNT con la fecha de la última sincronización (RF-73)
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       responses:
         '200':
           description: El prestador.
@@ -414,10 +406,8 @@ paths:
       operationId: cambiarRnt
       summary: Cambia el número de RNT y lo vuelve a validar (RF-62, RF-63)
       description: Como en el registro. Si la habilitación cambia, se avisa al catálogo (DC-02).
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -446,10 +436,8 @@ paths:
         Un número nuevo queda sin verificar y recibe un código de 6 dígitos por WhatsApp, que vale 30 minutos y admite
         3 intentos (DN-33). Mientras no lo verifique, el prestador no recibe la notificación de una solicitud Pagada
         (RF-57). Con WhatsApp simulado, el código sale en el log del núcleo.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -475,10 +463,8 @@ paths:
       operationId: enviarCodigoWhatsappPrestador
       summary: Envía otro código para verificar el WhatsApp (RF-71)
       description: El anterior deja de servir. Con el número ya verificado no envía nada.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       responses:
         '202':
           description: Código enviado.
@@ -495,10 +481,8 @@ paths:
       tags: [Prestadores]
       operationId: verificarWhatsappPrestador
       summary: El prestador confirma su WhatsApp con el código (RF-71)
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -536,10 +520,8 @@ paths:
         (DN-34); registrar los mismos datos no cambia nada. El número y el titular se guardan cifrados (RNF-08) y la
         respuesta solo muestra los últimos 4 dígitos: completo solo lo usa la dispersión (RF-75). Nequi y Daviplata
         usan como número el celular y no piden entidad.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -564,10 +546,8 @@ paths:
       tags: [Prestadores]
       operationId: consultarCuentaCobro
       summary: La cuenta de cobro vigente, con el número enmascarado (RF-75)
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       responses:
         '200':
           $ref: '#/components/responses/CuentaCobroVigente'
@@ -585,10 +565,8 @@ paths:
       description: |
         El guía independiente declara modalidades e idiomas y no empleados; los demás tipos, empleados (DN-33). El tipo
         tiene que coincidir con la categoría de su RNT.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
-        - $ref: '#/components/parameters/TipoPrestador'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -662,9 +640,8 @@ paths:
         El código anterior deja de servir. Si el número ya está verificado no envía nada. El código vale 30 minutos
         (RF-08) y admite 3 intentos [SUPUESTO] (DN-28). Mientras WhatsApp sea simulado, el código sale en el log del
         núcleo.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       responses:
         '202':
           description: Código enviado.
@@ -680,9 +657,8 @@ paths:
       operationId: verificarWhatsapp
       summary: El turista confirma su WhatsApp con el código (RF-03)
       description: Verificar un número ya verificado responde 200 sin cambiar nada.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -744,6 +720,8 @@ paths:
 
         Repetir la misma decisión sobre la misma versión responde 200 con la decisión de entonces, aunque el catálogo
         ya la haya aplicado; tomar la contraria responde 409 `MODERACION_YA_DECIDIDA`.
+      security:
+        - tokenAcceso: []
       parameters:
         - name: ofertaId
           in: path
@@ -751,8 +729,6 @@ paths:
           schema:
             type: string
           example: b00000000000000000000017
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       requestBody:
         required: true
         content:
@@ -791,14 +767,14 @@ paths:
       description: |
         Como las ofertas, sin número de versión: una opinión no se edita (DC-42 del catálogo). Un rechazo se notifica
         al turista con su motivo (DN-08).
+      security:
+        - tokenAcceso: []
       parameters:
         - name: opinionId
           in: path
           required: true
           schema:
             type: string
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       requestBody:
         required: true
         content:
@@ -849,10 +825,10 @@ paths:
           el catálogo no respondió), el reintento con la misma clave vuelve a intentarlo.
 
         El operador recibe un aviso en la plataforma (RF-34) y el turista, una notificación por WhatsApp (RF-44).
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       requestBody:
         required: true
         content:
@@ -932,11 +908,11 @@ paths:
       tags: [Solicitudes]
       operationId: listarSolicitudesTurista
       summary: Mis solicitudes, de la más reciente a la más antigua (RF-33)
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '200':
           description: Una página de las solicitudes del turista.
@@ -979,10 +955,10 @@ paths:
         Es la reconsulta al reconectar del ADR-04: si una petición quedó sin respuesta, la aplicación pregunta aquí en
         lugar de suponer. Atendida, trae el precio base y las condiciones, incluida la política de cancelación (RF-42),
         y `venceEn` es el fin de la ventana para confirmar y pagar (RF-55). La de otro turista responde 404.
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/SolicitudId'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '200':
           description: La solicitud.
@@ -1033,11 +1009,11 @@ paths:
         CONFIRMAR la deja Confirmada para pagar dentro de la misma ventana; DECLINAR la cierra y avisa al prestador que el
         cupo quedó libre (RF-56). Solo dentro de la ventana: después, 409 `PLAZO_VENCIDO`. Repetir con la misma
         `Idempotency-Key` devuelve la respuesta original sin hacer nada más.
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/SolicitudId'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       requestBody:
         required: true
         content:
@@ -1109,6 +1085,8 @@ paths:
         Sin `estado`, sus pendientes de la más antigua a la más reciente: su cola (RF-35). `proximaAVencer` resalta
         las que tienen 6 h o menos para atenderlas (RF-36). Con otro `estado`, su historial de trámites, de la más
         reciente a la más antigua. Solo las asignadas a ese operador (RF-32).
+      security:
+        - tokenAcceso: []
       parameters:
         - name: estado
           in: query
@@ -1117,8 +1095,6 @@ paths:
             $ref: '#/components/schemas/EstadoSolicitud'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '200':
           description: Una página de su cola.
@@ -1160,10 +1136,10 @@ paths:
       description: |
         Trae el WhatsApp del prestador, para contactarlo fuera de la plataforma (RF-71) [SUPUESTO] (DN-16). La asignada a
         otro operador responde 404.
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/SolicitudId'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '200':
           description: La solicitud.
@@ -1215,10 +1191,10 @@ paths:
 
         Pasadas las 24 h no se puede atender (409 `PLAZO_VENCIDO`). Si el vencimiento corrió a la vez, gana uno y el
         otro ve el estado real: 409 `TRANSICION_INVALIDA` (ADR-05). Una vez atendida, sus datos no cambian.
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/SolicitudId'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       requestBody:
         required: true
         content:
@@ -1292,11 +1268,11 @@ paths:
       operationId: avisosOperador
       summary: Los avisos del operador en la plataforma, del más reciente al más antiguo (RF-34)
       description: Cada solicitud nueva que llega a su cola deja un aviso NUEVA_SOLICITUD [SUPUESTO] (DN-13).
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '200':
           description: Una página de sus avisos.
@@ -1347,11 +1323,11 @@ paths:
         - **Tres intentos** con resultado de la pasarela por solicitud (RF-58); un cuarto es 409 `INTENTOS_AGOTADOS`.
           Normalmente no se llega: al tercer rechazo la solicitud ya está Vencida.
         - **Idempotencia:** la misma `Idempotency-Key` devuelve la respuesta original, con `Idempotency-Replayed: true`.
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/SolicitudId'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '201':
           description: El intento en curso y cómo abrirlo, o la respuesta original si la clave ya se había usado.
@@ -1419,10 +1395,10 @@ paths:
         Del primero al último, con su estado y el id de la transacción en la pasarela (RF-52). Sirve para reconsultar al
         reconectar: la redirección del navegador no prueba el pago (RF-51); el estado de la solicitud cambia solo con el
         evento del webhook (RF-50).
+      security:
+        - tokenAcceso: []
       parameters:
         - $ref: '#/components/parameters/SolicitudId'
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
       responses:
         '200':
           description: Los intentos de la solicitud.
@@ -1522,9 +1498,8 @@ paths:
       description: |
         El porcentaje sobre el precio base que se descuenta en la dispersión al prestador (RF-53). El inicial es 4 %. El
         operador de disponibilidad nunca ve la comisión (SRS, perfil del operador).
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       responses:
         '200':
           description: La vigente y el historial, del cambio más reciente al más antiguo.
@@ -1549,9 +1524,8 @@ paths:
       description: |
         Rige para los pagos que se confirmen desde ahora: los ya confirmados conservan el porcentaje que se les aplicó,
         sin efecto retroactivo (RF-83). De 0 a menos de 100, con hasta dos decimales [SUPUESTO] (DN-23).
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       requestBody:
         required: true
         content:
@@ -1591,9 +1565,8 @@ paths:
       description: |
         La solicitud no cambió y el administrador los reembolsa a mano, fuera del sistema. También llega uno por
         WhatsApp al registrarse (DN-22). Del más reciente al más antiguo.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       responses:
         '200':
           description: Los pagos tardíos.
@@ -1629,9 +1602,8 @@ paths:
         no pagadas de los retirados se cierran (HU-ADM-02): las PENDIENTE quedan NO_DISPONIBLE y las ATENDIDA,
         CONFIRMADA o PAGO_FALLIDO, VENCIDA, con el actor SISTEMA; la que tiene un intento de pago en curso espera su
         resultado.
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - $ref: '#/components/parameters/Rol'
+      security:
+        - tokenAcceso: []
       responses:
         '200':
           description: Lo que hizo la sincronización.
@@ -1651,6 +1623,18 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
 
 components:
+  securitySchemes:
+    tokenAcceso:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        El token de acceso que entregan `POST /cuentas/sesion` y `POST /cuentas/sesion/renovacion`, en
+        `Authorization: Bearer <token>` (DN-29, DN-37). Es un JWT RS256 de 15 minutos firmado por el núcleo, que
+        el catálogo y la recomendación validan con su clave pública. Lleva `sub` (el usuario), `rol`, `sid` (la
+        sesión), `iss` (`samarian-tour-nucleo`), `iat`, `exp` y, solo el del prestador que ya registró su
+        RNT, `tipoPrestador`. Sin token, o con uno vencido, falsificado o de otro emisor, la ruta responde 401
+        `NO_AUTENTICADO`; con un rol que la ruta no admite, 403 `ACCESO_DENEGADO`.
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
@@ -1688,39 +1672,6 @@ components:
         minimum: 1
         maximum: 100
         default: 20
-    UsuarioId:
-      name: X-Usuario-Id
-      in: header
-      required: true
-      description: |
-        PROVISIONAL (DN-05): sustituye al identificador del usuario que traerá el JWT. Solo se acepta con el perfil
-        `demo`; sin él, la petición responde 401.
-      schema:
-        type: string
-        format: uuid
-    Rol:
-      name: X-Rol
-      in: header
-      required: true
-      description: |
-        PROVISIONAL (DN-05), igual que `X-Usuario-Id`. Debe ser el rol que exige el prefijo de la ruta; con otro
-        rol, la petición responde 403 `ACCESO_DENEGADO`.
-      schema:
-        $ref: '#/components/schemas/Rol'
-    RolCualquiera:
-      name: X-Rol
-      in: header
-      required: true
-      description: PROVISIONAL (DN-05), igual que `X-Usuario-Id`. Cualquiera de los cinco roles.
-      schema:
-        $ref: '#/components/schemas/Rol'
-    TipoPrestador:
-      name: X-Tipo-Prestador
-      in: header
-      required: true
-      description: PROVISIONAL (DN-05), igual que `X-Usuario-Id`. Obligatorio con el rol PRESTADOR.
-      schema:
-        $ref: '#/components/schemas/TipoPrestador'
 
   responses:
     CuentaCobroVigente:
@@ -1929,7 +1880,9 @@ components:
             detail: 'La solicitud está ATENDIDA: solo se paga una solicitud Confirmada o con el pago fallido'
             codigo: SOLICITUD_NO_COBRABLE
     NoAutenticado:
-      description: Falta la identidad del usuario, o está mal formada.
+      description: |
+        Falta el token de acceso, o venció, no lo firmó el núcleo o está mal formado. Lleva
+        `WWW-Authenticate: Bearer` (RFC 6750).
       content:
         application/problem+json:
           schema:
@@ -1938,7 +1891,7 @@ components:
             type: about:blank
             title: No autenticado
             status: 401
-            detail: Falta el header X-Usuario-Id
+            detail: 'Esta ruta exige iniciar sesión: envía el token de acceso en Authorization: Bearer'
             codigo: NO_AUTENTICADO
     AccesoDenegado:
       description: El rol del usuario no es el que exige la ruta.
