@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Consultas de los otros servicios: el núcleo pide una oferta al crear una solicitud (RF-30) y la recomendación lee
- * las ofertas visibles (RF-26, RF-29, RET-02). Nginx no expone {@code /internal/**} hacia afuera; la autenticación
- * entre servicios queda pendiente del JWT (DC-04).
+ * las ofertas visibles (RF-26, RF-29, RET-02). Nginx no expone {@code /internal/**} hacia afuera, y cada consulta
+ * exige el token de servicio de quien la usa: la lista, la recomendación; una oferta, el núcleo (DC-04, DN-38).
  */
 @RestController
 @RequestMapping("/internal/ofertas")

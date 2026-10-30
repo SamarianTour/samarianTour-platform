@@ -29,6 +29,12 @@ seguridad:
     emisor: samarian-tour-nucleo
     # X.509 en Base64; la genera infra/generar-claves.sh. Sin ella el catálogo no arranca.
     clave-publica: ${SEGURIDAD_JWT_CLAVE_PUBLICA:}
+  # Los servicios que llaman a /internal/** con su token de servicio (DN-38). El núcleo firma con la clave de arriba;
+  # la recomendación, con la suya, cuya pública llega en SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA.
+  servicios:
+    recomendacion:
+      emisor: samarian-tour-recomendacion
+      clave-publica: ${SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA:}
 
 server:
   port: 8080

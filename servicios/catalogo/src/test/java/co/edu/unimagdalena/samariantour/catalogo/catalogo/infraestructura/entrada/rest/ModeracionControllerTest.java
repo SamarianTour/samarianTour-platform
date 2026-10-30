@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ListarPendientesModeracionUseCase;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ModeracionController.class)
 @ActiveProfiles("demo")
 class ModeracionControllerTest {
+
+    /** El token con el que el núcleo llama a las rutas internas (DN-38). */
+    private static final String COMO_NUCLEO =
+            TokensDePrueba.bearerServicio(ServiciosInternos.NUCLEO, ServiciosInternos.CATALOGO);
 
     private static final String ADMINISTRADOR = "60000000-0000-0000-0000-000000000006";
 
@@ -121,7 +126,7 @@ class ModeracionControllerTest {
     void consultaDelNucleo() throws Exception {
         when(pendientes.consultarOferta("oferta-1")).thenReturn(ofertaEnModeracion());
 
-        http.perform(get("/internal/moderacion/ofertas/oferta-1"))
+        http.perform(get("/internal/moderacion/ofertas/oferta-1").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("oferta-1"))
                 .andExpect(jsonPath("$.tipo").value("ACTIVIDAD"))
@@ -137,7 +142,7 @@ class ModeracionControllerTest {
     void ofertaFueraDeModeracion() throws Exception {
         when(pendientes.consultarOferta("oferta-1")).thenThrow(new OfertaNoEncontradaException("oferta-1"));
 
-        http.perform(get("/internal/moderacion/ofertas/oferta-1"))
+        http.perform(get("/internal/moderacion/ofertas/oferta-1").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));

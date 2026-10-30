@@ -6,11 +6,14 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoNucleoCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.ResultadoAviso;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,6 +32,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AvisoInternoController.class)
 class AvisoInternoControllerTest {
+
+    /** El token con el que el núcleo llama a las rutas internas (DN-38). */
+    private static final String COMO_NUCLEO =
+            TokensDePrueba.bearerServicio(ServiciosInternos.NUCLEO, ServiciosInternos.CATALOGO);
 
     @Autowired
     private MockMvc http;
@@ -114,7 +121,9 @@ class AvisoInternoControllerTest {
     }
 
     private ResultActions enviar(String aviso) throws Exception {
-        return http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content(aviso));
+        return http.perform(post("/internal/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content(aviso));
     }
 
     private AvisoNucleoCommand avisoRecibido() {

@@ -1,6 +1,7 @@
 package co.edu.unimagdalena.samariantour.catalogo;
 
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.almacenamiento.ImagenesDePrueba;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles({"memoria", "demo"})
 class DemostracionApiTest {
+
+    /** El token con el que el núcleo llama a las rutas internas (DN-38). */
+    private static final String COMO_NUCLEO =
+            TokensDePrueba.bearerServicio(ServiciosInternos.NUCLEO, ServiciosInternos.CATALOGO);
+
+    /** El token con el que la recomendación lee las ofertas visibles (DN-38). */
+    private static final String COMO_RECOMENDACION =
+            TokensDePrueba.bearerServicio(ServiciosInternos.RECOMENDACION, ServiciosInternos.CATALOGO);
 
     private static final String GUIA = "20000000-0000-0000-0000-000000000002";
 
@@ -116,9 +125,13 @@ class DemostracionApiTest {
         String aviso = """
                 {"idAviso": "demo-1", "tipo": "MODERACION", "ofertaId": "%s", "numeroVersion": 1, "decision": "APROBAR"}
                 """.formatted(id);
-        http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content(aviso))
+        http.perform(post("/internal/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content(aviso))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("APLICADO"));
-        http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content(aviso))
+        http.perform(post("/internal/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content(aviso))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("DUPLICADO"));
 
         http.perform(get("/ofertas").param("zonaId", "a00000000000000000000007"))
@@ -151,7 +164,9 @@ class DemostracionApiTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String id = JsonPath.read(creada, "$.id");
-        http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+        http.perform(post("/internal/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
                         {"idAviso": "retiro-1", "tipo": "MODERACION", "ofertaId": "%s", "numeroVersion": 1,
                          "decision": "APROBAR"}
                         """.formatted(id)))
@@ -197,21 +212,21 @@ class DemostracionApiTest {
     @Test
     @DisplayName("el núcleo consulta una oferta visible con su versión aprobada; una sin aprobar o sin RNT da 404")
     void consultaInternaDelNucleo() throws Exception {
-        http.perform(get("/internal/ofertas/b00000000000000000000001"))
+        http.perform(get("/internal/ofertas/b00000000000000000000001").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Caminata a Cabo San Juan del Guía"))
                 .andExpect(jsonPath("$.prestadorId").value("10000000-0000-0000-0000-000000000001"))
                 .andExpect(jsonPath("$.zonaId").value("a00000000000000000000005"))
                 .andExpect(jsonPath("$.horariosSalida", contains("07:00", "08:00")))
                 .andExpect(jsonPath("$.capacidadMaxima").value(12));
-        http.perform(get("/internal/ofertas/b00000000000000000000013"))
+        http.perform(get("/internal/ofertas/b00000000000000000000013").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tipo").value("RESTAURANTE"))
                 .andExpect(jsonPath("$.horariosSalida").doesNotExist());
-        http.perform(get("/internal/ofertas/b00000000000000000000017"))
+        http.perform(get("/internal/ofertas/b00000000000000000000017").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
-        http.perform(get("/internal/ofertas/b00000000000000000000016"))
+        http.perform(get("/internal/ofertas/b00000000000000000000016").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isNotFound());
     }
 
@@ -221,19 +236,24 @@ class DemostracionApiTest {
         String busqueda = http.perform(get("/ofertas").param("size", "100"))
                 .andReturn().getResponse().getContentAsString();
         int visibles = JsonPath.read(busqueda, "$.totalElementos");
-        http.perform(get("/internal/ofertas").param("size", "100"))
+        http.perform(get("/internal/ofertas")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION).param("size", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElementos").value(visibles))
                 .andExpect(jsonPath("$.contenido[*].id", not(hasItem("b00000000000000000000016"))));
 
-        http.perform(get("/internal/ofertas").param("zonaId", "a00000000000000000000005").param("tipo", "PAQUETE"))
+        http.perform(get("/internal/ofertas")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION)
+                        .param("zonaId", "a00000000000000000000005").param("tipo", "PAQUETE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido", hasSize(1)))
                 .andExpect(jsonPath("$.contenido[0].id").value("b00000000000000000000008"))
                 .andExpect(jsonPath("$.contenido[0].zonaAltaAfluencia").value(true))
                 .andExpect(jsonPath("$.contenido[0].tiposActividad", contains("SENDERISMO", "BUCEO_SNORKEL")))
                 .andExpect(jsonPath("$.contenido[0].nivelEsfuerzo").value("MODERADO"));
-        http.perform(get("/internal/ofertas").param("zonaId", "a00000000000000000000001"))
+        http.perform(get("/internal/ofertas")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION)
+                        .param("zonaId", "a00000000000000000000001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[*].zonaAltaAfluencia", not(hasItem(true))));
     }
@@ -253,12 +273,14 @@ class DemostracionApiTest {
                 .andExpect(jsonPath("$.contenido[1].pendiente.precioReferencia").value(165000))
                 .andExpect(jsonPath("$.contenido[1].publicada.precioReferencia").value(150000));
 
-        http.perform(get("/internal/moderacion/ofertas/b00000000000000000000017"))
+        http.perform(get("/internal/moderacion/ofertas/b00000000000000000000017")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Paseo en lancha a Playa Blanca"))
                 .andExpect(jsonPath("$.prestadorId").value("10000000-0000-0000-0000-000000000001"))
                 .andExpect(jsonPath("$.numeroVersion").value(1));
-        http.perform(get("/internal/moderacion/ofertas/b00000000000000000000013"))
+        http.perform(get("/internal/moderacion/ofertas/b00000000000000000000013")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isNotFound());
     }
 
@@ -277,7 +299,9 @@ class DemostracionApiTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("OPINION_NO_HABILITADA"));
 
-        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+        http.perform(post("/internal/opiniones/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
                         {"idAviso": "pago-1", "tipo": "HABILITACION_OPINION", "turistaId": "%s", "ofertaId": "%s"}
                         """.formatted(turista, oferta)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.resultado").value("APLICADO"));
@@ -301,16 +325,20 @@ class DemostracionApiTest {
                                 TokensDePrueba.bearer("60000000-0000-0000-0000-000000000006", "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[*].id", hasItem(id)));
-        http.perform(get("/internal/moderacion/opiniones/" + id))
+        http.perform(get("/internal/moderacion/opiniones/" + id).header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.turistaId").value(turista));
 
         String aprobar = """
                 {"idAviso": "moderacion-1", "tipo": "MODERACION_OPINION", "opinionId": "%s", "decision": "APROBAR"}
                 """.formatted(id);
-        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content(aprobar))
+        http.perform(post("/internal/opiniones/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content(aprobar))
                 .andExpect(jsonPath("$.resultado").value("APLICADO"));
-        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content(aprobar))
+        http.perform(post("/internal/opiniones/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content(aprobar))
                 .andExpect(jsonPath("$.resultado").value("DUPLICADO"));
 
         http.perform(get("/ofertas/" + oferta + "/opiniones"))
@@ -322,7 +350,9 @@ class DemostracionApiTest {
                         .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(turista, "TURISTA")))
                 .andExpect(jsonPath("$.contenido[0].estado").value("APROBADA"));
 
-        http.perform(post("/internal/opiniones/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+        http.perform(post("/internal/opiniones/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
                         {"idAviso": "supresion-1", "tipo": "SUPRESION_TURISTA", "turistaId": "%s"}
                         """.formatted(turista)))
                 .andExpect(jsonPath("$.resultado").value("APLICADO"));
@@ -424,7 +454,9 @@ class DemostracionApiTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String ofertaId = JsonPath.read(oferta, "$.id");
-        http.perform(post("/internal/avisos").contentType(MediaType.APPLICATION_JSON).content("""
+        http.perform(post("/internal/avisos")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
                         {"idAviso": "demo-zona-1", "tipo": "MODERACION", "ofertaId": "%s", "numeroVersion": 1,
                          "decision": "APROBAR"}""".formatted(ofertaId)))
                 .andExpect(jsonPath("$.resultado").value("APLICADO"));

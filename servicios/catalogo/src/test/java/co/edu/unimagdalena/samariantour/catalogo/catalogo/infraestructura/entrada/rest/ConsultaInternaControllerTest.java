@@ -10,10 +10,13 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOfe
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaInternaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertasVisiblesUseCase;
+import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
+import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -42,6 +45,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ConsultaInternaController.class)
 class ConsultaInternaControllerTest {
 
+    /** El token con el que el núcleo llama a las rutas internas (DN-38). */
+    private static final String COMO_NUCLEO =
+            TokensDePrueba.bearerServicio(ServiciosInternos.NUCLEO, ServiciosInternos.CATALOGO);
+
+    /** El token con el que la recomendación lee las ofertas visibles (DN-38). */
+    private static final String COMO_RECOMENDACION =
+            TokensDePrueba.bearerServicio(ServiciosInternos.RECOMENDACION, ServiciosInternos.CATALOGO);
+
     @Autowired
     private MockMvc http;
 
@@ -56,7 +67,7 @@ class ConsultaInternaControllerTest {
     void ofertaInterna() throws Exception {
         when(consultarOferta.consultar("oferta-1")).thenReturn(ofertaPublicada());
 
-        http.perform(get("/internal/ofertas/oferta-1"))
+        http.perform(get("/internal/ofertas/oferta-1").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("oferta-1"))
                 .andExpect(jsonPath("$.tipo").value("ACTIVIDAD"))
@@ -73,7 +84,7 @@ class ConsultaInternaControllerTest {
     void ofertaInternaSinHorariosDeSalida() throws Exception {
         when(consultarOferta.consultar("restaurante-1")).thenReturn(restaurantePublicado());
 
-        http.perform(get("/internal/ofertas/restaurante-1"))
+        http.perform(get("/internal/ofertas/restaurante-1").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tipo").value("RESTAURANTE"))
                 .andExpect(jsonPath("$.horariosSalida").doesNotExist());
@@ -84,7 +95,7 @@ class ConsultaInternaControllerTest {
     void ofertaInternaNoEncontrada() throws Exception {
         when(consultarOferta.consultar("no-existe")).thenThrow(new OfertaNoEncontradaException("no-existe"));
 
-        http.perform(get("/internal/ofertas/no-existe"))
+        http.perform(get("/internal/ofertas/no-existe").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
@@ -103,7 +114,7 @@ class ConsultaInternaControllerTest {
                 new Pagina<>(List.of(new OfertaVisible(paquete, true, List.of(caminata, buceo))),
                         new Paginacion(0, 50), 1));
 
-        http.perform(get("/internal/ofertas")
+        http.perform(get("/internal/ofertas").header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION)
                         .param("tipo", "PAQUETE").param("zonaId", ZONA_ACTIVA).param("page", "0").param("size", "50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido", hasSize(1)))
@@ -129,7 +140,7 @@ class ConsultaInternaControllerTest {
         when(consultarVisibles.consultar(any(), any(), any())).thenReturn(new Pagina<>(
                 List.of(new OfertaVisible(restaurantePublicado(), false, List.of())), Paginacion.de(null, null), 1));
 
-        http.perform(get("/internal/ofertas"))
+        http.perform(get("/internal/ofertas").header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[0].tipo").value("RESTAURANTE"))
                 .andExpect(jsonPath("$.contenido[0].tiposActividad", hasSize(0)))
@@ -142,11 +153,13 @@ class ConsultaInternaControllerTest {
     @Test
     @DisplayName("un tipo desconocido o un tamaño fuera de rango responden 400 DATO_INVALIDO")
     void parametrosInvalidos() throws Exception {
-        http.perform(get("/internal/ofertas").param("tipo", "HOTEL"))
+        http.perform(get("/internal/ofertas")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION).param("tipo", "HOTEL"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"))
                 .andExpect(jsonPath("$.detail", containsString("ALOJAMIENTO")));
-        http.perform(get("/internal/ofertas").param("size", "500"))
+        http.perform(get("/internal/ofertas")
+                        .header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION).param("size", "500"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATO_INVALIDO"));
     }

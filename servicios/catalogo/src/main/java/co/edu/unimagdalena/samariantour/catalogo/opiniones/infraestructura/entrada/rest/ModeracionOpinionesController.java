@@ -32,7 +32,7 @@ public class ModeracionOpinionesController {
         return ModeracionOpinionesWebMapper.aPaginaPendientes(pendientes.listar(Paginacion.de(page, size)));
     }
 
-    /** Nginx no expone {@code /internal/**} hacia afuera; la autenticación entre servicios llega con el JWT. */
+    /** Nginx no expone {@code /internal/**} hacia afuera, y solo el núcleo entra, con su token de servicio (DN-38). */
     @GetMapping("/internal/moderacion/opiniones/{id}")
     public OpinionEnModeracionResponse opinionEnModeracion(@PathVariable String id) {
         return ModeracionOpinionesWebMapper.aEnModeracion(pendientes.consultar(id));
