@@ -11,8 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.UUID;
 
@@ -48,6 +52,23 @@ class DecodificadorTokenTest {
                 .isInstanceOf(JwtException.class);
         assertThatThrownBy(() -> decodificar(TokensDePrueba.bearerAjustado(USUARIO, "ADMINISTRADOR",
                 datos -> datos.issuer("otro-emisor")))).isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("el vencimiento se valida con el reloj que se le pase, no con la fecha real")
+    void vencimientoConReloj() {
+        Instant emitido = Instant.parse("2026-10-30T12:00:00Z");
+        String token = TokensDePrueba.bearerAjustado(USUARIO, "TURISTA",
+                datos -> datos.issuedAt(emitido).expiresAt(emitido.plus(Duration.ofMinutes(15))));
+
+        JwtDecoder antes = DecodificadorToken.crear(ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA),
+                TokensDePrueba.EMISOR, Clock.fixed(emitido.plus(Duration.ofMinutes(10)), ZoneOffset.UTC));
+        JwtDecoder despues = DecodificadorToken.crear(ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA),
+                TokensDePrueba.EMISOR, Clock.fixed(emitido.plus(Duration.ofMinutes(17)), ZoneOffset.UTC));
+
+        assertThat(antes.decode(token.substring("Bearer ".length())).getSubject()).isEqualTo(USUARIO.toString());
+        assertThatThrownBy(() -> despues.decode(token.substring("Bearer ".length())))
+                .isInstanceOf(JwtValidationException.class).hasMessageContaining("expired");
     }
 
     @Test
