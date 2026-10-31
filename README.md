@@ -160,7 +160,7 @@ Para cobrar en el **sandbox de Wompi** (QAS-06, sin recompilar):
 Desde ahí, `POST /turista/solicitudes/{id}/pago` responde con `"pasarela":"WOMPI"` y la URL del Web Checkout (`https://checkout.wompi.co/p/?public-key=...&signature:integrity=...`).
 - **Datos de prueba del sandbox:** la tarjeta 4242 4242 4242 4242 (cualquier fecha futura y CVC de 3 dígitos) se aprueba, la 4111 1111 1111 1111 se rechaza y cualquier otra termina en ERROR. Con Nequi, 3991111111 se aprueba y 3992222222 se rechaza.
 - **Al terminar,** Wompi devuelve al turista a la pantalla de su solicitud y envía el evento firmado al webhook, que es lo único que cambia el estado (RF-51).
-- **Sin el túnel,** el pago se hace pero el evento no llega: el intento queda en curso y a los 30 min se abandona (DN-20).
+- **Sin el túnel,** el pago se hace pero el evento no llega: el intento queda en curso y se abandona a los 30 min, o al terminar la gracia si la ventana vence antes (DN-20).
 - **La dispersión al prestador sigue siendo simulada:** "Pagos a terceros" de Wompi exige activarlo en la cuenta del comercio, con sus propias credenciales (DN-24).
 
 Para volver a la simulada, borra `PAGOS_PASARELA` de `infra/.env` (o ponle `simulada`) y recrea el núcleo.
@@ -963,7 +963,8 @@ Otros casos que se pueden mostrar:
 
 - **Firma inválida:** un evento con otro `checksum` en `POST $NUCLEO/pagos/eventos` responde 401 `EVENTO_NO_AUTENTICO` y no se guarda. El mismo evento válido dos veces responde 200 las dos, con `"duplicado":true` la segunda (DN-21).
 - **Solicitud que no se puede pagar:** una Pendiente o una Atendida responde 409 `SOLICITUD_NO_COBRABLE`, y la de otro turista, 404.
-- **Pago abandonado:** un intento sin resultado a los 30 min queda Abandonado y no cuenta como rechazo: el turista puede abrir otro (DN-20).
+- **Pago abandonado:** un intento sin resultado a los 30 min queda Abandonado y no cuenta como rechazo: el turista puede abrir otro. Si la ventana vence mientras está en curso, se abandona al terminar la gracia de 30 min, y un aprobado dentro de ella paga la solicitud (DN-20).
+- **Pago por otro monto:** un aprobado por un monto distinto al del intento no paga la solicitud, pero aparece en `GET $NUCLEO/admin/pagos-tardios` con `"motivo":"MONTO_DISTINTO"` y llega el aviso al administrador (DN-22).
 
 ### 14. Cuentas
 

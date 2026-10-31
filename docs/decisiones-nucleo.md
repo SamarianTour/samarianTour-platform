@@ -28,9 +28,9 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-17 | API de las solicitudes para pagos | ✅ documento de diseño, RF-50, RF-55, RF-58 |
 | DN-18 | Pasarela elegida por configuración: la simulada de la demo o Wompi sandbox | ✅ QAS-06, RF-46 a RF-48 · 🆕 [SUPUESTO] página simulada |
 | DN-19 | Claves de idempotencia propias de pagos | ✅ ADR-04, DN-12 · 🆕 duplicadas, no extraídas |
-| DN-20 | Intentos de pago: tres con resultado, y el abandonado | ✅ RF-46, RF-49, RF-55, RF-58 · 🆕 [SUPUESTO] abandonado a los 30 min |
-| DN-21 | Webhook con recepción síncrona y procesamiento asíncrono | ✅ RT-07, ADR-04, ADR-05, RF-50 a RF-52 · 🆕 [SUPUESTO] clave de duplicados |
-| DN-22 | Pagos tardíos para el reembolso manual | ✅ RF-50 · 🆕 [SUPUESTO] segunda transacción aprobada |
+| DN-20 | Intentos de pago: tres con resultado, y el abandonado | ✅ RF-46, RF-49, RF-55, RF-58 · 🆕 [SUPUESTO] abandonado a los 30 min o al terminar la gracia |
+| DN-21 | Webhook con recepción síncrona y procesamiento asíncrono | ✅ RT-07, ADR-04, ADR-05, RF-50 a RF-52 · 🆕 [SUPUESTO] clave de duplicados, cinco fallos |
+| DN-22 | Pagos para revisión: tardíos y aprobados por otro monto | ✅ RF-49, RF-50 · 🆕 [SUPUESTO] segunda transacción aprobada |
 | DN-23 | Comisión con historial y costo transaccional configurable | ✅ RF-53, RF-82, RF-83 · 🆕 [SUPUESTO] costo y redondeo |
 | DN-24 | Dispersión al prestador con tres reintentos; con Wompi, delegada a la simulada | ✅ RF-53, RF-54, RF-74, RF-75 · 🆕 [SUPUESTO] esperas |
 | DN-25 | Persistencia de pagos (V7) | ✅ DN-02, ADR-05 |
@@ -291,13 +291,15 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
   - si ya hay un intento en curso, devuelve ese mismo con una sesión nueva y no abre otro;
   - si no, abre el siguiente y llama a `marcarIntentoEnCurso`, que aplaza el vencimiento hasta 30 min (RF-55, DN-14);
   - un índice único parcial impide dos en curso a la vez, aunque las peticiones lleguen a réplicas distintas.
-- **El monto** es el precio base × 100, en centavos y en COP, sin cargos adicionales (RF-49). Un evento por otro monto no paga la solicitud: queda procesado con el resultado `MONTO_DISTINTO`.
+- **El monto** es el precio base × 100, en centavos y en COP, sin cargos adicionales (RF-49). Un evento por otro monto no paga la solicitud: queda procesado con el resultado `MONTO_DISTINTO` y, si la pasarela lo aprobó, queda para revisión (DN-22).
 - **Estados:** EN_CURSO, APROBADO, RECHAZADO, ERROR y ABANDONADO.
   - DECLINED y VOIDED quedan como RECHAZADO; ERROR, como ERROR. Los tres llevan la solicitud a Pago fallido, o a Vencida al tercero (RF-58);
   - PENDING solo guarda el id de la transacción, y el intento queda con el id de la que lo resuelve (RF-52).
-- **Abandonado** [SUPUESTO]:
-  - un intento en curso sin resultado 30 min después de abierto queda Abandonado: el turista cerró el checkout o no lo terminó;
-  - una tarea por minuto lo marca con `FOR UPDATE SKIP LOCKED` y llama a `liberarIntentoEnCurso`, así la solicitud vuelve a su plazo;
+- **Abandonado** [SUPUESTO]: un intento en curso sin resultado queda Abandonado a su hora de abandono, porque el turista cerró el checkout o no lo terminó.
+  - **La hora** se calcula al abrirlo (`abandonar_en`, V13): a los 30 min de abierto; si la ventana de la solicitud vence antes, al terminar la gracia de RF-55 (el fin de la ventana más 30 min), nunca después. Por ejemplo, con la ventana hasta las 13:00 y el checkout abierto a las 12:40, se abandona a las 13:30, no a las 13:10, y un aprobado a las 13:20 paga la solicitud.
+  - **Antes** se abandonaba siempre a los 30 min de abierto (fix): liberar el intento le quitaba la gracia a la solicitud, que vencía antes de los 30 min que permite RF-55, y el aprobado de la gracia quedaba como pago tardío;
+  - una tarea por minuto toma de a uno, cada uno en su transacción y con `FOR UPDATE SKIP LOCKED`, los que ya llegaron a su hora, los marca y llama a `liberarIntentoEnCurso`, así la solicitud vuelve a su plazo;
+  - si uno falla por un error inesperado (por ejemplo, su solicitud ya no existe), su abandono se aplaza 1 min [SUPUESTO] y la tarea sigue con los demás: ninguno se toma de primero en cada corrida;
   - un abandonado no cuenta para el límite de RF-58, porque la pasarela no lo rechazó;
   - si después llega su resultado, vale: aprobado paga la solicitud, o queda como pago tardío si ya venció.
 - **El número** del intento es correlativo y no se reinicia, así que con abandonados puede pasar de 3 [SUPUESTO]. El SRS habla de "número 1 a 3"; lo que se limita a tres son los intentos con resultado de la pasarela.
@@ -312,10 +314,16 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
   - un evento válido se guarda y se responde 200 de inmediato, también si es un duplicado. Wompi reintenta a los 30 min, a las 3 h y a las 24 h si no recibe 200.
 - **Duplicados** [SUPUESTO]: el evento no trae id, así que la clave de unicidad es el id de la transacción más el estado. La inserción usa `ON CONFLICT DO NOTHING`, y la respuesta dice `duplicado: true`, como también para un evento auténtico que no es de una transacción (no se guarda).
 - **Procesamiento:**
-  - cada 5 s [SUPUESTO] (`nucleo.pagos.eventos.cron`) se toman los eventos sin procesar, de a uno y del más antiguo, con `FOR UPDATE SKIP LOCKED`: las dos réplicas trabajan a la vez, sin repetir y sin ShedLock;
+  - cada 5 s [SUPUESTO] (`nucleo.pagos.eventos.cron`) se toman los pendientes cuyo próximo intento ya toca (`siguiente_intento_en`), de a uno y del más atrasado, con `FOR UPDATE SKIP LOCKED`: las dos réplicas trabajan a la vez, sin repetir y sin ShedLock;
   - en una sola transacción se actualizan el intento, la solicitud (por `SolicitudesPagosApi`, `MANDATORY`, DN-17), la dispersión o el pago tardío, y el evento queda procesado con su resultado;
   - un `ConflictoConcurrenciaException` reintenta la transacción completa;
   - si la solicitud no admite el evento (`EventoPagoNoAplicableException`), la transacción se deshace y el evento queda procesado en otra transacción con el código del error, para no repetirlo.
+- **Un evento que falla no bloquea la cola** (fix, con el criterio de la bandeja, DN-06). Antes, cualquier otra excepción dejaba el evento sin procesar y, como la cola se ordenaba por llegada, se volvía a tomar de primero en cada corrida: los pagos de después quedaban bloqueados, cobrados en la pasarela y sin pasar a Pagada. Ahora, ante una excepción inesperada (un error de la base, un `IllegalStateException`, un conflicto que agotó sus reintentos):
+  - en una transacción aparte se sube `intentos_procesamiento`, se guarda `ultimo_error` (el tipo y el mensaje de la excepción, hasta 500 caracteres; las tablas de pagos no tienen datos del turista) y el evento se aplaza con espera creciente: 5, 10, 20 y 40 s [SUPUESTO];
+  - al quinto fallo [SUPUESTO] queda FALLIDO (`procesamiento`, V13), sale de la cola y se avisa al administrador por WhatsApp (`EVENTO_FALLIDO`), con la referencia, la transacción, el estado y el monto, para que lo revise a mano;
+  - el fallo se registra solo si el evento sigue pendiente, leído con `FOR UPDATE`: si otra réplica lo procesó mientras tanto, no se toca. Con dos réplicas, un evento que falla puede sumar dos intentos en la misma vuelta, uno por cada una;
+  - si falla antes de tomar un evento (por ejemplo, sin base de datos), no hay qué aplazar: la tarea registra el error y lo intenta en la siguiente corrida.
+- **Pendiente:** no hay una ruta para ver o reintentar los fallidos. El administrador los revisa en la base y, para reintentar uno, lo devuelve a PENDIENTE.
 - **Lo que hace cada estado:**
   - APPROVED lleva la solicitud a Pagada (RF-50) y deja su dispersión pendiente (DN-24);
   - DECLINED, VOIDED y ERROR la llevan a Pago fallido, o a Vencida al tercer intento (RF-58);
@@ -323,13 +331,15 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
   - un evento sin intento queda procesado como `SIN_INTENTO`.
 - **Hallazgo en la documentación:** el ejemplo de checksum de la página de eventos (`3476DDA5…`) no corresponde a su propia cadena. Su SHA-256 es `5a18ec5e…`, que es el vector de `FormatoWompiTest`, junto con los dos ejemplos de la página de eventos de Pagos a terceros, que sí cuadran. La firma de integridad sí cuadra con su ejemplo (`37c84077…`).
 
-**DN-22. Pagos tardíos** (RF-50).
+**DN-22. Pagos para revisión: tardíos y aprobados por otro monto** (RF-49, RF-50).
 - **Qué es un pago tardío:** un aprobado que no paga nada. Hay tres casos:
   - la solicitud ya estaba Vencida o cerrada (`PAGO_TARDIO` de `registrarPagoAprobado`);
   - otro intento ya la había pagado (`SIN_CAMBIOS`);
   - el intento ya tenía resultado y llega aprobada otra transacción con su referencia [SUPUESTO]. Pasa en la página simulada si el turista vuelve atrás y pulsa Aprobar después de Rechazar. En Wompi no debería pasar, porque la referencia es única por transacción, pero la regla igual lo cubre.
-- **Qué se hace:** la solicitud no cambia ni revive. Se guarda un `PagoTardio` (uno por transacción) y una tarea avisa al administrador por WhatsApp (`PAGO_TARDIO`) para que lo reembolse a mano, fuera del sistema (los reembolsos están fuera del alcance).
-- **`GET /admin/pagos-tardios`** (ADMINISTRADOR): los pagos tardíos del más reciente al más antiguo, con la referencia, el id de la transacción, el monto en pesos y si ya se avisó.
+- **Un aprobado por otro monto** (fix) tampoco paga la solicitud (RF-49), pero el turista sí pagó. Antes solo quedaba marcado como `MONTO_DISTINTO` y nadie se enteraba. Ahora queda para revisión con el motivo `MONTO_DISTINTO`, por el monto que aprobó la pasarela. Uno rechazado por otro monto no se registra, porque no se cobró nada.
+- **Qué se hace:** la solicitud no cambia ni revive. Se guarda un `PagoTardio` (uno por transacción) con su `motivo`, `PAGO_TARDIO` o `MONTO_DISTINTO` (V13), y una tarea avisa al administrador por WhatsApp, con el tipo del mismo nombre, para que lo revise y lo reembolse a mano, fuera del sistema (los reembolsos están fuera del alcance).
+- **`GET /admin/pagos-tardios`** (ADMINISTRADOR): los pagos para revisión del más reciente al más antiguo, con la referencia, el id de la transacción, el monto aprobado en pesos, el motivo y si ya se avisó.
+- **Los avisos no se bloquean** (fix): cada uno se intenta en su propia transacción. Uno que no sale (el destinatario no tiene WhatsApp, el envío falla o hay un error inesperado) queda con `aviso_intentado_en` (V13) y pasa al final de la fila; se reintenta en la siguiente vuelta, sin detener a los demás. Antes iban en un lote de diez, en una sola transacción: un error deshacía el lote, y diez que no se podían avisar ocupaban siempre el primer lugar. Lo mismo vale para los avisos de dispersiones fallidas (DN-24) y de eventos fallidos (DN-21).
 
 **DN-23. Comisión y costo transaccional** (RF-53, RF-82, RF-83).
 - **El porcentaje** está en `configuracion_comision`, con su historial: cada cambio agrega una fila con `vigenteDesde` y el administrador que lo hizo.
@@ -350,11 +360,13 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
 **DN-24. Dispersión al prestador** (RF-53, RF-54, RF-74, RF-75).
 - **Al confirmarse el pago** queda una `Dispersion` PENDIENTE, una por solicitud, con el monto bruto, el porcentaje y el valor de la comisión, el costo transaccional y el neto.
 - **`DispersionScheduler`**, cada 15 s [SUPUESTO]:
-  - toma las pendientes que ya toca intentar, con `FOR UPDATE SKIP LOCKED`;
+  - toma de a una, cada una en su transacción, las pendientes que ya toca intentar, con `FOR UPDATE SKIP LOCKED`;
   - las ejecuta con la cuenta de cobro vigente del prestador en ese momento (RF-74), y guarda la cuenta destino enmascarada.
-- **Si falla** (la pasarela la rechaza, la llamada lanza un error o el prestador no tiene cuenta):
+- **Si falla** (la pasarela la rechaza, la llamada lanza un error, el prestador no tiene cuenta o hay un error inesperado al leer la cuenta o al guardar el resultado):
   - reintenta hasta 3 veces, con una espera que se duplica: 1, 2 y 4 min [SUPUESTO]; en la demo, 10, 20 y 40 s;
-  - al cuarto fallo queda FALLIDA, y se avisa al prestador por WhatsApp (`DISPERSION_FALLIDA`) para que actualice su cuenta (RF-54).
+  - al cuarto fallo queda FALLIDA, y se avisa al prestador por WhatsApp (`DISPERSION_FALLIDA`) para que actualice su cuenta (RF-54);
+  - un error inesperado (fix) se registra como un fallo más, en una transacción aparte. Antes las diez de un lote iban en una sola transacción, y un error con una deshacía todas y volvían a tomarse de primeras.
+- **Riesgo:** si la dispersión salió y lo que falla es guardar el resultado, se vuelve a intentar. Con la simulada no importa; cuando se active Pagos a terceros, hay que mandar el id de la dispersión como `idempotency-key`, que Wompi admite, para que no salga dos veces.
 - **Pendiente:** "reintentarla al actualizarse la cuenta" espera a que RF-74 exista en el módulo de prestadores.
 - **La cuenta** solo la ve la dispersión (RF-75). En las respuestas, la base y los logs sale enmascarada (`******1234`), y `CuentaCobro.toString` también la enmascara.
 - **Wompi delega la dispersión a la simulada.** Wompi tiene una API documentada de dispersión ("Pagos a terceros", `api.sandbox.payouts.wompi.co`) con sandbox, pero:
@@ -364,16 +376,16 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
 
   Por eso el adaptador `wompi` cobra con Wompi y dispersa con `DispersionSimulada`. Cuando se active el producto, se agrega su cliente en ese adaptador sin tocar el dominio.
 
-**DN-25. Persistencia de pagos (V7)** (DN-02, ADR-05).
+**DN-25. Persistencia de pagos (V7 y V13)** (DN-02, ADR-05).
 - **Tablas:**
-  - `intentos_pago`: referencia única, un solo intento en curso por solicitud (índice único parcial), índice de los en curso por abandonar y revisión con `@Version`;
-  - `eventos_pasarela`: clave única, cuerpo recibido e índice parcial de los que faltan por procesar;
-  - `pagos_tardios`: uno por transacción e índice de los que faltan por avisar;
+  - `intentos_pago`: referencia única, un solo intento en curso por solicitud (índice único parcial), su hora de abandono con su índice (V13) y revisión con `@Version`;
+  - `eventos_pasarela`: clave única, cuerpo recibido, en qué va su procesamiento con sus fallos y su próximo intento, e índice de la cola por ese próximo intento (V13);
+  - `pagos_tardios`: uno por transacción, con su motivo (V13), e índice de los que faltan por avisar;
   - `configuracion_comision`, con el valor inicial;
   - `dispersiones`: una por solicitud e índices de las pendientes y de las fallidas sin aviso;
   - `claves_idempotencia_pagos`.
 - **Sin claves foráneas a `solicitudes`:** pagos solo guarda su identificador, para no depender de las tablas de otro módulo.
-- **Los avisos** de pagos tardíos y de dispersiones fallidas se marcan en su propia fila (`aviso_enviado_en`), y la tarea de las dispersiones los envía con `SKIP LOCKED`: no hace falta otra cola de notificaciones.
+- **Los avisos** de pagos tardíos, de dispersiones fallidas y de eventos fallidos se marcan en su propia fila (`aviso_enviado_en`, y `aviso_intentado_en` para el turno de los que no salen, V13), y la tarea de las dispersiones los envía con `SKIP LOCKED`: no hace falta otra cola de notificaciones.
 
 **DN-26. Cuentas de cobro y contactos de pagos** (reemplazada por DN-35). La cuenta de cobro y el WhatsApp de cada prestador eran una tabla provisional de la demo [SUPUESTO]; ahora salen del módulo de prestadores, por `PrestadoresPagosAdapter`. Siguen en `application-demo.yml`:
 - el WhatsApp ficticio del administrador (`nucleo.demo.administrador.whatsapp`), porque las cuentas todavía no guardan el de los roles internos;
@@ -620,3 +632,4 @@ Con esto quedan hechos los dos pendientes de DN-17.
 19. **Diagrama de paquetes, `libs/seguridad-jwt` y `compartido/seguridad`:** la librería tiene `DecodificadorToken`, `ReclamosToken`, `SeguridadJwt`, `RespuestasSeguridad`, `AutenticacionToken` y `ClavesRsa`, y su test-jar, `TokensDePrueba`; cada `compartido/seguridad` tiene `Identidad` y `SeguridadConfig` (DN-37). El módulo de cuentas agrega `TipoPrestadorPort` y `cuentas.api.FuenteTipoPrestador`, que implementa prestadores (`FuenteTipoPrestadorAdapter`).
 20. **Documento de diseño y diagrama de despliegue:** el TLS de Nginx sigue pendiente (DN-37); la validación del token es local en los tres servicios, como dice la interacción 5.
 21. **Diagrama de paquetes, `libs/seguridad-jwt` y las interacciones entre servicios:** la librería agrega `EmisorTokenServicio`, `DecodificadorTokenServicio` y `ServiciosInternos`; las flechas 1, 2 y 3 llevan el token de servicio del que llama, y el catálogo tiene una cadena de seguridad para `/internal/**` (DN-38).
+22. **Diagrama entidad-relación y diccionario de clases, pagos (V13):** `eventos_pasarela` agrega `procesamiento` (PENDIENTE, PROCESADO o FALLIDO), `intentos_procesamiento`, `ultimo_error`, `siguiente_intento_en`, `aviso_enviado_en` y `aviso_intentado_en`; `intentos_pago`, `abandonar_en`; `pagos_tardios`, `motivo` y `aviso_intentado_en`, y `dispersiones`, `aviso_intentado_en`. `TipoAvisoPago` agrega `MONTO_DISTINTO` y `EVENTO_FALLIDO` (DN-20 a DN-22, DN-24).
