@@ -18,16 +18,15 @@ interface IntentoPagoJpaRepository extends JpaRepository<IntentoPagoEntity, UUID
     List<IntentoPagoEntity> findBySolicitudIdOrderByNumeroAsc(UUID solicitudId);
 
     /**
-     * Toma los en curso abiertos antes del límite y los bloquea hasta el final de la transacción; los que otra
-     * transacción tiene bloqueados se saltan (DN-20).
+     * El en curso cuya hora de abandono ya llegó, el de la hora más antigua, bloqueado hasta el final de la
+     * transacción; los que otra transacción tiene bloqueados se saltan (DN-20).
      */
     @Query(value = """
             SELECT * FROM intentos_pago
-            WHERE estado = 'EN_CURSO' AND creado_en <= :limite
-            ORDER BY creado_en, id
-            LIMIT :cantidad
+            WHERE estado = 'EN_CURSO' AND abandonar_en <= :ahora
+            ORDER BY abandonar_en, id
+            LIMIT 1
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
-    List<IntentoPagoEntity> tomarEnCursoAbiertosAntesDe(@Param("limite") Instant limite,
-                                                        @Param("cantidad") int cantidad);
+    Optional<IntentoPagoEntity> tomarPorAbandonar(@Param("ahora") Instant ahora);
 }

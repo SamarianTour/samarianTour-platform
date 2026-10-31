@@ -7,7 +7,6 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.Dispe
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,13 +45,23 @@ public class DispersionJpaAdapter implements DispersionRepositoryPort {
     }
 
     @Override
-    public List<Dispersion> tomarPendientes(Instant ahora, int cantidad) {
-        return dispersiones.tomarPendientes(ahora, cantidad).stream().map(DispersionJpaAdapter::aDominio).toList();
+    public Optional<Dispersion> tomarPendiente(Instant ahora) {
+        return dispersiones.tomarPendiente(ahora).map(DispersionJpaAdapter::aDominio);
     }
 
     @Override
-    public List<Dispersion> tomarFallidasSinAviso(int cantidad) {
-        return dispersiones.tomarFallidasSinAviso(cantidad).stream().map(DispersionJpaAdapter::aDominio).toList();
+    public Optional<Dispersion> pendientePorId(UUID id) {
+        return dispersiones.pendientePorId(id).map(DispersionJpaAdapter::aDominio);
+    }
+
+    @Override
+    public Optional<Dispersion> tomarFallidaSinAviso(Instant inicio) {
+        return dispersiones.tomarFallidaSinAviso(inicio).map(DispersionJpaAdapter::aDominio);
+    }
+
+    @Override
+    public void marcarAvisoIntentado(UUID id, Instant ahora) {
+        dispersiones.marcarAvisoIntentado(id, ahora);
     }
 
     private static void copiarEstado(Dispersion dispersion, DispersionEntity fila) {

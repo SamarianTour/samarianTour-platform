@@ -84,17 +84,18 @@ class PagosAdminControllerTest {
     }
 
     @Test
-    @DisplayName("los pagos tardíos para el reembolso manual (RF-50)")
+    @DisplayName("los pagos para el reembolso manual, con su motivo (RF-49, RF-50)")
     void pagosTardios() throws Exception {
         UUID solicitud = UUID.randomUUID();
         when(pagos.pagosTardios()).thenReturn(List.of(new PagoTardioRegistrado(UUID.randomUUID(), solicitud,
-                "ST-1", "T-1", 300_000, HOY, true)));
+                "ST-1", "T-1", 300_000, "MONTO_DISTINTO", HOY, true)));
 
         http.perform(get("/admin/pagos-tardios")
                         .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(ADMINISTRADOR, "ADMINISTRADOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].solicitudId").value(solicitud.toString()))
                 .andExpect(jsonPath("$[0].monto").value(300_000))
+                .andExpect(jsonPath("$[0].motivo").value("MONTO_DISTINTO"))
                 .andExpect(jsonPath("$[0].avisado").value(true));
     }
 

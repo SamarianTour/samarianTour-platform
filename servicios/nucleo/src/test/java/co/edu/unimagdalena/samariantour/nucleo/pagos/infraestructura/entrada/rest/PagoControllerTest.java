@@ -66,7 +66,7 @@ class PagoControllerTest {
     @Test
     @DisplayName("pago: 201 con el intento y el checkout; la clave y el turista vienen de los headers")
     void generar() throws Exception {
-        IntentoPago intento = IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 300_000, AHORA);
+        IntentoPago intento = IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 300_000, null, AHORA);
         SesionCobro sesion = new SesionCobro("SIMULADA", "http://localhost:8080/api/nucleo/pasarela-simulada/x", null,
                 null, "http://localhost:8080/turista/solicitudes/" + SOLICITUD);
         when(cobros.generar(eq(SOLICITUD), eq(TURISTA), any(), any())).thenAnswer(llamada -> new ResultadoIdempotente(

@@ -56,7 +56,7 @@ public class PagosAdminController {
     public List<PagoTardioResponse> pagosTardios() {
         return pagos.pagosTardios().stream()
                 .map(pago -> new PagoTardioResponse(pago.id(), pago.solicitudId(), pago.referencia(),
-                        pago.transaccionId(), pago.monto(), pago.registradoEn(), pago.avisado()))
+                        pago.transaccionId(), pago.monto(), pago.motivo(), pago.registradoEn(), pago.avisado()))
                 .toList();
     }
 

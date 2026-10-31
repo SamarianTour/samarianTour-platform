@@ -3,6 +3,8 @@ package co.edu.unimagdalena.samariantour.nucleo.pagos;
 import co.edu.unimagdalena.samariantour.nucleo.IntegracionPostgresBase;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.EjecutarDispersionesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.ProcesarEventoPagoUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.CuentasCobroPort;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.salida.modulos.PrestadoresPagosAdapter;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.SolicitudDisponibilidad;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.VencerSolicitudesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.NotificacionRepositoryPort;
@@ -55,7 +57,6 @@ import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDeP
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.OTRO_TURISTA;
 import static co.edu.unimagdalena.samariantour.nucleo.solicitudes.SolicitudesDePrueba.TURISTA;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -76,12 +77,26 @@ class PagosIT extends IntegracionPostgresBase {
 
     static final AtomicReference<Instant> AHORA_DEL_SERVICIO = new AtomicReference<>(AHORA);
 
+    /** Un prestador cuya cuenta no se puede leer: la consulta lanza un error inesperado. */
+    static final UUID PRESTADOR_ROTO = UUID.fromString("10000000-0000-0000-0000-0000000000ee");
+
     @TestConfiguration
     static class RelojDePrueba {
         @Bean
         @Primary
         Clock relojDePrueba() {
             return PagosDePrueba.reloj(AHORA_DEL_SERVICIO);
+        }
+
+        @Bean
+        @Primary
+        CuentasCobroPort cuentasConUnPrestadorRoto(PrestadoresPagosAdapter cuentas) {
+            return prestadorId -> {
+                if (PRESTADOR_ROTO.equals(prestadorId)) {
+                    throw new IllegalStateException("La cuenta no se pudo leer");
+                }
+                return cuentas.cuentaVigente(prestadorId);
+            };
         }
     }
 
@@ -215,7 +230,7 @@ class PagosIT extends IntegracionPostgresBase {
     }
 
     @Test
-    @DisplayName("el pago y la solicitud se confirman juntos: si falla una parte, no queda ninguna")
+    @DisplayName("el pago y la solicitud se confirman juntos: si falla una parte, no queda ninguna y se aplaza")
     void todoONada() throws Exception {
         UUID id = guardar(confirmada(MIERCOLES)).id();
         String referencia = referencia(pagar(id, UUID.randomUUID().toString()));
@@ -226,13 +241,70 @@ class PagosIT extends IntegracionPostgresBase {
                                           costo_transaccional, monto_neto, estado, intentos, creada_en)
                 VALUES (?, ?, ?, 1, 0, 0, 0, 1, 'EXITOSA', 1, now())""", UUID.randomUUID(), id, UUID.randomUUID());
 
-        assertThatThrownBy(() -> eventos.procesarPendientes()).isInstanceOf(RuntimeException.class);
+        assertThat(eventos.procesarPendientes()).isEqualTo(1);
 
         assertThat(jdbc.queryForObject("SELECT estado FROM solicitudes", String.class)).isEqualTo("CONFIRMADA");
         assertThat(jdbc.queryForObject("SELECT estado FROM intentos_pago", String.class)).isEqualTo("EN_CURSO");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM eventos_pasarela WHERE procesado_en IS NULL",
-                Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT procesamiento || ' ' || intentos_procesamiento FROM eventos_pasarela",
+                String.class)).isEqualTo("PENDIENTE 1");
+        assertThat(jdbc.queryForObject("SELECT ultimo_error FROM eventos_pasarela", String.class))
+                .startsWith("DataIntegrityViolationException");
         assertThat(contar("bandeja_salida")).isZero();
+    }
+
+    @Test
+    @DisplayName("un evento que siempre falla no bloquea a los que llegan después; se aplaza con espera creciente")
+    void eventoQueFallaNoBloquea() throws Exception {
+        UUID rota = guardar(confirmada(MIERCOLES)).id();
+        UUID sana = guardar(confirmada(MIERCOLES.plusDays(1))).id();
+        String referenciaRota = referencia(pagar(rota, UUID.randomUUID().toString()));
+        String referenciaSana = referencia(pagar(sana, UUID.randomUUID().toString()));
+        ocuparDispersion(rota);
+        Instant inicio = AHORA_DEL_SERVICIO.get();
+        webhook(PagosDePrueba.evento("T-1", referenciaRota, PRECIO_CENTAVOS, "APPROVED", json));
+        AHORA_DEL_SERVICIO.set(inicio.plusSeconds(1));
+        webhook(PagosDePrueba.evento("T-2", referenciaSana, PRECIO_CENTAVOS, "APPROVED", json));
+
+        assertThat(eventos.procesarPendientes()).isEqualTo(2);
+
+        assertThat(estadoDe(sana)).isEqualTo("PAGADA");
+        assertThat(estadoDe(rota)).isEqualTo("CONFIRMADA");
+        assertThat(jdbc.queryForObject("SELECT siguiente_intento_en FROM eventos_pasarela WHERE transaccion_id = 'T-1'",
+                Instant.class)).isEqualTo(inicio.plusSeconds(1 + 5));
+        assertThat(eventos.procesarPendientes()).isZero();
+    }
+
+    @Test
+    @DisplayName("se reintenta a los 5, 10, 20 y 40 s; al quinto fallo queda FALLIDO y se avisa al administrador")
+    void eventoFallido() throws Exception {
+        UUID id = guardar(confirmada(MIERCOLES)).id();
+        String referencia = referencia(pagar(id, UUID.randomUUID().toString()));
+        ocuparDispersion(id);
+        webhook(PagosDePrueba.evento("T-1", referencia, PRECIO_CENTAVOS, "APPROVED", json));
+        eventos.procesarPendientes();
+
+        for (int fallo = 1; fallo <= 4; fallo++) {
+            Instant siguiente = jdbc.queryForObject("SELECT siguiente_intento_en FROM eventos_pasarela", Instant.class);
+            AHORA_DEL_SERVICIO.set(siguiente.minusMillis(1));
+            assertThat(eventos.procesarPendientes()).isZero();
+            AHORA_DEL_SERVICIO.set(siguiente);
+            Instant antes = AHORA_DEL_SERVICIO.get();
+            assertThat(eventos.procesarPendientes()).isEqualTo(1);
+            if (fallo < 4) {
+                assertThat(jdbc.queryForObject("SELECT siguiente_intento_en FROM eventos_pasarela", Instant.class))
+                        .isEqualTo(antes.plus(Duration.ofSeconds(5).multipliedBy(1L << fallo)));
+            }
+        }
+
+        assertThat(jdbc.queryForObject("SELECT procesamiento || ' ' || intentos_procesamiento FROM eventos_pasarela",
+                String.class)).isEqualTo("FALLIDO 5");
+        AHORA_DEL_SERVICIO.set(AHORA_DEL_SERVICIO.get().plus(Duration.ofHours(1)));
+        assertThat(eventos.procesarPendientes()).isZero();
+        assertThat(dispersiones.enviarAvisos()).isEqualTo(1);
+        assertThat(dispersiones.enviarAvisos()).isZero();
+        assertThat(jdbc.queryForObject("SELECT aviso_enviado_en IS NOT NULL FROM eventos_pasarela", Boolean.class))
+                .isTrue();
+        assertThat(estadoDe(id)).isEqualTo("CONFIRMADA");
     }
 
     @Test
@@ -255,11 +327,36 @@ class PagosIT extends IntegracionPostgresBase {
                 .andExpect(jsonPath("$[0].solicitudId").value(id.toString()))
                 .andExpect(jsonPath("$[0].monto").value(300_000))
                 .andExpect(jsonPath("$[0].transaccionId").value("T-1"))
+                .andExpect(jsonPath("$[0].motivo").value("PAGO_TARDIO"))
                 .andExpect(jsonPath("$[0].avisado").value(false));
 
         assertThat(dispersiones.enviarAvisos()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT aviso_enviado_en IS NOT NULL FROM pagos_tardios", Boolean.class))
                 .isTrue();
+    }
+
+    @Test
+    @DisplayName("aprobado por otro monto: no paga la solicitud, queda para revisión con su motivo y se avisa (RF-49)")
+    void montoDistinto() throws Exception {
+        UUID id = guardar(confirmada(MIERCOLES)).id();
+        String referencia = referencia(pagar(id, UUID.randomUUID().toString()));
+        webhook(PagosDePrueba.evento("T-1", referencia, PRECIO_CENTAVOS - 100, "DECLINED", json));
+        webhook(PagosDePrueba.evento("T-2", referencia, PRECIO_CENTAVOS - 100, "APPROVED", json));
+
+        assertThat(eventos.procesarPendientes()).isEqualTo(2);
+
+        assertThat(estadoDe(id)).isEqualTo("CONFIRMADA");
+        assertThat(jdbc.queryForList("SELECT resultado FROM eventos_pasarela", String.class))
+                .containsOnly("MONTO_DISTINTO");
+        assertThat(jdbc.queryForObject("SELECT estado FROM intentos_pago", String.class)).isEqualTo("EN_CURSO");
+        http.perform(comoAdministrador(get("/admin/pagos-tardios")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].transaccionId").value("T-2"))
+                .andExpect(jsonPath("$[0].monto").value(299_999))
+                .andExpect(jsonPath("$[0].motivo").value("MONTO_DISTINTO"));
+        assertThat(dispersiones.enviarAvisos()).isEqualTo(1);
+        assertThat(contar("dispersiones")).isZero();
     }
 
     @Test
@@ -303,22 +400,66 @@ class PagosIT extends IntegracionPostgresBase {
     }
 
     @Test
-    @DisplayName("un intento en curso aplaza el vencimiento hasta 30 min; abandonado, la solicitud vence (RF-55)")
+    @DisplayName("un intento en curso aplaza el vencimiento hasta 30 min; se abandona al terminar la gracia (RF-55)")
     void abandonado() throws Exception {
         UUID id = guardar(confirmada(MIERCOLES)).id();
         AHORA_DEL_SERVICIO.set(FIN_VENTANA.minus(Duration.ofMinutes(5)));
         pagar(id, UUID.randomUUID().toString()).andExpect(status().isCreated());
 
-        AHORA_DEL_SERVICIO.set(FIN_VENTANA.plus(Duration.ofMinutes(10)));
+        AHORA_DEL_SERVICIO.set(FIN_VENTANA.plus(Duration.ofMinutes(25)));
+        assertThat(eventos.abandonarIntentos()).isZero();
         vencimientos.vencerLote();
         assertThat(jdbc.queryForObject("SELECT estado FROM solicitudes", String.class)).isEqualTo("CONFIRMADA");
 
-        AHORA_DEL_SERVICIO.set(FIN_VENTANA.plus(Duration.ofMinutes(25)));
+        AHORA_DEL_SERVICIO.set(FIN_VENTANA.plus(Duration.ofMinutes(30)));
         assertThat(eventos.abandonarIntentos()).isEqualTo(1);
         vencimientos.vencerLote();
 
         assertThat(jdbc.queryForObject("SELECT estado FROM intentos_pago", String.class)).isEqualTo("ABANDONADO");
         assertThat(jdbc.queryForObject("SELECT estado FROM solicitudes", String.class)).isEqualTo("VENCIDA");
+    }
+
+    @Test
+    @DisplayName("checkout 20 min antes del fin de la ventana: a los 30 min no se abandona y el aprobado paga (RF-55)")
+    void aprobadoDentroDeLaGracia() throws Exception {
+        UUID id = guardar(confirmada(MIERCOLES)).id();
+        AHORA_DEL_SERVICIO.set(FIN_VENTANA.minus(Duration.ofMinutes(20)));
+        String referencia = referencia(pagar(id, UUID.randomUUID().toString()));
+
+        AHORA_DEL_SERVICIO.set(FIN_VENTANA.plus(Duration.ofMinutes(10)));
+        assertThat(eventos.abandonarIntentos()).isZero();
+        vencimientos.vencerLote();
+        AHORA_DEL_SERVICIO.set(FIN_VENTANA.plus(Duration.ofMinutes(20)));
+        webhook(PagosDePrueba.evento("T-1", referencia, PRECIO_CENTAVOS, "APPROVED", json));
+        eventos.procesarPendientes();
+
+        assertThat(estadoDe(id)).isEqualTo("PAGADA");
+        assertThat(jdbc.queryForObject("SELECT resultado FROM eventos_pasarela", String.class)).isEqualTo("APLICADO");
+        assertThat(contar("pagos_tardios")).isZero();
+    }
+
+    @Test
+    @DisplayName("un intento que no se puede abandonar se aplaza un minuto y no detiene a los demás")
+    void abandonoQueFalla() throws Exception {
+        UUID id = guardar(confirmada(MIERCOLES)).id();
+        pagar(id, UUID.randomUUID().toString()).andExpect(status().isCreated());
+        // Un intento de una solicitud que ya no existe: liberarla falla.
+        jdbc.update("""
+                INSERT INTO intentos_pago (id, solicitud_id, turista_id, numero, referencia, monto_centavos, estado,
+                                           creado_en, abandonar_en, revision)
+                VALUES (?, ?, ?, 1, ?, 1, 'EN_CURSO', ?, ?, 0)""", UUID.randomUUID(), UUID.randomUUID(), TURISTA,
+                "ST-huerfano", java.sql.Timestamp.from(AHORA), java.sql.Timestamp.from(AHORA));
+        Instant ahora = AHORA_DEL_SERVICIO.get().plus(Duration.ofMinutes(30));
+        AHORA_DEL_SERVICIO.set(ahora);
+
+        assertThat(eventos.abandonarIntentos()).isEqualTo(2);
+
+        assertThat(jdbc.queryForObject("SELECT estado FROM intentos_pago WHERE referencia <> 'ST-huerfano'",
+                String.class)).isEqualTo("ABANDONADO");
+        assertThat(jdbc.queryForObject("SELECT estado || ' ' || (abandonar_en = ?) FROM intentos_pago "
+                + "WHERE referencia = 'ST-huerfano'", String.class, java.sql.Timestamp.from(ahora.plusSeconds(60))))
+                .isEqualTo("EN_CURSO true");
+        assertThat(eventos.abandonarIntentos()).isZero();
     }
 
     @Test
@@ -345,6 +486,76 @@ class PagosIT extends IntegracionPostgresBase {
                 .hasSize(6).containsOnly("EXITOSA 1");
         assertThat(jdbc.queryForList("SELECT cuenta_destino FROM dispersiones", String.class))
                 .containsOnly("******0101");
+    }
+
+    @Test
+    @DisplayName("dos réplicas con un evento que falla: los demás se procesan una sola vez y ese se aplaza")
+    void dosReplicasConUnoQueFalla() throws Exception {
+        List<String> referencias = new ArrayList<>();
+        UUID rota = null;
+        for (int dia = 0; dia < 5; dia++) {
+            UUID id = guardar(confirmada(MIERCOLES.plusDays(dia))).id();
+            referencias.add(referencia(pagar(id, UUID.randomUUID().toString())));
+            rota = id;
+        }
+        ocuparDispersion(rota);
+        for (int i = 0; i < referencias.size(); i++) {
+            webhook(PagosDePrueba.evento("T-" + i, referencias.get(i), PRECIO_CENTAVOS, "APPROVED", json));
+        }
+
+        aLaVez(() -> eventos.procesarPendientes());
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM eventos_pasarela WHERE resultado = 'APLICADO'",
+                Integer.class)).isEqualTo(4);
+        assertThat(contar("bandeja_salida")).isEqualTo(4);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notificaciones_solicitud WHERE tipo = 'SOLICITUD_PAGADA'",
+                Integer.class)).isEqualTo(8);
+        assertThat(jdbc.queryForObject("SELECT procesamiento FROM eventos_pasarela WHERE transaccion_id = 'T-4'",
+                String.class)).isEqualTo("PENDIENTE");
+        assertThat(jdbc.queryForObject("SELECT intentos_procesamiento FROM eventos_pasarela "
+                + "WHERE transaccion_id = 'T-4'", Integer.class)).isBetween(1, 2);
+    }
+
+    @Test
+    @DisplayName("una dispersión con un error inesperado cuenta como fallo y no detiene a las demás (RF-54)")
+    void dispersionConError() throws Exception {
+        UUID id = guardar(confirmada(MIERCOLES)).id();
+        String referencia = referencia(pagar(id, UUID.randomUUID().toString()));
+        webhook(PagosDePrueba.evento("T-1", referencia, PRECIO_CENTAVOS, "APPROVED", json));
+        eventos.procesarPendientes();
+        jdbc.update("""
+                INSERT INTO dispersiones (id, solicitud_id, prestador_id, monto_bruto, porcentaje_comision, comision,
+                                          costo_transaccional, monto_neto, estado, intentos, creada_en,
+                                          proximo_intento)
+                VALUES (?, ?, ?, 1, 0, 0, 0, 1, 'PENDIENTE', 0, ?, ?)""", UUID.randomUUID(), UUID.randomUUID(),
+                PRESTADOR_ROTO, java.sql.Timestamp.from(AHORA), java.sql.Timestamp.from(AHORA));
+
+        assertThat(dispersiones.ejecutarPendientes()).isEqualTo(2);
+
+        assertThat(jdbc.queryForObject("SELECT estado FROM dispersiones WHERE solicitud_id = ?", String.class, id))
+                .isEqualTo("EXITOSA");
+        assertThat(jdbc.queryForObject("SELECT estado || ' ' || intentos || ' ' || ultima_causa FROM dispersiones "
+                + "WHERE prestador_id = ?", String.class, PRESTADOR_ROTO))
+                .isEqualTo("PENDIENTE 1 Error inesperado: IllegalStateException");
+        assertThat(dispersiones.ejecutarPendientes()).isZero();
+    }
+
+    @Test
+    @DisplayName("los avisos que no se pueden enviar pasan al final de la fila y no detienen a los demás")
+    void avisosSinBloqueo() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            fallidaSinAviso(UUID.randomUUID(), AHORA.plusSeconds(i));
+        }
+        fallidaSinAviso(RESTAURANTE, AHORA.plusSeconds(60));
+
+        assertThat(dispersiones.enviarAvisos()).isZero();
+        AHORA_DEL_SERVICIO.set(AHORA_DEL_SERVICIO.get().plusSeconds(15));
+        assertThat(dispersiones.enviarAvisos()).isEqualTo(1);
+
+        assertThat(jdbc.queryForObject("SELECT aviso_enviado_en IS NOT NULL FROM dispersiones WHERE prestador_id = ?",
+                Boolean.class, RESTAURANTE)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM dispersiones WHERE aviso_intentado_en IS NOT NULL",
+                Integer.class)).isEqualTo(10);
     }
 
     @Test
@@ -425,6 +636,28 @@ class PagosIT extends IntegracionPostgresBase {
 
     private ResultActions webhook(String evento) throws Exception {
         return http.perform(post("/pagos/eventos").contentType(MediaType.APPLICATION_JSON).content(evento));
+    }
+
+    /** Una dispersión que ya ocupa la solicitud: hace fallar la última escritura del procesamiento de su pago. */
+    private void ocuparDispersion(UUID solicitudId) {
+        jdbc.update("""
+                INSERT INTO dispersiones (id, solicitud_id, prestador_id, monto_bruto, porcentaje_comision, comision,
+                                          costo_transaccional, monto_neto, estado, intentos, creada_en)
+                VALUES (?, ?, ?, 1, 0, 0, 0, 1, 'EXITOSA', 1, now())""", UUID.randomUUID(), solicitudId,
+                UUID.randomUUID());
+    }
+
+    /** Una dispersión fallida, de una solicitud cualquiera, que todavía no se avisó a su prestador. */
+    private void fallidaSinAviso(UUID prestadorId, Instant creada) {
+        jdbc.update("""
+                INSERT INTO dispersiones (id, solicitud_id, prestador_id, monto_bruto, porcentaje_comision, comision,
+                                          costo_transaccional, monto_neto, estado, intentos, ultima_causa, creada_en)
+                VALUES (?, ?, ?, 1, 0, 0, 0, 1, 'FALLIDA', 4, 'La entidad rechazó la cuenta', ?)""",
+                UUID.randomUUID(), UUID.randomUUID(), prestadorId, java.sql.Timestamp.from(creada));
+    }
+
+    private String estadoDe(UUID solicitudId) {
+        return jdbc.queryForObject("SELECT estado FROM solicitudes WHERE id = ?", String.class, solicitudId);
     }
 
     private int contar(String tabla) {

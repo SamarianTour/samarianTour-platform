@@ -6,6 +6,8 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.Configuracio
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.CostoTransaccional;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.Dispersion;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.EfectoEnSolicitud;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.EstadoIntento;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.EstadoTransaccion;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.EventoPasarela;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.IntentoPago;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.Liquidacion;
@@ -13,7 +15,6 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.PagoTardio;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.ResultadoIntento;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.SolicitudCobrable;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.politica.CalculadoraComision;
-import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.politica.PoliticaReintentos;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.ProcesarEventoPagoUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.ComisionRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.DispersionRepositoryPort;
@@ -31,8 +32,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Procesa los eventos guardados por el webhook, uno por transacción (RF-50 a RF-53, RF-58, DN-21). Toma el más antiguo
- * con {@code FOR UPDATE SKIP LOCKED}, así las dos réplicas trabajan a la vez sin repetir, y en la misma transacción:
+ * Procesa los eventos guardados por el webhook, uno por transacción (RF-50 a RF-53, RF-58, DN-21). Toma el pendiente
+ * que ya toca con {@code FOR UPDATE SKIP LOCKED}, así las dos réplicas trabajan a la vez sin repetir, y en la misma
+ * transacción:
  * <ul>
  *   <li>actualiza el intento y guarda el id de la transacción (RF-52);</li>
  *   <li>aprobado: la solicitud pasa a Pagada (RF-50) y queda la dispersión pendiente con la comisión vigente y el
@@ -40,10 +42,13 @@ import java.util.concurrent.atomic.AtomicReference;
  *   registra el pago tardío para el reembolso manual; también si el intento ya tenía resultado y llega aprobada otra
  *   transacción con su referencia;</li>
  *   <li>rechazado, anulado o con error: Pago fallido, o Vencida al tercero (RF-58);</li>
- *   <li>un estado no final solo actualiza el intento; un evento sin intento o con otro monto se ignora.</li>
+ *   <li>un estado no final solo actualiza el intento; un evento sin intento se ignora. Uno aprobado por otro monto no
+ *   paga la solicitud (RF-49), pero queda para que el administrador lo revise (DN-22).</li>
  * </ul>
  * Ante un conflicto de concurrencia se reintenta la transacción completa (ADR-05). Si la solicitud no admite el
- * evento, la transacción se deshace y el evento queda procesado con el código del error, para no repetirlo.
+ * evento, la transacción se deshace y el evento queda procesado con el código del error, para no repetirlo. Ante
+ * cualquier otro error, el evento se aplaza con espera creciente y, al quinto fallo, queda fallido: nunca bloquea a
+ * los que llegan después.
  */
 public class ProcesarEventoPagoService implements ProcesarEventoPagoUseCase {
 
@@ -78,6 +83,7 @@ public class ProcesarEventoPagoService implements ProcesarEventoPagoUseCase {
         this.reloj = reloj;
     }
 
+    /** @return los eventos que tomó: procesados, o aplazados porque fallaron */
     @Override
     public int procesarPendientes() {
         int procesados = 0;
@@ -91,7 +97,8 @@ public class ProcesarEventoPagoService implements ProcesarEventoPagoUseCase {
         AtomicReference<EventoPasarela> tomado = new AtomicReference<>();
         try {
             return reintento.ejecutar(() -> transaccion.ejecutar(() -> {
-                Optional<EventoPasarela> evento = eventos.tomarSinProcesar();
+                tomado.set(null);
+                Optional<EventoPasarela> evento = eventos.tomarSinProcesar(reloj.instant());
                 if (evento.isEmpty()) {
                     return false;
                 }
@@ -106,7 +113,27 @@ public class ProcesarEventoPagoService implements ProcesarEventoPagoUseCase {
                 return null;
             });
             return true;
+        } catch (RuntimeException e) {
+            if (tomado.get() == null) {
+                // Falló antes de tomar un evento (por ejemplo, sin base de datos): no hay qué aplazar.
+                throw e;
+            }
+            registrarFallo(tomado.get().id(), e);
+            return true;
         }
+    }
+
+    /**
+     * Aplaza el evento, o lo deja fallido al quinto fallo, en una transacción aparte: la del procesamiento ya se
+     * deshizo. Si otra réplica lo procesó mientras tanto, ya no está pendiente y no se toca.
+     */
+    private void registrarFallo(UUID eventoId, RuntimeException error) {
+        String causa = error.getClass().getSimpleName() + ": " + error.getMessage();
+        transaccion.ejecutar(() -> {
+            eventos.pendientePorId(eventoId)
+                    .ifPresent(evento -> eventos.registrarFallo(evento.conFallo(causa, reloj.instant())));
+            return null;
+        });
     }
 
     private String aplicar(EventoPasarela evento) {
@@ -115,11 +142,16 @@ public class ProcesarEventoPagoService implements ProcesarEventoPagoUseCase {
             return "SIN_INTENTO";
         }
         IntentoPago intento = encontrado.get();
+        Instant ahora = reloj.instant();
         if (intento.montoCentavos() != evento.montoCentavos()) {
-            // Una transacción por otro monto no paga la solicitud (RF-49): se deja registrada y no se aplica.
+            // Una transacción por otro monto no paga la solicitud (RF-49). Si se aprobó, el turista sí pagó: queda
+            // para que el administrador la revise y la reembolse (DN-22).
+            if (evento.estado() == EstadoTransaccion.APROBADA) {
+                tardios.guardar(PagoTardio.montoDistinto(UUID.randomUUID(), intento, evento.transaccionId(),
+                        evento.montoCentavos(), ahora));
+            }
             return "MONTO_DISTINTO";
         }
-        Instant ahora = reloj.instant();
         ResultadoIntento resultado = intento.aplicar(evento.estado(), evento.transaccionId(), ahora);
         if (intento.tieneCambios()) {
             intentos.actualizar(intento);
@@ -154,19 +186,56 @@ public class ProcesarEventoPagoService implements ProcesarEventoPagoUseCase {
         return EfectoEnSolicitud.APLICADO.name();
     }
 
+    /**
+     * Abandona los intentos en curso cuya hora de abandono ya llegó (DN-20), uno por transacción. Si uno falla por un
+     * error inesperado, su abandono se aplaza un minuto y la tarea sigue con los demás.
+     *
+     * @return los intentos que revisó: abandonados, o aplazados porque fallaron
+     */
     @Override
     public int abandonarIntentos() {
-        return reintento.ejecutar(() -> transaccion.ejecutar(() -> {
-            Instant ahora = reloj.instant();
-            List<IntentoPago> vencidos = intentos.tomarEnCursoAbiertosAntesDe(
-                    ahora.minus(PoliticaReintentos.ABANDONO_INTENTO), TAMANO_LOTE);
-            for (IntentoPago intento : vencidos) {
-                if (intento.abandonarSiCorresponde(ahora)) {
-                    intentos.actualizar(intento);
-                    solicitudes.liberarIntentoEnCurso(intento.solicitudId());
+        int revisados = 0;
+        while (revisados < TAMANO_LOTE && abandonarUno()) {
+            revisados++;
+        }
+        return revisados;
+    }
+
+    private boolean abandonarUno() {
+        AtomicReference<IntentoPago> tomado = new AtomicReference<>();
+        try {
+            return reintento.ejecutar(() -> transaccion.ejecutar(() -> {
+                tomado.set(null);
+                Instant ahora = reloj.instant();
+                Optional<IntentoPago> intento = intentos.tomarPorAbandonar(ahora);
+                if (intento.isEmpty()) {
+                    return false;
                 }
+                tomado.set(intento.get());
+                if (intento.get().abandonarSiCorresponde(ahora)) {
+                    intentos.actualizar(intento.get());
+                    solicitudes.liberarIntentoEnCurso(intento.get().solicitudId());
+                }
+                return true;
+            }));
+        } catch (RuntimeException e) {
+            if (tomado.get() == null) {
+                throw e;
             }
-            return vencidos.size();
+            aplazarAbandono(tomado.get().referencia());
+            return true;
+        }
+    }
+
+    private void aplazarAbandono(String referencia) {
+        reintento.ejecutar(() -> transaccion.ejecutar(() -> {
+            intentos.buscarPorReferencia(referencia)
+                    .filter(intento -> intento.estado() == EstadoIntento.EN_CURSO)
+                    .ifPresent(intento -> {
+                        intento.aplazarAbandono(reloj.instant());
+                        intentos.actualizar(intento);
+                    });
+            return null;
         }));
     }
 }

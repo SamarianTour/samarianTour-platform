@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.Aviso
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.ContactosPagosPort;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.CuentasCobroPort;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.DispersionRepositoryPort;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.EventoPasarelaRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.PagoTardioRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.PaymentGatewayPort;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.TransaccionPort;
@@ -26,11 +27,12 @@ public class DispersionesConfig {
 
     @Bean
     EjecutarDispersionesUseCase ejecutarDispersiones(DispersionRepositoryPort dispersiones,
-                                                     PagoTardioRepositoryPort tardios, CuentasCobroPort cuentas,
+                                                     PagoTardioRepositoryPort tardios,
+                                                     EventoPasarelaRepositoryPort eventos, CuentasCobroPort cuentas,
                                                      ContactosPagosPort contactos, PaymentGatewayPort pasarela,
                                                      AvisoPagoPort avisos, TransaccionPort transaccion,
                                                      PropiedadesPagos propiedades, Clock reloj) {
-        return new EjecutarDispersionesService(dispersiones, tardios, cuentas, contactos, pasarela, avisos,
+        return new EjecutarDispersionesService(dispersiones, tardios, eventos, cuentas, contactos, pasarela, avisos,
                 transaccion, propiedades.dispersion().esperaBase(), reloj);
     }
 }

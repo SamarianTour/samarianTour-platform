@@ -47,7 +47,7 @@ public class PagosAdministracionApiAdapter implements PagosAdministracionApi {
     public List<PagoTardioRegistrado> pagosTardios() {
         return tardios.consultar().stream()
                 .map(pago -> new PagoTardioRegistrado(pago.id(), pago.solicitudId(), pago.referencia(),
-                        pago.transaccionId(), pago.montoCentavos() / 100, pago.registradoEn(),
+                        pago.transaccionId(), pago.montoCentavos() / 100, pago.motivo().name(), pago.registradoEn(),
                         pago.avisoEnviadoEn() != null))
                 .toList();
     }
