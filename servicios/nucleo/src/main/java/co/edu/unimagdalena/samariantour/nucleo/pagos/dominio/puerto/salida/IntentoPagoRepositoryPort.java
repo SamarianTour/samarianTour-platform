@@ -27,8 +27,8 @@ public interface IntentoPagoRepositoryPort {
     List<IntentoPago> deLaSolicitud(UUID solicitudId);
 
     /**
-     * Toma los intentos en curso abiertos antes del límite y los bloquea hasta el final de la transacción; los que otra
-     * transacción tiene bloqueados se saltan (DN-20).
+     * Toma el intento en curso cuya hora de abandono ya llegó, el más atrasado, y lo bloquea hasta el final de la
+     * transacción; los que otra transacción tiene bloqueados se saltan (DN-20).
      */
-    List<IntentoPago> tomarEnCursoAbiertosAntesDe(Instant limite, int cantidad);
+    Optional<IntentoPago> tomarPorAbandonar(Instant ahora);
 }

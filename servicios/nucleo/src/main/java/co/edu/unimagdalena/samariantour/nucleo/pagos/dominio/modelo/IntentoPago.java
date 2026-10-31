@@ -22,6 +22,7 @@ public final class IntentoPago {
     private final String referencia;
     private final long montoCentavos;
     private final Instant creadoEn;
+    private Instant abandonarEn;
     private EstadoIntento estado;
     private String transaccionId;
     private Instant resueltoEn;
@@ -29,8 +30,8 @@ public final class IntentoPago {
     private boolean cambio;
 
     private IntentoPago(UUID id, UUID solicitudId, UUID turistaId, int numero, String referencia, long montoCentavos,
-                        Instant creadoEn, EstadoIntento estado, String transaccionId, Instant resueltoEn,
-                        Long revision) {
+                        Instant creadoEn, Instant abandonarEn, EstadoIntento estado, String transaccionId,
+                        Instant resueltoEn, Long revision) {
         this.id = Objects.requireNonNull(id, "id");
         this.solicitudId = Objects.requireNonNull(solicitudId, "solicitudId");
         this.turistaId = Objects.requireNonNull(turistaId, "turistaId");
@@ -38,6 +39,7 @@ public final class IntentoPago {
         this.referencia = Objects.requireNonNull(referencia, "referencia");
         this.montoCentavos = montoCentavos;
         this.creadoEn = micros(Objects.requireNonNull(creadoEn, "creadoEn"));
+        this.abandonarEn = micros(Objects.requireNonNull(abandonarEn, "abandonarEn"));
         this.estado = Objects.requireNonNull(estado, "estado");
         this.transaccionId = transaccionId;
         this.resueltoEn = micros(resueltoEn);
@@ -45,24 +47,28 @@ public final class IntentoPago {
     }
 
     /**
-     * Abre un intento por el precio base de la solicitud (RF-46, RF-49).
+     * Abre un intento por el precio base de la solicitud (RF-46, RF-49). Desde ya queda cuándo se abandona si no tiene
+     * resultado, con la gracia de la ventana (DN-20).
      *
-     * @param numero el orden del intento en la solicitud, desde 1
+     * @param numero  el orden del intento en la solicitud, desde 1
+     * @param venceEn el fin de la ventana de la solicitud; vacío si no se conoce
      */
     public static IntentoPago nuevo(UUID id, UUID solicitudId, UUID turistaId, int numero, long precioBase,
-                                    Instant ahora) {
+                                    Instant venceEn, Instant ahora) {
         if (precioBase <= 0) {
             throw new IllegalArgumentException("El precio base debe ser positivo");
         }
         return new IntentoPago(id, solicitudId, turistaId, numero, referenciaDe(id),
-                Math.multiplyExact(precioBase, 100L), ahora, EstadoIntento.EN_CURSO, null, null, null);
+                Math.multiplyExact(precioBase, 100L), ahora, PoliticaReintentos.abandonoDe(ahora, venceEn),
+                EstadoIntento.EN_CURSO, null, null, null);
     }
 
     public static IntentoPago reconstituir(UUID id, UUID solicitudId, UUID turistaId, int numero, String referencia,
-                                           long montoCentavos, Instant creadoEn, EstadoIntento estado,
-                                           String transaccionId, Instant resueltoEn, long revision) {
-        return new IntentoPago(id, solicitudId, turistaId, numero, referencia, montoCentavos, creadoEn, estado,
-                transaccionId, resueltoEn, revision);
+                                           long montoCentavos, Instant creadoEn, Instant abandonarEn,
+                                           EstadoIntento estado, String transaccionId, Instant resueltoEn,
+                                           long revision) {
+        return new IntentoPago(id, solicitudId, turistaId, numero, referencia, montoCentavos, creadoEn, abandonarEn,
+                estado, transaccionId, resueltoEn, revision);
     }
 
     /** Única por intento [SUPUESTO]: la pasarela la exige única por transacción (hasta 255 caracteres). */
@@ -104,19 +110,28 @@ public final class IntentoPago {
     }
 
     /**
-     * Un intento sin resultado 30 min después de abierto queda abandonado (DN-20): el turista cerró el pago o no lo
+     * Un intento sin resultado a su hora de abandono queda abandonado (DN-20): el turista cerró el pago o no lo
      * terminó. Deja de aplazar el vencimiento de la solicitud.
      *
      * @return true si lo abandonó ahora
      */
     public boolean abandonarSiCorresponde(Instant ahora) {
-        if (estado != EstadoIntento.EN_CURSO || ahora.isBefore(creadoEn.plus(PoliticaReintentos.ABANDONO_INTENTO))) {
+        if (estado != EstadoIntento.EN_CURSO || ahora.isBefore(abandonarEn)) {
             return false;
         }
         estado = EstadoIntento.ABANDONADO;
         resueltoEn = micros(ahora);
         cambio = true;
         return true;
+    }
+
+    /**
+     * Aplaza el abandono de un intento que no se pudo abandonar por un error inesperado (DN-20), para que la tarea siga
+     * con los demás y lo intente otra vez después.
+     */
+    public void aplazarAbandono(Instant ahora) {
+        abandonarEn = micros(ahora.plus(PoliticaReintentos.ESPERA_TRAS_ERROR));
+        cambio = true;
     }
 
     private static Instant micros(Instant instante) {
@@ -153,6 +168,11 @@ public final class IntentoPago {
 
     public Instant creadoEn() {
         return creadoEn;
+    }
+
+    /** Cuándo se abandona si sigue sin resultado (DN-20). */
+    public Instant abandonarEn() {
+        return abandonarEn;
     }
 
     public EstadoIntento estado() {

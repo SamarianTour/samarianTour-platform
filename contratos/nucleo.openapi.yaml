@@ -1561,15 +1561,16 @@ paths:
     get:
       tags: [Administración]
       operationId: consultarPagosTardios
-      summary: Pagos aprobados que llegaron con la solicitud ya vencida (RF-50)
+      summary: Pagos aprobados que no pagaron la solicitud, para revisarlos (RF-49, RF-50)
       description: |
-        La solicitud no cambió y el administrador los reembolsa a mano, fuera del sistema. También llega uno por
-        WhatsApp al registrarse (DN-22). Del más reciente al más antiguo.
+        Los que llegaron con la solicitud ya vencida, cerrada o pagada, y los que la pasarela aprobó por otro monto que
+        el del intento; `motivo` dice cuál. La solicitud no cambió y el administrador los reembolsa a mano, fuera
+        del sistema. También llega uno por WhatsApp al registrarse (DN-22). Del más reciente al más antiguo.
       security:
         - tokenAcceso: []
       responses:
         '200':
-          description: Los pagos tardíos.
+          description: Los pagos para revisar.
           content:
             application/json:
               schema:
@@ -2816,7 +2817,7 @@ components:
           description: Quién lo cambió; se omite en el inicial.
     PagoTardio:
       type: object
-      required: [id, solicitudId, referencia, transaccionId, monto, registradoEn, avisado]
+      required: [id, solicitudId, referencia, transaccionId, monto, motivo, registradoEn, avisado]
       properties:
         id:
           type: string
@@ -2831,7 +2832,13 @@ components:
         monto:
           type: integer
           format: int64
-          description: En pesos.
+          description: Lo que aprobó la pasarela, en pesos.
+        motivo:
+          type: string
+          enum: [PAGO_TARDIO, MONTO_DISTINTO]
+          description: >-
+            PAGO_TARDIO, si llegó con la solicitud vencida, cerrada o ya pagada (RF-50); MONTO_DISTINTO, si la pasarela
+            aprobó otro monto que el del intento (RF-49). En los dos casos la solicitud no cambia y se reembolsa a mano.
         registradoEn:
           type: string
           format: date-time

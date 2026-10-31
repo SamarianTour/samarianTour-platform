@@ -19,8 +19,10 @@ public class AvisoPagoWhatsappSimuladoAdapter implements AvisoPagoPort {
 
     @Override
     public void enviar(String whatsapp, TipoAvisoPago tipo, Map<String, String> parametros) {
-        LOG.info("[WhatsApp simulado] para={} tipo={} solicitud={}", enmascarar(whatsapp), tipo,
-                parametros.get("solicitudId"));
+        // Un evento fallido todavía no tiene solicitud: se identifica por su referencia en la pasarela.
+        String sobre = parametros.containsKey("solicitudId") ? "solicitud=" + parametros.get("solicitudId")
+                : "referencia=" + parametros.get("referencia");
+        LOG.info("[WhatsApp simulado] para={} tipo={} {}", enmascarar(whatsapp), tipo, sobre);
     }
 
     static String enmascarar(String whatsapp) {

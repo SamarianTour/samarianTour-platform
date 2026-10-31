@@ -38,6 +38,9 @@ public class IntentoPagoEntity {
     @Column(name = "creado_en")
     private Instant creadoEn;
 
+    @Column(name = "abandonar_en")
+    private Instant abandonarEn;
+
     @Column(name = "resuelto_en")
     private Instant resueltoEn;
 
@@ -59,7 +62,8 @@ public class IntentoPagoEntity {
         this.creadoEn = creadoEn;
     }
 
-    void cambiarEstado(String estado, String transaccionId, Instant resueltoEn) {
+    void cambiarEstado(String estado, String transaccionId, Instant resueltoEn, Instant abandonarEn) {
+        this.abandonarEn = abandonarEn;
         this.estado = estado;
         this.transaccionId = transaccionId;
         this.resueltoEn = resueltoEn;
@@ -99,6 +103,10 @@ public class IntentoPagoEntity {
 
     Instant creadoEn() {
         return creadoEn;
+    }
+
+    Instant abandonarEn() {
+        return abandonarEn;
     }
 
     Instant resueltoEn() {

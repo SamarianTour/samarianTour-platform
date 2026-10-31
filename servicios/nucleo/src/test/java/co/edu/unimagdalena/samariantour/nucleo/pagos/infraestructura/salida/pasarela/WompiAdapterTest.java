@@ -43,7 +43,7 @@ class WompiAdapterTest {
         WompiAdapter wompi = new WompiAdapter(propiedades("pub_test_llave", "test_integrity_secreto",
                 "test_events_secreto"), new ObjectMapper());
         IntentoPago intento = IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, UUID.randomUUID(), 1, 300_000,
-                Instant.parse("2026-10-27T15:00:00Z"));
+                null, Instant.parse("2026-10-27T15:00:00Z"));
 
         SesionCobro sesion = wompi.crearSesion(intento);
 

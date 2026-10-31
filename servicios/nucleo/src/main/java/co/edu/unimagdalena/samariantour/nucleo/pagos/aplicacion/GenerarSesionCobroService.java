@@ -72,7 +72,7 @@ public class GenerarSesionCobroService implements GenerarSesionCobroUseCase {
             throw new IntentosAgotadosException();
         }
         IntentoPago intento = IntentoPago.nuevo(UUID.randomUUID(), solicitud.solicitudId(), turistaId,
-                previos.size() + 1, solicitud.precioBase(), reloj.instant());
+                previos.size() + 1, solicitud.precioBase(), solicitud.venceEn(), reloj.instant());
         intentos.insertar(intento);
         solicitudes.marcarIntentoEnCurso(solicitud.solicitudId());
         return intento;

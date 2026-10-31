@@ -39,6 +39,20 @@ public class EventoPasarelaEntity {
 
     private String resultado;
 
+    private String procesamiento;
+
+    @Column(name = "intentos_procesamiento")
+    private int intentosProcesamiento;
+
+    @Column(name = "ultimo_error")
+    private String ultimoError;
+
+    @Column(name = "siguiente_intento_en")
+    private Instant siguienteIntentoEn;
+
+    @Column(name = "aviso_enviado_en")
+    private Instant avisoEnviadoEn;
+
     protected EventoPasarelaEntity() {
     }
 
@@ -80,5 +94,25 @@ public class EventoPasarelaEntity {
 
     String resultado() {
         return resultado;
+    }
+
+    String procesamiento() {
+        return procesamiento;
+    }
+
+    int intentosProcesamiento() {
+        return intentosProcesamiento;
+    }
+
+    String ultimoError() {
+        return ultimoError;
+    }
+
+    Instant siguienteIntentoEn() {
+        return siguienteIntentoEn;
+    }
+
+    Instant avisoEnviadoEn() {
+        return avisoEnviadoEn;
     }
 }

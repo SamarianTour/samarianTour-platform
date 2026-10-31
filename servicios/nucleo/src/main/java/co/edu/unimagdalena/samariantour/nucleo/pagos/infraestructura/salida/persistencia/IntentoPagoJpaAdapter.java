@@ -34,7 +34,8 @@ public class IntentoPagoJpaAdapter implements IntentoPagoRepositoryPort {
     public void insertar(IntentoPago intento) {
         IntentoPagoEntity fila = new IntentoPagoEntity(intento.id(), intento.solicitudId(), intento.turistaId(),
                 intento.numero(), intento.referencia(), intento.montoCentavos(), intento.creadoEn());
-        fila.cambiarEstado(intento.estado().name(), intento.transaccionId(), intento.resueltoEn());
+        fila.cambiarEstado(intento.estado().name(), intento.transaccionId(), intento.resueltoEn(),
+                intento.abandonarEn());
         try {
             intentos.saveAndFlush(fila);
         } catch (DataIntegrityViolationException e) {
@@ -53,7 +54,8 @@ public class IntentoPagoJpaAdapter implements IntentoPagoRepositoryPort {
         if (!Objects.equals(fila.revision(), intento.revision())) {
             throw new ConflictoConcurrenciaException("El intento " + intento.id() + " cambió desde que se leyó");
         }
-        fila.cambiarEstado(intento.estado().name(), intento.transaccionId(), intento.resueltoEn());
+        fila.cambiarEstado(intento.estado().name(), intento.transaccionId(), intento.resueltoEn(),
+                intento.abandonarEn());
         try {
             intentos.saveAndFlush(fila);
         } catch (OptimisticLockingFailureException e) {
@@ -79,14 +81,13 @@ public class IntentoPagoJpaAdapter implements IntentoPagoRepositoryPort {
     }
 
     @Override
-    public List<IntentoPago> tomarEnCursoAbiertosAntesDe(Instant limite, int cantidad) {
-        return intentos.tomarEnCursoAbiertosAntesDe(limite, cantidad).stream()
-                .map(IntentoPagoJpaAdapter::aDominio).toList();
+    public Optional<IntentoPago> tomarPorAbandonar(Instant ahora) {
+        return intentos.tomarPorAbandonar(ahora).map(IntentoPagoJpaAdapter::aDominio);
     }
 
     private static IntentoPago aDominio(IntentoPagoEntity fila) {
         return IntentoPago.reconstituir(fila.id(), fila.solicitudId(), fila.turistaId(), fila.numero(),
-                fila.referencia(), fila.montoCentavos(), fila.creadoEn(), EstadoIntento.valueOf(fila.estado()),
-                fila.transaccionId(), fila.resueltoEn(), fila.revision());
+                fila.referencia(), fila.montoCentavos(), fila.creadoEn(), fila.abandonarEn(),
+                EstadoIntento.valueOf(fila.estado()), fila.transaccionId(), fila.resueltoEn(), fila.revision());
     }
 }

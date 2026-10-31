@@ -17,7 +17,7 @@ class IntentoPagoTest {
     private static final UUID TURISTA = UUID.randomUUID();
 
     private static IntentoPago nuevo() {
-        return IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 300_000, AHORA);
+        return IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 300_000, null, AHORA);
     }
 
     @Test
@@ -29,7 +29,7 @@ class IntentoPagoTest {
         assertThat(intento.montoCentavos()).isEqualTo(30_000_000);
         assertThat(intento.referencia()).isEqualTo("ST-" + intento.id());
         assertThat(intento.transaccionId()).isNull();
-        assertThatThrownBy(() -> IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 0, AHORA))
+        assertThatThrownBy(() -> IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 0, null, AHORA))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -112,5 +112,43 @@ class IntentoPagoTest {
         assertThat(intento.aplicar(EstadoTransaccion.APROBADA, "t-1", AHORA.plus(Duration.ofMinutes(40))))
                 .isEqualTo(ResultadoIntento.APROBADO);
         assertThat(intento.estado()).isEqualTo(EstadoIntento.APROBADO);
+    }
+
+    @Test
+    @DisplayName("ventana hasta las 13:00, abierto a las 12:40: no se abandona a las 13:10, sino a las 13:30 (RF-55)")
+    void abandonoConGracia() {
+        Instant trece = Instant.parse("2026-10-27T18:00:00Z");
+        IntentoPago intento = IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 300_000, trece,
+                trece.minus(Duration.ofMinutes(20)));
+
+        assertThat(intento.abandonarEn()).isEqualTo(trece.plus(Duration.ofMinutes(30)));
+        assertThat(intento.abandonarSiCorresponde(trece.plus(Duration.ofMinutes(10)))).isFalse();
+        assertThat(intento.abandonarSiCorresponde(trece.plus(Duration.ofMinutes(29)))).isFalse();
+        assertThat(intento.abandonarSiCorresponde(trece.plus(Duration.ofMinutes(30)))).isTrue();
+    }
+
+    @Test
+    @DisplayName("con la ventana abierta más de 30 min después, se abandona a los 30 min de abierto")
+    void abandonoSinGracia() {
+        Instant trece = Instant.parse("2026-10-27T18:00:00Z");
+        IntentoPago intento = IntentoPago.nuevo(UUID.randomUUID(), SOLICITUD, TURISTA, 1, 300_000, trece,
+                trece.minus(Duration.ofHours(1)));
+
+        assertThat(intento.abandonarEn()).isEqualTo(trece.minus(Duration.ofMinutes(30)));
+        assertThat(intento.abandonarSiCorresponde(trece.minus(Duration.ofMinutes(31)))).isFalse();
+        assertThat(intento.abandonarSiCorresponde(trece.minus(Duration.ofMinutes(30)))).isTrue();
+    }
+
+    @Test
+    @DisplayName("si no se pudo abandonar por un error, se aplaza un minuto y queda en curso")
+    void abandonoAplazado() {
+        IntentoPago intento = nuevo();
+
+        intento.aplazarAbandono(AHORA.plus(Duration.ofMinutes(30)));
+
+        assertThat(intento.abandonarEn()).isEqualTo(AHORA.plus(Duration.ofMinutes(31)));
+        assertThat(intento.estado()).isEqualTo(EstadoIntento.EN_CURSO);
+        assertThat(intento.tieneCambios()).isTrue();
+        assertThat(intento.abandonarSiCorresponde(AHORA.plus(Duration.ofMinutes(30)))).isFalse();
     }
 }

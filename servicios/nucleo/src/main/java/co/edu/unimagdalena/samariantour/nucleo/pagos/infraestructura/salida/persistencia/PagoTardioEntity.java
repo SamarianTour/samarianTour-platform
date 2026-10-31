@@ -30,6 +30,8 @@ public class PagoTardioEntity {
     @Column(name = "monto_centavos")
     private long montoCentavos;
 
+    private String motivo;
+
     @Column(name = "registrado_en")
     private Instant registradoEn;
 
@@ -40,13 +42,14 @@ public class PagoTardioEntity {
     }
 
     PagoTardioEntity(UUID id, UUID solicitudId, UUID intentoId, String referencia, String transaccionId,
-                     long montoCentavos, Instant registradoEn, Instant avisoEnviadoEn) {
+                     long montoCentavos, String motivo, Instant registradoEn, Instant avisoEnviadoEn) {
         this.id = id;
         this.solicitudId = solicitudId;
         this.intentoId = intentoId;
         this.referencia = referencia;
         this.transaccionId = transaccionId;
         this.montoCentavos = montoCentavos;
+        this.motivo = motivo;
         this.registradoEn = registradoEn;
         this.avisoEnviadoEn = avisoEnviadoEn;
     }
@@ -77,6 +80,10 @@ public class PagoTardioEntity {
 
     long montoCentavos() {
         return montoCentavos;
+    }
+
+    String motivo() {
+        return motivo;
     }
 
     Instant registradoEn() {
