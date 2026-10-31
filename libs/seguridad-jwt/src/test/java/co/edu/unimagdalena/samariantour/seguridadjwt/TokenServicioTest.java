@@ -9,6 +9,7 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.mock.http.client.MockClientHttpResponse;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 
 import java.net.URI;
 import java.time.Clock;
@@ -26,12 +27,8 @@ class TokenServicioTest {
 
     private static final Instant AHORA = Instant.parse("2026-10-30T12:00:00Z");
 
-    private final DecodificadorTokenServicio catalogo = new DecodificadorTokenServicio(ServiciosInternos.CATALOGO,
-            List.of(new DecodificadorTokenServicio.Llamador(ServiciosInternos.NUCLEO, TokensDePrueba.EMISOR,
-                            ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA)),
-                    new DecodificadorTokenServicio.Llamador(ServiciosInternos.RECOMENDACION,
-                            TokensDePrueba.EMISOR_RECOMENDACION,
-                            ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA_RECOMENDACION))));
+    /** Con el reloj real: para los tokens de {@link TokensDePrueba}, que se firman con la hora actual. */
+    private final DecodificadorTokenServicio catalogo = catalogo(Clock.systemUTC());
 
     @Test
     @DisplayName("el núcleo firma un token que el catálogo acepta, y lo reutiliza hasta que le falta un minuto")
@@ -39,6 +36,7 @@ class TokenServicioTest {
         RelojMovible reloj = new RelojMovible(AHORA);
         EmisorTokenServicio nucleo = new EmisorTokenServicio(ServiciosInternos.NUCLEO, TokensDePrueba.EMISOR,
                 ClavesRsa.privada(TokensDePrueba.CLAVE_PRIVADA), reloj);
+        DecodificadorTokenServicio catalogo = catalogo(reloj);
 
         String primero = nucleo.token(ServiciosInternos.CATALOGO);
         assertThat(catalogo.decode(primero).getSubject()).isEqualTo(ServiciosInternos.NUCLEO);
@@ -46,6 +44,22 @@ class TokenServicioTest {
         assertThat(nucleo.token(ServiciosInternos.CATALOGO)).isEqualTo(primero);
         reloj.ahora = AHORA.plus(Duration.ofMinutes(4).plusSeconds(1));
         assertThat(nucleo.token(ServiciosInternos.CATALOGO)).isNotEqualTo(primero);
+    }
+
+    @Test
+    @DisplayName("pasada la vigencia y sus 60 s de tolerancia, el catálogo rechaza el token vencido")
+    void rechazaElVencido() {
+        RelojMovible reloj = new RelojMovible(AHORA);
+        EmisorTokenServicio nucleo = new EmisorTokenServicio(ServiciosInternos.NUCLEO, TokensDePrueba.EMISOR,
+                ClavesRsa.privada(TokensDePrueba.CLAVE_PRIVADA), reloj);
+        DecodificadorTokenServicio catalogo = catalogo(reloj);
+        String token = nucleo.token(ServiciosInternos.CATALOGO);
+
+        reloj.ahora = AHORA.plus(EmisorTokenServicio.VIGENCIA).plusSeconds(59);
+        assertThat(catalogo.decode(token).getSubject()).isEqualTo(ServiciosInternos.NUCLEO);
+        reloj.ahora = AHORA.plus(EmisorTokenServicio.VIGENCIA).plusSeconds(61);
+        assertThatThrownBy(() -> catalogo.decode(token)).isInstanceOf(JwtValidationException.class)
+                .hasMessageContaining("expired");
     }
 
     @Test
@@ -119,6 +133,16 @@ class TokenServicioTest {
         public Instant instant() {
             return ahora;
         }
+    }
+
+    /** El decodificador del catálogo, que admite al núcleo y a la recomendación, con ese reloj. */
+    private static DecodificadorTokenServicio catalogo(Clock reloj) {
+        return new DecodificadorTokenServicio(ServiciosInternos.CATALOGO, List.of(
+                new DecodificadorTokenServicio.Llamador(ServiciosInternos.NUCLEO, TokensDePrueba.EMISOR,
+                        ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA)),
+                new DecodificadorTokenServicio.Llamador(ServiciosInternos.RECOMENDACION,
+                        TokensDePrueba.EMISOR_RECOMENDACION,
+                        ClavesRsa.publica(TokensDePrueba.CLAVE_PUBLICA_RECOMENDACION))), reloj);
     }
 
     private static String token(String servicio, String audiencia) {

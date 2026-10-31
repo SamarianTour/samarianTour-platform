@@ -9,11 +9,11 @@ import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,8 +38,13 @@ public final class DecodificadorTokenServicio implements JwtDecoder {
 
     /** @param audiencia el nombre de este servicio, que el token debe traer en {@code aud} */
     public DecodificadorTokenServicio(String audiencia, List<Llamador> llamadores) {
+        this(audiencia, llamadores, Clock.systemUTC());
+    }
+
+    /** @param reloj con el que se valida el vencimiento; una prueba le pasa el mismo con el que emite */
+    public DecodificadorTokenServicio(String audiencia, List<Llamador> llamadores, Clock reloj) {
         this.porEmisor = llamadores.stream().collect(Collectors.toUnmodifiableMap(Llamador::emisor,
-                llamador -> decodificador(audiencia, llamador), (uno, otro) -> {
+                llamador -> decodificador(audiencia, llamador, reloj), (uno, otro) -> {
                     throw new IllegalArgumentException("Dos servicios con el mismo emisor");
                 }));
     }
@@ -60,12 +65,12 @@ public final class DecodificadorTokenServicio implements JwtDecoder {
         return decodificador.decode(token);
     }
 
-    private static JwtDecoder decodificador(String audiencia, Llamador llamador) {
+    private static JwtDecoder decodificador(String audiencia, Llamador llamador, Clock reloj) {
         NimbusJwtDecoder decodificador = NimbusJwtDecoder.withPublicKey(llamador.clavePublica())
                 .signatureAlgorithm(SignatureAlgorithm.RS256)
                 .build();
         decodificador.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(llamador.emisor()),
+                DecodificadorToken.validadoresPorDefecto(llamador.emisor(), reloj),
                 token -> validarReclamos(token, audiencia, llamador.servicio())));
         return decodificador;
     }
