@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo;
 
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.politica.PoliticaBloqueo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,6 +16,7 @@ import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.V2
 import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.cuenta;
 import static co.edu.unimagdalena.samariantour.nucleo.cuentas.CuentasDePrueba.turista;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** La cuenta de cualquier rol (RF-04, RF-05, RF-09, RF-10). */
 class UsuarioTest {
@@ -99,8 +101,62 @@ class UsuarioTest {
         assertThat(usuario.debeAceptarPolitica(V2)).isTrue();
     }
 
+    @Nested
+    @DisplayName("Cuentas internas (RF-81)")
+    class CuentasInternas {
+
+        @Test
+        @DisplayName("la crea el administrador: nace activa y sin contraseña, con la subclase de su rol")
+        void crear() {
+            Usuario operador = Usuario.crearInterna(UUID.randomUUID(), Rol.OPERADOR_DISPONIBILIDAD, " Valentina ",
+                    "Valentina@SamarianTour.co", AHORA);
+
+            assertThat(operador).isInstanceOf(OperadorDisponibilidad.class);
+            assertThat(operador.nombre()).isEqualTo("Valentina");
+            assertThat(operador.correo()).isEqualTo("valentina@samariantour.co");
+            assertThat(operador.estaActiva()).isTrue();
+            assertThat(operador.tieneContrasena()).isFalse();
+            assertThat(operador.autenticar("", HASHER)).isFalse();
+            assertThat(operador.aceptaciones()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("el turista y el prestador no son cuentas internas: se registran solos")
+        void soloRolesInternos() {
+            for (Rol rol : new Rol[] {Rol.TURISTA, Rol.PRESTADOR, null}) {
+                assertThatThrownBy(() -> Usuario.crearInterna(UUID.randomUUID(), rol, "X", "x@correo.co", AHORA))
+                        .isInstanceOf(DatoInvalidoException.class).hasMessageStartingWith("rol: ");
+            }
+        }
+
+        @Test
+        @DisplayName("desactivarla y reactivarla cambia el estado una vez; repetirlo no cambia nada")
+        void desactivarYReactivar() {
+            Usuario gestor = cuenta(Rol.GESTOR_DESTINO, "g@correo.co");
+
+            assertThat(gestor.desactivar()).isTrue();
+            assertThat(gestor.estado()).isEqualTo(EstadoCuenta.DESACTIVADA);
+            assertThat(gestor.desactivar()).isFalse();
+
+            assertThat(gestor.reactivar()).isTrue();
+            assertThat(gestor.estaActiva()).isTrue();
+            assertThat(gestor.reactivar()).isFalse();
+            assertThat(gestor.autenticar("Clave1234", HASHER)).isTrue();
+        }
+
+        @Test
+        @DisplayName("el turista no se desactiva: pide la supresión de sus datos (RF-13)")
+        void turistaNoSeDesactiva() {
+            Usuario turista = cuenta(Rol.TURISTA, "t@correo.co");
+
+            assertThatThrownBy(turista::desactivar).isInstanceOf(IllegalStateException.class);
+            assertThat(turista.estaActiva()).isTrue();
+        }
+    }
+
     @Test
     @DisplayName("el turista solo envía solicitudes con el WhatsApp verificado (RF-30)")
+
     void turistaVerificado() {
         assertThat(turista("t@correo.co", "+573001234567", true).puedeEnviarSolicitudes()).isTrue();
         assertThat(turista("t@correo.co", "+573001234567", false).puedeEnviarSolicitudes()).isFalse();
