@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarFo
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertaInternaService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertaParaModulosService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarOfertasVisiblesService;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ContarOfertasVisiblesService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.ConsultarZonasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarZonasService;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.GestionarOfertaService;
@@ -21,6 +22,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaInternaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaParaModulosUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertasVisiblesUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ContarOfertasVisiblesUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarZonasUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.GestionarOfertaUseCase;
@@ -72,6 +74,11 @@ public class CatalogoConfig {
     @Bean
     ConsultarOfertasVisiblesUseCase consultarOfertasVisibles(OfertaRepositoryPort ofertas, ZonaRepositoryPort zonas) {
         return new ConsultarOfertasVisiblesService(ofertas, zonas);
+    }
+
+    @Bean
+    ContarOfertasVisiblesUseCase contarOfertasVisibles(OfertaRepositoryPort ofertas) {
+        return new ContarOfertasVisiblesService(ofertas);
     }
 
     @Bean

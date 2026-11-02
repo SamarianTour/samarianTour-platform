@@ -60,6 +60,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-48 | Evidencia de QAS-07: métricas en el servidor y prueba de carga de la búsqueda | ✅ QAS-07, QAS-02; RNF-13 en parte |
 | DC-49 | El administrador registra, edita, marca e inactiva las zonas; nunca se eliminan | ✅ HU-ADM-06, RF-84, RF-25 |
 | DC-50 | El prestador consulta su oferta completa, también la que nunca se publicó | 🆕 RF-65, RF-66, RF-79 |
+| DC-51 | El núcleo pide cuántas ofertas visibles tiene cada prestador, para el índice de sesgo | ✅ RET-02, DN-43 |
 
 ## Identidad y habilitación del prestador
 
@@ -457,6 +458,13 @@ Las dos rutas no exigen rol de usuario: Nginx bloquea `/api/catalogo/internal/` 
 - **Solo su dueño:** la de otro prestador responde 403 `PRESTADOR_NO_AUTORIZADO` y una que no existe, 404 `OFERTA_NO_ENCONTRADA`, como al editarla o retirarla (DC-15).
 - **Unidad del precio en la lista:** cada versión de `GET /prestador/ofertas` trae `unidadPrecio`, como la búsqueda (DC-22); el frontend ya no tiene que deducirla del tipo.
 
+## Oferta elegible para el núcleo
+
+**DC-51. El núcleo pide cuántas ofertas visibles tiene cada prestador** (RET-02, DN-43 del núcleo). Una vez al día, el núcleo mide si la recomendación favorece a un prestador: compara su porcentaje de apariciones con su porcentaje de la oferta elegible, que solo conoce el catálogo.
+- **`GET /internal/ofertas/por-prestador`** (`ContarOfertasVisiblesUseCase`): `[{prestadorId, ofertas}]`, de más a menos ofertas, solo los prestadores con al menos una visible.
+- **La misma visibilidad que el turista:** recorre la búsqueda pública por páginas de 100, así que una oferta retirada, sin versión aprobada, de un prestador sin el RNT activo o un paquete con una actividad no visible no cuentan. No hizo falta una consulta propia en Mongo ni en memoria.
+- **Solo el núcleo** (DN-38): la regla `GET /internal/ofertas/*` ya era suya; la recomendación recibe 403.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -492,6 +500,7 @@ Las dos rutas no exigen rol de usuario: Nginx bloquea `/api/catalogo/internal/` 
 17. **Diagrama del módulo catálogo:** agregar el caso de uso `GestionarZonasUseCase` con `GestionarZonasService`, `ConsultarZonasUseCase.consultar`, las operaciones de escritura de `ZonaRepositoryPort` (`guardar`, `buscarTodas`, `nuevoId`) y el adaptador de entrada `ZonaAdminController` (DC-49). `DatosZona` es una agrupación técnica como `ContenidoComun`: no cambia el modelo.
 18. **Modelo documental (MongoDB):** agregar en `zonas` el campo `nombreClave` y su índice único `zona_por_nombre` (DC-49).
 19. **Diagrama del módulo catálogo:** agregar la operación `consultarMia` a `GestionarOfertaUseCase` (DC-50).
+20. **Diagrama del módulo catálogo:** agregar `ContarOfertasVisiblesUseCase` y la ruta interna `GET /internal/ofertas/por-prestador`, que usa el núcleo (DC-51).
 
 ## Fuera del alcance del prototipo
 

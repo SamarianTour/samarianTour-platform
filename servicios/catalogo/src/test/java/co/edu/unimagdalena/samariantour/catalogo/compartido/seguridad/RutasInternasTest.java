@@ -45,6 +45,8 @@ class RutasInternasTest {
             "POST, /internal/opiniones/avisos, recomendacion, 403",
             "GET, /internal/ofertas/b1, nucleo, 200",
             "GET, /internal/ofertas/b1, recomendacion, 403",
+            "GET, /internal/ofertas/por-prestador, nucleo, 200",
+            "GET, /internal/ofertas/por-prestador, recomendacion, 403",
             "GET, /internal/moderacion/ofertas/b1, nucleo, 200",
             "GET, /internal/moderacion/opiniones/d1, recomendacion, 403",
             "GET, /internal/ofertas, recomendacion, 200",

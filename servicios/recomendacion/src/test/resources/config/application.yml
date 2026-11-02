@@ -7,3 +7,6 @@ recomendacion:
     clave-privada: ${seguridad.jwt.pruebas.clave-privada-recomendacion}
   alertas:
     programadas: false
+  # Un puerto cerrado: las pruebas nunca envían la exposición a un núcleo real y queda en el log (DR-08).
+  nucleo:
+    url: http://localhost:1/api/nucleo

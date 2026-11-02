@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), y los indicadores del gestor (DN-41); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), los indicadores del gestor (DN-41) y el registro de exposición con las alertas de sesgo (DN-42, DN-43); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -50,6 +50,8 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-39 | El administrador asigna el operador de cada prestador; rige para las solicitudes nuevas, y la lista de los que no tienen | ✅ RF-32, RF-81, DN-15 · 🆕 equipo: lista de prestadores sin operador |
 | DN-40 | Cuentas internas: invitación por correo, desactivación y reactivación | ✅ RF-01, RF-81, DN-28, DN-30 · 🆕 [SUPUESTO] 72 h, operador con prestadores y cuenta propia |
 | DN-41 | Indicadores del gestor: tablero, embudo y categorías, con la categoría copiada en la solicitud y los conteos de 1 o 2 ocultos | ✅ RF-85 a RF-89, RET-03, diagrama de paquetes · 🆕 [SUPUESTO] periodo y menos de 3 |
+| DN-42 | Registro de exposición de la recomendación por `/internal/exposiciones`, con su token de servicio | ✅ RET-02, DN-38, diagrama de paquetes · 🆕 [SUPUESTO] 90 días |
+| DN-43 | Índice de exposición diario y alertas de sesgo en el panel del administrador | ✅ RET-02, diagrama de paquetes · 🆕 [SUPUESTO] solo recomendaciones; una revisión por día con la base, no ShedLock |
 
 ## Persistencia
 
@@ -607,7 +609,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
 
 ## Indicadores
 
-**DN-41. Indicadores del gestor del destino: tablero, embudo y categorías** (RF-85 a RF-89, RET-03; diagrama de paquetes, módulo de indicadores). Es el módulo `indicadores`, con `IndicadoresService` y los tres casos de uso del diagrama: `ConsultarTablero`, `ConsultarEmbudo` y `ConsultarDistribucionCategoria`. El registro de exposición y el índice de sesgo (RET-02) van en otra rama.
+**DN-41. Indicadores del gestor del destino: tablero, embudo y categorías** (RF-85 a RF-89, RET-03; diagrama de paquetes, módulo de indicadores). Es el módulo `indicadores`, con `IndicadoresService` y los tres casos de uso del diagrama: `ConsultarTablero`, `ConsultarEmbudo` y `ConsultarDistribucionCategoria`. El registro de exposición y el índice de sesgo (RET-02) están en DN-42 y DN-43.
 - **Rutas**, con el rol GESTOR_DESTINO y `?desde=&hasta=` (fechas ISO, opcionales):
   - `GET /api/nucleo/gestor/indicadores/tablero`: las solicitudes por zona y tipo de oferta (RF-85, RF-86). Agrupa por **tipo de oferta**, no por tipo de actividad, que la solicitud no guarda (DC-35);
   - `GET /api/nucleo/gestor/indicadores/embudo`: cuántas llegaron a enviadas, atendidas, confirmadas y pagadas, con el porcentaje sobre las enviadas, en total y por tipo de oferta (RF-87, RF-88);
@@ -619,6 +621,27 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - **Límite conocido:** si en un periodo solo hay una fila oculta, se podría deducir restando las visibles del total. Para el piloto se acepta; si hiciera falta, se ocultaría también el total.
 - **Quién hace qué:** las solicitudes cuentan en la base, con `GROUP BY` (`ConteosSolicitudesJdbcAdapter`, `ContarSolicitudesUseCase`), y entregan solo conteos por `solicitudes.api.SolicitudesIndicadoresApi`, nunca solicitudes. Los indicadores arman cada indicador y aplican la regla. Así el módulo de indicadores sigue sin tablas propias, como dice el diagrama. El índice `solicitudes_por_creacion` (V14) filtra el periodo.
 - **Pruebas:** `ConteosSolicitudesIT` (las consultas en PostgreSQL) e `IndicadoresIT` (las rutas de punta a punta).
+
+**DN-42. Registro de exposición de la recomendación** (RET-02; diagrama de paquetes: `ExposicionController`, `RegistrarExposicionUseCase`, `ExposicionRepositoryPort`; cierra DR-08 de la recomendación). La recomendación envía qué ofertas mostró en cada consulta, y el núcleo lo guarda para medir el sesgo (DN-43).
+- **La ruta:** `POST /api/nucleo/internal/exposiciones` con `{fecha, origen, motor, ofertas: [{ofertaId, prestadorId, posicion}]}`, que responde 202. Va por la red de Docker: Nginx no expone `/internal/**`.
+- **Seguridad** (DN-38): el núcleo tiene ahora su propia cadena para `/internal/**`, que va antes que la de los usuarios. Solo acepta el token de servicio de la recomendación, con `aud: nucleo`, que valida con su clave pública (`SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA`, la misma que ya usa el catálogo). El token de un usuario, aun el del administrador, o el de otro servicio responden 401.
+- **Sin datos del turista:** ni el texto, ni los criterios, ni las explicaciones; solo qué ofertas salieron, de qué prestador y en qué posición. La tabla `exposiciones` (V15) guarda una fila por oferta, y las de una misma consulta comparten `consulta_id`.
+- **Se guarda 90 días** [SUPUESTO]: la revisión diaria borra lo anterior, porque el índice solo mira 30.
+- **Si el núcleo no responde,** la recomendación igual llega al turista y deja la línea en su log, como antes (DR-24 de la recomendación).
+
+**DN-43. Índice de exposición y alertas de sesgo al administrador** (RET-02; diagrama de paquetes: `EvaluarIndiceExposicionUseCase`, `RevisionSesgoScheduler`, `IndiceExposicion`, `OfertaElegibleConsultaPort`, `AvisoPlataformaPort`). Mide si la recomendación favorece a algún prestador.
+- **El índice** (`IndiceExposicion`, como en el diagrama): el porcentaje de las apariciones del prestador en las recomendaciones de los últimos 30 días, dividido por su porcentaje de las ofertas elegibles. 1 es justo; si pasa de **1,5** con al menos **200** recomendaciones, se alerta al administrador.
+  - **Solo cuentan las recomendaciones** [SUPUESTO], no las alternativas por alta afluencia, que el turista no pide con sus filtros (DR-20).
+  - **Cuentan las apariciones:** si un prestador sale dos veces en una consulta, son dos.
+  - **Un prestador sin ofertas elegibles** el día de la revisión, porque perdió el RNT o las retiró, no se mide.
+- **Las ofertas elegibles las da el catálogo**, como en el diagrama: `CatalogoRestClientAdapter` consulta `GET /internal/ofertas/por-prestador` (DC-51) con el token de servicio del núcleo y la espera de 3 s. Es el número del día de la revisión, no el de cada consulta.
+- **Una revisión por día:** `RevisionSesgoProgramada` corre cada hora (`nucleo.indicadores.revision-sesgo.cron`) en las dos réplicas, pero solo una la hace. El diagrama nombra ShedLock; el núcleo usa la base, como en sus demás tareas: la réplica que inserta la fila del día en `revisiones_sesgo` (V15) es la que revisa.
+  - Primero pide las ofertas al catálogo, fuera de la transacción. Si el catálogo no responde, no reserva el día y se intenta a la hora siguiente.
+  - Con menos de 200 recomendaciones no mide y deja las alertas como estaban, pero el día queda revisado.
+- **Las alertas** son el aviso en el panel del administrador (el `AvisoPlataformaPort` del diagrama), sin correo:
+  - `GET /api/nucleo/admin/alertas-sesgo`, con el rol ADMINISTRADOR, da las abiertas de mayor a menor índice: el prestador, el índice, los dos porcentajes, las apariciones, las recomendaciones con que se midió y desde cuándo está abierta;
+  - hay a lo sumo una abierta por prestador (`alertas_sesgo`, con un índice único parcial): se actualiza mientras siga por encima y se cierra sola cuando baja. Las cerradas quedan en la tabla como historial.
+- **Pruebas:** `ExposicionIT` recorre el envío con el token de la recomendación, la revisión con un catálogo simulado y la alerta en el panel.
 
 ## Estructura y despliegue
 
@@ -685,3 +708,6 @@ Con esto quedan hechos los dos pendientes de DN-17.
 22. **Diagrama entidad-relación y diccionario de clases, pagos (V13):** `eventos_pasarela` agrega `procesamiento` (PENDIENTE, PROCESADO o FALLIDO), `intentos_procesamiento`, `ultimo_error`, `siguiente_intento_en`, `aviso_enviado_en` y `aviso_intentado_en`; `intentos_pago`, `abandonar_en`; `pagos_tardios`, `motivo` y `aviso_intentado_en`, y `dispersiones`, `aviso_intentado_en`. `TipoAvisoPago` agrega `MONTO_DISTINTO` y `EVENTO_FALLIDO` (DN-20 a DN-22, DN-24).
 23. **Diagrama de paquetes, módulo de indicadores:** `IndicadoresController` tiene las tres rutas de `/gestor/indicadores`; `SolicitudesPort` usa `solicitudes.api.SolicitudesIndicadoresApi`, que da solo conteos (`ContarSolicitudesUseCase`), y `ReglaAnonimizacion` oculta los de 1 o 2 (DN-41). El modelo agrega `Periodo` y `DistribucionCategoria`.
 24. **Diagrama entidad-relación y diccionario de clases, solicitudes (V14):** `solicitudes` agrega `categoria_prestador`, y `SolicitudDisponibilidad`, `categoriaPrestador` (DN-41). `PrestadoresPort` agrega `categoria`.
+25. **Diagrama de paquetes, módulo de indicadores (exposición):** `ExposicionController` es `POST /internal/exposiciones`; el `RevisionSesgoScheduler` es `RevisionSesgoProgramada` y no usa ShedLock sino la fila del día en `revisiones_sesgo`; el `AvisoPlataformaPort` es `AlertaSesgoRepositoryPort`, con `GET /admin/alertas-sesgo`, y no `NotificacionJpaAdapter`; se agregan `ConsultarAlertasSesgoUseCase` y `TransaccionPort`. El `OfertaElegibleConsultaPort` usa `GET /internal/ofertas/por-prestador` del catálogo (DN-42, DN-43, DC-51).
+26. **Diagrama entidad-relación (V15):** agregar `exposiciones`, `alertas_sesgo` y `revisiones_sesgo` (DN-42, DN-43). El módulo de indicadores ya no es "sin tablas propias": las del tablero siguen saliendo de las solicitudes, pero la exposición y el sesgo tienen las suyas.
+27. **Diagrama de paquetes, `compartido/seguridad` del núcleo:** una cadena para `/internal/**` con el token de servicio de la recomendación (DN-38, DN-42).

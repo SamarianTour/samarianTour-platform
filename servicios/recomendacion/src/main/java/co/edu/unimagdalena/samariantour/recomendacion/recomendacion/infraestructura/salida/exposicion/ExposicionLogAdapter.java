@@ -8,8 +8,6 @@ import co.edu.unimagdalena.samariantour.recomendacion.recomendacion.dominio.puer
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,9 +17,8 @@ import java.util.function.Consumer;
  * Escribe una línea JSON por consulta en el logger {@code exposicion}: fecha, origen (RECOMENDACION o ALTERNATIVAS),
  * motor y, por cada oferta mostrada, la oferta, su prestador, la posición y los criterios (RET-02, DR-08, DR-20). Con
  * eso se puede contar cuántas veces y en qué posición sale cada prestador. No lleva el texto ni ningún dato del turista.
- * <p>Provisional: cuando exista el núcleo, se cambia por un adaptador HTTP que le envíe el mismo registro.
+ * <p>Es el respaldo de {@link ExposicionRestAdapter}: si el núcleo no recibe el registro, queda aquí (DR-08, DR-24).
  */
-@Component
 public class ExposicionLogAdapter implements ExposicionPort {
 
     private static final Logger EXPOSICION = LoggerFactory.getLogger("exposicion");
@@ -30,7 +27,6 @@ public class ExposicionLogAdapter implements ExposicionPort {
     private final ObjectMapper json;
     private final Consumer<String> destino;
 
-    @Autowired
     public ExposicionLogAdapter(ObjectMapper json) {
         this(json, EXPOSICION::info);
     }

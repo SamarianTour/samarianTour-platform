@@ -2,7 +2,7 @@
 
 Núcleo transaccional sobre PostgreSQL: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e indicadores. Las decisiones están en [docs/decisiones-nucleo.md](../../docs/decisiones-nucleo.md) (DN-01 en adelante).
 
-Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores con la sincronización del RNT (DN-33 a DN-36), la validación del token de acceso con Spring Security y `libs/seguridad-jwt` (DN-37), las cuentas internas y los operadores (DN-39, DN-40) y los indicadores del gestor del destino (DN-41). El registro de exposición y el índice de sesgo (RET-02) están pendientes.
+Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores con la sincronización del RNT (DN-33 a DN-36), la validación del token de acceso con Spring Security y `libs/seguridad-jwt` (DN-37), las cuentas internas y los operadores (DN-39, DN-40) y los indicadores del gestor del destino (DN-41), y el registro de exposición de la recomendación con las alertas de sesgo (DN-42, DN-43).
 
 ## Estructura
 
@@ -20,7 +20,7 @@ co.edu.unimagdalena.samariantour.nucleo
 ├── administracion/      módulo 8 (RF-76 a RF-83): la sincronización del RNT (RF-76), la moderación (RF-79, RF-80),
 │                        las cuentas internas y el operador de cada prestador (RF-81), la comisión y los pagos tardíos
 ├── indicadores/         módulo 9 (RF-85 a RF-89): tablero de demanda, embudo y distribución por categoría, solo con
-│                        datos agregados (RET-03)
+│                        datos agregados (RET-03); registro de exposición y alertas de sesgo (RET-02)
 └── bandeja/             bandeja de salida hacia el catálogo (DN-06)
 ```
 
@@ -186,3 +186,20 @@ curl -s http://localhost:8080/api/nucleo/gestor/indicadores/categorias -H "Autho
 - **Solo datos agregados:** un conteo de 1 o 2 no sale en la respuesta, y la pantalla debe mostrar "menos de 3" (RET-03).
 - **La categoría** es la que tenía el prestador al enviarse la solicitud: se copia en ella (V14).
 - **Pruebas:** `ConteosSolicitudesIT` (las consultas) e `IndicadoresIT` (las rutas de punta a punta).
+
+## Exposición y sesgo
+
+La recomendación envía al núcleo qué ofertas mostró en cada consulta (`POST /internal/exposiciones`, con su token de servicio), y una vez al día el núcleo mide si favorece a algún prestador (RET-02, DN-42, DN-43). Con el piloto levantado:
+
+```bash
+# Unas recomendaciones, para que haya exposición (cada consulta deja una fila por oferta en la tabla exposiciones)
+curl -s -X POST http://localhost:8080/api/recomendacion/recomendaciones -H "Content-Type: application/json" -d '{"tiposActividad":["SENDERISMO"]}'
+# Las alertas abiertas, en el panel del administrador
+curl -s http://localhost:8080/api/nucleo/admin/alertas-sesgo -H "Authorization: Bearer $TOKEN_ADMIN"
+# [{"prestadorId":"...","indice":3.00,"porcentajeApariciones":30.00,"porcentajeOfertas":10.00,...}]
+```
+
+- **El índice:** el porcentaje de apariciones del prestador en las recomendaciones de 30 días dividido por su porcentaje de las ofertas visibles, que el núcleo pide al catálogo (`GET /internal/ofertas/por-prestador`). Pasa de 1,5 con al menos 200 recomendaciones: alerta.
+- **Cuándo:** la revisión corre cada hora (`nucleo.indicadores.revision-sesgo.cron`) pero solo la hace una réplica, una vez al día. Con menos de 200 recomendaciones no mide, así que en una demo recién levantada la lista sale vacía.
+- **Sin datos del turista:** solo ofertas, prestadores y posiciones. Las exposiciones se borran a los 90 días.
+- **Pruebas:** `ExposicionIT` (el envío con el token, la revisión con un catálogo simulado y la alerta en el panel).

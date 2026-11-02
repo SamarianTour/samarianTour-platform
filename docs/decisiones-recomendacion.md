@@ -3,7 +3,7 @@
 Registro de las decisiones tomadas para el prototipo del servicio `recomendacion` (RF-26 y RF-27: recomendaciones explicadas, por reglas o con IA; RF-28: alertas del destino; RF-29: alternativas por alta afluencia). Complementa el diagrama de paquetes detallado (módulo 09) y el registro del catálogo ([decisiones-catalogo-ofertas.md](decisiones-catalogo-ofertas.md)); donde los contradice, se indica en la sección final.
 
 - **Estado:** vigente, octubre de 2026. Pendiente de rectificar contra el SRS cuando termine su revisión.
-- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21); DR-22 es de `feature/seguridad-jwt` y DR-23, de `feature/seguridad-servicios`.
+- **Ramas:** `feature/recomendacion-ofertas` (DR-01 a DR-13) y `features/recomendacion-alertas` (DR-14 a DR-21); DR-22 es de `feature/seguridad-jwt`; DR-23, de `feature/seguridad-servicios`, y DR-24, de `feature/nucleo-exposicion`.
 - **Convención:** ✅ decisión que sale de un requisito o de una decisión anterior (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -32,6 +32,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `recomendacion
 | DR-20 | La exposición dice de qué consulta sale | ✅ RET-02 |
 | DR-22 | Spring Security con el token del núcleo, sin rutas que exijan rol | ✅ diagrama de paquetes, DN-37 |
 | DR-23 | La recomendación lee el catálogo con su propio token de servicio | ✅ DN-38 |
+| DR-24 | La exposición va al núcleo, con el log de respaldo | ✅ RET-02, DR-08, DN-42 · 🆕 [SUPUESTO] corte de 1 s |
 | DR-21 | Alertas en español e inglés; la fuente no se traduce | ✅ DR-02 |
 
 ## Motores
@@ -122,7 +123,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 - **Por ahora,** `ExposicionLogAdapter` escribe una línea JSON por consulta en el logger `exposicion`: `{"fecha", "origen", "motor", "recomendaciones": [{"ofertaId", "prestadorId", "posicion", "criterios"}]}` (`origen`, desde DR-20). Con eso se puede contar cuántas veces y en qué posición sale cada prestador.
 - **No lleva** el texto ni ningún dato del turista, ni las explicaciones.
 - **Si el registro falla,** la recomendación igual llega al turista.
-- **Cuando el núcleo tenga esa ruta,** se cambia por un adaptador HTTP con el mismo `RegistroExposicion`, sin tocar el dominio, y su contrato va en `contratos/internos/`.
+- **Ya la tiene:** desde DR-24 el registro va al núcleo, y el log es su respaldo.
 
 **DR-09. POST por privacidad y logs sin datos del turista.**
 - **POST y no GET:** el texto libre viaja en el cuerpo y no queda en la URL, en el historial del navegador ni en el access log de Nginx, que no registra cuerpos.
@@ -143,6 +144,12 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 **DR-12. El turista siempre sabe qué motor eligió** (restricción ética del enunciado: las recomendaciones de la IA se explican al usuario).
 - **La respuesta trae `motor`** (`IA` o `REGLAS`), para que la pantalla lo muestre, por ejemplo como "Sugerido por IA" o "Sugerido por reglas" (a cargo del frontend).
 - **Cada recomendación** trae su explicación y los criterios que cumple, como etiquetas.
+
+**DR-24. La exposición va al núcleo, con el log de respaldo** (RET-02; cierra DR-08; DN-42 del núcleo). El núcleo ya tiene la ruta que recibe el registro, así que `ExposicionRestAdapter` reemplaza a `ExposicionLogAdapter` como el `ExposicionPort` del servicio, sin tocar el dominio.
+- **El envío:** `POST /internal/exposiciones` del núcleo con `{fecha, origen, motor, ofertas: [{ofertaId, prestadorId, posicion}]}`. No van los criterios, que el núcleo no usa para medir el sesgo, ni nada del turista.
+- **Con su token de servicio** (DN-38, DR-23): el mismo que firma para el catálogo, con `aud: nucleo`.
+- **Si el núcleo no responde o responde un error,** el registro queda en el logger `exposicion`, como antes (DR-08), y la recomendación igual llega al turista. `ExposicionLogAdapter` es ahora el respaldo.
+- **Corte de 1 s** [SUPUESTO] (`recomendacion.nucleo.timeout`): el envío es antes de responder, así que un núcleo lento no puede demorar mucho al turista. En Docker Compose la URL es `RECOMENDACION_NUCLEO_URL`.
 
 ## Texto del turista
 
@@ -220,7 +227,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 **DR-22. Spring Security con el token del núcleo, sin rutas que exijan rol** (diagrama de paquetes: `compartido` "JWT"; DN-37). La recomendación usa `libs/seguridad-jwt` como los otros dos servicios (`compartido/seguridad/SeguridadConfig`), con la clave pública del núcleo en `SEGURIDAD_JWT_CLAVE_PUBLICA`.
 - Todas sus rutas son públicas según su contrato: la consulta, las alternativas y las alertas no dependen de quién pregunta.
 - Aun así, un token que llegue se valida, y uno vencido o falsificado responde 401; y el cortafuegos de Spring Security rechaza con 400 las rutas con `;` que esquivaban a Nginx.
-- Cuando una ruta necesite al turista, como el registro de exposición en el núcleo (DR-08), basta con agregar su regla.
+- Cuando una ruta necesite al turista, basta con agregar su regla. El registro de exposición no lo necesita: va al núcleo con el token de servicio (DR-24).
 
 **DR-23. La recomendación lee el catálogo con su propio token de servicio** (DN-38). `GET /internal/ofertas` del catálogo exige el token de la recomendación, que ella firma con su propia clave privada (`RECOMENDACION_JWT_CLAVE_PRIVADA`, `compartido/seguridad/TokenServicioConfig`) y el catálogo valida con la pública.
 - Lo agrega un interceptor del cliente del catálogo solo a `/internal/**`: las lecturas de `/zonas`, que son públicas, salen sin él.
@@ -230,7 +237,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 
 1. **Diagrama del módulo 09:**
    - agregar las políticas `ValidacionRespuestaIA` (DR-05) y `RelevanciaTexto` (DR-13) en el dominio;
-   - cambiar `ExposicionRestClientAdapter` por `ExposicionLogAdapter` mientras el núcleo no tenga la ruta que recibe la exposición (DR-08);
+   - `ExposicionRestClientAdapter` se llama `ExposicionRestAdapter` y tiene a `ExposicionLogAdapter` de respaldo (DR-08, DR-24);
    - la caché del catálogo vive dentro de `CatalogoRestClientAdapter`. El `CaffeineCacheAdapter` del diagrama es `AlertaCacheCaffeineAdapter`, el de `AlertaCachePort` (DR-16);
    - `IdeamAdapter` se divide en dos adaptadores de `WeatherAlertPort`, elegidos por configuración: `IdeamAlertasHidrologicasAdapter` y `AlertasSimuladasAdapter` (DR-14);
    - `WeatherAlertPort.consultar` recibe las zonas con sus coordenadas, que `ActualizarAlertasService` toma de `CatalogoConsultaPort.zonas()` (DR-15); el resultado dice qué zonas fallaron (DR-16);
@@ -239,7 +246,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
    - agregar `AlternativaController`, el que expone `ProponerAlternativasUseCase` (DR-18), y `OrigenExposicion` en el registro de exposición (DR-20);
    - el corte del proveedor de IA es de 6 s y no de 3 s: un modelo que razona tarda más que una consulta REST. El del catálogo sigue en 3 s;
    - en la nota de `ReglaCriteriosExplicitos`, agregar el nivel de esfuerzo a los criterios (tipo de oferta, tipo de actividad, zona, accesibilidad, nivel de esfuerzo y precio).
-2. **Contratos internos:** escribir el del registro de exposición hacia el núcleo (DR-08).
+2. **Contratos internos:** el registro de exposición hacia el núcleo ya tiene contrato, `POST /internal/exposiciones` en `contratos/nucleo.openapi.yaml` (DR-24); falta moverlo a `contratos/internos/` con los demás.
 3. **SRS, RF-27:** confirmar las preferencias de la consulta (DR-02) y el aviso `POCAS_COINCIDENCIAS` cuando menos de 3 ofertas cumplen los filtros duros (DR-03).
 4. **SRS, RF-28 y RF-29:** la fuente oficial es la capa de alertas hidrológicas del IDEAM (DR-14), sin fecha de emisión (DR-15); confirmar los supuestos de las alternativas: accesibilidad, ±50 % del precio y máximo 3 (DR-18).
 5. **Diagrama de despliegue:**
@@ -249,4 +256,4 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 
 ## Fuera del alcance de esta rama
 
-El registro de exposición en el núcleo; otros tipos de alerta del IDEAM (lluvias, deslizamientos, oleaje), que hoy solo da la fuente simulada porque no tienen un servicio consultable por ubicación (DR-14); el frontend de alertas y alternativas, a cargo de otra persona del equipo.
+Otros tipos de alerta del IDEAM (lluvias, deslizamientos, oleaje), que hoy solo da la fuente simulada porque no tienen un servicio consultable por ubicación (DR-14); el frontend de alertas y alternativas, a cargo de otra persona del equipo.

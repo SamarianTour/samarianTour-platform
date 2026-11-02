@@ -52,6 +52,15 @@ management:
       slo:
         http.server.requests: 50ms,100ms,200ms,300ms,500ms,750ms,1s,1500ms,2s,3s
 
+# Los servicios que llaman a /internal/** del núcleo con su token de servicio (DN-38): hoy solo la recomendación, con
+# el registro de exposición (DN-42). Su clave pública llega en SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA, la misma
+# que usa el catálogo; sin ella el núcleo no arranca.
+seguridad:
+  servicios:
+    recomendacion:
+      emisor: samarian-tour-recomendacion
+      clave-publica: ${SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA:}
+
 nucleo:
   cifrado:
     # Clave AES-256 de los datos personales, 32 bytes en Base64 (RNF-08, DN-28). Llega por NUCLEO_CIFRADO_CLAVE y se
@@ -95,6 +104,11 @@ nucleo:
       cron: "0 0 * * * *"
     # La pantalla de confirmación del frontend que lleva la notificación de Atendida (RF-45) [SUPUESTO] (DN-13).
     enlace-confirmacion: http://localhost:8080/turista/solicitudes/{id}
+  indicadores:
+    revision-sesgo:
+      # Cada hora intenta la revisión del sesgo del día (RET-02, DN-43); solo una réplica la hace, una vez al día. Si
+      # el catálogo no responde, se intenta a la hora siguiente. Con "-" no corre.
+      cron: "0 0 * * * *"
   administracion:
     sincronizacion-rnt:
       # Los lunes a las 3:00 de Colombia compara a los prestadores con el RNT (RF-76, DN-36). Con "-" no

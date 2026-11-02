@@ -15,7 +15,8 @@ info:
       acceso (`tokenAcceso`) con el rol TURISTA, PRESTADOR, ADMINISTRADOR, OPERADOR_DISPONIBILIDAD o
       GESTOR_DESTINO, respectivamente (DN-04, DN-37); `/cuenta/**` admite cualquiera de los cinco. Sin token
       válido responden 401 `NO_AUTENTICADO`; con otro rol, 403 `ACCESO_DENEGADO`. Las demás rutas son públicas,
-      salvo `/internal/**` y `/actuator/**`, que Nginx no expone. Una ruta con `;` responde 400.
+      salvo `/internal/**` y `/actuator/**`, que Nginx no expone; `/internal/**` exige además el token de servicio de
+      quien llama (`tokenServicio`, DN-38). Una ruta con `;` responde 400.
 servers:
   - url: http://localhost:8080/api/nucleo
     description: Piloto con Docker Compose, detrás de Nginx
@@ -2023,6 +2024,81 @@ paths:
         '403':
           $ref: '#/components/responses/AccesoDenegado'
 
+  /internal/exposiciones:
+    post:
+      tags: [Indicadores]
+      operationId: registrarExposicion
+      summary: Qué ofertas mostró la recomendación en una consulta (RET-02)
+      description: |
+        Lo envía la recomendación después de cada consulta, con su token de servicio (DN-38); ningún otro servicio ni
+        usuario puede. Una fila por oferta mostrada, sin el texto ni ningún dato del turista (DN-42). Con esto el
+        núcleo mide cada día si algún prestador aparece más de lo que le corresponde (DN-43). Si falla, la
+        recomendación igual llega al turista y deja la línea en su log (DR-08).
+      security:
+        - tokenServicio: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExposicionRequest'
+            example:
+              fecha: '2026-11-02T15:00:00Z'
+              origen: RECOMENDACION
+              motor: REGLAS
+              ofertas:
+                - ofertaId: b00000000000000000000001
+                  prestadorId: 10000000-0000-0000-0000-000000000001
+                  posicion: 1
+                - ofertaId: b00000000000000000000006
+                  prestadorId: 20000000-0000-0000-0000-000000000002
+                  posicion: 2
+      responses:
+        '202':
+          description: Registrada.
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /admin/alertas-sesgo:
+    get:
+      tags: [Indicadores]
+      operationId: consultarAlertasSesgo
+      summary: Los prestadores que la recomendación muestra más de lo que les corresponde (RET-02)
+      description: |
+        El aviso en el panel del administrador (diagrama de paquetes, DN-43). Cada día el núcleo compara, en los
+        últimos 30 días y con al menos 200 recomendaciones, el porcentaje de apariciones de cada prestador con su
+        porcentaje de las ofertas visibles; si el índice pasa de 1,5, abre una alerta. Hay a lo sumo una abierta por
+        prestador: se actualiza mientras siga por encima y se cierra sola cuando baja. Solo trae las abiertas, de la de
+        mayor índice a la de menor.
+      security:
+        - tokenAcceso: []
+      responses:
+        '200':
+          description: Las alertas abiertas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertaSesgo'
+              example:
+                - prestadorId: 10000000-0000-0000-0000-000000000001
+                  indice: 3.0
+                  porcentajeApariciones: 30.0
+                  porcentajeOfertas: 10.0
+                  apariciones: 450
+                  recomendaciones: 300
+                  abiertaEn: '2026-11-01T09:00:00Z'
+                  actualizadaEn: '2026-11-02T09:00:00Z'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
 components:
   securitySchemes:
     tokenAcceso:
@@ -2036,6 +2112,16 @@ components:
         sesión), `iss` (`samarian-tour-nucleo`), `iat`, `exp` y, solo el del prestador que ya registró su
         RNT, `tipoPrestador`. Sin token, o con uno vencido, falsificado o de otro emisor, la ruta responde 401
         `NO_AUTENTICADO`; con un rol que la ruta no admite, 403 `ACCESO_DENEGADO`.
+    tokenServicio:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        El token con el que otro servicio llama a `/internal/**` (DN-38), en `Authorization: Bearer <token>`. Lo
+        firma el servicio que llama con su propia clave (RS256) y lleva `iss`, `sub` (`recomendacion`), `aud: nucleo`
+        y `exp` de 5 minutos. Hoy solo la recomendación llama al núcleo, a `POST /internal/exposiciones`. Sin token, o
+        con el de un usuario, uno falsificado o para otro servicio, 401 `NO_AUTENTICADO`; con el de un servicio que no
+        le toca, 403 `ACCESO_DENEGADO`.
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
@@ -3473,6 +3559,67 @@ components:
         pagadas:
           type: integer
           description: Las que llegaron a pagarse; se omite si es 1 o 2.
+    ExposicionRequest:
+      type: object
+      required: [fecha, origen, motor, ofertas]
+      properties:
+        fecha:
+          type: string
+          format: date-time
+          description: Cuándo se hizo la consulta.
+        origen:
+          type: string
+          enum: [RECOMENDACION, ALTERNATIVAS]
+          description: Si la pidió el turista o son alternativas por alta afluencia (DR-20).
+        motor:
+          type: string
+          enum: [REGLAS, IA]
+        ofertas:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/OfertaExpuesta'
+    OfertaExpuesta:
+      type: object
+      required: [ofertaId, prestadorId, posicion]
+      properties:
+        ofertaId:
+          type: string
+        prestadorId:
+          type: string
+          format: uuid
+        posicion:
+          type: integer
+          minimum: 1
+    AlertaSesgo:
+      type: object
+      required: [prestadorId, indice, porcentajeApariciones, porcentajeOfertas, apariciones, recomendaciones,
+                 abiertaEn, actualizadaEn]
+      properties:
+        prestadorId:
+          type: string
+          format: uuid
+        indice:
+          type: number
+          description: El porcentaje de apariciones dividido por el porcentaje de ofertas, con dos decimales.
+        porcentajeApariciones:
+          type: number
+          description: De todas las apariciones en las recomendaciones de los últimos 30 días.
+        porcentajeOfertas:
+          type: number
+          description: De todas las ofertas visibles, el día de la revisión.
+        apariciones:
+          type: integer
+        recomendaciones:
+          type: integer
+          description: Las recomendaciones de los 30 días con las que se midió.
+        abiertaEn:
+          type: string
+          format: date-time
+        actualizadaEn:
+          type: string
+          format: date-time
     Problema:
       type: object
       description: ProblemDetail (RFC 7807) con la propiedad `codigo`.

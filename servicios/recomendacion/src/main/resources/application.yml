@@ -39,6 +39,12 @@ recomendacion:
     timeout: 3s
     # Cada cuánto se vuelve a leer el catálogo [SUPUESTO] (DR-07).
     vigencia-cache: 60s
+  nucleo:
+    # Recibe el registro de exposición (DR-24). En Docker Compose se sobrescribe con RECOMENDACION_NUCLEO_URL
+    # (http://nucleo:8080/api/nucleo). Si no responde, el registro queda en el log (DR-08).
+    url: http://localhost:8080/api/nucleo
+    # Corto [SUPUESTO]: el turista espera su recomendación mientras se envía.
+    timeout: 1s
   ia:
     # El proveedor de IA se cambia aquí, sin tocar código (QAS-06, DR-01). Apagado, o sin key, responde el motor por
     # reglas.
