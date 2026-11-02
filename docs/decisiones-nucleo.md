@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37) y el token de servicio en las rutas internas (DN-38); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -47,6 +47,8 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-36 | Sincronización semanal con el RNT, retiro, restitución y cierre de las solicitudes no pagadas | ✅ RF-76 a RF-78, HU-ADM-02 · 🆕 equipo: horario, lotes y motivo |
 | DN-37 | El token de acceso en los tres servicios con Spring Security y `libs/seguridad-jwt`, el tipo del prestador en el token y el cierre de las rutas que esquivaban a Nginx | ✅ QAS-04, diagrama de paquetes · 🆕 equipo: fuente del tipo, clave por variable, sin headers |
 | DN-38 | El token de servicio en las rutas internas: firmado por quien llama, con audiencia, y cada ruta solo para el servicio que la usa | ✅ QAS-04, documento de diseño · 🆕 equipo: clave propia de la recomendación, 5 minutos |
+| DN-39 | El administrador asigna el operador de cada prestador; rige para las solicitudes nuevas, y la lista de los que no tienen | ✅ RF-32, RF-81, DN-15 · 🆕 equipo: lista de prestadores sin operador |
+| DN-40 | Cuentas internas: invitación por correo, desactivación y reactivación | ✅ RF-01, RF-81, DN-28, DN-30 · 🆕 [SUPUESTO] 72 h, operador con prestadores y cuenta propia |
 
 ## Persistencia
 
@@ -147,7 +149,33 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 
   El catálogo lo aplica en los siguientes 15 s. Los identificadores son estables, y el catálogo descarta un aviso repetido (DC-08).
 - **Notificación** (decisión del equipo, provisional): al rechazar, el núcleo notifica el motivo al prestador (RF-79) o al turista (RF-80) por `NotificacionPort`. Mientras no exista un canal de notificaciones, el adaptador solo lo escribe en el log (`[Notificación simulada] ...`). La aprobación no se notifica: el prestador la ve en sus ofertas y el turista, en sus opiniones.
-- **RNT activo** (DC-38): el núcleo no aprueba una oferta si el prestador no tiene el RNT activo; responde 409 `PRESTADOR_NO_HABILITADO` y la decisión no se guarda. Lo consulta en el módulo de prestadores (DN-35).
+- **RNT activo** (DC-38): el núcleo no aprueba una oferta si el prestador no tiene el RNT activo; responde 409 `PRESTADOR_NO_HABILITADO` y la decisión no se guarda. Lo consulta en el módulo de prestadores (DN-35). La moderación no revisa el operador: un prestador sin operador se ve en la lista de DN-39.
+
+**DN-39. El operador de cada prestador** (RF-32, RF-81; diagrama de paquetes: `AsignarOperadorPrestadorUseCase`; cierra el pendiente de DN-35). La asignación es estática (RF-32, DN-16): cada prestador tiene un operador, y cada solicitud copia el de su prestador al crearse.
+- **Rutas**, con el rol ADMINISTRADOR:
+  - `PUT /api/nucleo/admin/prestadores/{prestadorId}/operador` con `{operadorId}` responde 200 con el prestador. Asignar el que ya tiene no cambia nada.
+  - `GET /api/nucleo/admin/prestadores`, del registrado hace más tiempo al más reciente, con su operador. Con `?sinOperador=true`, solo los que no tienen.
+- **La lista de los que no tienen operador** (decisión del equipo): el SRS pide que el administrador asigne el operador, pero no cómo sabe a quién. Sin la lista, solo se entera cuando un turista ya recibió 409 `PRESTADOR_SIN_OPERADOR` y lee la incidencia `[INCIDENCIA RF-32]` en el log de alguna de las dos réplicas (DN-15). Con la lista lo asigna antes de la primera solicitud; el log queda de respaldo.
+- **Rige para las solicitudes nuevas** (decisión del equipo): las que ya están abiertas siguen con el operador que tenían hasta terminar, porque ese operador ya las conoce y puede estar hablando con el prestador. Así no cambia el dueño de una solicitud a mitad del trámite.
+- **El operador tiene que ser una cuenta activa con el rol OPERADOR_DISPONIBILIDAD:** si no, 409 `OPERADOR_NO_VALIDO`. Un prestador que todavía no registró su RNT no está en la tabla `prestadores`: 404 `PRESTADOR_NO_REGISTRADO`.
+- **Quién hace qué:** las cuentas dicen si el operador es válido (`CuentasAdministracionApi`, DN-40) y los prestadores guardan la asignación (`PrestadoresApiInterna.asignarOperador`). Ninguno de los dos depende del otro para esto, así que la regla vive en la administración, en `AsignarOperadorPrestadorService`.
+- **Auditoría:** cada cambio queda en `auditoria_prestadores` con la acción `OPERADOR_ASIGNADO` y el operador anterior (RNF-09). No hace falta una migración: `operador_id` ya existía (V10).
+
+**DN-40. Cuentas internas** (RF-01, RF-81; diagrama de paquetes: `GestionarCuentasInternasUseCase`; cierra el pendiente de DN-32). Las cuentas de administradores, operadores de disponibilidad y gestores del destino las crea el administrador; no se registran solas (DN-28).
+- **Rutas**, con el rol ADMINISTRADOR:
+  - `POST /api/nucleo/admin/cuentas-internas` con `{rol, nombre, correo}` responde 201 con la cuenta;
+  - `GET /api/nucleo/admin/cuentas-internas`, de la más antigua a la más reciente, sin contraseñas;
+  - `POST .../{usuarioId}/desactivacion` y `POST .../{usuarioId}/reactivacion` responden 200 con la cuenta. Repetirlas no cambia nada.
+- **Invitación** [SUPUESTO]: la cuenta nace activa y sin contraseña. Le llega al correo un enlace `ESTABLECER_CONTRASENA` que vence a las **72 horas**, no a los 30 minutos del restablecimiento, porque quien lo recibe puede no abrir el correo el mismo día. Lleva a la misma pantalla del restablecimiento y se usa con `POST /cuentas/contrasena` (DN-30). Si vence, la persona pide otro con "Olvidé mi contraseña": no hace falta una ruta para reenviarla. La cuenta, el código y el correo van en la misma transacción: si el correo falla, 503 `CORREO_NO_DISPONIBLE` y no queda nada.
+- **Sin aceptación de la política:** la cuenta interna no acepta la política de datos al crearse; es personal de la plataforma, no un titular que se registra (RF-09).
+- **Desactivar:**
+  - la cuenta ya no inicia sesión (403 `CUENTA_DESACTIVADA`, que ya existía) y se cierran sus sesiones, así no renueva la que tenía. El token de acceso que ya tiene sirve hasta que venza, a lo sumo 15 minutos (DN-29);
+  - no se borra nada: el estado `DESACTIVADA` ya estaba en V8. La reactivación conserva la contraseña;
+  - un operador con prestadores asignados responde 409 `OPERADOR_CON_PRESTADORES` [SUPUESTO]: primero se reasignan (DN-39), o sus solicitudes nuevas le llegarían a alguien que ya no entra. Sus solicitudes abiertas se quedan en su cola: si nadie las atiende, a las 24 h quedan Sin respuesta, como cualquier otra (RF-41);
+  - el administrador no puede desactivar su propia cuenta: 409 `CUENTA_PROPIA` [SUPUESTO]. Así siempre queda al menos uno activo;
+  - un turista o un prestador no se desactivan por aquí (404 `CUENTA_NO_ENCONTRADA`): el turista pide la supresión de sus datos (DN-31).
+- **La API:** `cuentas.api.CuentasAdministracionApi`, aparte de `CuentasApiInterna`, como `PagosAdministracionApi` en pagos. La implementa `CuentasAdministracionApiAdapter` con `CrearCuentaInternaUseCase`, `DesactivarCuentaInternaUseCase` y `ConsultarCuentasInternasUseCase`, y traduce los errores a `CuentaInternaRechazadaException`, con el mismo código.
+- **Pruebas:** `CuentasInternasIT` recorre la invitación con un Mailpit real, el inicio de sesión, la asignación hasta lo que solicitudes usa para repartir, y la desactivación.
 
 ## Solicitudes de disponibilidad
 
@@ -237,7 +265,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 
 **DN-15. Prestadores y contactos de las solicitudes** (reemplazada por DN-35). El operador asignado y el WhatsApp de cada prestador eran una tabla provisional de la demo [SUPUESTO]; ahora salen del módulo de prestadores, por `PrestadoresSolicitudesAdapter` sobre `PrestadoresApiInterna`, sin cambios en el dominio. El contacto del turista sale de su cuenta (DN-32).
 - **Errores:** un prestador sin operador responde 409 `PRESTADOR_SIN_OPERADOR` y deja la incidencia en el log, con el prefijo `[INCIDENCIA RF-32]`, el prestador y la oferta, para que el administrador le asigne uno (RF-32). Un turista sin WhatsApp verificado responde 409 `WHATSAPP_NO_VERIFICADO` (RF-30).
-- **Sin el perfil demo** no hay prestadores con operador hasta que la administración los asigne (RF-81), y ninguna solicitud se puede enviar.
+- **Sin el perfil demo** no hay prestadores con operador hasta que la administración los asigne (RF-81, DN-39), y ninguna solicitud se puede enviar.
 
 **DN-16. Cola del operador** (RF-32, RF-34 a RF-36).
 - **Asignación estática** (RF-32): cada solicitud queda con el operador vinculado al prestador al crearse. El operador solo ve y atiende las suyas; la de otro operador responde 404, igual que la de otro turista, para no revelar que existe.
@@ -493,7 +521,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - La implementa `infraestructura/entrada/modulos/CuentasApiInternaAdapter` con `ConsultarContactoUseCase`.
   - Las cuentas no dependen de ningún módulo: los demás las consultan.
 - **Solicitudes la usa:** su `ContactoPort` lo implementa `CuentasModuloAdapter`, que reemplaza la tabla de turistas de la demo (DN-15).
-- **Pendiente:** crear y desactivar cuentas internas (RF-81) se hará con el módulo de administración. Ya existe el código `ESTABLECER_CONTRASENA`, y `POST /cuentas/contrasena` lo acepta.
+- **Cuentas internas:** las crea, desactiva y reactiva la administración por `CuentasAdministracionApi` (DN-40).
 
 ## Prestadores
 
@@ -556,7 +584,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - la agencia `50000000-...-005` está INACTIVA, sin operador ni cuenta: su 910005 no está en la tabla;
   - la habilitación arranca con la versión que el catálogo ya tiene de ellos (1 los activos y 2 la inactiva), para que el primer cambio llegue con una versión mayor;
   - la tabla simulada trae además 910006 (una guía) y 910007 (un hostal) para registrar prestadores nuevos.
-- **Asignar el operador** (RF-81) queda para la administración: por ahora solo lo tienen los de la demo.
+- **Asignar el operador** (RF-81) lo hace la administración con `PrestadoresApiInterna.asignarOperador` (DN-39).
 
 **DN-36. Sincronización semanal con el RNT, retiro y restitución** (RF-76 a RF-78, HU-ADM-01, HU-ADM-02, QAS-03).
 - **Cuándo:**
@@ -612,20 +640,26 @@ Con esto quedan hechos los dos pendientes de DN-17.
    - se agrega `ConsultarPoliticaDatosUseCase` (DN-28), porque un controlador no lee repositorios;
    - `EmailPort` y `NotificationPort` tienen adaptadores para Mailpit y para el WhatsApp simulado (DN-28, DN-30);
    - se agrega `AvisosCatalogoPort`, que deja `SUPRESION_TURISTA` en la bandeja (DN-31);
-   - `CrearCuentaInternaUseCase` y `DesactivarCuentaInternaUseCase` quedan para el módulo de administración (RF-81). `AnonimizarUsuarioUseCase` es hoy la supresión del turista (DN-31).
+   - se agregan `CrearCuentaInternaUseCase`, `DesactivarCuentaInternaUseCase` y `ConsultarCuentasInternasUseCase`, y la API `CuentasAdministracionApi` para la administración (DN-40). `AnonimizarUsuarioUseCase` es hoy la supresión del turista (DN-31).
+
 12. **Diccionario de clases, cuentas:**
    - `CodigoUnUso` agrega `intentosFallidos` (DN-28);
    - el token de renovación y el enlace del correo son `TokenOpaco` (`<id>.<secreto>`); `Sesion` guarda el hash del secreto (DN-29);
-   - `Usuario` agrega `cambiarNombre`, `cambiarContrasena` y la anonimización, y `Turista`, `verificarWhatsapp`, `cambiarWhatsapp` y `suprimir`.
+   - `Usuario` agrega `cambiarNombre`, `cambiarContrasena`, la anonimización, y `crearInterna`, `desactivar` y `reactivar` (DN-40), y `Turista`, `verificarWhatsapp`, `cambiarWhatsapp` y `suprimir`.
 13. **Diagrama entidad-relación:** agregar `usuarios`, `politicas_datos`, `aceptaciones_politica`, `solicitudes_supresion`, `codigos_un_uso` y `sesiones` (V8).
 14. **Diagrama de despliegue:** Mailpit en el piloto (DN-30).
 15. **Diagrama de paquetes, módulo de prestadores:**
    - los adaptadores de entrada son `PrestadorController` y `PrestadoresApiInternaAdapter`, que implementa `PrestadoresApiInterna` para solicitudes, pagos y administración (DN-35);
-   - se agregan `ConfigurarWhatsAppPrestadorUseCase` y `SincronizarRntUseCase` (DN-33, DN-36), y los puertos `CuentasPort` (sobre `CuentasApiInterna`), `HasherPort`, `NotificacionPrestadorPort`, `CuentaCobroRepositoryPort`, `AuditoriaPort` y `TransaccionPort`;
+   - se agregan `ConfigurarWhatsAppPrestadorUseCase`, `SincronizarRntUseCase` (DN-33, DN-36) y `AsignarOperadorUseCase` (DN-39), y los puertos
+ `CuentasPort` (sobre `CuentasApiInterna`), `HasherPort`, `NotificacionPrestadorPort`, `CuentaCobroRepositoryPort`, `AuditoriaPort` y `TransaccionPort`;
    - `RntVerificationPort` tiene dos adaptadores, el simulado y el de la API SODA (DN-33); `EventoSalidaPort` deja el aviso HABILITACION en la bandeja.
-16. **Diagrama de paquetes, módulo de administración:** se agregan `SincronizarRntAdminUseCase`, `RntAdminController`, la tarea semanal y los puertos `PrestadoresModeracionPort` y `SincronizacionRntPort`, sobre `PrestadoresApiInterna` (DN-35, DN-36).
+16. **Diagrama de paquetes, módulo de administración:**
+   - se agregan `SincronizarRntAdminUseCase`, `RntAdminController`, la tarea semanal y los puertos `PrestadoresModeracionPort` y `SincronizacionRntPort`, sobre `PrestadoresApiInterna` (DN-35, DN-36);
+   - `GestionarCuentasInternasUseCase` y `AsignarOperadorPrestadorUseCase` tienen `CuentasInternasAdminController` y `PrestadoresAdminController`, y los puertos `CuentasInternasPort`, sobre `CuentasAdministracionApi`, y `OperadoresPrestadoresPort`, sobre `PrestadoresApiInterna` (DN-39, DN-40). El `CuentasPort` y el `PrestadoresPort` del diagrama son estos dos.
+
 17. **Diccionario de clases, prestadores:**
-   - `Prestador` agrega `vistoEnRnt` (INACTIVO frente a NO_ENCONTRADO), la razón social, el municipio y la categoría del RNT, el código de verificación del WhatsApp (`CodigoWhatsapp`) y la versión de la habilitación (DN-33);
+   - `Prestador` agrega `vistoEnRnt` (INACTIVO frente a NO_ENCONTRADO), la razón social, el municipio y la categoría del RNT, el código de verificación del WhatsApp (`CodigoWhatsapp`), la versión de la habilitación (DN-33) y `asignarOperador` (DN-39);
+
    - `CuentaCobro` tiene `AHORROS` y `CORRIENTE` en lugar de `BANCARIA`, la entidad, el titular y su vigencia (DN-34);
    - `SolicitudDisponibilidad` agrega `cerrarPorRntInactivo` (DN-36).
 18. **Diagrama entidad-relación:** agregar `prestadores`, `cuentas_cobro` y `auditoria_prestadores` (V10), el índice de V11 y `rnt_simulado_bajas` (V12).

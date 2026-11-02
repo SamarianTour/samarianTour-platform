@@ -17,8 +17,8 @@ co.edu.unimagdalena.samariantour.nucleo
 ├── pagos/               módulo 5 (RF-46 a RF-58): sesión de cobro, webhook, pagos tardíos, comisión y dispersión
 ├── prestadores/         módulo 7 (RF-62, RF-63, RF-68 a RF-75): registro con el RNT, tipo, WhatsApp, cuenta de cobro,
 │                        sincronización del RNT y su api para los demás módulos
-├── administracion/      módulo 8 (RF-76 a RF-83); por ahora la sincronización del RNT (RF-76), la moderación (RF-79,
-│                        RF-80), la comisión y los pagos tardíos
+├── administracion/      módulo 8 (RF-76 a RF-83): la sincronización del RNT (RF-76), la moderación (RF-79, RF-80),
+│                        las cuentas internas y el operador de cada prestador (RF-81), la comisión y los pagos tardíos
 ├── indicadores/         módulo 9 (RF-85 a RF-89)
 └── bandeja/             bandeja de salida hacia el catálogo (DN-06)
 ```
@@ -122,7 +122,7 @@ Registro, sesión, restablecimiento de la contraseña, datos personales y supres
 - **Cuentas de la demo:** las 13 de `PrecargaCuentasDemo`, con la clave `Demo1234` (por ejemplo `laura@demo.samariantour.co`); el administrador de V9 es `admin@samariantour.co` / `SamarianAdmin2026`.
 - **Sesión:** `POST /cuentas/sesion` da un JWT RS256 de 15 min y un token de renovación de 7 días que rota en cada uso (DN-29). El token del prestador lleva su tipo cuando ya registró el RNT (DN-37).
 - **WhatsApp y correo simulados:** el código de verificación sale en el log (`docker compose -f infra/docker-compose.yml logs nucleo | grep CODIGO_VERIFICACION`) y el correo de restablecimiento llega a Mailpit, en `http://localhost:8025`.
-- **Para otros módulos:** `cuentas.api.CuentasApiInterna`. Las cuentas no dependen de ningún módulo.
+- **Para otros módulos:** `cuentas.api.CuentasApiInterna`, y para la administración, `cuentas.api.CuentasAdministracionApi` (las cuentas internas). Las cuentas no dependen de ningún módulo.
 
 ## Prestadores
 
@@ -144,3 +144,28 @@ curl -s -X POST http://localhost:8080/api/nucleo/admin/moderacion/ofertas/b00000
 ```
 
 La decisión queda en `decisiones_moderacion` y su aviso, en la bandeja; en los siguientes 15 s la oferta aparece en el catálogo. Los errores (404, 409, 503) y las decisiones repetidas están en DN-08 y en `contratos/nucleo.openapi.yaml`. Las notificaciones de rechazo, por ahora, solo salen en el log: `docker compose -f infra/docker-compose.yml logs nucleo | grep "Notificación simulada"`.
+
+## Cuentas internas y operadores
+
+El administrador crea las cuentas de los operadores de disponibilidad, los gestores del destino y otros administradores, y asigna a cada prestador su operador (RF-81, DN-39, DN-40). Con el mismo `$TOKEN_ADMIN`:
+
+```bash
+# Crea la cuenta: nace sin contraseña y el enlace para ponerla llega a Mailpit (http://localhost:8025); vence a las 72 h
+curl -s -X POST http://localhost:8080/api/nucleo/admin/cuentas-internas   -H "Authorization: Bearer $TOKEN_ADMIN"   -H "Content-Type: application/json" -d '{"rol": "OPERADOR_DISPONIBILIDAD", "nombre": "Valentina Ríos", "correo": "valentina@samariantour.co"}'
+# 201 {"id":"...","rol":"OPERADOR_DISPONIBILIDAD","estado":"ACTIVA","contrasenaEstablecida":false,...}
+
+# Los prestadores que todavía no tienen operador: sus solicitudes se rechazan con PRESTADOR_SIN_OPERADOR (DN-15)
+curl -s "http://localhost:8080/api/nucleo/admin/prestadores?sinOperador=true"   -H "Authorization: Bearer $TOKEN_ADMIN"
+# [{"id":"50000000-0000-0000-0000-000000000005","numeroRnt":"910005","estadoRnt":"INACTIVO",...}]
+
+# Le asigna el operador: rige para las solicitudes nuevas; las abiertas siguen con el que tenían
+curl -s -X PUT http://localhost:8080/api/nucleo/admin/prestadores/50000000-0000-0000-0000-000000000005/operador   -H "Authorization: Bearer $TOKEN_ADMIN"   -H "Content-Type: application/json" -d '{"operadorId": "60000000-0000-0000-0000-000000000001"}'
+
+# Da de baja una cuenta (y /reactivacion la vuelve a activar)
+curl -s -X POST http://localhost:8080/api/nucleo/admin/cuentas-internas/60000000-0000-0000-0000-000000000003/desactivacion   -H "Authorization: Bearer $TOKEN_ADMIN"
+```
+
+- **Invitación:** el enlace lleva a la misma pantalla del restablecimiento y se usa con `POST /cuentas/contrasena`. Si vence, la persona pide otro con `POST /cuentas/contrasena/restablecimiento`.
+- **Desactivar:** la cuenta ya no inicia sesión y pierde sus sesiones; su token de acceso dura hasta 15 minutos más. Un operador con prestadores asignados responde 409 `OPERADOR_CON_PRESTADORES` (primero se reasignan), y el administrador no puede desactivarse a sí mismo (409 `CUENTA_PROPIA`).
+- **Pruebas:** `CuentasInternasIT` recorre la invitación con un Mailpit real, la asignación y la desactivación.
+
