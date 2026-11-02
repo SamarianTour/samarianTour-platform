@@ -553,7 +553,7 @@ class SolicitudDisponibilidadTest {
     @DisplayName("tiene cambios solo si algo cambió: un evento sin efecto no obliga a guardar")
     void cambios() {
         SolicitudDisponibilidad solicitud = SolicitudDisponibilidad.reconstituir(UUID.randomUUID(), TURISTA,
-                "b1", caminata().datos(), MIERCOLES, A_LAS_SIETE, 2, null, OPERADOR, AHORA,
+                "b1", caminata().datos(), MIERCOLES, A_LAS_SIETE, 2, null, OPERADOR, null, AHORA,
                 EstadoSolicitud.PAGADA, condiciones(), null, null, false, 0, AHORA, 3, java.util.List.of());
 
         assertThat(solicitud.registrarPagoAprobado(AHORA)).isEqualTo(ResultadoEventoPago.SIN_CAMBIOS);

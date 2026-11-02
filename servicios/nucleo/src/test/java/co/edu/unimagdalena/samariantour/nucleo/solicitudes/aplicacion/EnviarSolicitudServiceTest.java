@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion;
 
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.CatalogoNoDisponibleException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.ExcepcionDominio;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CategoriaPrestador;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.EstadoSolicitud;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.NotificacionSolicitud;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.PeticionIdempotente;
@@ -46,7 +47,7 @@ class EnviarSolicitudServiceTest {
     private final AtomicReference<SolicitudDisponibilidad> creada = new AtomicReference<>();
 
     @Test
-    @DisplayName("queda Pendiente con el operador del prestador, con sus notificaciones al turista y al operador")
+    @DisplayName("queda Pendiente con el operador y la categoría del prestador, y notifica al turista y al operador")
     void enviar() {
         ResultadoIdempotente resultado = enviar(UUID.randomUUID(), comando(TURISTA, 2));
 
@@ -56,6 +57,7 @@ class EnviarSolicitudServiceTest {
         assertThat(guardada.estado()).isEqualTo(EstadoSolicitud.PENDIENTE);
         assertThat(guardada.operadorId()).isEqualTo(OPERADOR);
         assertThat(guardada.oferta().prestadorId()).isEqualTo(AGENCIA);
+        assertThat(guardada.categoriaPrestador()).isEqualTo(CategoriaPrestador.MICRO_PEQUENO);
         assertThat(notificaciones.registradas).extracting(NotificacionSolicitud::tipo)
                 .containsExactly(TipoNotificacion.SOLICITUD_RECIBIDA, TipoNotificacion.NUEVA_SOLICITUD);
     }

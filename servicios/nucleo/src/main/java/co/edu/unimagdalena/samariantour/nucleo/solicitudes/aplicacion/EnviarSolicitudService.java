@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.Ofe
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.PrestadorSinOperadorException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.WhatsappNoVerificadoException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CamposDelTipo;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CategoriaPrestador;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.OfertaSolicitable;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.PeticionIdempotente;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.RespuestaGuardada;
@@ -28,7 +29,8 @@ import java.util.function.Function;
  *   <li>el turista debe tener WhatsApp verificado (RF-30);</li>
  *   <li>la oferta debe estar visible en el catálogo: es la única llamada de red, con corte de circuito (ADR-04); si el
  *   catálogo no responde no se crea nada y el turista puede reintentar con la misma clave;</li>
- *   <li>el prestador debe tener un operador asignado; si no, se rechaza y se registra la incidencia (RF-32);</li>
+ *   <li>el prestador debe tener un operador asignado; si no, se rechaza y se registra la incidencia (RF-32). Su
+ *   categoría se copia para los indicadores (DN-41);</li>
  *   <li>la solicitud valida la fecha, los campos de su tipo y las personas, y ReglaNoDuplicado revisa las abiertas
  *   del turista (RF-31);</li>
  *   <li>se guarda Pendiente con sus notificaciones al turista y al operador (RF-34, RF-44).</li>
@@ -73,8 +75,9 @@ public class EnviarSolicitudService implements EnviarSolicitudUseCase {
                 .orElseThrow(() -> new PrestadorSinOperadorException(oferta.datos().prestadorId(), oferta.id()));
         CamposDelTipo campos = new CamposDelTipo(comando.horaSalida(), comando.horaReserva(), comando.fechaSalida(),
                 comando.numeroUnidades());
+        CategoriaPrestador categoria = prestadores.categoria(oferta.datos().prestadorId()).orElse(null);
         SolicitudDisponibilidad solicitud = SolicitudDisponibilidad.crear(UUID.randomUUID(), comando.turistaId(),
-                oferta, comando.fechaInicio(), campos, comando.personas(), comando.nota(), operadorId,
+                oferta, comando.fechaInicio(), campos, comando.personas(), comando.nota(), operadorId, categoria,
                 reloj.instant());
         ReglaNoDuplicado.verificar(comando.turistaId(), oferta.id(), comando.fechaInicio(), campos.hora(),
                 solicitudes.abiertasDelTurista(comando.turistaId(), oferta.id(), comando.fechaInicio()));

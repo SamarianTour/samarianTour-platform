@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion;
 import co.edu.unimagdalena.samariantour.nucleo.compartido.concurrencia.ConflictoConcurrenciaException;
 import co.edu.unimagdalena.samariantour.nucleo.compartido.concurrencia.EjecutorConReintento;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.SolicitudDuplicadaException;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CategoriaPrestador;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.ContactoTurista;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.EstadoSolicitud;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.NotificacionPendiente;
@@ -163,9 +164,9 @@ final class DoblesSolicitudes {
 
         private static SolicitudDisponibilidad copia(SolicitudDisponibilidad s, long revision) {
             return SolicitudDisponibilidad.reconstituir(s.id(), s.turistaId(), s.ofertaId(), s.oferta(),
-                    s.fechaInicio(), s.campos(), s.personas(), s.notaTurista(), s.operadorId(), s.creadaEn(),
-                    s.estado(), s.condiciones(), s.aparteHasta(), s.venceEn(), s.intentoPagoEnCurso(),
-                    s.intentosPagoFallidos(), s.actualizadaEn(), revision, s.historial());
+                    s.fechaInicio(), s.campos(), s.personas(), s.notaTurista(), s.operadorId(),
+                    s.categoriaPrestador(), s.creadaEn(), s.estado(), s.condiciones(), s.aparteHasta(), s.venceEn(),
+                    s.intentoPagoEnCurso(), s.intentosPagoFallidos(), s.actualizadaEn(), revision, s.historial());
         }
     }
 
@@ -256,6 +257,8 @@ final class DoblesSolicitudes {
     static final class Directorio implements PrestadoresPort, ContactoPort {
 
         final Map<UUID, UUID> operadores = new HashMap<>(Map.of(AGENCIA, OPERADOR));
+        final Map<UUID, CategoriaPrestador> categorias = new HashMap<>(
+                Map.of(AGENCIA, CategoriaPrestador.MICRO_PEQUENO));
         /** Los prestadores sin el RNT activo; los demás están habilitados. */
         final Set<UUID> inhabilitados = new HashSet<>();
         final Map<UUID, ContactoTurista> turistas = new HashMap<>(
@@ -274,6 +277,11 @@ final class DoblesSolicitudes {
         @Override
         public boolean estaHabilitado(UUID prestadorId) {
             return !inhabilitados.contains(prestadorId);
+        }
+
+        @Override
+        public Optional<CategoriaPrestador> categoria(UUID prestadorId) {
+            return Optional.ofNullable(categorias.get(prestadorId));
         }
 
         @Override

@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.nucleo.compartido.concurrencia.Conflicto
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.SolicitudDuplicadaException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.ActorTransicion;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CamposDelTipo;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CategoriaPrestador;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CondicionesOfrecidas;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.DatosOfertaCopiados;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.EstadoSolicitud;
@@ -56,7 +57,9 @@ public class SolicitudJpaAdapter implements SolicitudRepositoryPort {
                 solicitud.oferta().tipo().name(), solicitud.oferta().nombre(), solicitud.oferta().prestadorId(),
                 solicitud.oferta().zonaId(), solicitud.fechaInicio(), solicitud.horaSalida(), solicitud.horaReserva(),
                 solicitud.fechaSalida(), solicitud.numeroUnidades(), solicitud.personas(), solicitud.notaTurista(),
-                solicitud.operadorId(), solicitud.creadaEn());
+                solicitud.operadorId(),
+                solicitud.categoriaPrestador() == null ? null : solicitud.categoriaPrestador().name(),
+                solicitud.creadaEn());
         copiarEstado(solicitud, fila);
         try {
             solicitudes.saveAndFlush(fila);
@@ -187,6 +190,7 @@ public class SolicitudJpaAdapter implements SolicitudRepositoryPort {
                         fila.prestadorId(), fila.zonaId()),
                 fila.fechaInicio(), new CamposDelTipo(fila.horaSalida(), fila.horaReserva(), fila.fechaSalida(),
                         fila.numeroUnidades()), fila.personas(), fila.notaTurista(), fila.operadorId(),
+                fila.categoriaPrestador() == null ? null : CategoriaPrestador.valueOf(fila.categoriaPrestador()),
                 fila.creadaEn(), EstadoSolicitud.valueOf(fila.estado()), condiciones, fila.aparteHasta(),
                 fila.venceEn(), fila.intentoPagoEnCurso(), fila.intentosPagoFallidos(), fila.actualizadaEn(),
                 fila.revision(), historial);

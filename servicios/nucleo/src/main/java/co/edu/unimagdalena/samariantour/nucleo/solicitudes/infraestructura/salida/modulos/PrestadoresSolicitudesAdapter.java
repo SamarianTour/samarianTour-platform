@@ -2,6 +2,7 @@ package co.edu.unimagdalena.samariantour.nucleo.solicitudes.infraestructura.sali
 
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.api.PrestadorConsultado;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.api.PrestadoresApiInterna;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CategoriaPrestador;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.PrestadoresPort;
 import org.springframework.stereotype.Component;
 
@@ -34,5 +35,10 @@ public class PrestadoresSolicitudesAdapter implements PrestadoresPort {
     @Override
     public boolean estaHabilitado(UUID prestadorId) {
         return prestadores.consultar(prestadorId).map(PrestadorConsultado::habilitado).orElse(false);
+    }
+
+    @Override
+    public Optional<CategoriaPrestador> categoria(UUID prestadorId) {
+        return prestadores.consultar(prestadorId).map(prestador -> CategoriaPrestador.valueOf(prestador.categoria()));
     }
 }

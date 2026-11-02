@@ -1,5 +1,7 @@
 package co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida;
 
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.CategoriaPrestador;
+
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +16,7 @@ public interface PrestadoresPort {
 
     /** Si tiene el RNT activo (RF-77); falso también si no se ha registrado. */
     boolean estaHabilitado(UUID prestadorId);
+
+    /** Su categoría por tamaño (RF-72); vacía si no se ha registrado. */
+    Optional<CategoriaPrestador> categoria(UUID prestadorId);
 }

@@ -64,6 +64,9 @@ public class SolicitudEntity {
     @Column(name = "operador_id")
     private UUID operadorId;
 
+    @Column(name = "categoria_prestador")
+    private String categoriaPrestador;
+
     private String estado;
 
     @Column(name = "precio_base")
@@ -106,7 +109,7 @@ public class SolicitudEntity {
     SolicitudEntity(UUID id, UUID turistaId, String ofertaId, String tipoOferta, String nombreOferta,
                     UUID prestadorId, String zonaId, LocalDate fechaInicio, LocalTime horaSalida,
                     LocalTime horaReserva, LocalDate fechaSalida, Integer numeroUnidades, int personas,
-                    String notaTurista, UUID operadorId, Instant creadaEn) {
+                    String notaTurista, UUID operadorId, String categoriaPrestador, Instant creadaEn) {
         this.id = id;
         this.turistaId = turistaId;
         this.ofertaId = ofertaId;
@@ -122,6 +125,7 @@ public class SolicitudEntity {
         this.personas = personas;
         this.notaTurista = notaTurista;
         this.operadorId = operadorId;
+        this.categoriaPrestador = categoriaPrestador;
         this.creadaEn = creadaEn;
     }
 
@@ -199,6 +203,10 @@ public class SolicitudEntity {
 
     UUID operadorId() {
         return operadorId;
+    }
+
+    String categoriaPrestador() {
+        return categoriaPrestador;
     }
 
     String estado() {
