@@ -16,6 +16,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -95,6 +97,12 @@ public class UsuarioJpaAdapter implements UsuarioRepositoryPort {
     @Override
     public Optional<Usuario> porCorreoParaActualizar(String correo) {
         return usuarios.bloquearPorCorreo(correo).map(this::aDominio);
+    }
+
+    @Override
+    public List<Usuario> internas() {
+        List<String> roles = Arrays.stream(Rol.values()).filter(Rol::esInterno).map(Rol::name).toList();
+        return usuarios.findByRolInOrderByFechaRegistroAsc(roles).stream().map(this::aDominio).toList();
     }
 
     private void copiar(Usuario usuario, UsuarioEntity fila) {

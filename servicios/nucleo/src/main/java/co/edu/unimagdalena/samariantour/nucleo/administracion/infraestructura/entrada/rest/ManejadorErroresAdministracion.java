@@ -1,11 +1,18 @@
 package co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest;
 
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.CatalogoNoDisponibleException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.CorreoNoDisponibleException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.CorreoYaRegistradoException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.CuentaInternaNoEncontradaException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.CuentaPropiaException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.ExcepcionDominio;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.ModeracionYaDecididaException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.NoEstaEnModeracionException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.OperadorConPrestadoresException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.OperadorNoValidoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.PrestadorNoHabilitadoException;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.PrestadorNoRegistradoException;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.VersionNoVigenteException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -34,6 +41,14 @@ public class ManejadorErroresAdministracion {
             case ModeracionYaDecididaException e -> HttpStatus.CONFLICT;
             case PrestadorNoHabilitadoException e -> HttpStatus.CONFLICT;
             case CatalogoNoDisponibleException e -> HttpStatus.SERVICE_UNAVAILABLE;
+            case PrestadorNoRegistradoException e -> HttpStatus.NOT_FOUND;
+            case CuentaInternaNoEncontradaException e -> HttpStatus.NOT_FOUND;
+            case OperadorNoValidoException e -> HttpStatus.CONFLICT;
+            case OperadorConPrestadoresException e -> HttpStatus.CONFLICT;
+            case CuentaPropiaException e -> HttpStatus.CONFLICT;
+            case CorreoYaRegistradoException e -> HttpStatus.CONFLICT;
+            case CorreoNoDisponibleException e -> HttpStatus.SERVICE_UNAVAILABLE;
+
             default -> HttpStatus.BAD_REQUEST;
         };
     }

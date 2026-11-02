@@ -23,6 +23,12 @@ public interface PrestadorRepositoryPort {
 
     Optional<Prestador> porId(UUID id);
 
+    /** Del registrado hace más tiempo al más reciente; con {@code soloSinOperador}, los que no tienen (DN-39). */
+    List<Prestador> todos(boolean soloSinOperador);
+
+    /** Cuántos prestadores atiende el operador (RF-32). */
+    long asignadosA(UUID operadorId);
+
     /**
      * Toma hasta {@code limite} prestadores que la sincronización que empezó en {@code inicio} todavía no tomó, y los
      * marca como tomados (RF-76, DN-36). Dos réplicas nunca toman el mismo. Va dentro de una transacción.

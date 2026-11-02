@@ -2,7 +2,11 @@ package co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion;
 
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.RntYaRegistradoException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.ConsultaRnt;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.CuentaCobro;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.Prestador;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.AuditoriaPort;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentaCobroRepositoryPort;
+
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.EventoSalidaPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.NotificacionPrestadorPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.PrestadorRepositoryPort;
@@ -13,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -40,6 +45,8 @@ class EscenarioPrestadores {
     final List<String> retiros = new ArrayList<>();
     /** Cuándo tomó a cada prestador la última sincronización. */
     final Map<UUID, Instant> tomados = new HashMap<>();
+    /** La auditoría: prestador, acción y detalle. */
+    final List<String> auditoria = new ArrayList<>();
 
     final PrestadorRepositoryPort repositorio = new PrestadorRepositoryPort() {
         @Override
@@ -67,6 +74,20 @@ class EscenarioPrestadores {
                     .toList();
             lote.forEach(id -> tomados.put(id, inicio));
             return lote;
+        }
+
+        @Override
+        public List<Prestador> todos(boolean soloSinOperador) {
+            return prestadores.values().stream()
+                    .filter(prestador -> !soloSinOperador || prestador.operadorId() == null)
+                    .sorted(Comparator.comparing(Prestador::fechaRegistro))
+                    .toList();
+        }
+
+        @Override
+        public long asignadosA(UUID operadorId) {
+            return prestadores.values().stream().filter(prestador -> operadorId.equals(prestador.operadorId()))
+                    .count();
         }
 
         private void verificarRntUnico(Prestador prestador) {
@@ -105,6 +126,26 @@ class EscenarioPrestadores {
             cuentasDePrestador::contains, eventos, transaccion, Clock.fixed(AHORA, ZoneOffset.UTC));
 
     final GestionarPrestadorService gestionar = new GestionarPrestadorService(repositorio);
+
+    private final AuditoriaPort registroAuditoria = (prestadorId, accion, detalle, ocurridoEn) ->
+            auditoria.add(prestadorId + " " + accion + " " + detalle);
+
+    final AsignarOperadorService asignarOperador = new AsignarOperadorService(repositorio, registroAuditoria,
+            Clock.fixed(AHORA, ZoneOffset.UTC));
+
+    /** Sin cuentas de cobro: estas pruebas no las usan. */
+    final ConsultarPrestadorService consultar = new ConsultarPrestadorService(repositorio,
+            new CuentaCobroRepositoryPort() {
+                @Override
+                public Optional<CuentaCobro> vigente(UUID prestadorId) {
+                    return Optional.empty();
+                }
+
+                @Override
+                public void reemplazar(CuentaCobro anterior, CuentaCobro nueva) {
+                    throw new UnsupportedOperationException();
+                }
+            });
 
     UUID cuenta() {
         UUID id = UUID.randomUUID();

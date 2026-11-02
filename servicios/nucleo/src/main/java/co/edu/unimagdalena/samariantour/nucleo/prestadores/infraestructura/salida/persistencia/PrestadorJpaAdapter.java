@@ -72,6 +72,18 @@ public class PrestadorJpaAdapter implements PrestadorRepositoryPort {
     }
 
     @Override
+    public List<Prestador> todos(boolean soloSinOperador) {
+        List<PrestadorEntity> filas = soloSinOperador ? prestadores.findByOperadorIdIsNullOrderByFechaRegistroAsc()
+                : prestadores.findAllByOrderByFechaRegistroAsc();
+        return filas.stream().map(this::aDominio).toList();
+    }
+
+    @Override
+    public long asignadosA(UUID operadorId) {
+        return prestadores.countByOperadorId(operadorId);
+    }
+
+    @Override
     public List<UUID> tomarParaSincronizar(Instant inicio, int limite) {
         // PostgreSQL guarda microsegundos: con nanosegundos, la marca quedaría antes del inicio y se volvería a tomar.
         Instant marca = inicio.truncatedTo(ChronoUnit.MICROS);

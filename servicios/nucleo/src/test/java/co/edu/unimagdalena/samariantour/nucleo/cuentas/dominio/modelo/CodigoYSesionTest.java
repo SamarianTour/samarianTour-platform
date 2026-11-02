@@ -32,6 +32,17 @@ class CodigoYSesionTest {
     }
 
     @Test
+    @DisplayName("la invitación de una cuenta interna vale 72 horas (DN-40)")
+    void invitacion() {
+        CodigoUnUso codigo = CodigoUnUso.emitir(UUID.randomUUID(), USUARIO, PropositoCodigo.ESTABLECER_CONTRASENA,
+                "hash", AHORA);
+
+        assertThat(codigo.expiraEn()).isEqualTo(AHORA.plus(Duration.ofHours(72)));
+        assertThat(codigo.esValido(AHORA.plus(Duration.ofHours(72)).minusMillis(1))).isTrue();
+        assertThat(codigo.esValido(AHORA.plus(Duration.ofHours(72)))).isFalse();
+    }
+
+    @Test
     @DisplayName("tres códigos equivocados invalidan el código (DN-28)")
     void tresIntentos() {
         CodigoUnUso codigo = CodigoUnUso.emitir(UUID.randomUUID(), USUARIO, PropositoCodigo.VERIFICACION_WHATSAPP,

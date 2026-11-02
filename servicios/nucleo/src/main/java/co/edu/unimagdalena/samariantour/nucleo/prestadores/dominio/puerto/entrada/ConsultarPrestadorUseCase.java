@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entra
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.CuentaCobro;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.Prestador;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +15,10 @@ public interface ConsultarPrestadorUseCase {
 
     /** La cuenta vigente, completa: solo para la dispersión (RF-54, RF-75). */
     Optional<CuentaCobro> cuentaCobroVigente(UUID prestadorId);
+
+    /** Del registrado hace más tiempo al más reciente; con {@code soloSinOperador}, los que no tienen (RF-81). */
+    List<Prestador> todos(boolean soloSinOperador);
+
+    /** Cuántos prestadores atiende el operador (RF-32). */
+    long asignadosA(UUID operadorId);
 }

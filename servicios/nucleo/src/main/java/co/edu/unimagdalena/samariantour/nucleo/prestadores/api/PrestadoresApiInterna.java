@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.nucleo.prestadores.api;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +18,16 @@ public interface PrestadoresApiInterna {
 
     /** Compara a todos los prestadores con el RNT; la administración la ejecuta (RF-76 a RF-78, DN-36). */
     SincronizacionRnt sincronizarRnt();
+
+    /** Para asignarles el operador (RF-81); con {@code soloSinOperador}, solo los que no tienen. */
+    List<PrestadorAdministrado> prestadores(boolean soloSinOperador);
+
+    /**
+     * Quien llama ya verificó que el operador es una cuenta activa (DN-39).
+     *
+     * @return vacío si el prestador todavía no registró su RNT
+     */
+    Optional<PrestadorAdministrado> asignarOperador(UUID prestadorId, UUID operadorId);
+
+    long prestadoresAsignados(UUID operadorId);
 }

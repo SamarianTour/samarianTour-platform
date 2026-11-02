@@ -1,12 +1,16 @@
 package co.edu.unimagdalena.samariantour.nucleo;
 
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.AsignacionOperadorRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.CambioComisionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionResponse;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.CuentaInternaRequest;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.CuentaInternaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionModeracionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PagoTardioResponse;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PrestadorAdminResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.SincronizacionRntResponse;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.CuentaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.DatosPersonalesRequest;
@@ -151,7 +155,11 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
                 arguments("Comision", ComisionResponse.class),
                 arguments("CambioComision", CambioComisionResponse.class),
                 arguments("PagoTardio", PagoTardioResponse.class),
-                arguments("SincronizacionRnt", SincronizacionRntResponse.class));
+                arguments("SincronizacionRnt", SincronizacionRntResponse.class),
+                arguments("PrestadorAdmin", PrestadorAdminResponse.class),
+                arguments("AsignacionOperadorRequest", AsignacionOperadorRequest.class),
+                arguments("CuentaInternaRequest", CuentaInternaRequest.class),
+                arguments("CuentaInterna", CuentaInternaResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {

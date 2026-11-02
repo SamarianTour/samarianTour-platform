@@ -11,6 +11,12 @@ import java.util.UUID;
 
 interface PrestadorJpaRepository extends JpaRepository<PrestadorEntity, UUID> {
 
+    List<PrestadorEntity> findAllByOrderByFechaRegistroAsc();
+
+    List<PrestadorEntity> findByOperadorIdIsNullOrderByFechaRegistroAsc();
+
+    long countByOperadorId(UUID operadorId);
+
     /** Los que la sincronización de {@code inicio} no ha tomado; los que tiene otra réplica se saltan (DN-36). */
     @Query(value = """
             SELECT id FROM prestadores

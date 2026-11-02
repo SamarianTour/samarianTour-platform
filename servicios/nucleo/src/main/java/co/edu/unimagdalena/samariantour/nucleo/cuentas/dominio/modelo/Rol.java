@@ -18,4 +18,9 @@ public enum Rol {
     public boolean seRegistraSolo() {
         return this == TURISTA || this == PRESTADOR;
     }
+
+    /** El personal de la plataforma: administrador, operador de disponibilidad y gestor del destino (RF-81). */
+    public boolean esInterno() {
+        return !seRegistraSolo();
+    }
 }

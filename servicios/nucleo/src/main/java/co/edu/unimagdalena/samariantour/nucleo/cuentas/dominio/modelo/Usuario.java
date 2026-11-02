@@ -88,6 +88,18 @@ public abstract sealed class Usuario permits Turista, Prestador, OperadorDisponi
         return usuario;
     }
 
+    /**
+     * Una cuenta interna, que crea el administrador: administrador, operador de disponibilidad o gestor del destino
+     * (RF-01, RF-81). Nace activa y sin contraseña; la persona la pone con el enlace que le llega al correo (DN-40).
+     */
+    public static Usuario crearInterna(UUID id, Rol rol, String nombre, String correo, Instant ahora) {
+        if (rol == null || !rol.esInterno()) {
+            throw new DatoInvalidoException("rol", "debe ser ADMINISTRADOR, OPERADOR_DISPONIBILIDAD o GESTOR_DESTINO: "
+                    + "el turista y el prestador se registran solos");
+        }
+        return reconstruir(rol, DatosCuenta.nueva(id, nombre, correo, null, ahora), null, false);
+    }
+
     public abstract Rol rol();
 
     // ---- Inicio de sesión (RF-04, RF-05)
@@ -133,6 +145,43 @@ public abstract sealed class Usuario permits Turista, Prestador, OperadorDisponi
 
     public boolean estaActiva() {
         return estado == EstadoCuenta.ACTIVA;
+    }
+
+    /** Si ya tiene contraseña: una cuenta interna recién creada todavía no (RF-81). */
+    public boolean tieneContrasena() {
+        return hashContrasena != null;
+    }
+
+    // ---- Cuentas internas (RF-81)
+
+    /**
+     * La da de baja: ya no inicia sesión. No se borra nada.
+     *
+     * @return si cambió
+     */
+    public boolean desactivar() {
+        exigirInterna();
+        if (estado == EstadoCuenta.DESACTIVADA) {
+            return false;
+        }
+        estado = EstadoCuenta.DESACTIVADA;
+        return true;
+    }
+
+    /** @return si cambió; conserva la contraseña que tenía */
+    public boolean reactivar() {
+        exigirInterna();
+        if (estado == EstadoCuenta.ACTIVA) {
+            return false;
+        }
+        estado = EstadoCuenta.ACTIVA;
+        return true;
+    }
+
+    private void exigirInterna() {
+        if (!rol().esInterno()) {
+            throw new IllegalStateException("La cuenta %s no es interna: no se desactiva".formatted(id));
+        }
     }
 
     // ---- Política de datos (RF-09, RF-10)

@@ -1,11 +1,13 @@
 package co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.config;
 
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.AsignarOperadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.ConfigurarWhatsAppPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.ConsultarPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.GestionarPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.RegistrarCuentaCobroService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.RegistrarPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.SincronizarRntService;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.AsignarOperadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.ConfigurarWhatsAppPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.ConsultarPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.RegistrarCuentaCobroUseCase;
@@ -67,6 +69,12 @@ public class PrestadoresConfig {
                                          EventoSalidaPort eventos, NotificacionPrestadorPort notificacion,
                                          TransaccionPort transaccion, Clock reloj) {
         return new SincronizarRntService(prestadores, rnt, eventos, notificacion, transaccion, reloj);
+    }
+
+    @Bean
+    AsignarOperadorUseCase asignarOperador(PrestadorRepositoryPort prestadores, AuditoriaPort auditoria,
+                                           Clock reloj) {
+        return new AsignarOperadorService(prestadores, auditoria, reloj);
     }
 
     /** Implementa el cambio de tipo (RF-68, RF-69) y la consulta del estado RNT (RF-73). */

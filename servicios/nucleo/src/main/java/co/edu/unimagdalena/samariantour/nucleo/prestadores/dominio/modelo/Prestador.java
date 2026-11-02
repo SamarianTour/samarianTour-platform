@@ -45,7 +45,7 @@ public final class Prestador {
     private String hashCodigo;
     private Instant codigoEmitidoEn;
     private int intentosCodigo;
-    private final UUID operadorId;
+    private UUID operadorId;
     private boolean habilitadoEnCatalogo;
     private long versionHabilitacion;
     private final Instant fechaRegistro;
@@ -267,6 +267,22 @@ public final class Prestador {
         }
         whatsappVerificado = true;
         hashCodigo = null;
+    }
+
+    // ---- Operador de disponibilidad (RF-32, RF-81)
+
+    /**
+     * Rige para las solicitudes nuevas; las abiertas siguen con el operador que tenían (DN-39).
+     *
+     * @return si cambió
+     */
+    public boolean asignarOperador(UUID nuevo) {
+        Objects.requireNonNull(nuevo, "operadorId");
+        if (nuevo.equals(operadorId)) {
+            return false;
+        }
+        operadorId = nuevo;
+        return true;
     }
 
     // ---- Consultas
