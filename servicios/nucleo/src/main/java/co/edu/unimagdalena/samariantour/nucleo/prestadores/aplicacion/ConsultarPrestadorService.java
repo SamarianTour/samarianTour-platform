@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentaCobroRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.PrestadorRepositoryPort;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,5 +29,15 @@ public class ConsultarPrestadorService implements ConsultarPrestadorUseCase {
     @Override
     public Optional<CuentaCobro> cuentaCobroVigente(UUID prestadorId) {
         return cuentas.vigente(prestadorId);
+    }
+
+    @Override
+    public List<Prestador> todos(boolean soloSinOperador) {
+        return prestadores.todos(soloSinOperador);
+    }
+
+    @Override
+    public long asignadosA(UUID operadorId) {
+        return prestadores.asignadosA(operadorId);
     }
 }
