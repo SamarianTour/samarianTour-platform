@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), y los indicadores del gestor (DN-41); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -49,6 +49,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-38 | El token de servicio en las rutas internas: firmado por quien llama, con audiencia, y cada ruta solo para el servicio que la usa | ✅ QAS-04, documento de diseño · 🆕 equipo: clave propia de la recomendación, 5 minutos |
 | DN-39 | El administrador asigna el operador de cada prestador; rige para las solicitudes nuevas, y la lista de los que no tienen | ✅ RF-32, RF-81, DN-15 · 🆕 equipo: lista de prestadores sin operador |
 | DN-40 | Cuentas internas: invitación por correo, desactivación y reactivación | ✅ RF-01, RF-81, DN-28, DN-30 · 🆕 [SUPUESTO] 72 h, operador con prestadores y cuenta propia |
+| DN-41 | Indicadores del gestor: tablero, embudo y categorías, con la categoría copiada en la solicitud y los conteos de 1 o 2 ocultos | ✅ RF-85 a RF-89, RET-03, diagrama de paquetes · 🆕 [SUPUESTO] periodo y menos de 3 |
 
 ## Persistencia
 
@@ -604,6 +605,21 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - así no depende de quién le quitó la habilitación (la sincronización o un cambio de número) y, si una réplica cae a mitad, la siguiente vuelta termina. V11 agrega el índice de las abiertas por prestador.
 - **Para la demo**, con el RNT simulado: `DELETE /admin/rnt-simulado/{numero}` lo da de baja y `PUT` lo restituye, y los dos sincronizan enseguida. No son parte del contrato, como la pasarela simulada. Las bajas quedan en `rnt_simulado_bajas` (V12), así las dos réplicas las ven; con el RNT real esa tabla queda vacía.
 
+## Indicadores
+
+**DN-41. Indicadores del gestor del destino: tablero, embudo y categorías** (RF-85 a RF-89, RET-03; diagrama de paquetes, módulo de indicadores). Es el módulo `indicadores`, con `IndicadoresService` y los tres casos de uso del diagrama: `ConsultarTablero`, `ConsultarEmbudo` y `ConsultarDistribucionCategoria`. El registro de exposición y el índice de sesgo (RET-02) van en otra rama.
+- **Rutas**, con el rol GESTOR_DESTINO y `?desde=&hasta=` (fechas ISO, opcionales):
+  - `GET /api/nucleo/gestor/indicadores/tablero`: las solicitudes por zona y tipo de oferta (RF-85, RF-86). Agrupa por **tipo de oferta**, no por tipo de actividad, que la solicitud no guarda (DC-35);
+  - `GET /api/nucleo/gestor/indicadores/embudo`: cuántas llegaron a enviadas, atendidas, confirmadas y pagadas, con el porcentaje sobre las enviadas, en total y por tipo de oferta (RF-87, RF-88);
+  - `GET /api/nucleo/gestor/indicadores/categorias`: las solicitudes y las pagadas por categoría de prestador, con su porcentaje (RF-89).
+- **El periodo** [SUPUESTO]: cuenta las solicitudes por la fecha en que se **enviaron**, en hora de Colombia, con los dos días incluidos. Sin fechas son los últimos 30 días hasta hoy; como máximo 366 días. Al revés o más largo responde 400 `DATO_INVALIDO`.
+- **El embudo usa el historial** (`transiciones_solicitud`): una solicitud cuenta en cada etapa por la que pasó, aunque después haya cambiado. Una que se atendió y después venció cuenta como atendida.
+- **La categoría se copia en la solicitud** (decisión del equipo): al crearla, como ya se copian la zona y el tipo de oferta (DC-35). Así, si el prestador crece y pasa de micro y pequeño a mediano, sus solicitudes anteriores conservan la categoría que tenía. V14 agrega `solicitudes.categoria_prestador` y llena las que ya existían con la categoría actual de su prestador; la que no tenga prestador registrado queda vacía y sale como `SIN_CATEGORIA`.
+- **Solo datos agregados** (RET-03, `ReglaAnonimizacion`) [SUPUESTO]: un conteo de 1 o 2 no se publica, porque con una zona, un tipo y un periodo cortos podría señalar a un turista; el campo se omite y la pantalla muestra "menos de 3". Su porcentaje también se omite. El 0 sí se publica. En el tablero, las filas ocultas van al final, por zona, para que el orden no diga si son 1 o 2.
+  - **Límite conocido:** si en un periodo solo hay una fila oculta, se podría deducir restando las visibles del total. Para el piloto se acepta; si hiciera falta, se ocultaría también el total.
+- **Quién hace qué:** las solicitudes cuentan en la base, con `GROUP BY` (`ConteosSolicitudesJdbcAdapter`, `ContarSolicitudesUseCase`), y entregan solo conteos por `solicitudes.api.SolicitudesIndicadoresApi`, nunca solicitudes. Los indicadores arman cada indicador y aplican la regla. Así el módulo de indicadores sigue sin tablas propias, como dice el diagrama. El índice `solicitudes_por_creacion` (V14) filtra el periodo.
+- **Pruebas:** `ConteosSolicitudesIT` (las consultas en PostgreSQL) e `IndicadoresIT` (las rutas de punta a punta).
+
 ## Estructura y despliegue
 
 **DN-07. Estructura del servicio y despliegue en el piloto.**
@@ -667,3 +683,5 @@ Con esto quedan hechos los dos pendientes de DN-17.
 20. **Documento de diseño y diagrama de despliegue:** el TLS de Nginx sigue pendiente (DN-37); la validación del token es local en los tres servicios, como dice la interacción 5.
 21. **Diagrama de paquetes, `libs/seguridad-jwt` y las interacciones entre servicios:** la librería agrega `EmisorTokenServicio`, `DecodificadorTokenServicio` y `ServiciosInternos`; las flechas 1, 2 y 3 llevan el token de servicio del que llama, y el catálogo tiene una cadena de seguridad para `/internal/**` (DN-38).
 22. **Diagrama entidad-relación y diccionario de clases, pagos (V13):** `eventos_pasarela` agrega `procesamiento` (PENDIENTE, PROCESADO o FALLIDO), `intentos_procesamiento`, `ultimo_error`, `siguiente_intento_en`, `aviso_enviado_en` y `aviso_intentado_en`; `intentos_pago`, `abandonar_en`; `pagos_tardios`, `motivo` y `aviso_intentado_en`, y `dispersiones`, `aviso_intentado_en`. `TipoAvisoPago` agrega `MONTO_DISTINTO` y `EVENTO_FALLIDO` (DN-20 a DN-22, DN-24).
+23. **Diagrama de paquetes, módulo de indicadores:** `IndicadoresController` tiene las tres rutas de `/gestor/indicadores`; `SolicitudesPort` usa `solicitudes.api.SolicitudesIndicadoresApi`, que da solo conteos (`ContarSolicitudesUseCase`), y `ReglaAnonimizacion` oculta los de 1 o 2 (DN-41). El modelo agrega `Periodo` y `DistribucionCategoria`.
+24. **Diagrama entidad-relación y diccionario de clases, solicitudes (V14):** `solicitudes` agrega `categoria_prestador`, y `SolicitudDisponibilidad`, `categoriaPrestador` (DN-41). `PrestadoresPort` agrega `categoria`.
