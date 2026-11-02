@@ -147,4 +147,21 @@ class PrestadorTest {
         assertThat(agencia.cambiarWhatsapp("+573001110101")).isFalse();
         assertThatThrownBy(() -> agencia.cambiarWhatsapp("3001110101")).isInstanceOf(DatoInvalidoException.class);
     }
+
+    @Test
+    @DisplayName("nace sin operador; asignar otro lo cambia y el mismo no cambia nada (RF-32, RF-81)")
+    void operador() {
+        Prestador agencia = Prestador.registrar(UUID.randomUUID(), "910001", AGENCIA, agenciaActiva("910001"), AHORA);
+        UUID valentina = UUID.randomUUID();
+        UUID carlos = UUID.randomUUID();
+        assertThat(agencia.operadorId()).isNull();
+
+        assertThat(agencia.asignarOperador(valentina)).isTrue();
+        assertThat(agencia.asignarOperador(valentina)).isFalse();
+        assertThat(agencia.asignarOperador(carlos)).isTrue();
+
+        assertThat(agencia.operadorId()).isEqualTo(carlos);
+        assertThatThrownBy(() -> agencia.asignarOperador(null)).isInstanceOf(NullPointerException.class);
+    }
 }
+
