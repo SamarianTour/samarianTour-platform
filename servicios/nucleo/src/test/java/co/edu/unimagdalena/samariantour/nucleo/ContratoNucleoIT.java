@@ -23,6 +23,13 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.r
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.SupresionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.TokenRenovacionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.VerificacionWhatsappRequest;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.DemandaZonaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.DistribucionCategoriaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.EmbudoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.EmbudoTipoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.EtapaEmbudoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.ParticipacionCategoriaResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.TableroResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.CheckoutResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.EventoRecibidoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.IntentoPagoResponse;
@@ -159,7 +166,14 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
                 arguments("PrestadorAdmin", PrestadorAdminResponse.class),
                 arguments("AsignacionOperadorRequest", AsignacionOperadorRequest.class),
                 arguments("CuentaInternaRequest", CuentaInternaRequest.class),
-                arguments("CuentaInterna", CuentaInternaResponse.class));
+                arguments("CuentaInterna", CuentaInternaResponse.class),
+                arguments("Tablero", TableroResponse.class),
+                arguments("DemandaZona", DemandaZonaResponse.class),
+                arguments("Embudo", EmbudoResponse.class),
+                arguments("EmbudoTipo", EmbudoTipoResponse.class),
+                arguments("EtapaEmbudo", EtapaEmbudoResponse.class),
+                arguments("DistribucionCategoria", DistribucionCategoriaResponse.class),
+                arguments("ParticipacionCategoria", ParticipacionCategoriaResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {
