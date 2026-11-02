@@ -411,7 +411,7 @@ curl -s "$BASE/ofertas/$ID"
 
 ### 5. Consultas internas del núcleo y de la recomendación
 
-El núcleo consulta la oferta al crear una solicitud, y la recomendación lee las ofertas visibles. Como los avisos, solo responden dentro de la red de Docker y con el token del servicio que las usa (DN-38). `infra/token-servicio.sh` firma ese token con la clave de `infra/.env`, como lo haría el servicio; vale 5 minutos, así que si una llamada responde 401 se vuelve a pedir:
+El núcleo consulta la oferta al crear una solicitud y cuántas ofertas visibles tiene cada prestador (para el índice de sesgo, DC-51), y la recomendación lee las ofertas visibles. Como los avisos, solo responden dentro de la red de Docker y con el token del servicio que las usa (DN-38). `infra/token-servicio.sh` firma ese token con la clave de `infra/.env`, como lo haría el servicio; vale 5 minutos, así que si una llamada responde 401 se vuelve a pedir:
 
 ```bash
 COMO_NUCLEO=(-H "Authorization: Bearer $(bash infra/token-servicio.sh nucleo)")
@@ -431,6 +431,10 @@ docker compose -f infra/docker-compose.yml exec -T nginx \
 # Oferta aprobada de un prestador con el RNT inactivo: no se puede pedir, 404
 docker compose -f infra/docker-compose.yml exec -T nginx \
   curl -s "${COMO_NUCLEO[@]}" http://catalogo:8080/api/catalogo/internal/ofertas/b00000000000000000000016
+
+# Cuántas ofertas visibles tiene cada prestador, de más a menos; la agencia sin RNT no aparece
+docker compose -f infra/docker-compose.yml exec -T nginx \
+  curl -s "${COMO_NUCLEO[@]}" http://catalogo:8080/api/catalogo/internal/ofertas/por-prestador
 
 # Paquetes visibles del Parque Tayrona, con la alta afluencia de la zona, los tipos de actividad y el esfuerzo
 docker compose -f infra/docker-compose.yml exec -T nginx \
@@ -654,7 +658,7 @@ curl -s -X POST "$RECO" -H "Content-Type: application/json" -d '{"accesibleSilla
 curl -s -X POST "$RECO" -H "Content-Type: application/json" -d '{}'
 ```
 
-Entre ofertas con la misma afinidad el orden cambia en cada consulta (RF-27). Cada consulta deja una línea en el registro de exposición (RET-02), sin datos del turista:
+Entre ofertas con la misma afinidad el orden cambia en cada consulta (RF-27). Cada consulta se envía al registro de exposición del núcleo (RET-02, DN-42), sin datos del turista; si el núcleo no la recibe, queda como una línea en el log de la recomendación (DR-24):
 
 ```bash
 docker compose -f infra/docker-compose.yml logs recomendacion | grep exposicion
