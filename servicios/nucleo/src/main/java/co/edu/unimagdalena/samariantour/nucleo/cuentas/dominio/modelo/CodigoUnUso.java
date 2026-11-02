@@ -36,11 +36,11 @@ public final class CodigoUnUso {
         this.revision = revision;
     }
 
-    /** Un código nuevo, que vence a los 30 minutos (RF-08). */
+    /** Un código nuevo, que vence a los 30 minutos (RF-08), o a las 72 horas si es una invitación (DN-40). */
     public static CodigoUnUso emitir(UUID id, UUID usuarioId, PropositoCodigo proposito, String hashCodigo,
                                      Instant ahora) {
-        return new CodigoUnUso(id, usuarioId, proposito, hashCodigo, ahora, PoliticaCodigoUnUso.expiraEn(ahora), null,
-                0, null);
+        return new CodigoUnUso(id, usuarioId, proposito, hashCodigo, ahora,
+                PoliticaCodigoUnUso.expiraEn(proposito, ahora), null, 0, null);
     }
 
     /** Válido si no venció, no se usó y no agotó sus intentos (RF-08). */
