@@ -32,7 +32,8 @@ import java.util.List;
  * servicio de quien llama (DN-38), y cada ruta solo admite al servicio que la usa. El token de un usuario no sirve.
  * <ul>
  *   <li>el núcleo: los avisos ({@code /internal/avisos}, {@code /internal/opiniones/avisos}), la oferta de una
- *       solicitud ({@code /internal/ofertas/{id}}) y lo que va a moderar ({@code /internal/moderacion/**});</li>
+ *       solicitud ({@code /internal/ofertas/{id}}), las ofertas visibles de cada prestador
+ *       ({@code /internal/ofertas/por-prestador}, DC-51) y lo que va a moderar ({@code /internal/moderacion/**});</li>
  *   <li>la recomendación: las ofertas visibles ({@code GET /internal/ofertas}).</li>
  * </ul>
  */
