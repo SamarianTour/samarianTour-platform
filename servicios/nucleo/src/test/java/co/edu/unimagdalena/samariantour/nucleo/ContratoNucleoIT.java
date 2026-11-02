@@ -23,11 +23,14 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.r
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.SupresionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.TokenRenovacionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.rest.dto.VerificacionWhatsappRequest;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.AlertaSesgoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.DemandaZonaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.DistribucionCategoriaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.EmbudoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.EmbudoTipoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.EtapaEmbudoResponse;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.ExposicionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.OfertaExpuestaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.ParticipacionCategoriaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.indicadores.infraestructura.entrada.rest.dto.TableroResponse;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.rest.dto.CheckoutResponse;
@@ -173,7 +176,10 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
                 arguments("EmbudoTipo", EmbudoTipoResponse.class),
                 arguments("EtapaEmbudo", EtapaEmbudoResponse.class),
                 arguments("DistribucionCategoria", DistribucionCategoriaResponse.class),
-                arguments("ParticipacionCategoria", ParticipacionCategoriaResponse.class));
+                arguments("ParticipacionCategoria", ParticipacionCategoriaResponse.class),
+                arguments("ExposicionRequest", ExposicionRequest.class),
+                arguments("OfertaExpuesta", OfertaExpuestaRequest.class),
+                arguments("AlertaSesgo", AlertaSesgoResponse.class));
     }
 
     private Set<String> rutasDeLosControladores() {
