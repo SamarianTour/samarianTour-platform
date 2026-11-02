@@ -2,7 +2,6 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.entrada.
 
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.api.CuentaInternaRechazadaException;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.api.CuentaInternaRegistrada;
-
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.api.CuentasAdministracionApi;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.ExcepcionDominio;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Rol;
