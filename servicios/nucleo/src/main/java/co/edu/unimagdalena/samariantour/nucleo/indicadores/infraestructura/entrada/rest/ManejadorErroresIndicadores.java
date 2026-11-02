@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Traduce las excepciones de los indicadores a ProblemDetail (RFC 7807) con la propiedad {@code codigo}, como en el
- * catálogo (DC-15). Hoy solo hay DATO_INVALIDO, por un periodo que no sirve.
+ * catálogo (DC-15). Hoy solo llega DATO_INVALIDO: un periodo o una exposición que no sirven.
  */
 @RestControllerAdvice(basePackageClasses = IndicadoresController.class)
 public class ManejadorErroresIndicadores {
