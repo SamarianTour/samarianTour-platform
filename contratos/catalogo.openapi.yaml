@@ -733,6 +733,36 @@ paths:
         '403':
           $ref: '#/components/responses/AccesoDenegado'
 
+  /internal/ofertas/por-prestador:
+    get:
+      tags: [Interno]
+      operationId: contarOfertasVisiblesPorPrestador
+      security:
+        - tokenServicio: []
+      summary: Cuántas ofertas visibles tiene cada prestador (RET-02)
+      description: |
+        El núcleo lo consulta una vez al día para el índice de exposición: el porcentaje de la oferta elegible de cada
+        prestador (DC-51). Cuenta con la misma visibilidad que la búsqueda pública y solo trae los prestadores con al
+        menos una oferta visible. Solo el núcleo.
+      responses:
+        '200':
+          description: Las ofertas visibles de cada prestador.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OfertasPrestador'
+              example:
+                - prestadorId: 10000000-0000-0000-0000-000000000001
+                  ofertas: 6
+                - prestadorId: 20000000-0000-0000-0000-000000000002
+                  ofertas: 3
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
   /internal/ofertas/{id}:
     get:
       tags: [Interno]
@@ -1887,6 +1917,16 @@ components:
             `APLICADO`: cambió el catálogo. `IGNORADO`: llegó tarde o ya no aplica. `DUPLICADO`: ya se había procesado.
           enum: [APLICADO, IGNORADO, DUPLICADO]
 
+    OfertasPrestador:
+      type: object
+      required: [prestadorId, ofertas]
+      properties:
+        prestadorId:
+          type: string
+          format: uuid
+        ofertas:
+          type: integer
+          description: Sus ofertas visibles.
     OfertaInterna:
       type: object
       description: Lo que la solicitud copia de la oferta y lo que valida al crearse (RF-30, DC-35).
