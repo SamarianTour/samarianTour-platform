@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.excepcion.CorreoYaRegistradoException;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.modelo.Usuario;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,4 +31,7 @@ public interface UsuarioRepositoryPort {
      * cuenta, aunque lleguen a réplicas distintas, se atienden uno tras otro y cada fallo queda contado (RF-05).
      */
     Optional<Usuario> porCorreoParaActualizar(String correo);
+
+    /** Las de administradores, operadores y gestores, de la más antigua a la más reciente (RF-81). */
+    List<Usuario> internas();
 }

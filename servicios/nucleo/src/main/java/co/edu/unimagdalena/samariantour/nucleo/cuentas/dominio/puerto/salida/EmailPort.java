@@ -12,4 +12,11 @@ public interface EmailPort {
      * @throws CorreoNoDisponibleException si el servidor de correo no responde
      */
     void enviarRestablecimiento(String correo, String nombre, String token);
+
+    /**
+     * La invitación de una cuenta interna: el enlace para poner su primera contraseña; vence a las 72 horas (RF-81).
+     *
+     * @throws CorreoNoDisponibleException si el servidor de correo no responde
+     */
+    void enviarEstablecimiento(String correo, String nombre, String token);
 }

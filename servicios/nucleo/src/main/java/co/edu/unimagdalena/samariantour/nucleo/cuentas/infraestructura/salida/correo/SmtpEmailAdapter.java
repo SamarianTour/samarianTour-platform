@@ -36,11 +36,7 @@ public class SmtpEmailAdapter implements EmailPort {
 
     @Override
     public void enviarRestablecimiento(String correo, String nombre, String token) {
-        SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom(remitente);
-        mensaje.setTo(correo);
-        mensaje.setSubject("Restablece tu contraseña de Samarian Tour");
-        mensaje.setText("""
+        enviar(correo, "Restablece tu contraseña de Samarian Tour", """
                 Hola, %s:
 
                 Recibimos una solicitud para restablecer la contraseña de tu cuenta. Para poner una nueva, entra a:
@@ -51,9 +47,38 @@ public class SmtpEmailAdapter implements EmailPort {
                 sigue igual.
 
                 Samarian Tour
-                """.formatted(nombre, enlace.replace("{token}", URLEncoder.encode(token, StandardCharsets.UTF_8)),
-                PoliticaCodigoUnUso.VIGENCIA.toMinutes()));
+                """.formatted(nombre, direccion(token), PoliticaCodigoUnUso.VIGENCIA.toMinutes()));
+    }
+
+    @Override
+    public void enviarEstablecimiento(String correo, String nombre, String token) {
+        enviar(correo, "Tu cuenta de Samarian Tour", """
+                Hola, %s:
+
+                El administrador de Samarian Tour te creó una cuenta con este correo. Para empezar a usarla, pon tu
+                contraseña en:
+
+                %s
+
+                El enlace vence en %d horas y sirve una sola vez. Si se vence, pide otro con "Olvidé mi contraseña"
+                y este mismo correo.
+
+                Samarian Tour
+                """.formatted(nombre, direccion(token), PoliticaCodigoUnUso.VIGENCIA_INVITACION.toHours()));
+    }
+
+    private String direccion(String token) {
+        return enlace.replace("{token}", URLEncoder.encode(token, StandardCharsets.UTF_8));
+    }
+
+    private void enviar(String correo, String asunto, String texto) {
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setFrom(remitente);
+        mensaje.setTo(correo);
+        mensaje.setSubject(asunto);
+        mensaje.setText(texto);
         try {
+
             smtp.send(mensaje);
         } catch (MailException e) {
             throw new CorreoNoDisponibleException(e);

@@ -19,6 +19,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,12 @@ class EscenarioCuentas {
         @Override
         public Optional<Usuario> porCorreoParaActualizar(String correo) {
             return porCorreo(correo);
+        }
+
+        @Override
+        public List<Usuario> internas() {
+            return usuarios.values().stream().filter(usuario -> usuario.rol().esInterno())
+                    .sorted(Comparator.comparing(Usuario::fechaRegistro)).toList();
         }
     };
 
@@ -180,8 +187,20 @@ class EscenarioCuentas {
 
     /** Los enlaces enviados por correo: el correo y el token, separados por un espacio. */
     final List<String> correosEnviados = new ArrayList<>();
+    /** Las invitaciones de las cuentas internas, igual que {@link #correosEnviados}. */
+    final List<String> invitacionesEnviadas = new ArrayList<>();
 
-    final EmailPort correo = (direccion, nombre, token) -> correosEnviados.add(direccion + " " + token);
+    final EmailPort correo = new EmailPort() {
+        @Override
+        public void enviarRestablecimiento(String direccion, String nombre, String token) {
+            correosEnviados.add(direccion + " " + token);
+        }
+
+        @Override
+        public void enviarEstablecimiento(String direccion, String nombre, String token) {
+            invitacionesEnviadas.add(direccion + " " + token);
+        }
+    };
 
     final SolicitarRestablecimientoService solicitarRestablecimiento = new SolicitarRestablecimientoService(
             repositorio, repositorioCodigos, HASHER, correo, new Random(11), reloj);
@@ -198,9 +217,23 @@ class EscenarioCuentas {
     final SolicitarSupresionService supresion = new SolicitarSupresionService(repositorio, repositorioSesiones,
             supresionesAvisadas::add, HASHER, reloj);
 
+    final CrearCuentaInternaService crearInterna = new CrearCuentaInternaService(repositorio, repositorioCodigos,
+            HASHER, correo, new Random(13), reloj);
+
+    final DesactivarCuentaInternaService desactivarInterna = new DesactivarCuentaInternaService(repositorio,
+            repositorioSesiones, reloj);
+
+    final ConsultarCuentasInternasService consultarInternas = new ConsultarCuentasInternasService(repositorio);
+
     /** El token del último enlace enviado. */
     String ultimoEnlace() {
         String ultimo = correosEnviados.getLast();
         return ultimo.substring(ultimo.indexOf(' ') + 1);
+    }
+
+    /** El token de la última invitación enviada. */
+    String ultimaInvitacion() {
+        String ultima = invitacionesEnviadas.getLast();
+        return ultima.substring(ultima.indexOf(' ') + 1);
     }
 }

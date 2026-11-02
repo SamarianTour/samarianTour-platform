@@ -2,7 +2,10 @@ package co.edu.unimagdalena.samariantour.nucleo.cuentas.infraestructura.config;
 
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.CerrarSesionService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.ConsultarContactoService;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.ConsultarCuentasInternasService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.ConsultarPoliticaDatosService;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.CrearCuentaInternaService;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.DesactivarCuentaInternaService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.EmisionCodigoWhatsapp;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.EmisionSesion;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.GestionarDatosPersonalesService;
@@ -15,7 +18,10 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.SolicitarSupre
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.VerificarWhatsAppService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.CerrarSesionUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.ConsultarContactoUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.ConsultarCuentasInternasUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.ConsultarPoliticaDatosUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.CrearCuentaInternaUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.DesactivarCuentaInternaUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.GestionarDatosPersonalesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.IniciarSesionUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.RegistrarUsuarioUseCase;
@@ -123,5 +129,23 @@ public class CuentasConfig {
     @Bean
     ConsultarPoliticaDatosUseCase consultarPoliticaDatos(PoliticaDatosRepositoryPort politicas) {
         return new ConsultarPoliticaDatosService(politicas);
+    }
+
+    @Bean
+    CrearCuentaInternaUseCase crearCuentaInterna(UsuarioRepositoryPort usuarios, CodigoRepositoryPort codigos,
+                                                 PasswordHasherPort hasher, EmailPort correo, Clock reloj) {
+        // El secreto de la invitación se adivinaría con un generador predecible.
+        return new CrearCuentaInternaService(usuarios, codigos, hasher, correo, new SecureRandom(), reloj);
+    }
+
+    @Bean
+    DesactivarCuentaInternaUseCase desactivarCuentaInterna(UsuarioRepositoryPort usuarios,
+                                                           SesionRepositoryPort sesiones, Clock reloj) {
+        return new DesactivarCuentaInternaService(usuarios, sesiones, reloj);
+    }
+
+    @Bean
+    ConsultarCuentasInternasUseCase consultarCuentasInternas(UsuarioRepositoryPort usuarios) {
+        return new ConsultarCuentasInternasService(usuarios);
     }
 }
