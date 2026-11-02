@@ -68,6 +68,7 @@ public final class SolicitudDisponibilidad {
     private final int personas;
     private final String notaTurista;
     private final UUID operadorId;
+    private final CategoriaPrestador categoriaPrestador;
     private final Instant creadaEn;
     private EstadoSolicitud estado;
     private CondicionesOfrecidas condiciones;
@@ -84,11 +85,10 @@ public final class SolicitudDisponibilidad {
 
     private SolicitudDisponibilidad(UUID id, UUID turistaId, String ofertaId, DatosOfertaCopiados oferta,
                                     LocalDate fechaInicio, CamposDelTipo campos, int personas, String notaTurista,
-                                    UUID operadorId, Instant creadaEn, EstadoSolicitud estado,
-                                    CondicionesOfrecidas condiciones, Instant aparteHasta, Instant venceEn,
-                                    boolean intentoPagoEnCurso, int intentosPagoFallidos, Instant actualizadaEn,
-                                    Long revision,
-                                    List<TransicionSolicitud> historial) {
+                                    UUID operadorId, CategoriaPrestador categoriaPrestador, Instant creadaEn,
+                                    EstadoSolicitud estado, CondicionesOfrecidas condiciones, Instant aparteHasta,
+                                    Instant venceEn, boolean intentoPagoEnCurso, int intentosPagoFallidos,
+                                    Instant actualizadaEn, Long revision, List<TransicionSolicitud> historial) {
         this.id = Objects.requireNonNull(id, "id");
         this.turistaId = Objects.requireNonNull(turistaId, "turistaId");
         this.ofertaId = Objects.requireNonNull(ofertaId, "ofertaId");
@@ -98,6 +98,7 @@ public final class SolicitudDisponibilidad {
         this.personas = personas;
         this.notaTurista = notaTurista;
         this.operadorId = Objects.requireNonNull(operadorId, "operadorId");
+        this.categoriaPrestador = categoriaPrestador;
         this.creadaEn = micros(Objects.requireNonNull(creadaEn, "creadaEn"));
         this.estado = Objects.requireNonNull(estado, "estado");
         this.condiciones = condiciones;
@@ -114,13 +115,15 @@ public final class SolicitudDisponibilidad {
      * El turista envía una solicitud sobre una oferta visible (RF-30 a RF-32). Queda Pendiente, asignada al operador
      * del prestador, con 24 h para atenderla.
      *
-     * @param campos     los propios del tipo de oferta: horario de salida, fecha de salida y unidades, u hora de la
-     *                   reserva
-     * @param operadorId el operador vinculado al prestador de la oferta (RF-32)
+     * @param campos             los propios del tipo de oferta: horario de salida, fecha de salida y unidades, u
+     *                           hora de la reserva
+     * @param operadorId         el operador vinculado al prestador de la oferta (RF-32)
+     * @param categoriaPrestador la del prestador al enviarla, para los indicadores (RF-89, DN-41)
      */
     public static SolicitudDisponibilidad crear(UUID id, UUID turistaId, OfertaSolicitable oferta,
                                                 LocalDate fechaInicio, CamposDelTipo campos, int personas,
-                                                String nota, UUID operadorId, Instant ahora) {
+                                                String nota, UUID operadorId, CategoriaPrestador categoriaPrestador,
+                                                Instant ahora) {
         if (fechaInicio == null) {
             throw new DatoInvalidoException("fechaInicio", "es obligatoria");
         }
@@ -137,26 +140,34 @@ public final class SolicitudDisponibilidad {
         String limpia = Textos.limpio(nota);
         Textos.verificarLongitud("nota", limpia, LONGITUD_MAXIMA_NOTA);
         SolicitudDisponibilidad solicitud = new SolicitudDisponibilidad(id, turistaId, oferta.id(), oferta.datos(),
-                fechaInicio, campos, personas, limpia, operadorId, ahora, PENDIENTE, null, null,
+                fechaInicio, campos, personas, limpia, operadorId, categoriaPrestador, ahora, PENDIENTE, null, null,
                 PoliticaVentanas.plazoOperador(ahora), false, 0, ahora, null, List.of());
         solicitud.registrar(new TransicionSolicitud(null, PENDIENTE, ahora, ActorTransicion.TURISTA, turistaId,
                 null));
         return solicitud;
     }
 
+    /** Sin la categoría del prestador, que solo usan los indicadores. */
+    public static SolicitudDisponibilidad crear(UUID id, UUID turistaId, OfertaSolicitable oferta,
+                                                LocalDate fechaInicio, CamposDelTipo campos, int personas,
+                                                String nota, UUID operadorId, Instant ahora) {
+        return crear(id, turistaId, oferta, fechaInicio, campos, personas, nota, operadorId, null, ahora);
+    }
+
     /** Vuelve a armar una solicitud guardada, sin validar ni notificar. */
     public static SolicitudDisponibilidad reconstituir(UUID id, UUID turistaId, String ofertaId,
                                                        DatosOfertaCopiados oferta, LocalDate fechaInicio,
                                                        CamposDelTipo campos, int personas, String notaTurista,
-                                                       UUID operadorId, Instant creadaEn, EstadoSolicitud estado,
+                                                       UUID operadorId, CategoriaPrestador categoriaPrestador,
+                                                       Instant creadaEn, EstadoSolicitud estado,
                                                        CondicionesOfrecidas condiciones, Instant aparteHasta,
                                                        Instant venceEn,
                                                        boolean intentoPagoEnCurso, int intentosPagoFallidos,
                                                        Instant actualizadaEn, long revision,
                                                        List<TransicionSolicitud> historial) {
         return new SolicitudDisponibilidad(id, turistaId, ofertaId, oferta, fechaInicio, campos, personas,
-                notaTurista, operadorId, creadaEn, estado, condiciones, aparteHasta, venceEn, intentoPagoEnCurso,
-                intentosPagoFallidos, actualizadaEn, revision, historial);
+                notaTurista, operadorId, categoriaPrestador, creadaEn, estado, condiciones, aparteHasta, venceEn,
+                intentoPagoEnCurso, intentosPagoFallidos, actualizadaEn, revision, historial);
     }
 
     // ---- Operador (RF-37 a RF-40)
@@ -474,6 +485,11 @@ public final class SolicitudDisponibilidad {
 
     public UUID operadorId() {
         return operadorId;
+    }
+
+    /** Vacía en las solicitudes anteriores cuyo prestador no se encontró (V14). */
+    public CategoriaPrestador categoriaPrestador() {
+        return categoriaPrestador;
     }
 
     public Instant creadaEn() {

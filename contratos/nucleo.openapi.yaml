@@ -5,9 +5,9 @@ info:
   description: |
     API del núcleo transaccional: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e
     indicadores. Hoy tiene las cuentas (módulo 1), las solicitudes de disponibilidad (módulo 4), los pagos (módulo 5)
-    y la moderación, la comisión, las cuentas internas y los operadores (módulo 8); cada módulo agrega aquí sus rutas
-    antes de escribir su código (API first), y `ContratoNucleoIT` falla si una ruta existe en el contrato y no en los
-    controladores, o al revés.
+    y la moderación, la comisión, las cuentas internas y los operadores (módulo 8) y los indicadores del gestor
+    (módulo 9); cada módulo agrega aquí sus rutas antes de escribir su código (API first), y `ContratoNucleoIT` falla si
+    una ruta existe en el contrato y no en los controladores, o al revés.
 
     - Las rutas no incluyen el prefijo `/api/nucleo`: es el context-path del servicio y va en `servers`.
     - Los errores salen como `application/problem+json` (RFC 7807) con la propiedad `codigo`.
@@ -1879,6 +1879,150 @@ paths:
         '409':
           $ref: '#/components/responses/Conflicto'
 
+  /gestor/indicadores/tablero:
+    get:
+      tags: [Indicadores]
+      operationId: consultarTablero
+      summary: La demanda del destino por zona y tipo de oferta (RF-85, RF-86)
+      description: |
+        Cuenta las solicitudes enviadas en el periodo, por la fecha en que se enviaron (hora de Colombia), y las agrupa
+        por la zona y el tipo de oferta que se copiaron al crearlas (DC-35). Solo datos agregados (RET-03): un conteo
+        de 1 o 2 se omite y la pantalla muestra "menos de 3" (DN-41). Primero las combinaciones con más solicitudes.
+      security:
+        - tokenAcceso: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: La demanda del periodo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tablero'
+              example:
+                desde: '2026-10-01'
+                hasta: '2026-10-31'
+                total: 42
+                filas:
+                  - zonaId: tayrona
+                    tipoOferta: ACTIVIDAD
+                    solicitudes: 18
+                  - zonaId: minca
+                    tipoOferta: ALOJAMIENTO
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /gestor/indicadores/embudo:
+    get:
+      tags: [Indicadores]
+      operationId: consultarEmbudo
+      summary: Cuántas solicitudes llegan a cada etapa, en total y por tipo de oferta (RF-87, RF-88)
+      description: |
+        De las solicitudes enviadas en el periodo, cuántas llegaron a ser atendidas, confirmadas y pagadas, según su
+        historial de estados: una que se atendió y después venció cuenta como atendida. `porcentaje` es sobre las
+        enviadas. Los conteos de 1 o 2 se omiten, con su porcentaje (RET-03, DN-41).
+      security:
+        - tokenAcceso: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: El embudo del periodo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Embudo'
+              example:
+                desde: '2026-10-01'
+                hasta: '2026-10-31'
+                etapas:
+                  - etapa: ENVIADAS
+                    solicitudes: 42
+                    porcentaje: 100.0
+                  - etapa: ATENDIDAS
+                    solicitudes: 30
+                    porcentaje: 71.4
+                  - etapa: CONFIRMADAS
+                    solicitudes: 21
+                    porcentaje: 50.0
+                  - etapa: PAGADAS
+                    solicitudes: 17
+                    porcentaje: 40.5
+                porTipo:
+                  - tipoOferta: RESTAURANTE
+                    etapas:
+                      - etapa: ENVIADAS
+                        solicitudes: 4
+                        porcentaje: 100.0
+                      - etapa: ATENDIDAS
+                        solicitudes: 3
+                        porcentaje: 75.0
+                      - etapa: CONFIRMADAS
+                      - etapa: PAGADAS
+                        solicitudes: 0
+                        porcentaje: 0.0
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /gestor/indicadores/categorias:
+    get:
+      tags: [Indicadores]
+      operationId: consultarDistribucionCategoria
+      summary: Cómo se reparte la demanda entre prestadores grandes, medianos, pequeños y guías (RF-89)
+      description: |
+        Las solicitudes enviadas en el periodo y las pagadas, por la categoría que tenía el prestador al enviarlas
+        (DN-41). Siempre trae las cuatro categorías, aunque tengan 0; `SIN_CATEGORIA` solo aparece si hay solicitudes
+        anteriores cuyo prestador no se encontró. `porcentaje` es sobre el total de solicitudes. Los conteos de 1 o 2
+        se omiten (RET-03).
+      security:
+        - tokenAcceso: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: La distribución del periodo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistribucionCategoria'
+              example:
+                desde: '2026-10-01'
+                hasta: '2026-10-31'
+                total: 42
+                categorias:
+                  - categoria: GUIA_INDEPENDIENTE
+                    solicitudes: 6
+                    porcentaje: 14.3
+                  - categoria: MICRO_PEQUENO
+                    solicitudes: 25
+                    porcentaje: 59.5
+                    pagadas: 10
+                  - categoria: MEDIANO
+                    solicitudes: 11
+                    porcentaje: 26.2
+                    pagadas: 6
+                  - categoria: GRANDE
+                    solicitudes: 0
+                    porcentaje: 0.0
+                    pagadas: 0
+        '400':
+          $ref: '#/components/responses/DatoInvalido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
 components:
   securitySchemes:
     tokenAcceso:
@@ -1937,6 +2081,24 @@ components:
         minimum: 1
         maximum: 100
         default: 20
+    Desde:
+      name: desde
+      in: query
+      required: false
+      description: El primer día del periodo, en hora de Colombia. Por defecto, 29 días antes de `hasta`.
+      schema:
+        type: string
+        format: date
+      example: '2026-10-01'
+    Hasta:
+      name: hasta
+      in: query
+      required: false
+      description: El último día del periodo, incluido. Por defecto, hoy. El periodo es de 366 días como máximo.
+      schema:
+        type: string
+        format: date
+      example: '2026-10-31'
 
   responses:
     CuentaCobroVigente:
@@ -3209,6 +3371,108 @@ components:
         registradaEn:
           type: string
           format: date-time
+    Tablero:
+      type: object
+      required: [desde, hasta, filas]
+      properties:
+        desde:
+          type: string
+          format: date
+        hasta:
+          type: string
+          format: date
+        total:
+          type: integer
+          description: Todas las solicitudes del periodo; se omite si es 1 o 2.
+        filas:
+          type: array
+          items:
+            $ref: '#/components/schemas/DemandaZona'
+    DemandaZona:
+      type: object
+      required: [zonaId, tipoOferta]
+      properties:
+        zonaId:
+          type: string
+        tipoOferta:
+          $ref: '#/components/schemas/TipoOferta'
+        solicitudes:
+          type: integer
+          description: Se omite si es 1 o 2 (RET-03).
+    Embudo:
+      type: object
+      required: [desde, hasta, etapas, porTipo]
+      properties:
+        desde:
+          type: string
+          format: date
+        hasta:
+          type: string
+          format: date
+        etapas:
+          type: array
+          items:
+            $ref: '#/components/schemas/EtapaEmbudo'
+        porTipo:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmbudoTipo'
+    EmbudoTipo:
+      type: object
+      required: [tipoOferta, etapas]
+      properties:
+        tipoOferta:
+          $ref: '#/components/schemas/TipoOferta'
+        etapas:
+          type: array
+          items:
+            $ref: '#/components/schemas/EtapaEmbudo'
+    EtapaEmbudo:
+      type: object
+      required: [etapa]
+      properties:
+        etapa:
+          type: string
+          enum: [ENVIADAS, ATENDIDAS, CONFIRMADAS, PAGADAS]
+        solicitudes:
+          type: integer
+          description: Se omite si es 1 o 2 (RET-03).
+        porcentaje:
+          type: number
+          description: Sobre las enviadas, con un decimal; se omite si se omite el conteo o no hay enviadas.
+    DistribucionCategoria:
+      type: object
+      required: [desde, hasta, categorias]
+      properties:
+        desde:
+          type: string
+          format: date
+        hasta:
+          type: string
+          format: date
+        total:
+          type: integer
+          description: Se omite si es 1 o 2.
+        categorias:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipacionCategoria'
+    ParticipacionCategoria:
+      type: object
+      required: [categoria]
+      properties:
+        categoria:
+          type: string
+          enum: [GUIA_INDEPENDIENTE, MICRO_PEQUENO, MEDIANO, GRANDE, SIN_CATEGORIA]
+        solicitudes:
+          type: integer
+          description: Se omite si es 1 o 2 (RET-03).
+        porcentaje:
+          type: number
+          description: Sobre el total de solicitudes, con un decimal; se omite con el conteo.
+        pagadas:
+          type: integer
+          description: Las que llegaron a pagarse; se omite si es 1 o 2.
     Problema:
       type: object
       description: ProblemDetail (RFC 7807) con la propiedad `codigo`.

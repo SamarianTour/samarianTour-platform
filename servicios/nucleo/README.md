@@ -2,7 +2,7 @@
 
 Núcleo transaccional sobre PostgreSQL: cuentas, solicitudes de disponibilidad, pagos, prestadores, administración e indicadores. Las decisiones están en [docs/decisiones-nucleo.md](../../docs/decisiones-nucleo.md) (DN-01 en adelante).
 
-Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores con la sincronización del RNT (DN-33 a DN-36) y la validación del token de acceso con Spring Security y `libs/seguridad-jwt` (DN-37). Los indicadores están vacíos, con un `package-info.java` que dice qué requisitos le tocan.
+Por ahora tiene la base del servicio, la bandeja de salida hacia el catálogo, la moderación de ofertas y opiniones (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores con la sincronización del RNT (DN-33 a DN-36), la validación del token de acceso con Spring Security y `libs/seguridad-jwt` (DN-37), las cuentas internas y los operadores (DN-39, DN-40) y los indicadores del gestor del destino (DN-41). El registro de exposición y el índice de sesgo (RET-02) están pendientes.
 
 ## Estructura
 
@@ -19,7 +19,8 @@ co.edu.unimagdalena.samariantour.nucleo
 │                        sincronización del RNT y su api para los demás módulos
 ├── administracion/      módulo 8 (RF-76 a RF-83): la sincronización del RNT (RF-76), la moderación (RF-79, RF-80),
 │                        las cuentas internas y el operador de cada prestador (RF-81), la comisión y los pagos tardíos
-├── indicadores/         módulo 9 (RF-85 a RF-89)
+├── indicadores/         módulo 9 (RF-85 a RF-89): tablero de demanda, embudo y distribución por categoría, solo con
+│                        datos agregados (RET-03)
 └── bandeja/             bandeja de salida hacia el catálogo (DN-06)
 ```
 
@@ -169,3 +170,19 @@ curl -s -X POST http://localhost:8080/api/nucleo/admin/cuentas-internas/60000000
 - **Desactivar:** la cuenta ya no inicia sesión y pierde sus sesiones; su token de acceso dura hasta 15 minutos más. Un operador con prestadores asignados responde 409 `OPERADOR_CON_PRESTADORES` (primero se reasignan), y el administrador no puede desactivarse a sí mismo (409 `CUENTA_PROPIA`).
 - **Pruebas:** `CuentasInternasIT` recorre la invitación con un Mailpit real, la asignación y la desactivación.
 
+## Indicadores
+
+El gestor del destino ve la demanda agregada (RF-85 a RF-89, DN-41). `$TOKEN_GESTOR` es el token de `gestor@demo.samariantour.co` / `Demo1234`, pedido como en "Seguridad":
+
+```bash
+# Por zona y tipo de oferta; sin fechas, los últimos 30 días
+curl -s "http://localhost:8080/api/nucleo/gestor/indicadores/tablero?desde=2026-10-01&hasta=2026-10-31" -H "Authorization: Bearer $TOKEN_GESTOR"
+# Enviadas, atendidas, confirmadas y pagadas, en total y por tipo de oferta
+curl -s http://localhost:8080/api/nucleo/gestor/indicadores/embudo -H "Authorization: Bearer $TOKEN_GESTOR"
+# Por categoría del prestador: guía, micro y pequeño, mediano y grande
+curl -s http://localhost:8080/api/nucleo/gestor/indicadores/categorias -H "Authorization: Bearer $TOKEN_GESTOR"
+```
+
+- **Solo datos agregados:** un conteo de 1 o 2 no sale en la respuesta, y la pantalla debe mostrar "menos de 3" (RET-03).
+- **La categoría** es la que tenía el prestador al enviarse la solicitud: se copia en ella (V14).
+- **Pruebas:** `ConteosSolicitudesIT` (las consultas) e `IndicadoresIT` (las rutas de punta a punta).
