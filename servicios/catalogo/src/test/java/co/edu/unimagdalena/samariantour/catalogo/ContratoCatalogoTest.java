@@ -14,6 +14,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrad
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaResumenResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertaVisibleResponse;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.OfertasPrestadorResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilPublicoResponse;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.PerfilRequest;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.VersionPropiaResponse;
@@ -111,6 +112,7 @@ class ContratoCatalogoTest {
                 arguments("AvisoResultado", AvisoResponse.class),
                 arguments("OfertaInterna", OfertaInternaResponse.class),
                 arguments("OfertaVisible", OfertaVisibleResponse.class),
+                arguments("OfertasPrestador", OfertasPrestadorResponse.class),
                 arguments("ContenidoVersion", ContenidoVersionResponse.class),
                 arguments("OfertaPendiente", OfertaPendienteResponse.class),
                 arguments("OfertaEnModeracion", OfertaEnModeracionResponse.class),

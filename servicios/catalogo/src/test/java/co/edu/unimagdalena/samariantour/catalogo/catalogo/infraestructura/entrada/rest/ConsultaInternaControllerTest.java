@@ -4,12 +4,14 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Ofer
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.NivelEsfuerzo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.OfertaVisible;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.OfertasDePrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Pagina;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Paginacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoOferta;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.TipoPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertaInternaUseCase;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ConsultarOfertasVisiblesUseCase;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.ContarOfertasVisiblesUseCase;
 import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
@@ -61,6 +63,23 @@ class ConsultaInternaControllerTest {
 
     @MockitoBean
     private ConsultarOfertasVisiblesUseCase consultarVisibles;
+
+    @MockitoBean
+    private ContarOfertasVisiblesUseCase contarVisibles;
+
+    @Test
+    @DisplayName("el núcleo pide cuántas ofertas visibles tiene cada prestador (RET-02, DC-51)")
+    void porPrestador() throws Exception {
+        when(contarVisibles.porPrestador()).thenReturn(List.of(new OfertasDePrestador(PRESTADOR, 6)));
+
+        http.perform(get("/internal/ofertas/por-prestador").header(HttpHeaders.AUTHORIZATION, COMO_NUCLEO))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].prestadorId").value(PRESTADOR.toString()))
+                .andExpect(jsonPath("$[0].ofertas").value(6));
+        http.perform(get("/internal/ofertas/por-prestador").header(HttpHeaders.AUTHORIZATION, COMO_RECOMENDACION))
+                .andExpect(status().isForbidden());
+    }
 
     @Test
     @DisplayName("la consulta del núcleo trae lo que la solicitud copia y lo que valida (RF-30), sin pedir identidad")
