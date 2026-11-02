@@ -112,6 +112,8 @@ services:
       # Clave privada RSA que firma el token de acceso (DN-29) y el token de servicio hacia el catálogo (DN-38); la
       # genera el mismo script.
       NUCLEO_JWT_CLAVE_PRIVADA: "${NUCLEO_JWT_CLAVE_PRIVADA:?Falta la clave del token, ejecuta bash infra/generar-claves.sh}"
+      # Con ella valida el token de servicio con el que la recomendación envía la exposición (DN-38, DN-42).
+      SEGURIDAD_SERVICIOS_RECOMENDACION_CLAVE_PUBLICA: "${RECOMENDACION_JWT_CLAVE_PUBLICA:?Falta la clave de la recomendación, ejecuta bash infra/generar-claves.sh}"
       # El correo del restablecimiento de la contraseña va a Mailpit (DN-30).
       SPRING_MAIL_HOST: mailpit
       # demo: las cuentas, los prestadores y las solicitudes de la demostración (DN-28, DN-35). Solo para la
@@ -159,6 +161,8 @@ services:
     image: samarian-tour/recomendacion:latest
     environment:
       RECOMENDACION_CATALOGO_URL: http://catalogo:8080/api/catalogo
+      # Recibe el registro de exposición (RET-02, DR-24); si no responde, queda en el log (DR-08).
+      RECOMENDACION_NUCLEO_URL: http://nucleo:8080/api/nucleo
       # Motor con IA (QAS-06, DR-01): apagado por defecto. Se enciende en infra/.env (ver infra/.env.example), sin
       # recompilar; la key nunca se escribe en este archivo.
       RECOMENDACION_IA_HABILITADA: ${IA_HABILITADA:-false}
@@ -174,7 +178,8 @@ services:
       RECOMENDACION_ALERTAS_IDEAM_URL: ${IDEAM_ALERTAS_URL:-https://visualizador.ideam.gov.co/gisserver/rest/services/StoryMaps_IDA/Alertas_Hidrologicas/MapServer/2}
       # Clave pública del token del núcleo, como en el catálogo (DR-22, DN-37).
       SEGURIDAD_JWT_CLAVE_PUBLICA: "${NUCLEO_JWT_CLAVE_PUBLICA:?Falta la clave pública del token, ejecuta bash infra/generar-claves.sh}"
-      # Su propia clave privada, para el token de servicio con el que lee /internal/ofertas del catálogo (DN-38).
+      # Su propia clave privada, para el token de servicio con el que lee /internal/ofertas del catálogo y envía la
+      # exposición al núcleo (DN-38).
       RECOMENDACION_JWT_CLAVE_PRIVADA: "${RECOMENDACION_JWT_CLAVE_PRIVADA:?Falta la clave de la recomendación, ejecuta bash infra/generar-claves.sh}"
     depends_on:
       catalogo:
