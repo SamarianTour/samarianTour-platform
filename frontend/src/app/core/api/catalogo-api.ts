@@ -384,6 +384,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/ofertas/por-prestador": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cuántas ofertas visibles tiene cada prestador (RET-02)
+         * @description El núcleo lo consulta una vez al día para el índice de exposición: el porcentaje de la oferta elegible de cada
+         *     prestador (DC-51). Cuenta con la misma visibilidad que la búsqueda pública y solo trae los prestadores con al
+         *     menos una oferta visible. Solo el núcleo.
+         */
+        get: operations["contarOfertasVisiblesPorPrestador"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/ofertas/{id}": {
         parameters: {
             query?: never;
@@ -903,6 +925,12 @@ export interface components {
              * @enum {string}
              */
             resultado: "APLICADO" | "IGNORADO" | "DUPLICADO";
+        };
+        OfertasPrestador: {
+            /** Format: uuid */
+            prestadorId: string;
+            /** @description Sus ofertas visibles. */
+            ofertas: number;
         };
         /** @description Lo que la solicitud copia de la oferta y lo que valida al crearse (RF-30, DC-35). */
         OfertaInterna: {
@@ -2104,6 +2132,40 @@ export interface operations {
                 };
             };
             400: components["responses"]["DatoInvalido"];
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["AccesoDenegado"];
+        };
+    };
+    contarOfertasVisiblesPorPrestador: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las ofertas visibles de cada prestador. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "prestadorId": "10000000-0000-0000-0000-000000000001",
+                     *         "ofertas": 6
+                     *       },
+                     *       {
+                     *         "prestadorId": "20000000-0000-0000-0000-000000000002",
+                     *         "ofertas": 3
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["OfertasPrestador"][];
+                };
+            };
             401: components["responses"]["NoAutenticado"];
             403: components["responses"]["AccesoDenegado"];
         };
