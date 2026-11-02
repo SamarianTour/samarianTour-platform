@@ -115,8 +115,8 @@ public final class SolicitudDisponibilidad {
      * El turista envía una solicitud sobre una oferta visible (RF-30 a RF-32). Queda Pendiente, asignada al operador
      * del prestador, con 24 h para atenderla.
      *
-     * @param campos     los propios del tipo de oferta: horario de salida, fecha de salida y unidades, u hora de la
-     *                   reserva
+     * @param campos             los propios del tipo de oferta: horario de salida, fecha de salida y unidades, u
+     *                           hora de la reserva
      * @param operadorId         el operador vinculado al prestador de la oferta (RF-32)
      * @param categoriaPrestador la del prestador al enviarla, para los indicadores (RF-89, DN-41)
      */
