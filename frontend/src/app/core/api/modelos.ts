@@ -1,4 +1,6 @@
 import type { components, operations } from './catalogo-api';
+import type { components as componentesNucleo } from './nucleo-api';
+import type { components as componentesRecomendacion } from './recomendacion-api';
 
 /**
  * Nombres cortos para los tipos generados desde contratos/catalogo.openapi.yaml (npm run gen:api).
@@ -31,7 +33,11 @@ export type OpinionPublica = Esquemas['OpinionPublica'];
 export type ResumenOpiniones = Esquemas['ResumenOpiniones'];
 export type OpinionesOferta = Esquemas['OpinionesOferta'];
 export type Problema = Esquemas['Problema'];
-export type CodigoError = Problema['codigo'];
+/** Los códigos de error de los tres servicios: catálogo, núcleo y recomendación. */
+export type CodigoError =
+  | Problema['codigo']
+  | componentesNucleo['schemas']['Problema']['codigo']
+  | componentesRecomendacion['schemas']['Problema']['codigo'];
 
 /** Parámetros de GET /ofertas, tal como los define el contrato. */
 export type ConsultaOfertas = NonNullable<operations['buscarOfertas']['parameters']['query']>;
