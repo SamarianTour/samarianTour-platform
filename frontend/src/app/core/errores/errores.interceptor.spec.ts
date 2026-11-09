@@ -41,6 +41,19 @@ describe('erroresInterceptor', () => {
     ['OPINION_NO_HABILITADA', 403],
     ['OPINION_DUPLICADA', 409],
     ['OPINION_NO_ENCONTRADA', 404],
+    ['CREDENCIALES_INVALIDAS', 401],
+    ['CUENTA_BLOQUEADA', 423],
+    ['CUENTA_DESACTIVADA', 403],
+    ['SESION_INVALIDA', 401],
+    ['CORREO_YA_REGISTRADO', 409],
+    ['POLITICA_NO_VIGENTE', 409],
+    ['CODIGO_INCORRECTO', 400],
+    ['CODIGO_NO_VIGENTE', 409],
+    ['CORREO_NO_DISPONIBLE', 503],
+    ['CONTRASENA_INCORRECTA', 401],
+    ['PRESTADOR_CON_COMPROMISOS', 409],
+    ['WHATSAPP_NO_VERIFICADO', 409],
+    ['RECOMENDACION_NO_DISPONIBLE', 503],
   ];
 
   it.each(casos)('traduce %s a un mensaje para el usuario, sin mostrar el código', (codigo, estado) => {
@@ -50,6 +63,57 @@ describe('erroresInterceptor', () => {
     expect(error.codigo).toBe(codigo);
     expect(error.mensaje).toBe(MENSAJES[codigo]);
     expect(error.mensaje).not.toContain(codigo);
+  });
+
+  it('ningún mensaje queda vacío, muestra su código ni habla del usuario demo', () => {
+    for (const [codigo, mensaje] of Object.entries(MENSAJES)) {
+      expect(mensaje.trim(), codigo).not.toBe('');
+      expect(mensaje, codigo).not.toContain(codigo);
+      expect(mensaje.toLowerCase(), codigo).not.toContain('usuario demo');
+    }
+  });
+
+  it('pide iniciar sesión cuando falta el token', () => {
+    expect(fallar(401, { status: 401, codigo: 'NO_AUTENTICADO' }).mensaje).toBe('Inicia sesión para continuar.');
+  });
+
+  it('conserva hasta cuándo dura el bloqueo de la cuenta (RF-05)', () => {
+    const error = fallar(423, {
+      status: 423,
+      codigo: 'CUENTA_BLOQUEADA',
+      bloqueadaHasta: '2026-10-28T15:15:00Z',
+    });
+
+    expect(error.extras?.bloqueadaHasta).toBe('2026-10-28T15:15:00Z');
+  });
+
+  it('conserva los intentos que quedan para un código de WhatsApp', () => {
+    const error = fallar(400, { status: 400, codigo: 'CODIGO_INCORRECTO', intentosRestantes: 2 });
+
+    expect(error.extras?.intentosRestantes).toBe(2);
+  });
+
+  it('conserva la lista de compromisos que impide eliminar los datos del prestador', () => {
+    const error = fallar(409, {
+      status: 409,
+      codigo: 'PRESTADOR_CON_COMPROMISOS',
+      compromisos: ['2 dispersiones por recibir'],
+    });
+
+    expect(error.extras?.compromisos).toEqual(['2 dispersiones por recibir']);
+  });
+
+  it('descarta datos extra con un tipo inesperado y no inventa extras si no hay', () => {
+    const raro = fallar(409, {
+      status: 409,
+      codigo: 'PRESTADOR_CON_COMPROMISOS',
+      compromisos: [1, 2],
+      intentosRestantes: 'dos',
+    });
+    const comun = fallar(404, { status: 404, codigo: 'OFERTA_NO_ENCONTRADA' });
+
+    expect(raro.extras).toBeUndefined();
+    expect(comun.extras).toBeUndefined();
   });
 
   it('avisa del conflicto de concurrencia con el mensaje acordado', () => {

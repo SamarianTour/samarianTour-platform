@@ -1,0 +1,122 @@
+:host {
+  display: block;
+}
+
+/* Una columna de lectura, como en el diseño. */
+.pagina {
+  --pagina-relleno: 2rem 1.5rem 4.5rem;
+  max-width: 51.25rem;
+}
+
+.encabezado .rotulo {
+  margin-bottom: 0.25rem;
+  color: var(--enlace);
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.contenido h2 {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 800;
+}
+
+.contenido > section > h2 + p {
+  margin: 0.25rem 0 0.875rem;
+}
+
+.seccion__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#datos-titulo:focus {
+  outline: none;
+}
+
+#datos-titulo:focus-visible {
+  outline: 3px solid var(--enlace);
+  outline-offset: 4px;
+}
+
+.datos dd .etiqueta {
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.datos dd .campo__ayuda {
+  display: block;
+  margin-top: 0.125rem;
+  font-weight: 400;
+}
+
+.edicion {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  margin-top: 1rem;
+}
+
+.edicion .alerta {
+  margin: 0;
+}
+
+.acciones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.derechos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.derecho {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.derecho h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.derecho p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.derecho .boton {
+  margin-top: auto;
+}
+
+.derecho__nota {
+  margin-top: auto !important;
+  font-size: 0.8125rem !important;
+}
+
+.enlace-texto {
+  min-height: 44px;
+  border: 0;
+  padding: 0 0 0 0.25rem;
+  background: none;
+  color: var(--enlace);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}

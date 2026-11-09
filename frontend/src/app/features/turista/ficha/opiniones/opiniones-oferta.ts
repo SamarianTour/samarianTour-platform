@@ -2,14 +2,14 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { OpinionesOferta } from '../../../../core/api/modelos';
 import { OpinionesService } from '../../../../core/api/opiniones.service';
 import { AvisosService } from '../../../../core/avisos/avisos.service';
 import { ErrorApi } from '../../../../core/errores/error-api';
 import { aErrorApi } from '../../../../core/errores/errores.interceptor';
-import { IdentidadService } from '../../../../core/identidad/identidad.service';
+import { SesionService } from '../../../../core/sesion/sesion.service';
 import { CALIFICACION } from '../../../../shared/etiquetas';
 import { Estrellas } from '../../../../shared/estrellas/estrellas';
 import { Icono } from '../../../../shared/icono/icono';
@@ -32,8 +32,8 @@ const largoDelComentario: ValidatorFn = (control) => {
 
 /**
  * Opiniones de una oferta en su ficha (RF-59): el promedio, el total y las aprobadas de la más reciente a la más
- * antigua. Con un turista demo elegido, deja opinar (RF-60): la opinión queda en moderación y la decide el
- * administrador.
+ * antigua. Con la sesión de un turista, deja opinar (RF-60): la opinión queda en moderación y la decide el
+ * administrador. Sin sesión invita a iniciarla, y con la de otro rol explica que solo opinan los turistas.
  */
 @Component({
   selector: 'app-opiniones-oferta',
@@ -46,7 +46,13 @@ export class OpinionesDeLaOferta {
 
   private readonly servicio = inject(OpinionesService);
   private readonly avisos = inject(AvisosService);
-  protected readonly turista = inject(IdentidadService).turista;
+  private readonly sesion = inject(SesionService);
+  /** Para volver a esta misma ficha después de iniciar sesión. */
+  protected readonly router = inject(Router);
+
+  protected readonly autenticada = this.sesion.autenticada;
+  /** La cuenta, solo si es la de un turista: es quien puede opinar. */
+  protected readonly turista = computed(() => (this.sesion.rol() === 'TURISTA' ? this.sesion.cuenta() : null));
 
   protected readonly calificaciones = [1, 2, 3, 4, 5];
   protected readonly textoCalificacion = CALIFICACION;

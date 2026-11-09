@@ -1,0 +1,17 @@
+<section class="acceso">
+  <div class="tarjeta-acceso" [class.tarjeta-acceso--ancha]="ancha()">
+    <header class="cabecera-acceso">
+      <span class="cabecera-acceso__logo" aria-hidden="true"><app-icono nombre="hoja" /></span>
+      <h1>{{ titulo() }}</h1>
+      @if (subtitulo(); as texto) {
+        <p>{{ texto }}</p>
+      }
+    </header>
+
+    <ng-content />
+
+    <div class="pie-acceso">
+      <ng-content select="[pie]" />
+    </div>
+  </div>
+</section>

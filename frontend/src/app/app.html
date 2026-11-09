@@ -8,34 +8,28 @@
     </a>
     <nav aria-label="Principal">
       <ul class="navegacion">
-        <li>
-          <a routerLink="/" [class.activo]="seccion() === 'catalogo'" [attr.aria-current]="seccion() === 'catalogo' ? 'page' : null">
-            Catálogo
-          </a>
-        </li>
-        @if (turista()) {
+        @for (enlace of enlaces(); track enlace.ruta) {
           <li>
             <a
-              routerLink="/mis-opiniones"
-              [class.activo]="seccion() === 'opiniones'"
-              [attr.aria-current]="seccion() === 'opiniones' ? 'page' : null"
+              [routerLink]="enlace.ruta"
+              [queryParams]="enlace.consulta"
+              [class.activo]="esActivo(enlace)"
+              [attr.aria-current]="esActivo(enlace) ? 'page' : null"
             >
-              Mis opiniones
+              {{ enlace.texto }}
             </a>
           </li>
         }
-        <li>
-          <a
-            routerLink="/prestador/ofertas"
-            [class.activo]="seccion() === 'prestador'"
-            [attr.aria-current]="seccion() === 'prestador' ? 'page' : null"
-          >
-            Soy prestador
-          </a>
-        </li>
       </ul>
     </nav>
-    <app-usuario-demo class="cabecera__usuario" />
+    <div class="cabecera__cuenta">
+      @if (autenticada()) {
+        <app-menu-usuario />
+      } @else {
+        <a class="boton boton--secundario" routerLink="/iniciar-sesion">Iniciar sesión</a>
+        <a class="boton" routerLink="/registro">Registrarse</a>
+      }
+    </div>
   </div>
 </header>
 

@@ -36,6 +36,14 @@
   padding: 0.5rem 1.5rem;
 }
 
+/* Sin sesión: "Iniciar sesión" y "Registrarse". Con sesión: el menú de la cuenta. */
+.cabecera__cuenta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .marca {
   display: inline-flex;
   align-items: center;
@@ -70,7 +78,7 @@
   height: 1.25rem;
 }
 
-/* La navegación va al centro; el selector de usuario demo queda a la derecha. */
+/* La navegación va al centro; la cuenta (o los botones de acceso) queda a la derecha. */
 nav {
   margin-inline: auto;
 }
@@ -175,9 +183,15 @@ main {
   }
 }
 
-/* En pantallas angostas el usuario demo baja a su propia línea. */
+/* En pantallas angostas la navegación baja a su propia línea, bajo el logo y la cuenta. */
 @media (max-width: 52rem) {
-  .cabecera__usuario {
+  .cabecera__cuenta {
+    margin-left: auto;
+  }
+
+  nav {
+    order: 3;
     flex-basis: 100%;
+    margin-inline: 0;
   }
 }

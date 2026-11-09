@@ -1,0 +1,127 @@
+.menu {
+  position: relative;
+}
+
+.menu__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  max-width: 15rem;
+  border: 1.5px solid var(--borde-fuerte);
+  border-radius: var(--radio-pildora);
+  padding: 0.25rem 0.75rem 0.25rem 0.375rem;
+  background: var(--superficie);
+  color: var(--texto);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    border-color 200ms ease,
+    color 200ms ease;
+}
+
+.menu__boton:hover,
+.menu__boton[aria-expanded='true'] {
+  border-color: var(--enlace);
+  color: var(--enlace);
+}
+
+.menu__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  background: var(--enlace);
+  color: #fff;
+  font-weight: 700;
+}
+
+.menu__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu__flecha {
+  width: 1rem;
+  height: 1rem;
+  transform: rotate(90deg);
+  transition: transform 200ms ease;
+}
+
+.menu__boton[aria-expanded='true'] .menu__flecha {
+  transform: rotate(-90deg);
+}
+
+.menu__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 1050;
+  min-width: 15rem;
+  max-width: calc(100vw - 2rem);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-md);
+  padding: 0.375rem;
+  background: var(--superficie);
+  box-shadow: var(--sombra-2);
+}
+
+.menu__datos {
+  border-bottom: 1px solid var(--borde);
+  padding: 0.625rem 0.75rem 0.75rem;
+}
+
+.menu__datos p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.menu__titulo {
+  font-weight: 700;
+}
+
+.menu__rol {
+  color: var(--enlace);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.menu__correo {
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+}
+
+.menu__lista {
+  margin: 0;
+  padding: 0.25rem 0 0;
+  list-style: none;
+}
+
+.menu__lista a,
+.menu__lista button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radio-sm);
+  padding: 0.625rem 0.75rem;
+  background: none;
+  color: var(--texto);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.menu__lista a:hover,
+.menu__lista button:hover {
+  background: var(--superficie-suave);
+  color: var(--texto);
+}

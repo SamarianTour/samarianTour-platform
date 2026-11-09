@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 import { Problema } from '../api/modelos';
-import { ErrorApi, MENSAJES, MENSAJE_GENERICO, MENSAJE_SIN_CONEXION } from './error-api';
+import { ErrorApi, ExtrasError, MENSAJES, MENSAJE_GENERICO, MENSAJE_SIN_CONEXION } from './error-api';
 
 /**
  * Convierte los errores HTTP en ErrorApi. Lee el application/problem+json de la API y traduce su `codigo`
@@ -23,11 +23,28 @@ export function aErrorApi(error: unknown): ErrorApi {
   const problema = aProblema(error.error);
   const codigo = problema?.codigo;
   const mensaje = codigo ? (MENSAJES[codigo] ?? MENSAJE_GENERICO) : MENSAJE_GENERICO;
+  const extras = extrasDe(problema);
   if (codigo === 'DATO_INVALIDO') {
     const { campo, detalle } = campoDe(problema?.detail);
-    return new ErrorApi(error.status, codigo, mensaje, campo, detalle);
+    return new ErrorApi(error.status, codigo, mensaje, campo, detalle, extras);
   }
-  return new ErrorApi(error.status, codigo, mensaje);
+  return new ErrorApi(error.status, codigo, mensaje, undefined, undefined, extras);
+}
+
+/** Lee las propiedades extra del núcleo; descarta las que lleguen con otro tipo para que la pantalla no se rompa. */
+function extrasDe(problema: object | undefined): ExtrasError | undefined {
+  const { bloqueadaHasta, intentosRestantes, compromisos } = (problema ?? {}) as Record<string, unknown>;
+  const extras: { -readonly [K in keyof ExtrasError]: ExtrasError[K] } = {};
+  if (typeof bloqueadaHasta === 'string') {
+    extras.bloqueadaHasta = bloqueadaHasta;
+  }
+  if (typeof intentosRestantes === 'number') {
+    extras.intentosRestantes = intentosRestantes;
+  }
+  if (Array.isArray(compromisos) && compromisos.every((compromiso) => typeof compromiso === 'string')) {
+    extras.compromisos = compromisos;
+  }
+  return Object.keys(extras).length > 0 ? extras : undefined;
 }
 
 function aProblema(cuerpo: unknown): Partial<Problema> | undefined {

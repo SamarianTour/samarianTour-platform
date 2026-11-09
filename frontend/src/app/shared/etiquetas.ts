@@ -7,11 +7,20 @@ import {
   TipoOferta,
   TipoPrestador,
 } from '../core/api/modelos';
+import { Rol } from '../core/api/modelos-nucleo';
 
 /**
  * Textos que ve el usuario para los valores del contrato. Cada tabla exige todos los valores de su tipo:
  * si el contrato agrega uno, el build falla aquí hasta ponerle nombre.
  */
+export const ROL: Record<Rol, string> = {
+  TURISTA: 'Turista',
+  PRESTADOR: 'Prestador',
+  ADMINISTRADOR: 'Administrador',
+  OPERADOR_DISPONIBILIDAD: 'Operador de disponibilidad',
+  GESTOR_DESTINO: 'Gestor del destino',
+};
+
 export const TIPO_OFERTA: Record<TipoOferta, string> = {
   ACTIVIDAD: 'Actividad',
   PAQUETE: 'Paquete',

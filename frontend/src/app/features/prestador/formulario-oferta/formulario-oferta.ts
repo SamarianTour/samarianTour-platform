@@ -28,7 +28,7 @@ import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.ser
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { MENSAJES } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
-import { IdentidadService } from '../../../core/identidad/identidad.service';
+import { SesionService } from '../../../core/sesion/sesion.service';
 import {
   MODALIDAD,
   NIVEL_ESFUERZO,
@@ -65,6 +65,10 @@ interface ActividadPropia {
 }
 
 const MINIMO_ACTIVIDADES = 2;
+
+/** Sin tipo de prestador no se sabe qué ofertas puede publicar (DC-10): primero debe registrar su RNT. */
+export const MENSAJE_SIN_TIPO =
+  'Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ni editar ofertas. Esa pantalla llegará en una próxima fase.';
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const IDIOMA = /^[a-z]{2}$/;
 
@@ -101,16 +105,18 @@ export class FormularioOferta {
 
   private readonly catalogo = inject(CatalogoService);
   private readonly servicio = inject(OfertasPrestadorService);
-  private readonly identidad = inject(IdentidadService);
+  private readonly sesion = inject(SesionService);
   private readonly avisos = inject(AvisosService);
   private readonly router = inject(Router);
   private readonly anfitrion = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  /** El panel solo muestra el formulario con un prestador elegido. */
-  private readonly prestador = this.identidad.prestador()!;
-  private readonly esGuia = this.prestador.tipo === 'GUIA_INDEPENDIENTE';
+  /** El tipo viene en el token de la sesión y solo lo tiene el prestador que ya registró su RNT. */
+  private readonly tipoPrestador = this.sesion.tipoPrestador();
+  private readonly esGuia = this.tipoPrestador === 'GUIA_INDEPENDIENTE';
 
-  protected readonly tiposPermitidos = TIPOS_QUE_PUBLICA[this.prestador.tipo];
+  protected readonly tiposPermitidos: readonly TipoOferta[] = this.tipoPrestador
+    ? TIPOS_QUE_PUBLICA[this.tipoPrestador]
+    : [];
   protected readonly tiposActividad = tipoActividadValues;
   protected readonly niveles = nivelEsfuerzoValues;
   protected readonly modalidades = modalidadRecorridoValues;
@@ -124,7 +130,7 @@ export class FormularioOferta {
   protected readonly exigeRecorrido = this.esGuia;
 
   protected readonly formulario = new FormGroup({
-    tipo: new FormControl<TipoOferta>(this.tiposPermitidos[0], { nonNullable: true }),
+    tipo: new FormControl<TipoOferta>(this.tiposPermitidos[0] ?? 'ACTIVIDAD', { nonNullable: true }),
     nombre: new FormControl('', { nonNullable: true, validators: obligatorio }),
     descripcion: new FormControl('', { nonNullable: true, validators: obligatorio }),
     precioReferencia: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
@@ -290,6 +296,9 @@ export class FormularioOferta {
 
   /** Zonas, ofertas propias y, al editar, la ficha publicada de la oferta. */
   private cargar(id: string | undefined): Observable<Carga> {
+    if (!this.tipoPrestador) {
+      return of({ zonas: [], propias: [], bloqueo: MENSAJE_SIN_TIPO });
+    }
     return forkJoin({ zonas: this.catalogo.zonas(), propias: this.servicio.todas() }).pipe(
       switchMap((base): Observable<Carga> => {
         if (!id) {

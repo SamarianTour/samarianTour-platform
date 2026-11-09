@@ -1,0 +1,81 @@
+.eliminar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  border-color: var(--peligro-borde);
+}
+
+.eliminar h2 {
+  margin: 0;
+  font-size: 1.1875rem;
+}
+
+.eliminar h2:focus {
+  outline: none;
+}
+
+.eliminar h2:focus-visible {
+  outline: 3px solid var(--enlace);
+  outline-offset: 4px;
+}
+
+.eliminar p {
+  margin: 0;
+}
+
+.eliminar__advertencia {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--peligro);
+  font-weight: 600;
+}
+
+.dialogo {
+  width: min(30rem, calc(100vw - 2rem));
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  padding: 1.5rem;
+  background: var(--superficie);
+  box-shadow: var(--sombra-3);
+  color: var(--texto);
+}
+
+.dialogo::backdrop {
+  background: rgb(15 23 42 / 55%);
+}
+
+.dialogo form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dialogo h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.dialogo p {
+  margin: 0;
+}
+
+.dialogo .alerta {
+  margin: 0;
+}
+
+.alerta__texto {
+  font-weight: 600;
+}
+
+.compromisos {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.dialogo__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

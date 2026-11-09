@@ -1,0 +1,43 @@
+.verificar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  border-color: var(--aviso-borde);
+  background: var(--aviso-fondo);
+}
+
+.verificar h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.verificar p {
+  margin: 0;
+}
+
+.verificar .alerta {
+  margin: 0;
+}
+
+.verificar__formulario {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.verificar__formulario .campo {
+  width: 12rem;
+}
+
+.verificar__formulario input {
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.verificar__acciones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
