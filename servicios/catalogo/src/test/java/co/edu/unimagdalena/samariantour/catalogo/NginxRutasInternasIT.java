@@ -20,10 +20,11 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * La configuración real de Nginx ({@code infra/nginx/nginx.conf}) frente a las rutas que intentan llegar desde afuera
- * a {@code /internal/**} o {@code /actuator} de los tres servicios (DN-37). Detrás de Nginx hay un eco que responde la
- * ruta que le llegó con los nombres de los tres servicios: si una petición bloqueada lo alcanzara, la respuesta lo
- * diría.
+ * La configuración real de Nginx ({@code infra/nginx/nginx.conf}, con las rutas de {@code rutas.conf}) frente a las
+ * rutas que intentan llegar desde afuera a {@code /internal/**} o {@code /actuator} de los tres servicios (DN-37).
+ * Detrás de Nginx hay un eco que responde la ruta que le llegó con los nombres de los tres servicios: si una petición
+ * bloqueada lo alcanzara, la respuesta lo diría. La configuración de AWS, que incluye las mismas rutas, la prueba
+ * {@link NginxAwsIT}.
  */
 class NginxRutasInternasIT {
 
@@ -51,6 +52,8 @@ class NginxRutasInternasIT {
             .withNetwork(RED)
             .withCopyFileToContainer(MountableFile.forHostPath(Path.of("../../infra/nginx/nginx.conf")),
                     "/etc/nginx/nginx.conf")
+            .withCopyFileToContainer(MountableFile.forHostPath(Path.of("../../infra/nginx/rutas.conf")),
+                    "/etc/nginx/rutas.conf")
             .withExposedPorts(8080)
             .dependsOn(SERVICIOS)
             .waitingFor(Wait.forHttp("/").forPort(8080));
