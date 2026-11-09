@@ -21,7 +21,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -52,17 +55,26 @@ class PrestadoresIT extends IntegracionPostgresBase {
     @MockitoSpyBean
     private NotificacionPrestadorPort whatsapp;
 
+    /** Las cuentas que suprimieron sus datos: ya no tienen el correo de estas pruebas. */
+    private static final Set<UUID> SUPRIMIDAS = ConcurrentHashMap.newKeySet();
+
     @BeforeEach
     void vaciar() {
-        String deEstasPruebas = "IN (SELECT id FROM usuarios WHERE correo LIKE '%" + DOMINIO + "')";
-        jdbc.update("DELETE FROM bandeja_salida WHERE id_aviso LIKE 'habilitacion-%'");
+        String deEstasPruebas = "IN (SELECT id FROM usuarios WHERE correo LIKE '%" + DOMINIO + "'"
+                + SUPRIMIDAS.stream().map(id -> " OR id = '" + id + "'").collect(Collectors.joining()) + ")";
+        jdbc.update("DELETE FROM bandeja_salida WHERE id_aviso LIKE 'habilitacion-%'"
+                + " OR id_aviso LIKE 'supresion-prestador-%'");
+        jdbc.update("DELETE FROM dispersiones WHERE prestador_id " + deEstasPruebas);
+        jdbc.update("DELETE FROM solicitudes WHERE prestador_id " + deEstasPruebas);
         jdbc.update("DELETE FROM auditoria_prestadores WHERE prestador_id " + deEstasPruebas);
         jdbc.update("DELETE FROM cuentas_cobro WHERE prestador_id " + deEstasPruebas);
         jdbc.update("DELETE FROM prestadores WHERE id " + deEstasPruebas);
         jdbc.update("DELETE FROM codigos_un_uso WHERE usuario_id " + deEstasPruebas);
         jdbc.update("DELETE FROM sesiones WHERE usuario_id " + deEstasPruebas);
         jdbc.update("DELETE FROM aceptaciones_politica WHERE usuario_id " + deEstasPruebas);
-        jdbc.update("DELETE FROM usuarios WHERE correo LIKE '%" + DOMINIO + "'");
+        jdbc.update("DELETE FROM solicitudes_supresion WHERE usuario_id " + deEstasPruebas);
+        jdbc.update("DELETE FROM usuarios WHERE id " + deEstasPruebas);
+        SUPRIMIDAS.clear();
     }
 
     @Test
@@ -196,6 +208,63 @@ class PrestadoresIT extends IntegracionPostgresBase {
         assertThat(jdbc.queryForList("SELECT accion FROM auditoria_prestadores WHERE prestador_id = ? "
                 + "ORDER BY ocurrido_en", String.class, hostal))
                 .containsExactly("CUENTA_COBRO_REGISTRADA", "CUENTA_COBRO_CAMBIADA");
+    }
+
+    @Test
+    @DisplayName("la supresión pide la contraseña, se niega con compromisos y luego borra la cuenta y libera el RNT")
+    void supresion() throws Exception {
+        UUID hostal = cuenta("supresion");
+        registrar(hostal, "910007", "ALOJAMIENTO", 6).andExpect(status().isCreated());
+        suprimir(hostal, "otra")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.codigo").value("CONTRASENA_INCORRECTA"));
+
+        UUID dispersion = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO dispersiones (id, solicitud_id, prestador_id, monto_bruto, porcentaje_comision, comision,
+                                          costo_transaccional, monto_neto, estado, intentos, cuenta_destino,
+                                          creada_en)
+                VALUES (?, ?, ?, 300000, 4.00, 12000, 0, 288000, 'PENDIENTE', 0, '******0707', now())
+                """, dispersion, UUID.randomUUID(), hostal);
+        UUID pagada = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO solicitudes (id, turista_id, oferta_id, tipo_oferta, nombre_oferta, prestador_id, zona_id,
+                                         fecha_inicio, fecha_salida, personas, operador_id, estado,
+                                         intento_pago_en_curso, intentos_pago_fallidos, creada_en, actualizada_en,
+                                         revision)
+                VALUES (?, ?, 'OF-IT', 'ALOJAMIENTO', 'Hostal', ?, 'taganga', current_date - 1,
+                        current_date + 1, 2, ?, 'PAGADA', false, 0, now(), now(), 0)
+                """, pagada, UUID.randomUUID(), hostal, UUID.randomUUID());
+        suprimir(hostal, "Minca2026")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("PRESTADOR_CON_COMPROMISOS"))
+                .andExpect(jsonPath("$.compromisos.length()").value(2));
+
+        jdbc.update("DELETE FROM dispersiones WHERE id = ?", dispersion);
+        jdbc.update("UPDATE solicitudes SET fecha_salida = current_date - 1, fecha_inicio = current_date - 2 "
+                + "WHERE id = ?", pagada);
+        SUPRIMIDAS.add(hostal);
+        suprimir(hostal, "Minca2026").andExpect(status().isNoContent());
+
+        assertThat(jdbc.queryForObject("SELECT cuerpo::text FROM bandeja_salida WHERE id_aviso = ?", String.class,
+                "supresion-prestador-" + hostal)).contains("\"tipo\": \"SUPRESION_PRESTADOR\"");
+        assertThat(jdbc.queryForObject("SELECT cuerpo::text FROM bandeja_salida WHERE id_aviso = ?", String.class,
+                "habilitacion-" + hostal + "-v2")).contains("\"rntActivo\": false");
+        assertThat(jdbc.queryForMap("SELECT correo, hash_contrasena, estado FROM usuarios WHERE id = ?", hostal))
+                .containsEntry("correo", "suprimido-" + hostal + "@cuentas.invalid")
+                .containsEntry("hash_contrasena", null).containsEntry("estado", "SUPRIMIDA");
+        assertThat(jdbc.queryForObject("SELECT numero_rnt FROM prestadores WHERE id = ?", String.class, hostal))
+                .as("soporte contable").isEqualTo("910007");
+        http.perform(como(get("/prestador/registro"), hostal)).andExpect(status().isNotFound());
+        http.perform(post("/cuentas/sesion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"correo\": \"supresion" + DOMINIO + "\", \"contrasena\": \"Minca2026\"}"))
+                .andExpect(status().isUnauthorized());
+        registrar(cuenta("sucesor"), "910007", "ALOJAMIENTO", 6).andExpect(status().isCreated());
+    }
+
+    private ResultActions suprimir(UUID prestador, String contrasena) throws Exception {
+        return http.perform(como(post("/prestador/supresion"), prestador).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contrasena\": \"" + contrasena + "\"}"));
     }
 
     private ResultActions registrar(UUID id, String rnt, String tipo, int empleados) throws Exception {

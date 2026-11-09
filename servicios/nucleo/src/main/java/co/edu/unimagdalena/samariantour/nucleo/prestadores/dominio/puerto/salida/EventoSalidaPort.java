@@ -10,4 +10,7 @@ public interface EventoSalidaPort {
 
     /** @param version la de la habilitación del prestador: el catálogo ignora una igual o menor a la que tiene */
     void avisarHabilitacion(UUID prestadorId, boolean rntActivo, long version);
+
+    /** El prestador suprimió sus datos: el catálogo retira sus ofertas y borra su perfil y sus fotos (DN-45). */
+    void avisarSupresion(UUID prestadorId);
 }

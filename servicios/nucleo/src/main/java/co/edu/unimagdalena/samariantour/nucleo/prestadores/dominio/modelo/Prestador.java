@@ -49,13 +49,14 @@ public final class Prestador {
     private boolean habilitadoEnCatalogo;
     private long versionHabilitacion;
     private final Instant fechaRegistro;
+    private Instant suprimidoEn;
     private final Long revision;
 
     public Prestador(UUID id, String numeroRnt, DatosTipo datosTipo, String razonSocial, String municipio,
                      String categoriaRnt, boolean personaNaturalRnt, EstadoRnt estadoRnt, boolean vistoEnRnt,
                      Instant ultimaSincronizacion, String whatsapp, boolean whatsappVerificado, CodigoWhatsapp codigo,
                      UUID operadorId, boolean habilitadoEnCatalogo, long versionHabilitacion, Instant fechaRegistro,
-                     Long revision) {
+                     Instant suprimidoEn, Long revision) {
         this.id = Objects.requireNonNull(id, "id");
         this.numeroRnt = Objects.requireNonNull(numeroRnt, "numeroRnt");
         this.datosTipo = Objects.requireNonNull(datosTipo, "datosTipo");
@@ -77,6 +78,7 @@ public final class Prestador {
         this.habilitadoEnCatalogo = habilitadoEnCatalogo;
         this.versionHabilitacion = versionHabilitacion;
         this.fechaRegistro = micros(Objects.requireNonNull(fechaRegistro, "fechaRegistro"));
+        this.suprimidoEn = micros(suprimidoEn);
         this.revision = revision;
     }
 
@@ -92,7 +94,7 @@ public final class Prestador {
     public static Prestador registrar(UUID id, String numeroRnt, DatosTipo datosTipo, ConsultaRnt consulta,
                                       Instant ahora) {
         Prestador prestador = new Prestador(id, validarNumero(numeroRnt), datosTipo, null, null, null, false,
-                EstadoRnt.VERIFICACION_PENDIENTE, false, null, null, false, null, null, false, 0, ahora, null);
+                EstadoRnt.VERIFICACION_PENDIENTE, false, null, null, false, null, null, false, 0, ahora, null, null);
         prestador.aplicarRegistro(consulta, ahora);
         prestador.actualizarHabilitacion();
         return prestador;
@@ -285,11 +287,38 @@ public final class Prestador {
         return true;
     }
 
+    // ---- Supresión de sus datos (RF-13)
+
+    /**
+     * El prestador suprime sus datos (RF-13, DN-45): se borran su WhatsApp y su código, y deja de estar habilitado,
+     * así que sus solicitudes abiertas sin pagar se cierran como si hubiera perdido el RNT (DN-36). Se conservan el
+     * RNT y la razón social, que son datos públicos del RNT, como soporte de los pagos que ya recibió; el número de
+     * RNT queda libre para otro registro (V17).
+     *
+     * @return si cambió la habilitación y hay que avisar al catálogo
+     * @throws IllegalStateException si ya estaba suprimido
+     */
+    public boolean suprimir(Instant ahora) {
+        if (suprimidoEn != null) {
+            throw new IllegalStateException("El prestador " + id + " ya suprimió sus datos");
+        }
+        suprimidoEn = micros(ahora);
+        whatsapp = null;
+        whatsappVerificado = false;
+        hashCodigo = null;
+        codigoEmitidoEn = null;
+        intentosCodigo = 0;
+        return actualizarHabilitacion();
+    }
+
     // ---- Consultas
 
-    /** Solo un prestador con el RNT activo publica y aparece en el catálogo (RF-77, RF-79). */
+    /**
+     * Solo un prestador con el RNT activo publica y aparece en el catálogo (RF-77, RF-79); uno que suprimió sus datos,
+     * nunca (DN-45).
+     */
     public boolean estaHabilitado() {
-        return estadoRnt == EstadoRnt.ACTIVO;
+        return estadoRnt == EstadoRnt.ACTIVO && suprimidoEn == null;
     }
 
     public CategoriaPrestador categoria() {
@@ -388,6 +417,11 @@ public final class Prestador {
 
     public Instant fechaRegistro() {
         return fechaRegistro;
+    }
+
+    /** Cuándo suprimió sus datos; null si no lo ha hecho (DN-45). */
+    public Instant suprimidoEn() {
+        return suprimidoEn;
     }
 
     public Long revision() {

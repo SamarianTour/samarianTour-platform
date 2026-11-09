@@ -31,6 +31,8 @@ class RegistrarCuentaCobroServiceTest {
     /** El historial: la vigente es la que no tiene fecha de cierre. */
     private final List<CuentaCobro> historial = new ArrayList<>();
     private final List<String> auditoria = new ArrayList<>();
+    /** Los prestadores de quienes se avisó un cambio de cuenta (DN-44). */
+    private final List<UUID> avisados = new ArrayList<>();
     private final RegistrarCuentaCobroService servicio = new RegistrarCuentaCobroService(escenario.repositorio,
             new CuentaCobroRepositoryPort() {
                 @Override
@@ -46,7 +48,7 @@ class RegistrarCuentaCobroServiceTest {
                     }
                     historial.add(nueva);
                 }
-            }, (prestadorId, accion, detalle, cuando) -> auditoria.add(accion + " " + detalle),
+            }, (prestadorId, accion, detalle, cuando) -> auditoria.add(accion + " " + detalle), avisados::add,
             Clock.fixed(AHORA, ZoneOffset.UTC));
     private UUID agencia;
 
@@ -58,7 +60,7 @@ class RegistrarCuentaCobroServiceTest {
     }
 
     @Test
-    @DisplayName("cambiar la cuenta cierra la anterior y la audita; los mismos datos no cambian nada")
+    @DisplayName("cambiar la cuenta cierra la anterior, la audita y avisa a pagos; los mismos datos no cambian nada")
     void historialYAuditoria() {
         servicio.registrar(agencia, TipoCuenta.AHORROS, " Bancolombia ", "4011-2233-440101", "Mar y Selva");
         servicio.registrar(agencia, TipoCuenta.AHORROS, "Bancolombia", "40112233440101", "Mar y Selva");
@@ -72,6 +74,8 @@ class RegistrarCuentaCobroServiceTest {
         assertThat(auditoria).containsExactly("CUENTA_COBRO_REGISTRADA AHORROS Bancolombia ******0101",
                 "CUENTA_COBRO_CAMBIADA NEQUI Nequi ******0101");
         assertThat(nequi.toString()).doesNotContain("3001110101");
+        // Pagos reactiva las dispersiones fallidas con la cuenta nueva (DN-44); repetir los datos no avisa.
+        assertThat(avisados).containsExactly(agencia, agencia);
     }
 
     @Test

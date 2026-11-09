@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.Cuenta
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.TipoCuenta;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.RegistrarCuentaCobroUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.AuditoriaPort;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.AvisoCuentaCobroPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentaCobroRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.PrestadorRepositoryPort;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,13 +22,15 @@ public class RegistrarCuentaCobroService implements RegistrarCuentaCobroUseCase 
     private final PrestadorRepositoryPort prestadores;
     private final CuentaCobroRepositoryPort cuentas;
     private final AuditoriaPort auditoria;
+    private final AvisoCuentaCobroPort aviso;
     private final Clock reloj;
 
     public RegistrarCuentaCobroService(PrestadorRepositoryPort prestadores, CuentaCobroRepositoryPort cuentas,
-                                       AuditoriaPort auditoria, Clock reloj) {
+                                       AuditoriaPort auditoria, AvisoCuentaCobroPort aviso, Clock reloj) {
         this.prestadores = prestadores;
         this.cuentas = cuentas;
         this.auditoria = auditoria;
+        this.aviso = aviso;
         this.reloj = reloj;
     }
 
@@ -46,6 +49,8 @@ public class RegistrarCuentaCobroService implements RegistrarCuentaCobroUseCase 
         cuentas.reemplazar(anterior.map(cuenta -> cuenta.cerrar(ahora)).orElse(null), nueva);
         auditoria.registrar(prestadorId, anterior.isPresent() ? "CUENTA_COBRO_CAMBIADA" : "CUENTA_COBRO_REGISTRADA",
                 "%s %s %s".formatted(nueva.tipo(), nueva.entidad(), nueva.numeroEnmascarado()), ahora);
+        // Las dispersiones que fallaron con la cuenta anterior, o porque no tenía, se reintentan con esta (DN-44).
+        aviso.cuentaCambiada(prestadorId);
         return nueva;
     }
 

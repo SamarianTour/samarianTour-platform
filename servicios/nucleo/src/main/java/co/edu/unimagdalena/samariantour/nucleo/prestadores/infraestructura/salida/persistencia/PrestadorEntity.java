@@ -76,6 +76,9 @@ public class PrestadorEntity {
     @Column(name = "fecha_registro")
     private Instant fechaRegistro;
 
+    @Column(name = "suprimido_en")
+    private Instant suprimidoEn;
+
     @Version
     private Long revision;
 
@@ -200,6 +203,15 @@ public class PrestadorEntity {
 
     Instant fechaRegistro() {
         return fechaRegistro;
+    }
+
+    /** Cuándo suprimió sus datos (DN-45). */
+    void cambiarSupresion(Instant suprimidoEn) {
+        this.suprimidoEn = suprimidoEn;
+    }
+
+    Instant suprimidoEn() {
+        return suprimidoEn;
     }
 
     Long revision() {

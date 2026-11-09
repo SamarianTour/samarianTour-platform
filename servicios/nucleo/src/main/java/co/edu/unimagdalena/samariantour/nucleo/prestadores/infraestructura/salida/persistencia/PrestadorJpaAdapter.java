@@ -68,19 +68,19 @@ public class PrestadorJpaAdapter implements PrestadorRepositoryPort {
 
     @Override
     public Optional<Prestador> porId(UUID id) {
-        return prestadores.findById(id).map(this::aDominio);
+        return prestadores.findById(id).filter(fila -> fila.suprimidoEn() == null).map(this::aDominio);
     }
 
     @Override
     public List<Prestador> todos(boolean soloSinOperador) {
         List<PrestadorEntity> filas = soloSinOperador ? prestadores.findByOperadorIdIsNullOrderByFechaRegistroAsc()
                 : prestadores.findAllByOrderByFechaRegistroAsc();
-        return filas.stream().map(this::aDominio).toList();
+        return filas.stream().filter(fila -> fila.suprimidoEn() == null).map(this::aDominio).toList();
     }
 
     @Override
     public long asignadosA(UUID operadorId) {
-        return prestadores.countByOperadorId(operadorId);
+        return prestadores.countByOperadorIdAndSuprimidoEnIsNull(operadorId);
     }
 
     @Override
@@ -117,6 +117,7 @@ public class PrestadorJpaAdapter implements PrestadorRepositoryPort {
                 codigo == null ? null : codigo.emitidoEn(), codigo == null ? 0 : codigo.intentosFallidos(),
                 prestador.operadorId(), prestador.habilitadoEnCatalogo(),
                 prestador.versionHabilitacion());
+        fila.cambiarSupresion(prestador.suprimidoEn());
     }
 
     private Prestador aDominio(PrestadorEntity fila) {
@@ -128,7 +129,7 @@ public class PrestadorJpaAdapter implements PrestadorRepositoryPort {
                 fila.codigoHash() == null ? null
                         : new CodigoWhatsapp(fila.codigoHash(), fila.codigoEmitido(), fila.codigoIntentos()),
                 fila.operadorId(), fila.habilitadoEnCatalogo(), fila.versionHabilitacion(), fila.fechaRegistro(),
-                fila.revision());
+                fila.suprimidoEn(), fila.revision());
     }
 
     private static String unir(List<String> valores) {

@@ -163,5 +163,32 @@ class PrestadorTest {
         assertThat(agencia.operadorId()).isEqualTo(carlos);
         assertThatThrownBy(() -> agencia.asignarOperador(null)).isInstanceOf(NullPointerException.class);
     }
+
+    @Test
+    @DisplayName("suprimir borra el WhatsApp y lo deshabilita con versión nueva; no se suprime dos veces (DN-45)")
+    void suprimir() {
+        Prestador agencia = Prestador.registrar(UUID.randomUUID(), "910001", AGENCIA, agenciaActiva("910001"), AHORA);
+        agencia.cambiarWhatsapp("+573001110101");
+        agencia.verificarWhatsapp();
+
+        assertThat(agencia.suprimir(AHORA.plusSeconds(60))).isTrue();
+
+        assertThat(agencia.suprimidoEn()).isEqualTo(AHORA.plusSeconds(60));
+        assertThat(agencia.whatsapp()).isNull();
+        assertThat(agencia.whatsappVerificado()).isFalse();
+        assertThat(agencia.estaHabilitado()).isFalse();
+        assertThat(agencia.versionHabilitacion()).isEqualTo(2);
+        assertThat(agencia.numeroRnt()).as("soporte contable").isEqualTo("910001");
+        assertThatThrownBy(() -> agencia.suprimir(AHORA.plusSeconds(120))).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("sin habilitación previa, suprimir no cambia la versión que conoce el catálogo (DN-45)")
+    void suprimirSinHabilitacion() {
+        Prestador agencia = Prestador.registrar(UUID.randomUUID(), "1", AGENCIA, new ConsultaRnt.NoEncontrado(), AHORA);
+
+        assertThat(agencia.suprimir(AHORA)).isFalse();
+        assertThat(agencia.versionHabilitacion()).isZero();
+    }
 }
 

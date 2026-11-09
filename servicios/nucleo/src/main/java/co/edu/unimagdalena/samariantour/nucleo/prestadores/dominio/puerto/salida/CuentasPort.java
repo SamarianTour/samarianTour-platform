@@ -6,4 +6,16 @@ import java.util.UUID;
 public interface CuentasPort {
 
     boolean esPrestadorActivo(UUID usuarioId);
+
+    /**
+     * Confirma con la contraseña que el prestador pide suprimir sus datos (DN-45). En su propia transacción: un fallo
+     * queda contado para el bloqueo aunque la supresión no siga.
+     *
+     * @throws co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.ContrasenaRechazadaException si
+     *         no la confirma
+     */
+    void verificarContrasena(UUID prestadorId, String contrasena);
+
+    /** Anonimiza su cuenta y cierra sus sesiones, en la transacción de la supresión. */
+    void suprimirCuenta(UUID prestadorId);
 }

@@ -7,13 +7,17 @@ import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.GestionarP
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.RegistrarCuentaCobroService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.RegistrarPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.SincronizarRntService;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion.SuprimirPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.AsignarOperadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.ConfigurarWhatsAppPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.ConsultarPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.RegistrarCuentaCobroUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.RegistrarPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.SincronizarRntUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.SuprimirPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.AuditoriaPort;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.AvisoCuentaCobroPort;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CompromisosPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentaCobroRepositoryPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentasPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.EventoSalidaPort;
@@ -54,8 +58,8 @@ public class PrestadoresConfig {
     @Bean
     RegistrarCuentaCobroUseCase registrarCuentaCobro(PrestadorRepositoryPort prestadores,
                                                      CuentaCobroRepositoryPort cuentas, AuditoriaPort auditoria,
-                                                     Clock reloj) {
-        return new RegistrarCuentaCobroService(prestadores, cuentas, auditoria, reloj);
+                                                     AvisoCuentaCobroPort aviso, Clock reloj) {
+        return new RegistrarCuentaCobroService(prestadores, cuentas, auditoria, aviso, reloj);
     }
 
     @Bean
@@ -75,6 +79,13 @@ public class PrestadoresConfig {
     AsignarOperadorUseCase asignarOperador(PrestadorRepositoryPort prestadores, AuditoriaPort auditoria,
                                            Clock reloj) {
         return new AsignarOperadorService(prestadores, auditoria, reloj);
+    }
+
+    @Bean
+    SuprimirPrestadorUseCase suprimirPrestador(PrestadorRepositoryPort prestadores, CuentasPort cuentas,
+                                               CompromisosPort compromisos, EventoSalidaPort eventos,
+                                               AuditoriaPort auditoria, TransaccionPort transaccion, Clock reloj) {
+        return new SuprimirPrestadorService(prestadores, cuentas, compromisos, eventos, auditoria, transaccion, reloj);
     }
 
     /** Implementa el cambio de tipo (RF-68, RF-69) y la consulta del estado RNT (RF-73). */
