@@ -558,6 +558,58 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problema'
+  /prestador/supresion:
+    post:
+      tags: [Prestadores]
+      operationId: suprimirPrestador
+      summary: El prestador elimina sus datos personales, de inmediato (RF-13, Ley 1581, DN-45)
+      description: |
+        Confirma con la contraseña actual, como el turista (DN-31). Si todavía tiene compromisos con turistas o dinero
+        por recibir, se niega con la lista en `compromisos`: solicitudes pagadas cuyo servicio no ha terminado, pagos
+        en curso o dispersiones pendientes o fallidas. Si no, en una sola transacción la cuenta queda anonimizada y sin
+        sesiones, el prestador pierde su WhatsApp y su habilitación, y el catálogo recibe el aviso SUPRESION_PRESTADOR
+        para retirar definitivamente sus ofertas y borrar su perfil y sus fotos (DC-52). El RNT, la razón social, las
+        cuentas de cobro y las dispersiones se conservan como soporte contable, pero el RNT queda libre para
+        registrarse en otra cuenta. Sus solicitudes abiertas sin pagar se cierran en el minuto siguiente, como cuando
+        pierde el RNT (DN-36). Puede hacerlo también sin haber registrado el RNT.
+      security:
+        - tokenAcceso: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupresionRequest'
+      responses:
+        '204':
+          description: Datos suprimidos.
+        '401':
+          description: "`CONTRASENA_INCORRECTA`: la contraseña no es correcta; el fallo cuenta para el bloqueo (RF-05). También `NO_AUTENTICADO`."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/CuentaNoEncontrada'
+        '409':
+          description: "`PRESTADOR_CON_COMPROMISOS`: primero tiene que cumplirlos; `compromisos` dice cuáles."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+              example:
+                status: 409
+                codigo: PRESTADOR_CON_COMPROMISOS
+                detail: 'Antes de suprimir sus datos tiene que cumplir: 2 dispersiones por recibir'
+                compromisos: ['2 dispersiones por recibir']
+        '423':
+          description: "`CUENTA_BLOQUEADA`: cinco fallos consecutivos (RF-05)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
   /prestador/tipo:
     put:
       tags: [Prestadores]
@@ -1590,6 +1642,129 @@ paths:
           $ref: '#/components/responses/NoAutenticado'
         '403':
           $ref: '#/components/responses/AccesoDenegado'
+  /admin/pagos/eventos-fallidos:
+    get:
+      tags: [Administración]
+      operationId: consultarEventosFallidos
+      summary: Eventos de la pasarela que fallaron cinco veces al procesarse (DN-21, DN-44)
+      description: |
+        Un evento que falla por un error inesperado se reintenta con espera creciente; al quinto fallo queda FALLIDO,
+        sale de la cola y se avisa al administrador por WhatsApp. Del recibido más reciente al más antiguo.
+      security:
+        - tokenAcceso: []
+      responses:
+        '200':
+          description: Los eventos fallidos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoPagoFallido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+  /admin/pagos/eventos-fallidos/{eventoId}/reintento:
+    post:
+      tags: [Administración]
+      operationId: reintentarEventoFallido
+      summary: Devuelve un evento fallido a la cola (DN-44)
+      description: |
+        Queda pendiente, con los fallos en cero: la tarea de eventos lo procesa en los siguientes 5 s. Si vuelve a
+        fallar cinco veces, se avisa otra vez.
+      security:
+        - tokenAcceso: []
+      parameters:
+        - name: eventoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: El evento, otra vez en la cola.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoPagoFallido'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          description: '`EVENTO_NO_ENCONTRADO`: no existe.'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '409':
+          description: '`EVENTO_NO_FALLIDO`: no está fallido.'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+  /admin/bandeja/rechazados:
+    get:
+      tags: [Administración]
+      operationId: consultarAvisosRechazados
+      summary: Avisos al catálogo que el catálogo rechazó (DN-06, DN-44)
+      description: |
+        Un aviso que el catálogo responde con un 4xx queda RECHAZADO y no se reintenta solo, porque fallaría igual.
+        Del más reciente al más antiguo, con lo que respondió el catálogo.
+      security:
+        - tokenAcceso: []
+      responses:
+        '200':
+          description: Los avisos rechazados.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvisoBandeja'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+  /admin/bandeja/{idAviso}/reenvio:
+    post:
+      tags: [Administración]
+      operationId: reenviarAviso
+      summary: Reenvía un aviso rechazado, después de corregir la causa (DN-44)
+      description: Queda pendiente, con los intentos en cero; la bandeja lo envía en los siguientes 15 s.
+      security:
+        - tokenAcceso: []
+      parameters:
+        - name: idAviso
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: El aviso, otra vez pendiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvisoBandeja'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          description: '`AVISO_NO_ENCONTRADO`: no existe.'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '409':
+          description: '`AVISO_NO_RECHAZADO`: no está rechazado.'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
   /admin/rnt/sincronizacion:
     post:
       tags: [Administración]
@@ -3369,6 +3544,56 @@ components:
         avisado:
           type: boolean
           description: Si ya se avisó al administrador por WhatsApp.
+    EventoPagoFallido:
+      type: object
+      required: [id, referencia, transaccionId, estado, monto, intentos, recibidoEn]
+      properties:
+        id:
+          type: string
+          format: uuid
+        referencia:
+          type: string
+        transaccionId:
+          type: string
+        estado:
+          type: string
+          description: El estado de la transacción en la pasarela (APROBADA, RECHAZADA, ...).
+        monto:
+          type: integer
+          format: int64
+          description: En pesos.
+        intentos:
+          type: integer
+          description: Los fallos al procesarlo; 0 después de reintentarlo.
+        ultimoError:
+          type: string
+          description: El tipo y el mensaje del último fallo; nunca datos del turista.
+        recibidoEn:
+          type: string
+          format: date-time
+    AvisoBandeja:
+      type: object
+      required: [idAviso, destino, estado, intentos, creadoEn]
+      properties:
+        idAviso:
+          type: string
+        destino:
+          type: string
+          enum: [OFERTAS, OPINIONES]
+        tipo:
+          type: string
+          description: El tipo del aviso (MODERACION, HABILITACION, SUPRESION_TURISTA, ...).
+        estado:
+          type: string
+          enum: [PENDIENTE, ENVIADO, RECHAZADO]
+        intentos:
+          type: integer
+        ultimoError:
+          type: string
+          description: Lo que respondió el catálogo la última vez que no lo recibió.
+        creadoEn:
+          type: string
+          format: date-time
     SincronizacionRnt:
       type: object
       required: [revisados, retirados, restituidos, sinRespuesta, interrumpida]
@@ -3680,6 +3905,11 @@ components:
             - SOLICITUD_NO_COBRABLE
             - INTENTOS_AGOTADOS
             - EVENTO_NO_AUTENTICO
+            - EVENTO_NO_ENCONTRADO
+            - EVENTO_NO_FALLIDO
+            - AVISO_NO_ENCONTRADO
+            - AVISO_NO_RECHAZADO
+            - PRESTADOR_CON_COMPROMISOS
         intentosRestantes:
           type: integer
           description: Solo con `CODIGO_INCORRECTO`.
@@ -3687,3 +3917,8 @@ components:
           type: string
           format: date-time
           description: Solo con `CUENTA_BLOQUEADA`.
+        compromisos:
+          type: array
+          items:
+            type: string
+          description: Solo con `PRESTADOR_CON_COMPROMISOS`.
