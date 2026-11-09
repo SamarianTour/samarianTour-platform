@@ -16,6 +16,9 @@ import { CuentasService } from '../../../core/api/cuentas.service';
 import { DatosPersonalesRequest, PoliticaDatos } from '../../../core/api/modelos-nucleo';
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo, textoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { ROL } from '../../../shared/etiquetas';
 import { FechaPipe } from '../../../shared/fecha.pipe';
@@ -35,7 +38,15 @@ type Campo = 'nombre' | 'whatsapp';
  */
 @Component({
   selector: 'app-mis-datos',
-  imports: [ReactiveFormsModule, FechaPipe, Icono, VisorPolitica, VerificarWhatsapp, EliminarCuenta],
+  imports: [
+    ReactiveFormsModule,
+    FechaPipe,
+    Icono,
+    TPipe,
+    VisorPolitica,
+    VerificarWhatsapp,
+    EliminarCuenta,
+  ],
   templateUrl: './mis-datos.html',
   styleUrl: './mis-datos.css',
 })
@@ -63,14 +74,14 @@ export class MisDatos implements OnInit {
   );
 
   protected readonly cargando = signal(true);
-  protected readonly errorDeCarga = signal<string | null>(null);
+  protected readonly errorDeCarga = signal<TextoVivo | null>(null);
   protected readonly politica = signal<PoliticaDatos | null>(null);
 
   protected readonly editando = signal(false);
   protected readonly guardando = signal(false);
-  protected readonly errorGeneral = signal<string | null>(null);
+  protected readonly errorGeneral = signal<TextoVivo | null>(null);
   /** Errores de campo que devolvió la API, por campo. */
-  private readonly erroresDeApi = signal<Partial<Record<Campo, string>>>({});
+  private readonly erroresDeApi = signal<Partial<Record<Campo, TextoVivo>>>({});
   private readonly cambios = signal(0);
   protected readonly formulario = new FormGroup({
     nombre: new FormControl('', {
@@ -108,7 +119,8 @@ export class MisDatos implements OnInit {
         this.enfocarVerificacionSiCorresponde();
       },
       error: (fallo: unknown) => {
-        this.errorDeCarga.set(aErrorApi(fallo).mensaje);
+        const problema = aErrorApi(fallo);
+        this.errorDeCarga.set(() => problema.mensaje);
         this.cargando.set(false);
       },
     });
@@ -150,7 +162,7 @@ export class MisDatos implements OnInit {
     this.cambios();
     const deApi = this.erroresDeApi()[campo];
     if (deApi) {
-      return deApi;
+      return deApi();
     }
     const control = this.formulario.controls[campo];
     if (!control.invalid || !control.touched) {
@@ -158,12 +170,12 @@ export class MisDatos implements OnInit {
     }
     if (campo === 'nombre') {
       return control.errors?.['maxlength']
-        ? 'El nombre puede tener hasta 100 caracteres.'
-        : 'Escribe tu nombre.';
+        ? traducir('cuentas.error.nombreLargo')
+        : traducir('cuentas.misDatos.errorNombre');
     }
     return control.errors?.['required']
-      ? 'Escribe tu número de WhatsApp.'
-      : 'Escribe el número con el indicativo del país, por ejemplo +573001234567.';
+      ? traducir('cuentas.error.escribeWhatsapp')
+      : traducir('cuentas.error.whatsappInvalido');
   }
 
   protected guardar(): void {
@@ -195,9 +207,9 @@ export class MisDatos implements OnInit {
         this.guardando.set(false);
         this.sesion.actualizarCuenta(actualizada);
         this.avisos.mostrar(
-          cambioWhatsapp
-            ? 'Guardamos tus datos. Te enviamos un código por WhatsApp para verificar tu número nuevo.'
-            : 'Guardamos tus datos.',
+          traducir(
+            cambioWhatsapp ? 'cuentas.misDatos.guardadoConCodigo' : 'cuentas.misDatos.guardado',
+          ),
         );
         this.cancelarEdicion();
       },
@@ -212,7 +224,7 @@ export class MisDatos implements OnInit {
     const error = aErrorApi(fallo);
     if (error.campo === 'nombre' || error.campo === 'whatsapp') {
       this.erroresDeApi.set({
-        [error.campo]: mayusculaInicial(error.detalleCampo ?? error.mensaje),
+        [error.campo]: () => mayusculaInicial(error.detalleCampo ?? error.mensaje),
       });
       this.enfocar(error.campo);
       return;
@@ -220,8 +232,8 @@ export class MisDatos implements OnInit {
     // El texto general de este código habla de ofertas: aquí lo que cambió fueron los datos de la cuenta.
     this.errorGeneral.set(
       error.codigo === 'CONFLICTO_CONCURRENCIA'
-        ? 'Tus datos cambiaron mientras los editabas. Vuelve a intentarlo.'
-        : error.mensaje,
+        ? textoVivo('cuentas.misDatos.conflicto')
+        : () => error.mensaje,
     );
   }
 

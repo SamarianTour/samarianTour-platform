@@ -10,6 +10,8 @@ import { AREAS, TEXTOS } from './textos';
 const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
   // "Kayak" se escribe igual en español y en inglés.
   'etiquetas.modalidad.KAYAK',
+  // WhatsApp es un nombre propio.
+  'cuentas.campo.whatsapp',
 ]);
 
 /**

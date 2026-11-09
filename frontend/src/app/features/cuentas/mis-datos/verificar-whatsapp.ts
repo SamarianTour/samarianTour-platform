@@ -4,6 +4,9 @@ import { CuentasService } from '../../../core/api/cuentas.service';
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { MENSAJES } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { Icono } from '../../../shared/icono/icono';
 
@@ -16,7 +19,7 @@ const CODIGO = /^\d{6}$/;
  */
 @Component({
   selector: 'app-verificar-whatsapp',
-  imports: [ReactiveFormsModule, Icono],
+  imports: [ReactiveFormsModule, Icono, TPipe],
   templateUrl: './verificar-whatsapp.html',
   styleUrl: './verificar-whatsapp.css',
 })
@@ -35,7 +38,7 @@ export class VerificarWhatsapp {
   protected readonly formulario = new FormGroup({ codigo: this.codigo });
   protected readonly enviando = signal(false);
   protected readonly reenviando = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<TextoVivo | null>(null);
   protected readonly reenviado = signal(false);
 
   /** Lleva el foco al campo del código, por ejemplo cuando el turista llega desde el registro. */
@@ -48,8 +51,8 @@ export class VerificarWhatsapp {
       return null;
     }
     return this.codigo.errors?.['required']
-      ? 'Escribe el código que te llegó.'
-      : 'El código tiene 6 dígitos, solo números.';
+      ? traducir('cuentas.verificar.errorVacio')
+      : traducir('cuentas.verificar.errorFormato');
   }
 
   protected verificar(): void {
@@ -68,15 +71,16 @@ export class VerificarWhatsapp {
       next: (cuenta) => {
         this.enviando.set(false);
         this.sesion.actualizarCuenta(cuenta);
-        this.avisos.mostrar('Verificaste tu WhatsApp');
+        this.avisos.mostrar(traducir('cuentas.verificar.verificado'));
       },
       error: (fallo: unknown) => {
         this.enviando.set(false);
         const problema = aErrorApi(fallo);
+        const intentos = problema.extras?.intentosRestantes;
         this.error.set(
           problema.codigo === 'CODIGO_INCORRECTO'
-            ? mensajeDeCodigoIncorrecto(problema.extras?.intentosRestantes)
-            : problema.mensaje,
+            ? () => mensajeDeCodigoIncorrecto(intentos)
+            : () => problema.mensaje,
         );
         this.codigo.reset('');
         this.enfocar();
@@ -100,7 +104,8 @@ export class VerificarWhatsapp {
       error: (fallo: unknown) => {
         this.reenviando.set(false);
         this.reenviado.set(false);
-        this.error.set(aErrorApi(fallo).mensaje);
+        const problema = aErrorApi(fallo);
+        this.error.set(() => problema.mensaje);
       },
     });
   }
@@ -112,7 +117,7 @@ function mensajeDeCodigoIncorrecto(intentosRestantes: number | undefined): strin
     return MENSAJES.CODIGO_INCORRECTO;
   }
   if (intentosRestantes <= 0) {
-    return 'El código no es correcto y ya no admite más intentos. Pide uno nuevo.';
+    return traducir('cuentas.verificar.agotado');
   }
-  return `El código no es correcto. Te ${intentosRestantes === 1 ? 'queda 1 intento' : `quedan ${intentosRestantes} intentos`}.`;
+  return traducir('cuentas.verificar.intentos', { n: intentosRestantes });
 }

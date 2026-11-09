@@ -3,6 +3,9 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { CuentasService } from '../../../core/api/cuentas.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { Icono } from '../../../shared/icono/icono';
 import { PaginaAcceso } from '../../../shared/pagina-acceso/pagina-acceso';
 import { obligatorio } from '../validaciones';
@@ -13,7 +16,7 @@ import { obligatorio } from '../validaciones';
  */
 @Component({
   selector: 'app-recuperar-contrasena',
-  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono],
+  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono, TPipe],
   templateUrl: './recuperar-contrasena.html',
   styleUrl: './recuperar-contrasena.css',
 })
@@ -25,7 +28,7 @@ export class RecuperarContrasena {
     correo: new FormControl('', { nonNullable: true, validators: [obligatorio, Validators.email] }),
   });
   protected readonly enviando = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<TextoVivo | null>(null);
   /** El correo al que se pidió el enlace; mientras tenga valor se muestra la confirmación en lugar del formulario. */
   protected readonly enviadoA = signal<string | null>(null);
 
@@ -35,8 +38,8 @@ export class RecuperarContrasena {
       return null;
     }
     return control.errors?.['required']
-      ? 'Escribe el correo de tu cuenta.'
-      : 'Escribe un correo válido, por ejemplo nombre@correo.co.';
+      ? traducir('cuentas.recuperar.errorCorreo')
+      : traducir('cuentas.error.correoInvalido');
   }
 
   protected pedirEnlace(): void {
@@ -58,7 +61,8 @@ export class RecuperarContrasena {
       },
       error: (fallo: unknown) => {
         this.enviando.set(false);
-        this.error.set(aErrorApi(fallo).mensaje);
+        const problema = aErrorApi(fallo);
+        this.error.set(() => problema.mensaje);
       },
     });
   }

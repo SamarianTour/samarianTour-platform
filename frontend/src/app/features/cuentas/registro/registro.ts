@@ -23,6 +23,9 @@ import { PoliticaDatos, RegistroRequest } from '../../../core/api/modelos-nucleo
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { MENSAJES } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo, textoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { INICIO_POR_ROL } from '../../../core/sesion/rutas-por-rol';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { Icono } from '../../../shared/icono/icono';
@@ -51,6 +54,9 @@ const CAMPO_DE_API: Record<string, Campo> = {
   aceptaPolitica: 'acepta',
 };
 
+/** El error "ya hay una cuenta con ese correo". Es siempre el mismo objeto: así la pantalla lo reconoce para ofrecer entrar. */
+const CORREO_REPETIDO: TextoVivo = () => MENSAJES.CORREO_YA_REGISTRADO;
+
 /**
  * P06.1 Registro (RF-01 a RF-03, RF-09 a RF-11). El turista o el prestador crea su cuenta aceptando la versión vigente de
  * la política de datos; el turista además da su WhatsApp. Al terminar entra solo, con los datos que acaba de escribir: el
@@ -58,7 +64,7 @@ const CAMPO_DE_API: Record<string, Campo> = {
  */
 @Component({
   selector: 'app-registro',
-  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono, VisorPolitica],
+  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono, VisorPolitica, TPipe],
   templateUrl: './registro.html',
   styleUrl: './registro.css',
 })
@@ -103,11 +109,11 @@ export class Registro implements OnInit {
   protected readonly esTurista = computed(() => this.rol() === 'TURISTA');
 
   protected readonly politica = signal<PoliticaDatos | null>(null);
-  protected readonly errorDePolitica = signal<string | null>(null);
+  protected readonly errorDePolitica = signal<TextoVivo | null>(null);
   protected readonly enviando = signal(false);
-  protected readonly errorGeneral = signal<string | null>(null);
+  protected readonly errorGeneral = signal<TextoVivo | null>(null);
   /** Errores de campo que devolvió la API, por campo del formulario. */
-  private readonly erroresDeApi = signal<Partial<Record<Campo, string>>>({});
+  private readonly erroresDeApi = signal<Partial<Record<Campo, TextoVivo>>>({});
   /** Cambia con cada edición, para que los mensajes de error se vuelvan a calcular. */
   private readonly cambios = signal(0);
 
@@ -144,7 +150,10 @@ export class Registro implements OnInit {
     this.errorDePolitica.set(null);
     this.cuentas.politicaVigente().subscribe({
       next: (politica) => this.politica.set(politica),
-      error: (fallo: unknown) => this.errorDePolitica.set(aErrorApi(fallo).mensaje),
+      error: (fallo: unknown) => {
+        const problema = aErrorApi(fallo);
+        this.errorDePolitica.set(() => problema.mensaje);
+      },
     });
   }
 
@@ -157,7 +166,7 @@ export class Registro implements OnInit {
     this.cambios();
     const deApi = this.erroresDeApi()[campo];
     if (deApi) {
-      return deApi;
+      return deApi();
     }
     const control = this.formulario.controls[campo];
     return control.invalid && control.touched
@@ -167,7 +176,7 @@ export class Registro implements OnInit {
 
   /** El núcleo dice que el correo ya tiene cuenta: se ofrece iniciar sesión o recuperar la contraseña. */
   protected correoRepetido(): boolean {
-    return this.erroresDeApi().correo === MENSAJES.CORREO_YA_REGISTRADO;
+    return this.erroresDeApi().correo === CORREO_REPETIDO;
   }
 
   protected registrar(): void {
@@ -181,9 +190,7 @@ export class Registro implements OnInit {
       this.formulario.markAllAsTouched();
       this.cambios.update((cambios) => cambios + 1);
       if (this.formulario.valid && !politica) {
-        this.errorGeneral.set(
-          'No pudimos cargar la política de datos que debes aceptar. Vuelve a intentarlo antes de crear la cuenta.',
-        );
+        this.errorGeneral.set(textoVivo('cuentas.registro.sinPolitica'));
         return;
       }
       this.enfocar(this.primerCampoInvalido());
@@ -215,21 +222,19 @@ export class Registro implements OnInit {
     this.sesion.iniciarSesion(solicitud.correo, solicitud.contrasena, false).subscribe({
       next: (cuenta) => {
         if (cuenta.rol === 'TURISTA') {
-          this.avisos.mostrar(
-            'Cuenta creada. Te enviamos un código por WhatsApp para verificar tu número.',
-          );
+          this.avisos.mostrar(traducir('cuentas.registro.avisoTurista'));
           void this.router.navigate(['/mis-datos'], {
             queryParams: { verificar: 'whatsapp' },
             replaceUrl: true,
           });
         } else {
-          this.avisos.mostrar('Cuenta creada. Bienvenido a Samarian Tour.');
+          this.avisos.mostrar(traducir('cuentas.registro.avisoPrestador'));
           void this.router.navigateByUrl(INICIO_POR_ROL[cuenta.rol], { replaceUrl: true });
         }
       },
       error: () => {
         // La cuenta se creó pero la sesión no abrió: basta con iniciar sesión a mano.
-        this.avisos.mostrar('Cuenta creada. Inicia sesión para continuar.');
+        this.avisos.mostrar(traducir('cuentas.registro.avisoSinSesion'));
         void this.router.navigate(['/iniciar-sesion'], { replaceUrl: true });
       },
     });
@@ -241,22 +246,24 @@ export class Registro implements OnInit {
       // Cambió la versión mientras se llenaba el formulario: hay que leer y aceptar la nueva.
       this.formulario.controls.acepta.setValue(false);
       this.cargarPolitica();
-      this.erroresDeApi.set({ acepta: MENSAJES.POLITICA_NO_VIGENTE });
+      this.erroresDeApi.set({ acepta: () => MENSAJES.POLITICA_NO_VIGENTE });
       this.enfocar('acepta');
       return;
     }
     if (error.codigo === 'CORREO_YA_REGISTRADO') {
-      this.erroresDeApi.set({ correo: MENSAJES.CORREO_YA_REGISTRADO });
+      this.erroresDeApi.set({ correo: CORREO_REPETIDO });
       this.enfocar('correo');
       return;
     }
     const campo = error.campo ? CAMPO_DE_API[error.campo] : undefined;
     if (campo) {
-      this.erroresDeApi.set({ [campo]: mayusculaInicial(error.detalleCampo ?? error.mensaje) });
+      this.erroresDeApi.set({
+        [campo]: () => mayusculaInicial(error.detalleCampo ?? error.mensaje),
+      });
       this.enfocar(campo);
       return;
     }
-    this.errorGeneral.set(error.mensaje);
+    this.errorGeneral.set(() => error.mensaje);
   }
 
   private ajustarWhatsapp(rol: RolRegistro): void {
@@ -291,31 +298,36 @@ function mensajeDe(
   switch (campo) {
     case 'nombre':
       return errores['maxlength']
-        ? 'El nombre puede tener hasta 100 caracteres.'
+        ? traducir('cuentas.error.nombreLargo')
         : esTurista
-          ? 'Escribe tu nombre completo.'
-          : 'Escribe el nombre comercial de tu negocio.';
+          ? traducir('cuentas.registro.errorNombreTurista')
+          : traducir('cuentas.registro.errorNombrePrestador');
     case 'correo':
       if (errores['required']) {
-        return 'Escribe tu correo.';
+        return traducir('cuentas.registro.errorCorreo');
       }
       return errores['maxlength']
-        ? 'El correo puede tener hasta 254 caracteres.'
-        : 'Escribe un correo válido, por ejemplo nombre@correo.co.';
+        ? traducir('cuentas.registro.errorCorreoLargo')
+        : traducir('cuentas.error.correoInvalido');
     case 'contrasena':
       if (errores['required']) {
-        return 'Escribe una contraseña.';
+        return traducir('cuentas.error.escribeContrasena');
       }
       return errores['largo']
-        ? `La contraseña debe tener entre ${CONTRASENA_MINIMA} y ${CONTRASENA_MAXIMA} caracteres.`
-        : 'La contraseña debe tener al menos una letra y un número.';
+        ? traducir('cuentas.error.contrasenaLargo', {
+            minimo: CONTRASENA_MINIMA,
+            maximo: CONTRASENA_MAXIMA,
+          })
+        : traducir('cuentas.error.contrasenaLetraNumero');
     case 'repetir':
-      return errores['required'] ? 'Repite la contraseña.' : 'Las contraseñas no coinciden.';
+      return errores['required']
+        ? traducir('cuentas.error.repiteContrasena')
+        : traducir('cuentas.error.noCoinciden');
     case 'whatsapp':
       return errores['required']
-        ? 'Escribe tu número de WhatsApp.'
-        : 'Escribe el número con el indicativo del país, por ejemplo +573001234567.';
+        ? traducir('cuentas.error.escribeWhatsapp')
+        : traducir('cuentas.error.whatsappInvalido');
     case 'acepta':
-      return 'Debes aceptar la política de tratamiento de datos para crear tu cuenta.';
+      return traducir('cuentas.registro.errorAcepta');
   }
 }

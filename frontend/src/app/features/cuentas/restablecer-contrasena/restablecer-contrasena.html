@@ -1,36 +1,38 @@
 <app-pagina-acceso
-  titulo="Elige una contraseña nueva"
-  subtitulo="Escríbela dos veces. Después tendrás que iniciar sesión con ella."
+  [titulo]="'cuentas.restablecer.titulo' | t"
+  [subtitulo]="'cuentas.restablecer.subtitulo' | t"
 >
   @if (!token()) {
     <div class="sin-enlace">
       <p class="alerta alerta--error" role="alert">
         <app-icono nombre="alerta" />
-        <span>Este enlace no es válido: le falta el código del correo. Pide uno nuevo.</span>
+        <span>{{ 'cuentas.restablecer.sinCodigo' | t }}</span>
       </p>
-      <a class="boton" routerLink="/recuperar-contrasena">Pedir un enlace nuevo</a>
+      <a class="boton" routerLink="/recuperar-contrasena">{{
+        'cuentas.restablecer.pedirNuevo' | t
+      }}</a>
     </div>
   } @else if (enlaceVencido()) {
     <div class="sin-enlace">
       <p class="alerta alerta--error" role="alert">
         <app-icono nombre="alerta" />
-        <span
-          >El enlace venció o ya se usó. Los enlaces valen 30 minutos y sirven una sola vez.</span
-        >
+        <span>{{ 'cuentas.restablecer.vencido' | t }}</span>
       </p>
-      <a class="boton" routerLink="/recuperar-contrasena">Pedir un enlace nuevo</a>
+      <a class="boton" routerLink="/recuperar-contrasena">{{
+        'cuentas.restablecer.pedirNuevo' | t
+      }}</a>
     </div>
   } @else {
     <form class="formulario" [formGroup]="formulario" (ngSubmit)="cambiar()" novalidate>
       @if (error(); as mensaje) {
         <p class="alerta alerta--error" role="alert">
           <app-icono nombre="alerta" />
-          <span>{{ mensaje }}</span>
+          <span>{{ mensaje() }}</span>
         </p>
       }
 
       <div class="campo">
-        <label for="contrasena">Contraseña nueva</label>
+        <label for="contrasena">{{ 'cuentas.campo.contrasenaNueva' | t }}</label>
         <input
           id="contrasena"
           type="password"
@@ -43,7 +45,7 @@
           "
         />
         <p class="campo__ayuda" id="contrasena-ayuda">
-          Mínimo {{ contrasenaMinima }} caracteres, con al menos una letra y un número.
+          {{ 'cuentas.campo.ayudaContrasena' | t: { minimo: contrasenaMinima } }}
         </p>
         @if (errorDe('contrasena'); as mensaje) {
           <p class="campo__error" id="contrasena-error">{{ mensaje }}</p>
@@ -51,7 +53,7 @@
       </div>
 
       <div class="campo">
-        <label for="repetir">Repite la contraseña</label>
+        <label for="repetir">{{ 'cuentas.campo.repetir' | t }}</label>
         <input
           id="repetir"
           type="password"
@@ -67,10 +69,12 @@
       </div>
 
       <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
-        {{ enviando() ? 'Guardando…' : 'Cambiar contraseña' }}
+        {{ (enviando() ? 'cuentas.restablecer.guardando' : 'cuentas.restablecer.cambiar') | t }}
       </button>
     </form>
   }
 
-  <p pie><a routerLink="/iniciar-sesion">Volver a iniciar sesión</a></p>
+  <p pie>
+    <a routerLink="/iniciar-sesion">{{ 'cuentas.restablecer.volver' | t }}</a>
+  </p>
 </app-pagina-acceso>

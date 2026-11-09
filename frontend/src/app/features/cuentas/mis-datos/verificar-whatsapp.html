@@ -1,31 +1,31 @@
 <section class="verificar tarjeta" aria-labelledby="verificar-titulo">
-  <h2 id="verificar-titulo">Verifica tu WhatsApp</h2>
+  <h2 id="verificar-titulo">{{ 'cuentas.verificar.titulo' | t }}</h2>
   <p class="texto-suave">
     @if (whatsapp(); as numero) {
-      Te enviamos un código de 6 dígitos al <strong>{{ numero }}</strong
+      {{ 'cuentas.verificar.enviadoAl' | t }} <strong>{{ numero }}</strong
       >.
     } @else {
-      Te enviamos un código de 6 dígitos a tu WhatsApp.
+      {{ 'cuentas.verificar.enviadoSinNumero' | t }}
     }
-    Mientras no lo verifiques no podrás enviar solicitudes. El código vale 30 minutos.
+    {{ 'cuentas.verificar.aviso' | t }}
   </p>
 
   @if (error(); as mensaje) {
     <p class="alerta alerta--error" role="alert">
       <app-icono nombre="alerta" />
-      <span>{{ mensaje }}</span>
+      <span>{{ mensaje() }}</span>
     </p>
   }
   @if (reenviado()) {
     <p class="alerta alerta--exito" role="status">
       <app-icono nombre="hoja" />
-      <span>Te enviamos un código nuevo. El anterior ya no sirve.</span>
+      <span>{{ 'cuentas.verificar.reenviado' | t }}</span>
     </p>
   }
 
   <form class="verificar__formulario" [formGroup]="formulario" (ngSubmit)="verificar()" novalidate>
     <div class="campo">
-      <label for="codigo">Código de 6 dígitos</label>
+      <label for="codigo">{{ 'cuentas.verificar.etiqueta' | t }}</label>
       <input
         id="codigo"
         type="text"
@@ -43,7 +43,7 @@
     </div>
     <div class="verificar__acciones">
       <button type="submit" class="boton" [disabled]="enviando()">
-        {{ enviando() ? 'Verificando…' : 'Verificar' }}
+        {{ (enviando() ? 'cuentas.verificar.verificando' : 'cuentas.verificar.verificar') | t }}
       </button>
       <button
         type="button"
@@ -51,7 +51,7 @@
         [disabled]="reenviando()"
         (click)="reenviar()"
       >
-        {{ reenviando() ? 'Enviando…' : 'Enviar otro código' }}
+        {{ (reenviando() ? 'cuentas.verificar.enviando' : 'cuentas.verificar.otro') | t }}
       </button>
     </div>
   </form>

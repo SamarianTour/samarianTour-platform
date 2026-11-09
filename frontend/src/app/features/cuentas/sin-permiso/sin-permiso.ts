@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { TPipe } from '../../../core/idioma/t.pipe';
 import { INICIO_POR_ROL } from '../../../core/sesion/rutas-por-rol';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { ROL } from '../../../shared/etiquetas';
@@ -11,7 +12,7 @@ import { Icono } from '../../../shared/icono/icono';
  */
 @Component({
   selector: 'app-sin-permiso',
-  imports: [RouterLink, Icono],
+  imports: [RouterLink, Icono, TPipe],
   templateUrl: './sin-permiso.html',
   styleUrl: './sin-permiso.css',
 })
