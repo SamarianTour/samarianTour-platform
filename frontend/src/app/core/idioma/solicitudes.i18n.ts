@@ -33,6 +33,79 @@ export const SOLICITUDES = diccionario(
     'solicitudes.actor.OPERADOR': 'Operador',
     'solicitudes.actor.SISTEMA': 'Sistema',
     'solicitudes.actor.PAGOS': 'Pagos',
+
+    // Pasos del flujo (solicitar → confirmar → pagar → listo)
+    'solicitudes.pasos.etiqueta': 'Pasos de la solicitud',
+    'solicitudes.pasos.solicitar': 'Solicitar',
+    'solicitudes.pasos.confirmar': 'Confirmar',
+    'solicitudes.pasos.pagar': 'Pagar',
+    'solicitudes.pasos.listo': 'Listo',
+    'solicitudes.pasos.actual': '(paso actual)',
+    'solicitudes.pasos.hecho': '(completado)',
+
+    // Botón en la ficha de la oferta
+    'solicitudes.solicitar': 'Solicitar disponibilidad',
+    'solicitudes.pedirSesion': 'Te pediremos iniciar sesión.',
+    'solicitudes.soloTuristas': 'Solo los turistas pueden solicitar disponibilidad.',
+
+    // P02.1 Formulario de solicitud
+    'solicitudes.form.titulo': 'Solicita disponibilidad',
+    'solicitudes.form.intro':
+      'Cuéntanos cuándo y cuántos. Un operador verificará el cupo con el prestador y te enviará las condiciones. No es una reserva y todavía no se paga nada.',
+    'solicitudes.form.fechaDeseada': 'Fecha deseada',
+    'solicitudes.form.fechaEntrada': 'Fecha de entrada',
+    'solicitudes.form.fechaSalida': 'Fecha de salida',
+    'solicitudes.form.ayudaFecha': 'Con 2 días de anticipación: desde el {fecha}.',
+    'solicitudes.form.horaSalida': 'Hora de salida',
+    'solicitudes.form.eligeHora': 'Elige una hora',
+    'solicitudes.form.horaReserva': 'Hora de la reserva',
+    'solicitudes.form.ayudaHorario': 'Horario del restaurante: {horarios}',
+    'solicitudes.form.personas': 'Número de personas',
+    'solicitudes.form.huespedes': 'Huéspedes',
+    'solicitudes.form.ayudaPersonas': 'Hasta {maximo} personas.',
+    'solicitudes.form.unidades': 'Número de unidades',
+    'solicitudes.form.ayudaUnidades': 'Cuántas unidades necesitas (por ejemplo, habitaciones).',
+    'solicitudes.form.nota': 'Comentarios para el prestador (opcional)',
+    'solicitudes.form.ayudaNota':
+      'Alergias, accesibilidad, grupo con niños… ({largo} de {maximo} caracteres)',
+    'solicitudes.form.procesoTitulo': 'Así sigue el proceso',
+    'solicitudes.form.procesoTexto':
+      'Solicitud → el operador confirma el cupo → recibes las condiciones → confirmas y pagas en una pasarela segura. La comisión de la plataforma nunca se te suma: el precio es el acordado.',
+    'solicitudes.form.enviar': 'Enviar solicitud',
+    'solicitudes.form.enviando': 'Enviando…',
+    'solicitudes.form.volver': 'Volver',
+    'solicitudes.form.enviada':
+      'Solicitud enviada. Un operador la revisará y te avisaremos por WhatsApp.',
+    'solicitudes.form.whatsappTitulo': 'Verifica tu WhatsApp para enviar solicitudes',
+    'solicitudes.form.whatsappTexto':
+      'Te enviamos un código cuando te registraste. Es el único canal por el que te avisamos de tus solicitudes.',
+    'solicitudes.form.whatsappEnlace': 'Verificar mi WhatsApp',
+    'solicitudes.form.verMisSolicitudes': 'Ver mis solicitudes',
+    'solicitudes.form.sinPrecio': 'Completa el formulario para ver el precio',
+
+    // Resumen de la oferta en el formulario
+    'solicitudes.resumen.precio': 'Precio',
+    'solicitudes.resumen.personas': 'Personas',
+    'solicitudes.resumen.noches': 'Noches',
+    'solicitudes.resumen.unidades': 'Unidades',
+    'solicitudes.resumen.fecha': 'Fecha',
+    'solicitudes.resumen.referencia': 'Precio de referencia',
+    'solicitudes.resumen.nota': 'El precio final lo confirma el operador.',
+
+    // Errores de cada campo
+    'solicitudes.error.fechaRequerido': 'Elige una fecha.',
+    'solicitudes.error.fechaFormato': 'Escribe una fecha válida.',
+    'solicitudes.error.fechaPasada':
+      'La fecha debe ser desde el {fecha}: la solicitud se hace con 2 días de anticipación.',
+    'solicitudes.error.salidaAntes': 'La salida debe ser después de la entrada.',
+    'solicitudes.error.horaRequerida': 'Elige una hora.',
+    'solicitudes.error.horaFormato': 'Escribe una hora válida, por ejemplo 19:30.',
+    'solicitudes.error.horaNoOfrecida': 'Elige una de las horas de salida de la oferta.',
+    'solicitudes.error.cantidadRequerida': 'Escribe un número.',
+    'solicitudes.error.cantidadEntera': 'Escribe un número entero.',
+    'solicitudes.error.cantidadMinima': 'Debe ser al menos 1.',
+    'solicitudes.error.personasMaximo': 'Esta oferta admite hasta {maximo} personas.',
+    'solicitudes.error.notaLarga': 'La nota puede tener hasta {maximo} caracteres.',
   },
   {
     'solicitudes.estado.PENDIENTE': 'Pending',
@@ -62,5 +135,73 @@ export const SOLICITUDES = diccionario(
     'solicitudes.actor.OPERADOR': 'Operator',
     'solicitudes.actor.SISTEMA': 'System',
     'solicitudes.actor.PAGOS': 'Payments',
+
+    'solicitudes.pasos.etiqueta': 'Request steps',
+    'solicitudes.pasos.solicitar': 'Request',
+    'solicitudes.pasos.confirmar': 'Confirm',
+    'solicitudes.pasos.pagar': 'Pay',
+    'solicitudes.pasos.listo': 'Done',
+    'solicitudes.pasos.actual': '(current step)',
+    'solicitudes.pasos.hecho': '(completed)',
+
+    'solicitudes.solicitar': 'Request availability',
+    'solicitudes.pedirSesion': "We'll ask you to log in.",
+    'solicitudes.soloTuristas': 'Only tourists can request availability.',
+
+    'solicitudes.form.titulo': 'Request availability',
+    'solicitudes.form.intro':
+      'Tell us when and how many. An operator will check availability with the provider and send you the terms. This is not a booking and nothing is charged yet.',
+    'solicitudes.form.fechaDeseada': 'Preferred date',
+    'solicitudes.form.fechaEntrada': 'Check-in date',
+    'solicitudes.form.fechaSalida': 'Check-out date',
+    'solicitudes.form.ayudaFecha': 'With 2 days of notice: from {fecha}.',
+    'solicitudes.form.horaSalida': 'Departure time',
+    'solicitudes.form.eligeHora': 'Choose a time',
+    'solicitudes.form.horaReserva': 'Reservation time',
+    'solicitudes.form.ayudaHorario': 'Restaurant hours: {horarios}',
+    'solicitudes.form.personas': 'Number of people',
+    'solicitudes.form.huespedes': 'Guests',
+    'solicitudes.form.ayudaPersonas': 'Up to {maximo} people.',
+    'solicitudes.form.unidades': 'Number of units',
+    'solicitudes.form.ayudaUnidades': 'How many units you need (for example, rooms).',
+    'solicitudes.form.nota': 'Comments for the provider (optional)',
+    'solicitudes.form.ayudaNota':
+      'Allergies, accessibility, group with children… ({largo} of {maximo} characters)',
+    'solicitudes.form.procesoTitulo': 'What happens next',
+    'solicitudes.form.procesoTexto':
+      'Request → the operator checks availability → you receive the terms → you confirm and pay through a secure gateway. The platform commission is never added to your price: the price is the agreed one.',
+    'solicitudes.form.enviar': 'Send request',
+    'solicitudes.form.enviando': 'Sending…',
+    'solicitudes.form.volver': 'Back',
+    'solicitudes.form.enviada':
+      'Request sent. An operator will review it and we will notify you on WhatsApp.',
+    'solicitudes.form.whatsappTitulo': 'Verify your WhatsApp to send requests',
+    'solicitudes.form.whatsappTexto':
+      'We sent you a code when you signed up. It is the only channel through which we notify you about your requests.',
+    'solicitudes.form.whatsappEnlace': 'Verify my WhatsApp',
+    'solicitudes.form.verMisSolicitudes': 'View my requests',
+    'solicitudes.form.sinPrecio': 'Complete the form to see the price',
+
+    'solicitudes.resumen.precio': 'Price',
+    'solicitudes.resumen.personas': 'People',
+    'solicitudes.resumen.noches': 'Nights',
+    'solicitudes.resumen.unidades': 'Units',
+    'solicitudes.resumen.fecha': 'Date',
+    'solicitudes.resumen.referencia': 'Reference price',
+    'solicitudes.resumen.nota': 'The operator confirms the final price.',
+
+    'solicitudes.error.fechaRequerido': 'Choose a date.',
+    'solicitudes.error.fechaFormato': 'Enter a valid date.',
+    'solicitudes.error.fechaPasada':
+      'The date must be {fecha} or later: requests need 2 days of notice.',
+    'solicitudes.error.salidaAntes': 'Check-out must be after check-in.',
+    'solicitudes.error.horaRequerida': 'Choose a time.',
+    'solicitudes.error.horaFormato': 'Enter a valid time, for example 19:30.',
+    'solicitudes.error.horaNoOfrecida': "Choose one of the offer's departure times.",
+    'solicitudes.error.cantidadRequerida': 'Enter a number.',
+    'solicitudes.error.cantidadEntera': 'Enter a whole number.',
+    'solicitudes.error.cantidadMinima': 'Must be at least 1.',
+    'solicitudes.error.personasMaximo': 'This offer allows up to {maximo} people.',
+    'solicitudes.error.notaLarga': 'The note can be up to {maximo} characters long.',
   },
 );

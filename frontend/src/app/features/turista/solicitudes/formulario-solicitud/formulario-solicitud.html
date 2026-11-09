@@ -1,0 +1,301 @@
+<section class="pagina">
+  @switch (estado().tipo) {
+    @case ('cargando') {
+      <p class="texto-suave" aria-live="polite">{{ 'turista.ficha.cargando' | t }}</p>
+    }
+    @case ('no-disponible') {
+      <div class="tarjeta vacio" role="alert">
+        <h1>{{ 'turista.ficha.noDisponible' | t }}</h1>
+        <p class="texto-suave">{{ 'turista.ficha.noDisponibleAyuda' | t }}</p>
+        <a class="boton" routerLink="/">{{ 'turista.ficha.verCatalogo' | t }}</a>
+      </div>
+    }
+    @case ('error') {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensajeDeError() }}</span>
+      </p>
+      <a class="boton boton--secundario" routerLink="/">{{ 'turista.ficha.volver' | t }}</a>
+    }
+    @case ('lista') {
+      @let oferta = ficha()!;
+
+      <app-pasos-solicitud paso="solicitar" />
+
+      <div class="solicitud">
+        <div class="tarjeta solicitud__formulario">
+          <h1>{{ 'solicitudes.form.titulo' | t }}</h1>
+          <p class="texto-suave">{{ 'solicitudes.form.intro' | t }}</p>
+
+          @if (sinWhatsapp()) {
+            <div class="alerta alerta--aviso" role="alert">
+              <app-icono nombre="alerta" />
+              <div>
+                <p class="alerta__titulo">{{ 'solicitudes.form.whatsappTitulo' | t }}</p>
+                <p>{{ 'solicitudes.form.whatsappTexto' | t }}</p>
+                <a class="boton boton--secundario" routerLink="/mis-datos" [queryParams]="{ verificar: 'whatsapp' }">{{
+                  'solicitudes.form.whatsappEnlace' | t
+                }}</a>
+              </div>
+            </div>
+          }
+
+          <form class="formulario" [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+            <p class="campo__ayuda">
+              {{ 'cuentas.registro.obligatoriosAntes' | t }} <span class="requerido" aria-hidden="true">*</span
+              ><span class="solo-lectores">{{ 'cuentas.campo.asterisco' | t }}</span>
+              {{ 'cuentas.registro.obligatoriosDespues' | t }}
+            </p>
+
+            @if (errorGeneral(); as mensaje) {
+              <div class="alerta alerta--error" role="alert">
+                <app-icono nombre="alerta" />
+                <div>
+                  <p>{{ mensaje() }}</p>
+                  @if (esDuplicada()) {
+                    <a routerLink="/turista/solicitudes">{{ 'solicitudes.form.verMisSolicitudes' | t }}</a>
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="campo-doble">
+              <div class="campo">
+                <label for="fechaInicio">
+                  {{ (oferta.tipo === 'ALOJAMIENTO' ? 'solicitudes.form.fechaEntrada' : 'solicitudes.form.fechaDeseada') | t }}
+                  <span class="requerido" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="fechaInicio"
+                  type="date"
+                  formControlName="fechaInicio"
+                  [min]="minimaFecha()"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('fechaInicio') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('fechaInicio') ? 'fechaInicio-error fechaInicio-ayuda' : 'fechaInicio-ayuda'"
+                />
+                <p class="campo__ayuda" id="fechaInicio-ayuda">
+                  {{ 'solicitudes.form.ayudaFecha' | t: { fecha: (minimaFecha() | fecha: 'larga') } }}
+                </p>
+                @if (errorDe('fechaInicio'); as mensaje) {
+                  <p class="campo__error" id="fechaInicio-error">{{ mensaje }}</p>
+                }
+              </div>
+
+              @if (campos().includes('fechaSalida')) {
+                <div class="campo">
+                  <label for="fechaSalida">
+                    {{ 'solicitudes.form.fechaSalida' | t }} <span class="requerido" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="fechaSalida"
+                    type="date"
+                    formControlName="fechaSalida"
+                    [min]="menorFechaDeSalida()"
+                    aria-required="true"
+                    [attr.aria-invalid]="errorDe('fechaSalida') ? 'true' : null"
+                    [attr.aria-describedby]="errorDe('fechaSalida') ? 'fechaSalida-error' : null"
+                  />
+                  @if (errorDe('fechaSalida'); as mensaje) {
+                    <p class="campo__error" id="fechaSalida-error">{{ mensaje }}</p>
+                  }
+                </div>
+              }
+
+              @if (campos().includes('horaSalida')) {
+                <div class="campo">
+                  <label for="horaSalida">
+                    {{ 'solicitudes.form.horaSalida' | t }} <span class="requerido" aria-hidden="true">*</span>
+                  </label>
+                  @if (horasDeSalida().length > 0) {
+                    <select
+                      id="horaSalida"
+                      formControlName="horaSalida"
+                      aria-required="true"
+                      [attr.aria-invalid]="errorDe('horaSalida') ? 'true' : null"
+                      [attr.aria-describedby]="errorDe('horaSalida') ? 'horaSalida-error' : null"
+                    >
+                      <option value="">{{ 'solicitudes.form.eligeHora' | t }}</option>
+                      @for (hora of horasDeSalida(); track hora) {
+                        <option [value]="hora">{{ hora }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <input
+                      id="horaSalida"
+                      type="time"
+                      formControlName="horaSalida"
+                      aria-required="true"
+                      [attr.aria-invalid]="errorDe('horaSalida') ? 'true' : null"
+                      [attr.aria-describedby]="errorDe('horaSalida') ? 'horaSalida-error' : null"
+                    />
+                  }
+                  @if (errorDe('horaSalida'); as mensaje) {
+                    <p class="campo__error" id="horaSalida-error">{{ mensaje }}</p>
+                  }
+                </div>
+              }
+
+              @if (campos().includes('horaReserva')) {
+                <div class="campo">
+                  <label for="horaReserva">
+                    {{ 'solicitudes.form.horaReserva' | t }} <span class="requerido" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="horaReserva"
+                    type="time"
+                    formControlName="horaReserva"
+                    aria-required="true"
+                    [attr.aria-invalid]="errorDe('horaReserva') ? 'true' : null"
+                    [attr.aria-describedby]="errorDe('horaReserva') ? 'horaReserva-error horaReserva-ayuda' : 'horaReserva-ayuda'"
+                  />
+                  @if (oferta.horarios) {
+                    <p class="campo__ayuda" id="horaReserva-ayuda">
+                      {{ 'solicitudes.form.ayudaHorario' | t: { horarios: oferta.horarios } }}
+                    </p>
+                  }
+                  @if (errorDe('horaReserva'); as mensaje) {
+                    <p class="campo__error" id="horaReserva-error">{{ mensaje }}</p>
+                  }
+                </div>
+              }
+
+              <div class="campo">
+                <label for="personas">
+                  {{ (oferta.tipo === 'ALOJAMIENTO' ? 'solicitudes.form.huespedes' : 'solicitudes.form.personas') | t }}
+                  <span class="requerido" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="personas"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  step="1"
+                  [max]="oferta.capacidadMaxima"
+                  formControlName="personas"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('personas') ? 'true' : null"
+                  [attr.aria-describedby]="errorDe('personas') ? 'personas-error personas-ayuda' : 'personas-ayuda'"
+                />
+                <p class="campo__ayuda" id="personas-ayuda">
+                  {{ 'solicitudes.form.ayudaPersonas' | t: { maximo: oferta.capacidadMaxima } }}
+                </p>
+                @if (errorDe('personas'); as mensaje) {
+                  <p class="campo__error" id="personas-error">{{ mensaje }}</p>
+                }
+              </div>
+
+              @if (campos().includes('numeroUnidades')) {
+                <div class="campo">
+                  <label for="numeroUnidades">
+                    {{ 'solicitudes.form.unidades' | t }} <span class="requerido" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="numeroUnidades"
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    step="1"
+                    formControlName="numeroUnidades"
+                    aria-required="true"
+                    [attr.aria-invalid]="errorDe('numeroUnidades') ? 'true' : null"
+                    [attr.aria-describedby]="errorDe('numeroUnidades') ? 'numeroUnidades-error numeroUnidades-ayuda' : 'numeroUnidades-ayuda'"
+                  />
+                  <p class="campo__ayuda" id="numeroUnidades-ayuda">{{ 'solicitudes.form.ayudaUnidades' | t }}</p>
+                  @if (errorDe('numeroUnidades'); as mensaje) {
+                    <p class="campo__error" id="numeroUnidades-error">{{ mensaje }}</p>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="campo">
+              <label for="nota">{{ 'solicitudes.form.nota' | t }}</label>
+              <textarea
+                id="nota"
+                formControlName="nota"
+                [attr.aria-invalid]="errorDe('nota') ? 'true' : null"
+                [attr.aria-describedby]="errorDe('nota') ? 'nota-error nota-ayuda' : 'nota-ayuda'"
+              ></textarea>
+              <p class="campo__ayuda" id="nota-ayuda">
+                {{ 'solicitudes.form.ayudaNota' | t: { largo: largoNota(), maximo: notaMaxima } }}
+              </p>
+              @if (errorDe('nota'); as mensaje) {
+                <p class="campo__error" id="nota-error">{{ mensaje }}</p>
+              }
+            </div>
+
+            <div class="alerta alerta--info" role="note">
+              <app-icono nombre="info" />
+              <div>
+                <p class="alerta__titulo">{{ 'solicitudes.form.procesoTitulo' | t }}</p>
+                <p>{{ 'solicitudes.form.procesoTexto' | t }}</p>
+              </div>
+            </div>
+
+            <div class="acciones">
+              <a class="boton boton--secundario" [routerLink]="['/ofertas', oferta.id]">{{
+                'solicitudes.form.volver' | t
+              }}</a>
+              <button type="submit" class="boton" [disabled]="enviando()">
+                {{ (enviando() ? 'solicitudes.form.enviando' : 'solicitudes.form.enviar') | t }}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <aside class="tarjeta resumen" [attr.aria-label]="'turista.ficha.resumen' | t">
+          <div class="resumen__tipo portada">
+            <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
+            <span>{{ etiquetaTipo[oferta.tipo] }}</span>
+          </div>
+          <h2>{{ oferta.nombre }}</h2>
+          @if (oferta.zona; as zona) {
+            <p class="texto-suave resumen__zona">
+              <app-icono nombre="ubicacion" />
+              {{ zona.nombre }}
+            </p>
+          }
+          <ul class="resumen__filas">
+            <li>
+              <span class="texto-suave">{{ 'solicitudes.resumen.precio' | t }}</span>
+              <span>{{ oferta.precioReferencia | precio }} {{ oferta.unidadPrecio | unidad }}</span>
+            </li>
+            @if (valores().fechaInicio) {
+              <li>
+                <span class="texto-suave">{{ 'solicitudes.resumen.fecha' | t }}</span>
+                <span>{{ valores().fechaInicio | fecha }}</span>
+              </li>
+            }
+            @if (valores().personas) {
+              <li>
+                <span class="texto-suave">{{ 'solicitudes.resumen.personas' | t }}</span>
+                <span>{{ valores().personas }}</span>
+              </li>
+            }
+            @if (oferta.tipo === 'ALOJAMIENTO' && noches() > 0) {
+              <li>
+                <span class="texto-suave">{{ 'solicitudes.resumen.noches' | t }}</span>
+                <span>{{ noches() }}</span>
+              </li>
+            }
+            @if (oferta.tipo === 'ALOJAMIENTO' && valores().numeroUnidades) {
+              <li>
+                <span class="texto-suave">{{ 'solicitudes.resumen.unidades' | t }}</span>
+                <span>{{ valores().numeroUnidades }}</span>
+              </li>
+            }
+          </ul>
+          <div class="resumen__total">
+            <span>{{ 'solicitudes.resumen.referencia' | t }}</span>
+            <strong>{{ precioReferencia() === null ? '—' : (precioReferencia() | precio) }}</strong>
+          </div>
+          <p class="campo__ayuda resumen__nota">
+            <app-icono nombre="info" />
+            <span>{{ 'solicitudes.resumen.nota' | t }}</span>
+          </p>
+        </aside>
+      </div>
+    }
+  }
+</section>

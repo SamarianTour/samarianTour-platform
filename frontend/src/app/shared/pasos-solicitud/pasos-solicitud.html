@@ -1,0 +1,21 @@
+<ol class="pasos" [attr.aria-label]="'solicitudes.pasos.etiqueta' | t">
+  @for (p of pasos(); track p.paso; let primero = $first) {
+    @if (!primero) {
+      <li class="pasos__separador" aria-hidden="true"></li>
+    }
+    <li
+      class="paso"
+      [class.paso--hecho]="p.estado === 'hecho'"
+      [class.paso--actual]="p.estado === 'actual'"
+      [attr.aria-current]="p.estado === 'actual' ? 'step' : null"
+    >
+      <span class="paso__numero" aria-hidden="true">{{ p.estado === 'hecho' ? '✓' : p.numero }}</span>
+      <span class="paso__texto">{{ p.clave | t }}</span>
+      @if (p.estado === 'actual') {
+        <span class="solo-lectores">{{ 'solicitudes.pasos.actual' | t }}</span>
+      } @else if (p.estado === 'hecho') {
+        <span class="solo-lectores">{{ 'solicitudes.pasos.hecho' | t }}</span>
+      }
+    </li>
+  }
+</ol>

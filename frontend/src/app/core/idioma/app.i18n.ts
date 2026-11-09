@@ -47,6 +47,7 @@ export const APP = diccionario(
     'app.titulo.recuperarAcceso': 'Recuperar el acceso',
     'app.titulo.contrasenaNueva': 'Contraseña nueva',
     'app.titulo.sinPermiso': 'Sin permiso',
+    'app.titulo.solicitar': 'Solicitar disponibilidad',
 
     // Pantallas que llegan en ramas posteriores (se ven con la ruta ya protegida por rol).
     'app.proximamente.turista.nombre': 'Mis solicitudes',
@@ -100,6 +101,7 @@ export const APP = diccionario(
     'app.titulo.recuperarAcceso': 'Recover access',
     'app.titulo.contrasenaNueva': 'New password',
     'app.titulo.sinPermiso': 'No permission',
+    'app.titulo.solicitar': 'Request availability',
 
     'app.proximamente.turista.nombre': 'My requests',
     'app.proximamente.turista.descripcion':

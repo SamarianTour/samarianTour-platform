@@ -1,0 +1,74 @@
+.pasos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.paso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--texto-suave);
+}
+
+.paso__numero {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 50%;
+  background: var(--borde);
+  color: var(--texto-suave);
+  font-weight: 700;
+}
+
+.paso--hecho .paso__numero {
+  background: var(--acento-suave);
+  color: var(--enlace-fuerte);
+}
+
+.paso--actual {
+  color: var(--texto);
+  font-weight: 700;
+}
+
+.paso--actual .paso__numero {
+  background: var(--enlace);
+  color: #fff;
+}
+
+.pasos__separador {
+  width: 1.75rem;
+  height: 2px;
+  background: var(--borde-control);
+}
+
+/* En celular solo se ve el número; el nombre sigue disponible para lectores de pantalla. */
+@media (max-width: 40rem) {
+  .paso__texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .paso--actual .paso__texto {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+
+  .pasos__separador {
+    width: 0.75rem;
+  }
+}

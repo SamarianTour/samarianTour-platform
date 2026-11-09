@@ -27,6 +27,15 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'solicitudes' },
       {
+        // P02.1: el botón "Solicitar disponibilidad" de la ficha lleva aquí. Sin sesión, el guard lleva a iniciar sesión y vuelve.
+        path: 'solicitar/:ofertaId',
+        title: 'app.titulo.solicitar',
+        loadComponent: () =>
+          import('./features/turista/solicitudes/formulario-solicitud/formulario-solicitud').then(
+            (modulo) => modulo.FormularioSolicitud,
+          ),
+      },
+      {
         path: '**',
         title: 'app.titulo.misSolicitudes',
         data: {

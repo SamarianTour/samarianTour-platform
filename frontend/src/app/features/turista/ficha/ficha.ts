@@ -7,6 +7,7 @@ import { FichaOferta } from '../../../core/api/modelos';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { TPipe } from '../../../core/idioma/t.pipe';
+import { SesionService } from '../../../core/sesion/sesion.service';
 import { traducir } from '../../../core/idioma/traducir';
 import { DuracionPipe } from '../../../shared/duracion.pipe';
 import { MODALIDAD, NIVEL_ESFUERZO, TIPO_ACTIVIDAD, TIPO_OFERTA } from '../../../shared/etiquetas';
@@ -48,6 +49,7 @@ export class Ficha {
   readonly id = input.required<string>();
 
   private readonly catalogo = inject(CatalogoService);
+  private readonly sesion = inject(SesionService);
 
   protected readonly etiquetaTipo = TIPO_OFERTA;
   protected readonly etiquetaActividad = TIPO_ACTIVIDAD;
@@ -56,6 +58,12 @@ export class Ficha {
   protected readonly iconoDeTipo = ICONO_DE_TIPO;
 
   protected readonly estado = signal<Estado>({ tipo: 'cargando' });
+
+  protected readonly autenticada = this.sesion.autenticada;
+  /** Pedir disponibilidad es de los turistas; quien no ha iniciado sesión recibe la invitación a hacerlo. */
+  protected readonly puedeSolicitar = computed(
+    () => !this.sesion.autenticada() || this.sesion.rol() === 'TURISTA',
+  );
 
   protected readonly ficha = computed(() => {
     const estado = this.estado();
@@ -109,7 +117,8 @@ export class Ficha {
   protected nombresDeIdiomas(codigos: readonly string[] | undefined): string {
     return (codigos ?? [])
       .map((codigo) => {
-        const clave = codigo === 'es' ? 'turista.idioma.es' : codigo === 'en' ? 'turista.idioma.en' : null;
+        const clave =
+          codigo === 'es' ? 'turista.idioma.es' : codigo === 'en' ? 'turista.idioma.en' : null;
         return clave ? traducir(clave) : codigo;
       })
       .join(', ');
