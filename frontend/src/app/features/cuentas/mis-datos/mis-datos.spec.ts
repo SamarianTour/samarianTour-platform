@@ -107,8 +107,9 @@ describe('MisDatos', () => {
     it('un prestador no ve WhatsApp ni verificación', () => {
       crear('PRESTADOR');
 
-      expect(texto()).toContain('Prestador');
-      expect(texto()).not.toContain('WhatsApp');
+      const datos = raiz().querySelector('dl.datos')!.textContent;
+      expect(datos).toContain('Prestador');
+      expect(datos).not.toContain('WhatsApp');
       expect(raiz().querySelector('app-verificar-whatsapp')).toBeNull();
     });
 
@@ -198,7 +199,7 @@ describe('MisDatos', () => {
       guardar();
 
       http.expectNone(`${BASE}/cuenta`);
-      expect(raiz().querySelector('form')).toBeNull();
+      expect(raiz().querySelector('form.edicion')).toBeNull();
     });
 
     it('guarda el nombre nuevo, actualiza la sesión y lo confirma', () => {
@@ -220,7 +221,7 @@ describe('MisDatos', () => {
 
       expect(sesion.cuenta()?.nombre).toBe('Laura Gómez Ruiz');
       expect(texto()).toContain('Laura Gómez Ruiz');
-      expect(raiz().querySelector('form')).toBeNull();
+      expect(raiz().querySelector('form.edicion')).toBeNull();
       expect(TestBed.inject(AvisosService).avisos()[0].texto).toBe('Guardamos tus datos.');
       expect(document.activeElement).toBe(raiz().querySelector('#editar'));
     });
@@ -288,7 +289,7 @@ describe('MisDatos', () => {
       expect(raiz().querySelector('#whatsapp-error')?.textContent).toContain(
         'El número no es válido',
       );
-      expect(raiz().querySelector('form')).not.toBeNull();
+      expect(raiz().querySelector('form.edicion')).not.toBeNull();
       expect(document.activeElement).toBe(campo('whatsapp'));
     });
 
@@ -317,7 +318,7 @@ describe('MisDatos', () => {
       boton('Cancelar').click();
       fixture.detectChanges();
 
-      expect(raiz().querySelector('form')).toBeNull();
+      expect(raiz().querySelector('form.edicion')).toBeNull();
       expect(texto()).toContain('Laura');
       expect(texto()).not.toContain('Otro nombre');
     });
@@ -331,8 +332,34 @@ describe('MisDatos', () => {
       boton('Actualizar').click();
       fixture.detectChanges();
 
-      expect(raiz().querySelector('form')).not.toBeNull();
+      expect(raiz().querySelector('form.edicion')).not.toBeNull();
     });
+
+    it.each(['TURISTA', 'PRESTADOR'] as const)(
+      'la supresión de un %s lleva a la sección de eliminar la cuenta',
+      (rol) => {
+        crear(rol);
+
+        boton('Solicitar').click();
+
+        expect(document.activeElement?.id).toBe('eliminar-titulo');
+        expect(raiz().querySelector('app-eliminar-cuenta .boton--peligro')).not.toBeNull();
+      },
+    );
+
+    it.each(['OPERADOR_DISPONIBILIDAD', 'GESTOR_DESTINO', 'ADMINISTRADOR'] as const)(
+      'la supresión de un %s se explica: su cuenta interna la gestiona un administrador',
+      (rol) => {
+        crear(rol);
+        const tarjeta = Array.from(raiz().querySelectorAll<HTMLElement>('.derecho')).find((t) =>
+          t.querySelector('h3')?.textContent?.includes('Supresión'),
+        )!;
+
+        expect(tarjeta.querySelector('button')).toBeNull();
+        expect(tarjeta.textContent).toContain('la gestiona un administrador');
+        expect(raiz().querySelector('app-eliminar-cuenta .boton--peligro')).toBeNull();
+      },
+    );
 
     it('oposición, portabilidad y revocación se explican, pero no tienen botón', () => {
       crear('TURISTA');
@@ -359,7 +386,7 @@ describe('MisDatos', () => {
       boton('Leer la política').click();
       fixture.detectChanges();
 
-      expect(raiz().querySelector('dialog')!.hasAttribute('open')).toBe(true);
+      expect(raiz().querySelector('app-visor-politica dialog')!.hasAttribute('open')).toBe(true);
       http.expectOne(`${BASE}/politica-datos/v1`).flush('Texto de la política');
     });
   });

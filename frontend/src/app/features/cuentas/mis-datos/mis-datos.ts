@@ -22,6 +22,7 @@ import { ROL } from '../../../shared/etiquetas';
 import { Icono } from '../../../shared/icono/icono';
 import { VisorPolitica } from '../politica-datos/visor-politica';
 import { mayusculaInicial, normalizarWhatsapp, obligatorio, whatsappValido } from '../validaciones';
+import { EliminarCuenta } from './eliminar-cuenta';
 import { VerificarWhatsapp } from './verificar-whatsapp';
 
 type Campo = 'nombre' | 'whatsapp';
@@ -29,11 +30,12 @@ type Campo = 'nombre' | 'whatsapp';
 /**
  * P06.4 Mis datos y derechos del titular (RF-12, Ley 1581 de 2012). Cualquier rol consulta sus datos y puede corregirlos;
  * el turista además verifica su WhatsApp. El correo no se cambia (DN-31). De los seis derechos del titular, el contrato del
- * núcleo solo da una acción para acceso, rectificación y supresión: los otros tres se explican pero no tienen botón.
+ * núcleo solo da una acción para acceso, rectificación y supresión: los otros tres se explican pero no tienen botón. La
+ * supresión (eliminar la cuenta) está en su propio componente.
  */
 @Component({
   selector: 'app-mis-datos',
-  imports: [ReactiveFormsModule, DatePipe, Icono, VisorPolitica, VerificarWhatsapp],
+  imports: [ReactiveFormsModule, DatePipe, Icono, VisorPolitica, VerificarWhatsapp, EliminarCuenta],
   templateUrl: './mis-datos.html',
   styleUrl: './mis-datos.css',
 })
@@ -52,6 +54,10 @@ export class MisDatos implements OnInit {
   protected readonly cuenta = this.sesion.cuenta;
   protected readonly etiquetaRol = ROL;
   protected readonly esTurista = computed(() => this.cuenta()?.rol === 'TURISTA');
+  /** Solo el turista y el prestador pueden eliminar su cuenta desde aquí. */
+  protected readonly puedeEliminar = computed(
+    () => this.cuenta()?.rol === 'TURISTA' || this.cuenta()?.rol === 'PRESTADOR',
+  );
   protected readonly faltaVerificar = computed(
     () => this.esTurista() && this.cuenta()?.whatsappVerificado === false,
   );
@@ -110,6 +116,10 @@ export class MisDatos implements OnInit {
 
   protected abrirPolitica(): void {
     this.visor().abrir();
+  }
+
+  protected irAEliminar(): void {
+    this.anfitrion.nativeElement.querySelector<HTMLElement>('#eliminar-titulo')?.focus();
   }
 
   protected irADatos(): void {

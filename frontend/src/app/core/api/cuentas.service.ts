@@ -42,6 +42,22 @@ export class CuentasService {
     return this.http.put<Cuenta>(`${API_NUCLEO}/cuenta`, datos);
   }
 
+  /**
+   * El turista elimina sus datos personales, de inmediato y sin vuelta atrás (RF-13, Ley 1581). Confirma con su contraseña
+   * actual; un error cuenta para el bloqueo por intentos fallidos (RF-05). Cierra todas sus sesiones.
+   */
+  suprimirTurista(contrasena: string): Observable<void> {
+    return this.http.post<void>(`${API_NUCLEO}/turista/supresion`, { contrasena });
+  }
+
+  /**
+   * El prestador elimina sus datos personales (RF-13, DN-45). Como el turista, confirma con su contraseña. Si todavía tiene
+   * compromisos con turistas o dinero por recibir, el núcleo se niega (409 `PRESTADOR_CON_COMPROMISOS`) y dice cuáles.
+   */
+  suprimirPrestador(contrasena: string): Observable<void> {
+    return this.http.post<void>(`${API_NUCLEO}/prestador/supresion`, { contrasena });
+  }
+
   /** Envía otro código de 6 dígitos al WhatsApp del turista; el anterior deja de servir (RF-03). */
   enviarCodigoWhatsapp(): Observable<void> {
     return this.http.post<void>(`${API_NUCLEO}/turista/whatsapp/codigo`, null);

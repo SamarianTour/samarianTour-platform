@@ -1,0 +1,92 @@
+<section class="tarjeta eliminar" aria-labelledby="eliminar-titulo">
+  <h2 id="eliminar-titulo" tabindex="-1">Eliminar mi cuenta</h2>
+
+  @if (puedeEliminar()) {
+    @if (esPrestador()) {
+      <p>
+        Borraremos tus datos personales, tu WhatsApp y tu habilitación, y cerraremos tus sesiones.
+        Tus ofertas se retiran para siempre y se borran tu perfil y tus fotos del catálogo. Tus
+        solicitudes abiertas sin pagar se cierran.
+      </p>
+      <p class="texto-suave">
+        El RNT, la razón social, tus cuentas de cobro y tus dispersiones se conservan como soporte
+        contable, pero el RNT queda libre para registrarse en otra cuenta. Si todavía tienes
+        servicios pagados por cumplir o dinero por recibir, primero tienes que resolverlos.
+      </p>
+    } @else {
+      <p>
+        Borraremos tu nombre, tu correo, tu contraseña y tu WhatsApp, cerraremos tus sesiones y
+        quitaremos tus opiniones del catálogo. Tus solicitudes se conservan solo con un
+        identificador, sin tus datos.
+      </p>
+      <p class="texto-suave">
+        Las actividades ya realizadas pueden conservarse de forma anonimizada por obligaciones
+        legales y contables. Con el mismo correo podrás crear una cuenta nueva.
+      </p>
+    }
+    <p class="eliminar__advertencia">
+      <app-icono nombre="alerta" />
+      <span>Esta acción es inmediata y no se puede deshacer.</span>
+    </p>
+    <div>
+      <button type="button" class="boton boton--peligro" (click)="abrir()">
+        <app-icono nombre="alerta" />
+        Eliminar mi cuenta
+      </button>
+    </div>
+
+    <dialog #dialogo class="dialogo" aria-labelledby="dialogo-eliminar-titulo">
+      <form [formGroup]="formulario" (ngSubmit)="eliminar()" novalidate>
+        <h2 id="dialogo-eliminar-titulo">¿Eliminar tu cuenta?</h2>
+        <p>
+          Perderás el acceso y tus datos personales se borrarán ahora mismo.
+          <strong>No se puede deshacer.</strong>
+          Escribe tu contraseña para confirmar.
+        </p>
+
+        @if (error(); as mensaje) {
+          <div class="alerta alerta--error" role="alert">
+            <app-icono nombre="alerta" />
+            <div>
+              <p class="alerta__texto">{{ mensaje }}</p>
+              @if (compromisos().length > 0) {
+                <ul class="compromisos">
+                  @for (compromiso of compromisos(); track compromiso) {
+                    <li>{{ compromiso }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="campo">
+          <label for="contrasena-eliminar">Tu contraseña</label>
+          <input
+            id="contrasena-eliminar"
+            type="password"
+            formControlName="contrasena"
+            autocomplete="current-password"
+            aria-required="true"
+            [attr.aria-invalid]="errorDeContrasena() ? 'true' : null"
+            [attr.aria-describedby]="errorDeContrasena() ? 'contrasena-eliminar-error' : null"
+          />
+          @if (errorDeContrasena(); as mensaje) {
+            <p class="campo__error" id="contrasena-eliminar-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="dialogo__acciones">
+          <button type="button" class="boton boton--secundario" (click)="cerrar()">Cancelar</button>
+          <button type="submit" class="boton boton--peligro" [disabled]="eliminando()">
+            {{ eliminando() ? 'Eliminando…' : 'Eliminar mi cuenta' }}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  } @else {
+    <p class="texto-suave">
+      Tu cuenta es interna: la gestiona un administrador. Desde aquí no se puede eliminar.
+    </p>
+  }
+</section>

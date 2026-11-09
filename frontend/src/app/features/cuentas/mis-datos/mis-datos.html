@@ -168,6 +168,19 @@
             </button>
           </li>
           <li class="tarjeta derecho">
+            <h3>Supresión</h3>
+            <p>Pedir que eliminemos tus datos cuando proceda.</p>
+            @if (puedeEliminar()) {
+              <button type="button" class="boton boton--secundario" (click)="irAEliminar()">
+                Solicitar
+              </button>
+            } @else {
+              <p class="texto-suave derecho__nota">
+                Tu cuenta es interna: la gestiona un administrador.
+              </p>
+            }
+          </li>
+          <li class="tarjeta derecho">
             <h3>Oposición</h3>
             <p>Oponerte a ciertos usos de tus datos.</p>
             <p class="texto-suave derecho__nota">
@@ -207,6 +220,8 @@
           <p class="texto-suave">No pudimos cargar la política en este momento.</p>
         }
       </section>
+
+      <app-eliminar-cuenta />
     </div>
   } @else if (cargando()) {
     <p class="texto-suave" aria-live="polite">Cargando tus datos…</p>

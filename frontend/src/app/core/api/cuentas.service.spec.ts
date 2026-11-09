@@ -86,6 +86,30 @@ describe('CuentasService', () => {
     expect(cuenta).toMatchObject({ nombre: 'Laura Gómez Ruiz' });
   });
 
+  it('el turista elimina sus datos confirmando con su contraseña', () => {
+    let terminó = false;
+
+    servicio.suprimirTurista('Demo1234').subscribe(() => (terminó = true));
+
+    const peticion = http.expectOne(`${BASE}/turista/supresion`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ contrasena: 'Demo1234' });
+    peticion.flush(null, { status: 204, statusText: 'No Content' });
+    expect(terminó).toBe(true);
+  });
+
+  it('el prestador elimina sus datos por su propia ruta', () => {
+    let terminó = false;
+
+    servicio.suprimirPrestador('Demo1234').subscribe(() => (terminó = true));
+
+    const peticion = http.expectOne(`${BASE}/prestador/supresion`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ contrasena: 'Demo1234' });
+    peticion.flush(null, { status: 204, statusText: 'No Content' });
+    expect(terminó).toBe(true);
+  });
+
   it('pide otro código de WhatsApp con POST y sin cuerpo', () => {
     let terminó = false;
 
