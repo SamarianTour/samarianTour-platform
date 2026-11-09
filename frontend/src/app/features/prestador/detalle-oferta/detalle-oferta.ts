@@ -4,7 +4,10 @@ import { RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { OfertaPrestador } from '../../../core/api/modelos';
 import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.service';
+import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { traducir } from '../../../core/idioma/traducir';
 import { ESTADO_MODERACION, TIPO_OFERTA, UNIDAD_PRECIO } from '../../../shared/etiquetas';
 import { FechaPipe } from '../../../shared/fecha.pipe';
 import { Icono } from '../../../shared/icono/icono';
@@ -15,12 +18,12 @@ type Estado =
   | { tipo: 'cargando' }
   | { tipo: 'lista'; oferta: OfertaPrestador }
   | { tipo: 'no-encontrada' }
-  | { tipo: 'error'; mensaje: string };
+  | { tipo: 'error'; error: ErrorApi };
 
 /** Detalle de una oferta propia: su versión publicada y su versión pendiente, lado a lado (RF-66). */
 @Component({
   selector: 'app-detalle-oferta',
-  imports: [RouterLink, FechaPipe, PrecioPipe, Icono],
+  imports: [RouterLink, FechaPipe, PrecioPipe, Icono, TPipe],
   templateUrl: './detalle-oferta.html',
   styleUrl: './detalle-oferta.css',
 })
@@ -45,7 +48,8 @@ export class DetalleOferta {
 
   protected readonly mensajeDeError = computed(() => {
     const estado = this.estado();
-    return estado.tipo === 'error' ? estado.mensaje : '';
+    // Se guarda el error y no su texto: así el mensaje cambia de idioma con la interfaz.
+    return estado.tipo === 'error' ? estado.error.mensaje : '';
   });
 
   /** Las dos versiones, en el orden en que se muestran. */
@@ -53,8 +57,18 @@ export class DetalleOferta {
     const oferta = this.oferta();
     return oferta
       ? [
-          { titulo: 'Versión publicada', vacio: 'Todavía no tiene una versión publicada.', version: oferta.publicada },
-          { titulo: 'Versión pendiente', vacio: 'No tiene cambios en revisión.', version: oferta.pendiente },
+          {
+            clave: 'publicada',
+            titulo: traducir('prestador.detalle.versionPublicada'),
+            vacio: traducir('prestador.detalle.vacioPublicada'),
+            version: oferta.publicada,
+          },
+          {
+            clave: 'pendiente',
+            titulo: traducir('prestador.detalle.versionPendiente'),
+            vacio: traducir('prestador.detalle.vacioPendiente'),
+            version: oferta.pendiente,
+          },
         ]
       : [];
   });
@@ -76,7 +90,7 @@ export class DetalleOferta {
         switchMap((id) =>
           this.servicio.buscarPropia(id).pipe(
             map((oferta): Estado => (oferta ? { tipo: 'lista', oferta } : { tipo: 'no-encontrada' })),
-            catchError((error: unknown) => of<Estado>({ tipo: 'error', mensaje: aErrorApi(error).mensaje })),
+            catchError((error: unknown) => of<Estado>({ tipo: 'error', error: aErrorApi(error) })),
           ),
         ),
         takeUntilDestroyed(),

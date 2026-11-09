@@ -125,14 +125,20 @@ La interfaz está en español e inglés (RF-18, RF-19) y cambia al instante, sin
 - **Diccionarios** (`*.i18n.ts`). Uno por área, con las claves `area.pantalla.texto`. El español fija las claves y el inglés debe tener exactamente las mismas: si falta una traducción o sobra una clave, **el build falla**. Se reúnen en `textos.ts`. Los textos admiten parámetros (`{n}`) y plural (`{ uno, otros }`).
 - **En las plantillas,** el pipe `t`: `{{ 'comun.cerrar' | t }}`, con parámetros `{{ 'comun.pagina' | t: { pagina: 2, total: 5 } }}`. Solo acepta claves que existan. Es impuro a propósito, porque un pipe puro no se volvería a evaluar al cambiar el idioma. **En código,** `traducir('comun.cerrar')`.
 - **Glosario.** Los términos del inglés siguen `core/idioma/GLOSARIO.md`, y `textos.spec.ts` lo revisa: parámetros iguales en los dos idiomas, ningún texto sin traducir y términos del glosario.
+- **Selector.** `ES | EN` en la cabecera (`shared/selector-idioma`): dos botones con `aria-pressed`, cada uno con su `lang`. El cambio es inmediato y se recuerda.
+- **Etiquetas de enumeraciones** (`shared/etiquetas.ts`). Son tablas que se leen en el idioma vigente cada vez que se consultan (`tablaDeTextos`), así que se usan como siempre (`ROL[rol]`) y siguen el idioma sin tocar las plantillas. Cada tabla exige todos los valores del contrato.
+- **Títulos de las pestañas.** El `title` de cada ruta es una clave (`app.titulo.catalogo`), no un texto; `EstrategiaDeTitulo` lo traduce y lo mantiene al cambiar de idioma. `app.titulos.spec.ts` revisa que toda ruta tenga una clave que exista.
+- **Errores de la API.** `ErrorApi` guarda la clave del mensaje y arma `mensaje` al leerlo (`core/idioma/errores.i18n.ts`, un mensaje por código del contrato: si falta uno, el build falla). Las pantallas guardan en sus señales un `TextoVivo` (una función, `() => error.mensaje`) o el propio `ErrorApi`, y la plantilla lo llama: así un mensaje que ya está en pantalla cambia de idioma sin repetir la acción.
+- **Fechas, precios y números.** El `LOCALE_ID` de Angular no puede cambiar en marcha, así que se usan los pipes propios `fecha`, `precio`, `numero` y `unidad`: `$ 150.000` y `5 nov 2026` en español; `COP 150,000` y `Nov 5, 2026` en inglés. No se usa el pipe `date` de Angular.
+- **A la API.** El interceptor `idiomaInterceptor` manda `Accept-Language` en toda petición a `/api/`. La recomendación además recibe el idioma en el cuerpo (`conIdioma`) y como parámetro `?idioma=` en alertas y alternativas (`parametrosConIdioma`), en `core/idioma/idioma-api.ts`, para la rama de recomendación.
 - **Pruebas.** `src/test-setup.ts` deja el idioma en español antes de cada prueba; una prueba que necesite el inglés usa `establecerIdioma('en', { recordar: false })`.
-- **Lo que no se traduce.** Lo que viene del backend (nombres y descripciones de ofertas, zonas, perfiles, el texto de la política) se muestra tal como llega.
+- **Lo que no se traduce.** Lo que viene del backend se muestra tal como llega: nombres y descripciones de ofertas, zonas, buenas prácticas, perfiles, el texto de la política de datos, los compromisos del prestador, el motivo de un dato inválido y el motivo de un rechazo. Sí se traducen los códigos de idioma de atención (`es` → Español / Spanish) y las unidades de precio conocidas (`por persona` → per person).
 
 Regla para las ramas nuevas: **todo texto de la interfaz va en los dos idiomas, en el diccionario de su área y con el pipe `t`; ningún texto suelto en las plantillas ni en el código.**
 
 ## Errores de la API
 
-El interceptor de errores lee el `application/problem+json` y traduce su `codigo` a un mensaje (`core/errores/error-api.ts`). El código nunca se muestra. Con `DATO_INVALIDO`, la API nombra el campo en `detail` (`campo: detalle`) y el formulario marca ese campo. Tres códigos del núcleo traen datos extra que `ErrorApi` conserva en `extras`: `bloqueadaHasta` (`CUENTA_BLOQUEADA`), `intentosRestantes` (`CODIGO_INCORRECTO`) y `compromisos` (`PRESTADOR_CON_COMPROMISOS`). Los mensajes están en español; la rama de idiomas los traducirá.
+El interceptor de errores lee el `application/problem+json` y traduce su `codigo` a un mensaje (`core/errores/error-api.ts`). El código nunca se muestra. Con `DATO_INVALIDO`, la API nombra el campo en `detail` (`campo: detalle`) y el formulario marca ese campo. Tres códigos del núcleo traen datos extra que `ErrorApi` conserva en `extras`: `bloqueadaHasta` (`CUENTA_BLOQUEADA`), `intentosRestantes` (`CODIGO_INCORRECTO`) y `compromisos` (`PRESTADOR_CON_COMPROMISOS`). Cada código tiene su mensaje en español y en inglés (ver "Idiomas").
 
 ## Supuestos
 
@@ -148,6 +154,7 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Un solo nombre en el registro.** El núcleo guarda un único `nombre`: el turista escribe su nombre completo y el prestador, el nombre comercial de su negocio. El diseño separa nombres y apellidos.
 - **Contraseña.** De 8 a 72 caracteres con al menos una letra y un número (DN-28); el núcleo las vuelve a aplicar. El WhatsApp se acepta con espacios o guiones y se envía en formato internacional.
 - **Texto de la política.** Llega en Markdown y se muestra tal cual, respetando los saltos de línea, sin interpretarlo.
+- **Unidad del precio y códigos de idioma.** La API entrega `unidadPrecio` en español y `idiomasAtencion` como códigos (`es`, `en`). El frontend traduce las cuatro unidades conocidas y los dos códigos, y deja tal cual lo demás.
 - **Cuentas internas.** Operador, gestor y administrador no tienen ruta de supresión: su cuenta la gestiona un administrador.
 
 ## Docker

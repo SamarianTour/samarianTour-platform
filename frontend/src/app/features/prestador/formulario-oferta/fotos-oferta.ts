@@ -1,4 +1,5 @@
 import { Foto } from '../../../core/api/modelos';
+import { traducir } from '../../../core/idioma/traducir';
 
 /** Una oferta lleva de 1 a 6 fotos (DC-47). */
 export const MINIMO_FOTOS = 1;
@@ -26,13 +27,13 @@ export interface ClasificacionArchivos<T extends DatosArchivo> {
 export function motivoDeRechazo(archivo: DatosArchivo): string | null {
   // Algunos sistemas no informan el tipo: en ese caso decide la API.
   if (archivo.type !== '' && !TIPOS_FOTO.includes(archivo.type)) {
-    return 'solo se aceptan fotos JPG, PNG o WebP';
+    return traducir('prestador.fotos.motivoFormato');
   }
   if (archivo.size === 0) {
-    return 'el archivo está vacío';
+    return traducir('prestador.fotos.motivoVacio');
   }
   if (archivo.size > MAXIMO_BYTES) {
-    return 'pesa más de 5 MB';
+    return traducir('prestador.fotos.motivoPesa');
   }
   return null;
 }
@@ -55,14 +56,22 @@ export function clasificarArchivos<T extends DatosArchivo>(
   for (const archivo of archivos) {
     const motivo = motivoDeRechazo(archivo);
     if (motivo) {
-      avisos.push(`No se subió «${archivo.name}»: ${motivo}.`);
+      avisos.push(traducir('prestador.fotos.noSubido', { nombre: archivo.name, motivo }));
     } else if (aceptados.length >= cupos) {
-      avisos.push(`No se subió «${archivo.name}»: una oferta lleva máximo ${MAXIMO_FOTOS} fotos.`);
+      avisos.push(avisoDeMaximo(archivo.name));
     } else {
       aceptados.push(archivo);
     }
   }
   return { aceptados, avisos };
+}
+
+/** "No se subió «x»: una oferta lleva máximo 6 fotos." en el idioma vigente. */
+export function avisoDeMaximo(nombre: string): string {
+  return traducir('prestador.fotos.noSubido', {
+    nombre,
+    motivo: traducir('prestador.fotos.motivoMaximo', { maximo: MAXIMO_FOTOS }),
+  });
 }
 
 /** Agrega una foto al final. Si ya está o la lista está llena, devuelve la lista como estaba. */

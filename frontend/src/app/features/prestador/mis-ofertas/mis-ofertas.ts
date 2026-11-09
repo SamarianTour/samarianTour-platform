@@ -7,6 +7,8 @@ import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.ser
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { traducir } from '../../../core/idioma/traducir';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { DialogoConfirmacion } from '../../../shared/dialogo-confirmacion/dialogo-confirmacion';
 import { TIPO_OFERTA, UNIDAD_PRECIO } from '../../../shared/etiquetas';
@@ -32,7 +34,7 @@ interface Fila {
 /** Ofertas del prestador, con su estado calculado y las acciones de ver, editar y retirar (RF-65, RF-66). */
 @Component({
   selector: 'app-mis-ofertas',
-  imports: [RouterLink, PrecioPipe, Paginacion, DialogoConfirmacion, Icono],
+  imports: [RouterLink, PrecioPipe, Paginacion, DialogoConfirmacion, Icono, TPipe],
   templateUrl: './mis-ofertas.html',
   styleUrl: './mis-ofertas.css',
 })
@@ -61,9 +63,8 @@ export class MisOfertas {
   protected readonly retirando = signal(false);
 
   protected readonly filas = computed(() => (this.pagina()?.contenido ?? []).map(aFila));
-  protected readonly mensajeDeRetiro = computed(
-    () =>
-      `«${this.porRetirar()?.nombre ?? ''}» dejará de verse en el catálogo. El retiro es definitivo: después no podrás editarla ni volver a publicarla.`,
+  protected readonly mensajeDeRetiro = computed(() =>
+    traducir('prestador.ofertas.retiroMensaje', { nombre: this.porRetirar()?.nombre ?? '' }),
   );
 
   constructor() {
@@ -107,7 +108,7 @@ export class MisOfertas {
     this.servicio.retirar(fila.oferta.id).subscribe({
       next: () => {
         this.retirando.set(false);
-        this.avisos.mostrar(`Retiramos «${fila.nombre}» del catálogo.`);
+        this.avisos.mostrar(traducir('prestador.ofertas.retirada', { nombre: fila.nombre }));
         this.recarga.next();
       },
       error: (error: unknown) => {
@@ -122,7 +123,10 @@ function aFila(oferta: OfertaPrestador): Fila {
   const version = versionVigente(oferta);
   return {
     oferta,
-    nombre: version?.nombre ?? 'Oferta sin nombre',
+    // Un getter: el texto de respaldo sigue el idioma aunque la fila ya esté en pantalla.
+    get nombre() {
+      return version?.nombre ?? traducir('prestador.ofertas.sinNombre');
+    },
     precio: version?.precioReferencia,
     estado: estadoDe(oferta),
     motivoRechazo: motivoDeRechazo(oferta),

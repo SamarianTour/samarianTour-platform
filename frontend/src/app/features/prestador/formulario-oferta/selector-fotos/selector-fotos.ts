@@ -16,11 +16,15 @@ import { EMPTY, Observable, catchError, concatMap, from, tap } from 'rxjs';
 import { Foto } from '../../../../core/api/modelos';
 import { OfertasPrestadorService } from '../../../../core/api/ofertas-prestador.service';
 import { aErrorApi } from '../../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../../core/idioma/texto-vivo';
+import { traducir } from '../../../../core/idioma/traducir';
 import { Icono } from '../../../../shared/icono/icono';
 import {
   MAXIMO_FOTOS,
   TIPOS_FOTO,
   agregar,
+  avisoDeMaximo,
   clasificarArchivos,
   cuposLibres,
   mover,
@@ -32,7 +36,8 @@ interface Pendiente {
   readonly clave: number;
   readonly archivo: File;
   readonly estado: 'subiendo' | 'fallida';
-  readonly mensaje?: string;
+  /** Por qué falló la subida; se arma al mostrarlo para que siga el idioma. */
+  readonly mensaje?: TextoVivo;
 }
 
 type Accion = 'antes' | 'despues';
@@ -44,7 +49,7 @@ type Accion = 'antes' | 'despues';
  */
 @Component({
   selector: 'app-selector-fotos',
-  imports: [Icono],
+  imports: [Icono, TPipe],
   templateUrl: './selector-fotos.html',
   styleUrl: './selector-fotos.css',
 })
@@ -67,8 +72,11 @@ export class SelectorFotos {
   protected readonly maximo = MAXIMO_FOTOS;
   protected readonly formatos = TIPOS_FOTO.join(',');
   protected readonly pendientes = signal<readonly Pendiente[]>([]);
-  /** Un aviso por cada archivo que no se subió al elegir. */
-  protected readonly avisos = signal<readonly string[]>([]);
+  /**
+   * Un aviso por cada archivo que no se subió al elegir. Se guarda la manera de armarlos y no los textos: así los avisos
+   * que ya están en pantalla cambian de idioma con la interfaz.
+   */
+  protected readonly avisos = signal<() => readonly string[]>(() => []);
   /** Texto que leen los lectores de pantalla cuando una foto se mueve, se quita o termina de subir. */
   protected readonly anuncio = signal('');
   protected readonly cupos = computed(() =>
@@ -86,8 +94,9 @@ export class SelectorFotos {
     const archivos = Array.from(entrada.files ?? []);
     // Se vacía para que elegir otra vez el mismo archivo vuelva a disparar el evento.
     entrada.value = '';
-    const { aceptados, avisos } = clasificarArchivos(archivos, this.cupos());
-    this.avisos.set(avisos);
+    const cupos = this.cupos();
+    const { aceptados } = clasificarArchivos(archivos, cupos);
+    this.avisos.set(() => clasificarArchivos(archivos, cupos).avisos);
 
     const nuevos = aceptados.map((archivo): Pendiente => ({
       clave: ++this.contador,
@@ -106,12 +115,10 @@ export class SelectorFotos {
 
   protected reintentar(pendiente: Pendiente): void {
     if (this.cupos() === 0) {
-      this.avisos.set([
-        `No se subió «${pendiente.archivo.name}»: una oferta lleva máximo ${MAXIMO_FOTOS} fotos.`,
-      ]);
+      this.avisos.set(() => [avisoDeMaximo(pendiente.archivo.name)]);
       return;
     }
-    this.avisos.set([]);
+    this.avisos.set(() => []);
     this.cambiarPendientes((actuales) =>
       actuales.map((actual) =>
         actual.clave === pendiente.clave
@@ -130,8 +137,9 @@ export class SelectorFotos {
     const nueva = mover(this.fotos(), foto.id, desplazamiento);
     this.fotos.set(nueva);
     const posicion = nueva.findIndex((una) => una.id === foto.id) + 1;
+    const movida = traducir('prestador.fotos.movida', { posicion, total: nueva.length });
     this.anuncio.set(
-      `Foto movida a la posición ${posicion} de ${nueva.length}.${posicion === 1 ? ' Ahora es la portada.' : ''}`,
+      posicion === 1 ? `${movida} ${traducir('prestador.fotos.ahoraPortada')}` : movida,
     );
 
     // Al cambiar de lugar, el navegador puede soltar el foco: se devuelve al mismo botón, o al contrario si ya no se puede usar.
@@ -151,8 +159,8 @@ export class SelectorFotos {
     this.fotos.set(restantes);
     this.anuncio.set(
       restantes.length === 0
-        ? 'Foto quitada. La oferta no tiene fotos.'
-        : `Foto quitada. La oferta tiene ${restantes.length} de ${MAXIMO_FOTOS} fotos.`,
+        ? traducir('prestador.fotos.quitadaSinFotos')
+        : traducir('prestador.fotos.quitada', { n: restantes.length, maximo: MAXIMO_FOTOS }),
     );
     afterNextRender(
       () => {
@@ -168,8 +176,10 @@ export class SelectorFotos {
    * la posición de la foto y si es la portada.
    */
   protected textoAlternativo(indice: number): string {
-    const total = this.fotos().length;
-    return `Foto ${indice + 1} de ${total} de la oferta${indice === 0 ? ' (portada)' : ''}`;
+    return traducir(indice === 0 ? 'prestador.fotos.altPortada' : 'prestador.fotos.alt', {
+      indice: indice + 1,
+      total: this.fotos().length,
+    });
   }
 
   /** Sube un archivo; si sale bien entra a la lista de fotos y si falla queda como pendiente con su motivo. */
@@ -181,11 +191,11 @@ export class SelectorFotos {
           actuales.filter((actual) => actual.clave !== pendiente.clave),
         );
         this.anuncio.set(
-          `Foto agregada. La oferta tiene ${this.fotos().length} de ${MAXIMO_FOTOS} fotos.`,
+          traducir('prestador.fotos.agregada', { n: this.fotos().length, maximo: MAXIMO_FOTOS }),
         );
       }),
       catchError((fallo: unknown) => {
-        const mensaje = mensajeDeFallo(fallo);
+        const mensaje: TextoVivo = () => mensajeDeFallo(fallo);
         this.cambiarPendientes((actuales) =>
           actuales.map((actual) =>
             actual.clave === pendiente.clave ? { ...actual, estado: 'fallida', mensaje } : actual,

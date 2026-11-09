@@ -1,12 +1,12 @@
 <section class="pagina">
   <header class="encabezado encabezado--con-accion">
     <div>
-      <h1>Mis ofertas</h1>
-      <p class="texto-suave">Cada oferta nueva o editada pasa por moderación antes de verse en el catálogo.</p>
+      <h1>{{ 'app.nav.misOfertas' | t }}</h1>
+      <p class="texto-suave">{{ 'prestador.ofertas.subtitulo' | t }}</p>
     </div>
     <a class="boton" routerLink="/prestador/ofertas/nueva">
       <app-icono nombre="mas" />
-      Publicar oferta
+      {{ 'app.titulo.publicarOferta' | t }}
     </a>
   </header>
 
@@ -23,55 +23,61 @@
         <div class="tarjeta tarjeta--tabla">
           <table class="tabla">
             <caption class="solo-lectores">
-              Ofertas del prestador, {{ resultado.totalElementos }} en total
+              {{ 'prestador.ofertas.caption' | t: { n: resultado.totalElementos } }}
             </caption>
             <thead>
               <tr>
-                <th scope="col">Nombre de la oferta</th>
-                <th scope="col">Tipo</th>
-                <th scope="col">Precio ref.</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Acciones</th>
+                <th scope="col">{{ 'prestador.ofertas.colNombre' | t }}</th>
+                <th scope="col">{{ 'prestador.ofertas.colTipo' | t }}</th>
+                <th scope="col">{{ 'prestador.ofertas.colPrecio' | t }}</th>
+                <th scope="col">{{ 'prestador.ofertas.colEstado' | t }}</th>
+                <th scope="col">{{ 'prestador.ofertas.colAcciones' | t }}</th>
               </tr>
             </thead>
             <tbody>
               @for (fila of filas(); track fila.oferta.id) {
                 <tr>
-                  <th scope="row" data-etiqueta="Nombre de la oferta">{{ fila.nombre }}</th>
-                  <td data-etiqueta="Tipo">{{ etiquetaTipo[fila.oferta.tipo] }}</td>
-                  <td data-etiqueta="Precio ref.">
+                  <th scope="row" [attr.data-etiqueta]="'prestador.ofertas.colNombre' | t">{{ fila.nombre }}</th>
+                  <td [attr.data-etiqueta]="'prestador.ofertas.colTipo' | t">{{ etiquetaTipo[fila.oferta.tipo] }}</td>
+                  <td [attr.data-etiqueta]="'prestador.ofertas.colPrecio' | t">
                     <span class="precio">
                       <strong>{{ fila.precio | precio }}</strong>&ngsp;
                       <span>{{ unidad[fila.oferta.tipo] }}</span>
                     </span>
                   </td>
-                  <td data-etiqueta="Estado">
+                  <td [attr.data-etiqueta]="'prestador.ofertas.colEstado' | t">
                     <span class="etiqueta" [class]="claseDeEstado[fila.estado]">{{ etiquetaEstado[fila.estado] }}</span>
                     @if (fila.estado === 'RECHAZADA') {
-                      <p class="motivo">Motivo: {{ fila.motivoRechazo ?? 'no se indicó' }}</p>
+                      <p class="motivo">
+                        {{
+                          'prestador.ofertas.motivo'
+                            | t: { motivo: fila.motivoRechazo ?? ('prestador.ofertas.sinMotivo' | t) }
+                        }}
+                      </p>
                       @if (fila.oferta.publicada) {
-                        <p class="nota">Tu versión publicada sigue visible en el catálogo.</p>
+                        <p class="nota">{{ 'prestador.ofertas.sigueVisible' | t }}</p>
                       }
                     }
                   </td>
-                  <td data-etiqueta="Acciones">
+                  <td [attr.data-etiqueta]="'prestador.ofertas.colAcciones' | t">
                     <div class="acciones">
                       <a class="accion" [routerLink]="['/prestador/ofertas', fila.oferta.id]">
-                        Ver detalle<span class="solo-lectores"> de {{ fila.nombre }}</span>
+                        {{ 'prestador.ofertas.verDetalle' | t
+                        }}<span class="solo-lectores"> {{ 'prestador.ofertas.deLaOferta' | t: { nombre: fila.nombre } }}</span>
                       </a>
                       @if (fila.editable) {
                         <a class="accion" [routerLink]="['/prestador/ofertas', fila.oferta.id, 'editar']">
-                          Editar<span class="solo-lectores"> {{ fila.nombre }}</span>
+                          {{ 'prestador.ofertas.editar' | t }}<span class="solo-lectores"> {{ fila.nombre }}</span>
                         </a>
                       }
                       @if (!fila.oferta.retirada) {
                         <button type="button" class="accion accion--peligro" (click)="pedirRetiro(fila)">
-                          Retirar<span class="solo-lectores"> {{ fila.nombre }}</span>
+                          {{ 'prestador.ofertas.retirar' | t }}<span class="solo-lectores"> {{ fila.nombre }}</span>
                         </button>
                       }
                     </div>
                     @if (!fila.oferta.retirada && !fila.editable) {
-                      <p class="nota">Podrás editarla cuando tenga una versión publicada.</p>
+                      <p class="nota">{{ 'prestador.ofertas.nota' | t }}</p>
                     }
                   </td>
                 </tr>
@@ -82,20 +88,20 @@
         <app-paginacion [pagina]="resultado.pagina" [totalPaginas]="resultado.totalPaginas" (cambiar)="irAPagina($event)" />
       } @else {
         <div class="tarjeta vacio">
-          <h2>Todavía no tienes ofertas</h2>
-          <p class="texto-suave">Publica la primera y la enviaremos a moderación.</p>
-          <a class="boton" routerLink="/prestador/ofertas/nueva">Publicar oferta</a>
+          <h2>{{ 'prestador.ofertas.vacioTitulo' | t }}</h2>
+          <p class="texto-suave">{{ 'prestador.ofertas.vacioAyuda' | t }}</p>
+          <a class="boton" routerLink="/prestador/ofertas/nueva">{{ 'app.titulo.publicarOferta' | t }}</a>
         </div>
       }
     } @else if (cargando()) {
-      <p class="texto-suave">Cargando tus ofertas…</p>
+      <p class="texto-suave">{{ 'prestador.ofertas.cargando' | t }}</p>
     }
   </div>
 </section>
 
 <app-dialogo-confirmacion
-  titulo="¿Retirar esta oferta?"
+  [titulo]="'prestador.ofertas.retiroTitulo' | t"
   [mensaje]="mensajeDeRetiro()"
-  accion="Retirar oferta"
+  [accion]="'prestador.ofertas.retiroAccion' | t"
   (confirmado)="retirar()"
 />
