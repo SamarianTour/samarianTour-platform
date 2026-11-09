@@ -116,6 +116,20 @@ Las cuentas de la demo (clave `Demo1234`, todas `@demo.samariantour.co`): presta
 - **Mis datos** (RF-12). Consultar y corregir el nombre y, el turista, su WhatsApp; un número nuevo queda sin verificar y se confirma con el código de 6 dígitos. El correo no se cambia (DN-31). De los seis derechos del titular (Ley 1581), Acceso, Rectificación y Supresión tienen acción; Oposición, Portabilidad y Revocar la autorización se explican sin botón porque el contrato no tiene endpoint.
 - **Eliminar la cuenta** (RF-13). El turista y el prestador confirman con su contraseña (`POST /turista/supresion` o `/prestador/supresion`). Si el prestador tiene compromisos pendientes, el núcleo los lista y no deja eliminar. Operador, gestor y administrador no tienen esta opción.
 
+## Idiomas
+
+La interfaz está en español e inglés (RF-18, RF-19) y cambia al instante, sin recargar. No usa librerías: es un mecanismo propio y liviano en `src/app/core/idioma`.
+
+- **Idioma vigente** (`idioma.ts`). Un signal de módulo, para que también lo lean las tablas de etiquetas, `ErrorApi` y las funciones puras que arman mensajes, que no tienen inyección de dependencias. `IdiomaService` es la fachada para los componentes: `idioma()`, `establecer()` y `locale()` (`es-CO` o `en-US`, para `Intl` y los pipes de fecha y precio).
+- **Cuál se usa.** La elección guardada en `localStorage` (`samarian-tour.idioma`); si no hay, el idioma del navegador cuando es `es` o `en`; si no, español. Al cambiar, el servicio también cambia el atributo `lang` de la página y su descripción.
+- **Diccionarios** (`*.i18n.ts`). Uno por área, con las claves `area.pantalla.texto`. El español fija las claves y el inglés debe tener exactamente las mismas: si falta una traducción o sobra una clave, **el build falla**. Se reúnen en `textos.ts`. Los textos admiten parámetros (`{n}`) y plural (`{ uno, otros }`).
+- **En las plantillas,** el pipe `t`: `{{ 'comun.cerrar' | t }}`, con parámetros `{{ 'comun.pagina' | t: { pagina: 2, total: 5 } }}`. Solo acepta claves que existan. Es impuro a propósito, porque un pipe puro no se volvería a evaluar al cambiar el idioma. **En código,** `traducir('comun.cerrar')`.
+- **Glosario.** Los términos del inglés siguen `core/idioma/GLOSARIO.md`, y `textos.spec.ts` lo revisa: parámetros iguales en los dos idiomas, ningún texto sin traducir y términos del glosario.
+- **Pruebas.** `src/test-setup.ts` deja el idioma en español antes de cada prueba; una prueba que necesite el inglés usa `establecerIdioma('en', { recordar: false })`.
+- **Lo que no se traduce.** Lo que viene del backend (nombres y descripciones de ofertas, zonas, perfiles, el texto de la política) se muestra tal como llega.
+
+Regla para las ramas nuevas: **todo texto de la interfaz va en los dos idiomas, en el diccionario de su área y con el pipe `t`; ningún texto suelto en las plantillas ni en el código.**
+
 ## Errores de la API
 
 El interceptor de errores lee el `application/problem+json` y traduce su `codigo` a un mensaje (`core/errores/error-api.ts`). El código nunca se muestra. Con `DATO_INVALIDO`, la API nombra el campo en `detail` (`campo: detalle`) y el formulario marca ese campo. Tres códigos del núcleo traen datos extra que `ErrorApi` conserva en `extras`: `bloqueadaHasta` (`CUENTA_BLOQUEADA`), `intentosRestantes` (`CODIGO_INCORRECTO`) y `compromisos` (`PRESTADOR_CON_COMPROMISOS`). Los mensajes están en español; la rama de idiomas los traducirá.
