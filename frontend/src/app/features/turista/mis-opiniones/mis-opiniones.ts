@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -10,6 +9,7 @@ import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { ESTADO_OPINION } from '../../../shared/etiquetas';
 import { Estrellas } from '../../../shared/estrellas/estrellas';
+import { FechaPipe } from '../../../shared/fecha.pipe';
 import { Icono } from '../../../shared/icono/icono';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 
@@ -30,7 +30,7 @@ type Resultado = { pagina: PaginaMisOpiniones } | { error: ErrorApi };
  */
 @Component({
   selector: 'app-mis-opiniones',
-  imports: [RouterLink, DatePipe, Estrellas, Icono, Paginacion],
+  imports: [RouterLink, FechaPipe, Estrellas, Icono, Paginacion],
   templateUrl: './mis-opiniones.html',
   styleUrl: './mis-opiniones.css',
 })

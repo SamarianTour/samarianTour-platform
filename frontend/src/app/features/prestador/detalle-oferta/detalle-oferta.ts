@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -7,6 +6,7 @@ import { OfertaPrestador } from '../../../core/api/modelos';
 import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { ESTADO_MODERACION, TIPO_OFERTA, UNIDAD_PRECIO } from '../../../shared/etiquetas';
+import { FechaPipe } from '../../../shared/fecha.pipe';
 import { Icono } from '../../../shared/icono/icono';
 import { PrecioPipe } from '../../../shared/precio.pipe';
 import { CLASE_DE_ESTADO, ESTADO_OFERTA, estadoDe, sePuedeEditar } from '../estado-oferta';
@@ -20,7 +20,7 @@ type Estado =
 /** Detalle de una oferta propia: su versión publicada y su versión pendiente, lado a lado (RF-66). */
 @Component({
   selector: 'app-detalle-oferta',
-  imports: [RouterLink, DatePipe, PrecioPipe, Icono],
+  imports: [RouterLink, FechaPipe, PrecioPipe, Icono],
   templateUrl: './detalle-oferta.html',
   styleUrl: './detalle-oferta.css',
 })

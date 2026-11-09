@@ -11,7 +11,7 @@
   @if (opiniones(); as lectura) {
     @if (lectura.resumen.promedioCalificacion; as promedio) {
       <div class="resumen-opiniones">
-        <p class="resumen-opiniones__promedio">{{ promedio.toLocaleString('es-CO', { minimumFractionDigits: 1 }) }}</p>
+        <p class="resumen-opiniones__promedio">{{ promedio | numero: 1 }}</p>
         <div>
           <app-estrellas [valor]="promedio" />
           <p class="texto-suave">
@@ -27,7 +27,7 @@
             <div class="opinion__cabecera">
               <p class="opinion__autor">Turista</p>
               <app-estrellas [valor]="opinion.calificacion" />
-              <p class="opinion__fecha texto-suave">{{ opinion.fecha | date: 'd MMM y' }}</p>
+              <p class="opinion__fecha texto-suave">{{ opinion.fecha | fecha }}</p>
             </div>
             <p class="opinion__comentario">{{ opinion.comentario }}</p>
           </li>

@@ -50,11 +50,11 @@
                 </div>
                 <div>
                   <dt>Enviada a moderación</dt>
-                  <dd>{{ version.enviadaEn | date: 'd MMM y, h:mm a' }}</dd>
+                  <dd>{{ version.enviadaEn | fecha: 'conHora' }}</dd>
                 </div>
                 <div>
                   <dt>Revisada</dt>
-                  <dd>{{ version.revisadaEn ? (version.revisadaEn | date: 'd MMM y, h:mm a') : 'Aún no' }}</dd>
+                  <dd>{{ version.revisadaEn ? (version.revisadaEn | fecha: 'conHora') : 'Aún no' }}</dd>
                 </div>
                 @if (version.motivoRechazo) {
                   <div class="renglon--rechazo">

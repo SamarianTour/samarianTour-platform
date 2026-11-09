@@ -209,7 +209,7 @@
         @if (politica(); as vigente) {
           <p class="texto-suave">
             Versión vigente: <strong>{{ vigente.version }}</strong
-            >, publicada el {{ vigente.fechaPublicacion | date: 'd MMMM y' }}.
+            >, publicada el {{ vigente.fechaPublicacion | fecha: 'larga' }}.
           </p>
           <div>
             <button type="button" class="boton boton--secundario" (click)="abrirPolitica()">

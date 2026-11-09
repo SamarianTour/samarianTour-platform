@@ -19,7 +19,7 @@
             <li class="tarjeta mi-opinion">
               <div class="mi-opinion__cabecera">
                 <span class="etiqueta" [class]="claseDeEstado[opinion.estado]">{{ etiquetaEstado[opinion.estado] }}</span>
-                <p class="texto-suave mi-opinion__fecha">Enviada el {{ opinion.fecha | date: 'd MMM y' }}</p>
+                <p class="texto-suave mi-opinion__fecha">Enviada el {{ opinion.fecha | fecha }}</p>
               </div>
               <h2 class="mi-opinion__oferta">
                 <a [routerLink]="['/ofertas', opinion.ofertaId]">{{ opinion.nombreOferta ?? 'Oferta' }}</a>

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -19,6 +18,7 @@ import { AvisosService } from '../../../core/avisos/avisos.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { ROL } from '../../../shared/etiquetas';
+import { FechaPipe } from '../../../shared/fecha.pipe';
 import { Icono } from '../../../shared/icono/icono';
 import { VisorPolitica } from '../politica-datos/visor-politica';
 import { mayusculaInicial, normalizarWhatsapp, obligatorio, whatsappValido } from '../validaciones';
@@ -35,7 +35,7 @@ type Campo = 'nombre' | 'whatsapp';
  */
 @Component({
   selector: 'app-mis-datos',
-  imports: [ReactiveFormsModule, DatePipe, Icono, VisorPolitica, VerificarWhatsapp, EliminarCuenta],
+  imports: [ReactiveFormsModule, FechaPipe, Icono, VisorPolitica, VerificarWhatsapp, EliminarCuenta],
   templateUrl: './mis-datos.html',
   styleUrl: './mis-datos.css',
 })

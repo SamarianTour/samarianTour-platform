@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
@@ -12,7 +11,9 @@ import { aErrorApi } from '../../../../core/errores/errores.interceptor';
 import { SesionService } from '../../../../core/sesion/sesion.service';
 import { CALIFICACION } from '../../../../shared/etiquetas';
 import { Estrellas } from '../../../../shared/estrellas/estrellas';
+import { FechaPipe } from '../../../../shared/fecha.pipe';
 import { Icono } from '../../../../shared/icono/icono';
+import { NumeroPipe } from '../../../../shared/numero.pipe';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 
 const TAMANO_PAGINA = 5;
@@ -37,7 +38,7 @@ const largoDelComentario: ValidatorFn = (control) => {
  */
 @Component({
   selector: 'app-opiniones-oferta',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, Estrellas, Icono, Paginacion],
+  imports: [ReactiveFormsModule, RouterLink, FechaPipe, NumeroPipe, Estrellas, Icono, Paginacion],
   templateUrl: './opiniones-oferta.html',
   styleUrl: './opiniones-oferta.css',
 })
