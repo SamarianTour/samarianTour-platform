@@ -53,6 +53,34 @@ describe('CuentasService', () => {
     http.expectOne(`${BASE}/politica-datos/v1%2F..%2F..%2Fadmin`).flush('');
   });
 
+  it('pide el enlace para restablecer la contraseña con el correo', () => {
+    let terminó = false;
+
+    servicio
+      .solicitarRestablecimiento('laura@demo.samariantour.co')
+      .subscribe(() => (terminó = true));
+
+    const peticion = http.expectOne(`${BASE}/cuentas/contrasena/restablecimiento`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ correo: 'laura@demo.samariantour.co' });
+    peticion.flush(null, { status: 202, statusText: 'Accepted' });
+    expect(terminó).toBe(true);
+  });
+
+  it('restablece la contraseña con el token del enlace', () => {
+    let terminó = false;
+
+    servicio
+      .restablecerContrasena('token-del-correo', 'Playa2027')
+      .subscribe(() => (terminó = true));
+
+    const peticion = http.expectOne(`${BASE}/cuentas/contrasena`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ token: 'token-del-correo', contrasena: 'Playa2027' });
+    peticion.flush(null, { status: 204, statusText: 'No Content' });
+    expect(terminó).toBe(true);
+  });
+
   it('registra una cuenta con POST', () => {
     const solicitud: RegistroRequest = {
       rol: 'TURISTA',

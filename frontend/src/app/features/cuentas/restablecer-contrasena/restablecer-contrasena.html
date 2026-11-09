@@ -1,0 +1,76 @@
+<app-pagina-acceso
+  titulo="Elige una contraseña nueva"
+  subtitulo="Escríbela dos veces. Después tendrás que iniciar sesión con ella."
+>
+  @if (!token()) {
+    <div class="sin-enlace">
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>Este enlace no es válido: le falta el código del correo. Pide uno nuevo.</span>
+      </p>
+      <a class="boton" routerLink="/recuperar-contrasena">Pedir un enlace nuevo</a>
+    </div>
+  } @else if (enlaceVencido()) {
+    <div class="sin-enlace">
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span
+          >El enlace venció o ya se usó. Los enlaces valen 30 minutos y sirven una sola vez.</span
+        >
+      </p>
+      <a class="boton" routerLink="/recuperar-contrasena">Pedir un enlace nuevo</a>
+    </div>
+  } @else {
+    <form class="formulario" [formGroup]="formulario" (ngSubmit)="cambiar()" novalidate>
+      @if (error(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje }}</span>
+        </p>
+      }
+
+      <div class="campo">
+        <label for="contrasena">Contraseña nueva</label>
+        <input
+          id="contrasena"
+          type="password"
+          formControlName="contrasena"
+          autocomplete="new-password"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('contrasena') ? 'true' : null"
+          [attr.aria-describedby]="
+            errorDe('contrasena') ? 'contrasena-error contrasena-ayuda' : 'contrasena-ayuda'
+          "
+        />
+        <p class="campo__ayuda" id="contrasena-ayuda">
+          Mínimo {{ contrasenaMinima }} caracteres, con al menos una letra y un número.
+        </p>
+        @if (errorDe('contrasena'); as mensaje) {
+          <p class="campo__error" id="contrasena-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="repetir">Repite la contraseña</label>
+        <input
+          id="repetir"
+          type="password"
+          formControlName="repetir"
+          autocomplete="new-password"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('repetir') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('repetir') ? 'repetir-error' : null"
+        />
+        @if (errorDe('repetir'); as mensaje) {
+          <p class="campo__error" id="repetir-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
+        {{ enviando() ? 'Guardando…' : 'Cambiar contraseña' }}
+      </button>
+    </form>
+  }
+
+  <p pie><a routerLink="/iniciar-sesion">Volver a iniciar sesión</a></p>
+</app-pagina-acceso>

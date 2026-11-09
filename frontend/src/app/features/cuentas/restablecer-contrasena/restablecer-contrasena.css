@@ -1,0 +1,16 @@
+.formulario,
+.sin-enlace {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.125rem;
+}
+
+.formulario .alerta,
+.sin-enlace .alerta {
+  margin: 0;
+}
+
+.sin-enlace .boton {
+  align-self: flex-start;
+}

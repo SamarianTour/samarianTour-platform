@@ -33,6 +33,7 @@ import {
   CONTRASENA_MINIMA,
   contrasenaValida,
   igualA,
+  mayusculaInicial,
   normalizarWhatsapp,
   obligatorio,
   whatsappValido,
@@ -277,10 +278,6 @@ export class Registro implements OnInit {
       this.anfitrion.nativeElement.querySelector<HTMLElement>(`#${campo}`)?.focus();
     }
   }
-}
-
-function mayusculaInicial(texto: string): string {
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 function mensajeDe(

@@ -3,12 +3,24 @@ import {
   contrasenaValida,
   esWhatsappValido,
   igualA,
+  mayusculaInicial,
   normalizarWhatsapp,
   obligatorio,
   whatsappValido,
 } from './validaciones';
 
 const control = (valor: unknown) => new FormControl(valor);
+
+describe('mayusculaInicial', () => {
+  it('pone en mayúscula solo la primera letra', () => {
+    expect(mayusculaInicial('debe tener al menos una letra')).toBe('Debe tener al menos una letra');
+  });
+
+  it('respeta lo que ya está en mayúscula y el texto vacío', () => {
+    expect(mayusculaInicial('Ya empieza bien')).toBe('Ya empieza bien');
+    expect(mayusculaInicial('')).toBe('');
+  });
+});
 
 describe('obligatorio', () => {
   it.each(['', '   ', null])('rechaza %j', (valor) => {

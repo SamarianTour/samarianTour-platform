@@ -30,7 +30,16 @@ describe('rutas de la aplicación', () => {
   });
 
   describe('sin sesión', () => {
-    it.each(['/', '/ofertas/abc', '/iniciar-sesion'])('%s es pública', async (url) => {
+    it.each([
+      '/',
+      '/ofertas/abc',
+      '/iniciar-sesion',
+      '/registro',
+      '/registro?tipo=prestador',
+      '/recuperar-contrasena',
+      // El correo de recuperación del núcleo enlaza exactamente aquí.
+      '/restablecer-contrasena?token=abc123',
+    ])('%s es pública', async (url) => {
       expect(await ir(url)).toBe(url);
     });
 

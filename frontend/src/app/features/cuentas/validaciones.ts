@@ -4,6 +4,11 @@ import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 export const CONTRASENA_MINIMA = 8;
 export const CONTRASENA_MAXIMA = 72;
 
+/** Los motivos que da la API llegan en minúscula ("debe tener…"): al mostrarlos empiezan con mayúscula. */
+export function mayusculaInicial(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 /** Un texto con solo espacios no cuenta como escrito. */
 export const obligatorio: ValidatorFn = (control) =>
   typeof control.value === 'string' && control.value.trim() !== '' ? null : { required: true };

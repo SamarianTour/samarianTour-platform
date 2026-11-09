@@ -15,6 +15,23 @@ export const RUTAS_CUENTAS: Routes = [
     loadComponent: () => import('./registro/registro').then((modulo) => modulo.Registro),
   },
   {
+    path: 'recuperar-contrasena',
+    title: 'Recuperar el acceso · Samarian Tour',
+    loadComponent: () =>
+      import('./recuperar-contrasena/recuperar-contrasena').then(
+        (modulo) => modulo.RecuperarContrasena,
+      ),
+  },
+  {
+    // El correo de recuperación del núcleo enlaza exactamente a este nombre, con ?token=…
+    path: 'restablecer-contrasena',
+    title: 'Contraseña nueva · Samarian Tour',
+    loadComponent: () =>
+      import('./restablecer-contrasena/restablecer-contrasena').then(
+        (modulo) => modulo.RestablecerContrasena,
+      ),
+  },
+  {
     path: 'sin-permiso',
     title: 'Sin permiso · Samarian Tour',
     canActivate: [autenticadoGuard],

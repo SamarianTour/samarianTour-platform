@@ -1,0 +1,59 @@
+<app-pagina-acceso
+  titulo="Recuperar el acceso"
+  subtitulo="Escribe el correo de tu cuenta y te enviamos un enlace para elegir una contraseña nueva."
+>
+  @if (enviadoA(); as correo) {
+    <div class="confirmacion">
+      <p class="alerta alerta--exito" role="status">
+        <app-icono nombre="hoja" />
+        <span>
+          Si hay una cuenta activa con <strong>{{ correo }}</strong
+          >, te enviamos un enlace para elegir una contraseña nueva.
+        </span>
+      </p>
+      <ul class="notas">
+        <li>El enlace vence a los 30 minutos y sirve una sola vez.</li>
+        <li>Si no lo ves, revisa la carpeta de correo no deseado.</li>
+        <li>Si pides otro enlace, el anterior deja de servir.</li>
+      </ul>
+      <div class="acciones">
+        <a class="boton" routerLink="/iniciar-sesion">Volver a iniciar sesión</a>
+        <button type="button" class="boton boton--secundario" (click)="pedirOtro()">
+          Pedir otro enlace
+        </button>
+      </div>
+    </div>
+  } @else {
+    <form class="formulario" [formGroup]="formulario" (ngSubmit)="pedirEnlace()" novalidate>
+      @if (error(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje }}</span>
+        </p>
+      }
+
+      <div class="campo">
+        <label for="correo">Correo electrónico</label>
+        <input
+          id="correo"
+          type="email"
+          formControlName="correo"
+          autocomplete="email"
+          autocapitalize="none"
+          aria-required="true"
+          [attr.aria-invalid]="errorDeCorreo() ? 'true' : null"
+          [attr.aria-describedby]="errorDeCorreo() ? 'correo-error' : null"
+        />
+        @if (errorDeCorreo(); as mensaje) {
+          <p class="campo__error" id="correo-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
+        {{ enviando() ? 'Enviando…' : 'Enviar el enlace' }}
+      </button>
+    </form>
+  }
+
+  <p pie>¿Te acordaste? <a routerLink="/iniciar-sesion">Inicia sesión</a></p>
+</app-pagina-acceso>

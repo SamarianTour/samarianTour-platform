@@ -28,4 +28,20 @@ export class CuentasService {
   registrar(solicitud: RegistroRequest): Observable<Cuenta> {
     return this.http.post<Cuenta>(`${API_NUCLEO}/cuentas/registro`, solicitud);
   }
+
+  /**
+   * Pide el enlace para poner una contraseña nueva (RF-07). Responde igual exista o no la cuenta, para no revelar qué
+   * correos están registrados. Un enlace nuevo invalida los anteriores (DN-30).
+   */
+  solicitarRestablecimiento(correo: string): Observable<void> {
+    return this.http.post<void>(`${API_NUCLEO}/cuentas/contrasena/restablecimiento`, { correo });
+  }
+
+  /**
+   * Pone la contraseña nueva con el `token` del enlace del correo (RF-08). Gasta el enlace y cierra todas las sesiones de
+   * la cuenta (DN-30).
+   */
+  restablecerContrasena(token: string, contrasena: string): Observable<void> {
+    return this.http.post<void>(`${API_NUCLEO}/cuentas/contrasena`, { token, contrasena });
+  }
 }
