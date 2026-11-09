@@ -1,20 +1,31 @@
 import { Rol } from '../api/modelos-nucleo';
+import type { ClaveTexto } from '../idioma/textos';
 
 /** Un enlace de la navegación de la cabecera. */
 export interface EnlaceNavegacion {
-  readonly texto: string;
+  /** La clave del texto del enlace; la plantilla lo muestra con el pipe `t`, así que sigue el idioma. */
+  readonly clave: ClaveTexto;
   readonly ruta: string;
   readonly consulta?: Readonly<Record<string, string>>;
   /** Direcciones que marcan el enlace como la sección actual: iguales a una de estas o dentro de ellas. */
   readonly secciones: readonly string[];
 }
 
-const CATALOGO: EnlaceNavegacion = { texto: 'Catálogo', ruta: '/', secciones: ['/', '/ofertas'] };
+const CATALOGO: EnlaceNavegacion = {
+  clave: 'app.nav.catalogo',
+  ruta: '/',
+  secciones: ['/', '/ofertas'],
+};
 
 /** Lo que ve quien no ha iniciado sesión. "Soy prestador" lleva a registrarse como prestador. */
 const SIN_SESION: readonly EnlaceNavegacion[] = [
   CATALOGO,
-  { texto: 'Soy prestador', ruta: '/registro', consulta: { tipo: 'prestador' }, secciones: [] },
+  {
+    clave: 'app.nav.soyPrestador',
+    ruta: '/registro',
+    consulta: { tipo: 'prestador' },
+    secciones: [],
+  },
 ];
 
 /**
@@ -24,18 +35,16 @@ const SIN_SESION: readonly EnlaceNavegacion[] = [
 const POR_ROL: Record<Rol, readonly EnlaceNavegacion[]> = {
   TURISTA: [
     CATALOGO,
-    { texto: 'Mis solicitudes', ruta: '/turista/solicitudes', secciones: ['/turista'] },
-    { texto: 'Mis opiniones', ruta: '/mis-opiniones', secciones: ['/mis-opiniones'] },
+    { clave: 'app.nav.misSolicitudes', ruta: '/turista/solicitudes', secciones: ['/turista'] },
+    { clave: 'app.nav.misOpiniones', ruta: '/mis-opiniones', secciones: ['/mis-opiniones'] },
   ],
   PRESTADOR: [
     CATALOGO,
-    { texto: 'Mis ofertas', ruta: '/prestador/ofertas', secciones: ['/prestador'] },
+    { clave: 'app.nav.misOfertas', ruta: '/prestador/ofertas', secciones: ['/prestador'] },
   ],
-  OPERADOR_DISPONIBILIDAD: [
-    { texto: 'Cola de solicitudes', ruta: '/operador', secciones: ['/operador'] },
-  ],
-  GESTOR_DESTINO: [{ texto: 'Indicadores', ruta: '/gestor', secciones: ['/gestor'] }],
-  ADMINISTRADOR: [{ texto: 'Administración', ruta: '/admin', secciones: ['/admin'] }],
+  OPERADOR_DISPONIBILIDAD: [{ clave: 'app.nav.cola', ruta: '/operador', secciones: ['/operador'] }],
+  GESTOR_DESTINO: [{ clave: 'app.nav.indicadores', ruta: '/gestor', secciones: ['/gestor'] }],
+  ADMINISTRADOR: [{ clave: 'app.nav.administracion', ruta: '/admin', secciones: ['/admin'] }],
 };
 
 /** Los enlaces de la cabecera para el rol dado, o para quien no tiene sesión (null). */

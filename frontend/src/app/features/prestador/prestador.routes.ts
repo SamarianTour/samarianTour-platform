@@ -9,23 +9,23 @@ export const RUTAS_PRESTADOR: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'ofertas' },
       {
         path: 'ofertas',
-        title: 'Mis ofertas · Samarian Tour',
+        title: 'app.titulo.misOfertas',
         loadComponent: () => import('./mis-ofertas/mis-ofertas').then((modulo) => modulo.MisOfertas),
       },
       {
         path: 'ofertas/nueva',
-        title: 'Publicar oferta · Samarian Tour',
+        title: 'app.titulo.publicarOferta',
         loadComponent: () =>
           import('./formulario-oferta/formulario-oferta').then((modulo) => modulo.FormularioOferta),
       },
       {
         path: 'ofertas/:id',
-        title: 'Detalle de la oferta · Samarian Tour',
+        title: 'app.titulo.detalleOferta',
         loadComponent: () => import('./detalle-oferta/detalle-oferta').then((modulo) => modulo.DetalleOferta),
       },
       {
         path: 'ofertas/:id/editar',
-        title: 'Editar oferta · Samarian Tour',
+        title: 'app.titulo.editarOferta',
         loadComponent: () =>
           import('./formulario-oferta/formulario-oferta').then((modulo) => modulo.FormularioOferta),
       },

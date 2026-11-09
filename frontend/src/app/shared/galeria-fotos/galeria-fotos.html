@@ -7,12 +7,16 @@
         alt=""
         [attr.loading]="i === 0 ? 'eager' : 'lazy'"
       />
-      <span class="solo-lectores">Ver foto {{ i + 1 }} de {{ total() }}</span>
+      <span class="solo-lectores">{{
+        'compartido.galeria.verFoto' | t: { indice: i + 1, total: total() }
+      }}</span>
       @if (i === 2 && total() > 3) {
-        <span class="mosaico__mas">Ver las {{ total() }} fotos</span>
+        <span class="mosaico__mas">{{ 'compartido.galeria.verTodas' | t: { total: total() } }}</span>
       }
       @if (i === 0 && total() > 1) {
-        <span class="mosaico__mas mosaico__mas--movil">Ver las {{ total() }} fotos</span>
+        <span class="mosaico__mas mosaico__mas--movil">{{
+          'compartido.galeria.verTodas' | t: { total: total() }
+        }}</span>
       }
     </button>
   }
@@ -21,19 +25,19 @@
 <dialog
   #visor
   class="visor"
-  [attr.aria-label]="'Fotos de ' + nombre()"
+  [attr.aria-label]="'compartido.galeria.etiqueta' | t: { nombre: nombre() }"
   (close)="alCerrar()"
   (keydown)="teclado($event)"
   (click)="cerrarSiFuera($event)"
 >
   <button type="button" class="visor__cerrar" (click)="cerrar()">
-    Cerrar<span class="solo-lectores"> la galería</span>
+    {{ 'comun.cerrar' | t }}<span class="solo-lectores"> {{ 'compartido.galeria.laGaleria' | t }}</span>
   </button>
 
   @if (total() > 1) {
     <button type="button" class="visor__nav visor__nav--anterior" (click)="ir(-1)">
       <app-icono nombre="chevron" />
-      <span class="solo-lectores">Foto anterior</span>
+      <span class="solo-lectores">{{ 'compartido.galeria.anterior' | t }}</span>
     </button>
   } @else {
     <span></span>
@@ -43,13 +47,15 @@
     @if (actual(); as foto) {
       <img class="visor__foto" [src]="foto.url" [alt]="textoAlternativo(indice())" />
     }
-    <p class="visor__pie" aria-live="polite">{{ indice() + 1 }} de {{ total() }}</p>
+    <p class="visor__pie" aria-live="polite">
+        {{ 'compartido.galeria.posicion' | t: { indice: indice() + 1, total: total() } }}
+      </p>
   </div>
 
   @if (total() > 1) {
     <button type="button" class="visor__nav" (click)="ir(1)">
       <app-icono nombre="chevron" />
-      <span class="solo-lectores">Foto siguiente</span>
+      <span class="solo-lectores">{{ 'compartido.galeria.siguiente' | t }}</span>
     </button>
   } @else {
     <span></span>

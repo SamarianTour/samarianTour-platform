@@ -3,6 +3,7 @@ import {
   DestroyRef,
   ElementRef,
   afterNextRender,
+  computed,
   effect,
   inject,
   input,
@@ -11,6 +12,7 @@ import {
 } from '@angular/core';
 import * as L from 'leaflet';
 import { Coordenada } from '../../core/api/modelos';
+import { traducir } from '../../core/idioma/traducir';
 
 /** Centro de Santa Marta, para cuando todavía no hay ubicación. */
 const SANTA_MARTA: L.LatLngTuple = [11.2408, -74.199];
@@ -24,7 +26,7 @@ const ZOOM_PUNTO = 14;
  */
 @Component({
   selector: 'app-mapa',
-  template: `<div #lienzo class="mapa" role="application" [attr.aria-label]="descripcion()"></div>`,
+  template: `<div #lienzo class="mapa" role="application" [attr.aria-label]="textoDescripcion()"></div>`,
   styles: `
     :host {
       display: block;
@@ -40,7 +42,11 @@ const ZOOM_PUNTO = 14;
 export class Mapa {
   readonly ubicacion = input<Coordenada | null>(null);
   readonly editable = input(false);
-  readonly descripcion = input('Mapa de la ubicación');
+  /** Lo que oyen los lectores de pantalla; sin él, "Mapa de la ubicación" / "Location map". */
+  readonly descripcion = input<string | null>(null);
+  protected readonly textoDescripcion = computed(
+    () => this.descripcion() ?? traducir('compartido.mapa.descripcion'),
+  );
   readonly ubicacionElegida = output<Coordenada>();
 
   private readonly lienzo = viewChild.required<ElementRef<HTMLDivElement>>('lienzo');

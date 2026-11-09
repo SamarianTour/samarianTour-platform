@@ -1,4 +1,6 @@
 import { Rol } from '../api/modelos-nucleo';
+import { establecerIdioma } from '../idioma/idioma';
+import { traducir } from '../idioma/traducir';
 import { EnlaceNavegacion, enlaceActivo, enlacesDelRol } from './enlaces-por-rol';
 import { INICIO_POR_ROL, rolQueExige } from './rutas-por-rol';
 
@@ -10,7 +12,8 @@ const ROLES: Rol[] = [
   'ADMINISTRADOR',
 ];
 
-const textos = (rol: Rol | null) => enlacesDelRol(rol).map((enlace) => enlace.texto);
+/** Los textos de los enlaces tal como los ve quien tiene la interfaz en español. */
+const textos = (rol: Rol | null) => enlacesDelRol(rol).map((enlace) => traducir(enlace.clave));
 
 describe('enlacesDelRol', () => {
   it('sin sesión ofrece el catálogo y el camino para registrarse como prestador', () => {
@@ -31,12 +34,21 @@ describe('enlacesDelRol', () => {
     expect(textos(rol)).toEqual(esperado);
   });
 
+  it('el menú también está en inglés', () => {
+    establecerIdioma('en', { recordar: false });
+
+    expect(textos(null)).toEqual(['Catalog', "I'm a provider"]);
+    expect(textos('TURISTA')).toEqual(['Catalog', 'My requests', 'My reviews']);
+    expect(textos('PRESTADOR')).toEqual(['Catalog', 'My offers']);
+    expect(textos('ADMINISTRADOR')).toEqual(['Administration']);
+  });
+
   it.each(ROLES)(
     'el enlace de la sección de un %s apunta a una ruta que ese rol puede abrir',
     (rol) => {
       for (const enlace of enlacesDelRol(rol)) {
         const exige = rolQueExige(enlace.ruta);
-        expect(exige === null || exige === rol, `${enlace.texto} (${enlace.ruta})`).toBe(true);
+        expect(exige === null || exige === rol, `${enlace.clave} (${enlace.ruta})`).toBe(true);
       }
     },
   );

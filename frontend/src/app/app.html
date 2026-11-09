@@ -1,4 +1,4 @@
-<a class="saltar" href="#contenido">Saltar al contenido</a>
+<a class="saltar" href="#contenido">{{ 'app.saltar' | t }}</a>
 
 <header class="cabecera">
   <div class="cabecera__interior">
@@ -6,7 +6,7 @@
       <span class="marca__logo"><app-icono nombre="hoja" /></span>
       Samarian Tour
     </a>
-    <nav aria-label="Principal">
+    <nav [attr.aria-label]="'app.nav.principal' | t">
       <ul class="navegacion">
         @for (enlace of enlaces(); track enlace.ruta) {
           <li>
@@ -16,18 +16,19 @@
               [class.activo]="esActivo(enlace)"
               [attr.aria-current]="esActivo(enlace) ? 'page' : null"
             >
-              {{ enlace.texto }}
+              {{ enlace.clave | t }}
             </a>
           </li>
         }
       </ul>
     </nav>
     <div class="cabecera__cuenta">
+      <app-selector-idioma />
       @if (autenticada()) {
         <app-menu-usuario />
       } @else {
-        <a class="boton boton--secundario" routerLink="/iniciar-sesion">Iniciar sesión</a>
-        <a class="boton" routerLink="/registro">Registrarse</a>
+        <a class="boton boton--secundario" routerLink="/iniciar-sesion">{{ 'app.cuenta.iniciarSesion' | t }}</a>
+        <a class="boton" routerLink="/registro">{{ 'app.cuenta.registrarse' | t }}</a>
       }
     </div>
   </div>
@@ -44,7 +45,7 @@
         <span class="marca__logo"><app-icono nombre="hoja" /></span>
         Samarian Tour
       </span>
-      <p>Turismo sostenible en Santa Marta</p>
+      <p>{{ 'app.pie.lema' | t }}</p>
     </div>
   </div>
   <div class="pie__abajo">

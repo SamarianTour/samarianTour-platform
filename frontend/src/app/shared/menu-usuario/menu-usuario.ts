@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AvisosService } from '../../core/avisos/avisos.service';
+import { TPipe } from '../../core/idioma/t.pipe';
+import { traducir } from '../../core/idioma/traducir';
 import { SesionService } from '../../core/sesion/sesion.service';
 import { ROL } from '../etiquetas';
 import { Icono } from '../icono/icono';
@@ -20,7 +22,7 @@ import { Icono } from '../icono/icono';
  */
 @Component({
   selector: 'app-menu-usuario',
-  imports: [RouterLink, Icono],
+  imports: [RouterLink, Icono, TPipe],
   templateUrl: './menu-usuario.html',
   styleUrl: './menu-usuario.css',
 })
@@ -49,7 +51,7 @@ export class MenuUsuario {
   protected cerrarSesion(): void {
     this.cerrar();
     this.sesion.cerrarSesion().subscribe(() => {
-      this.avisos.mostrar('Cerraste sesión');
+      this.avisos.mostrar(traducir('app.menu.sesionCerrada'));
       void this.router.navigateByUrl('/');
     });
   }

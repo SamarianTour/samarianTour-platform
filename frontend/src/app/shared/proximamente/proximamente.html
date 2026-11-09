@@ -4,11 +4,9 @@
     @if (codigo(); as pantalla) {
       <p class="rotulo">{{ pantalla }}</p>
     }
-    <h1>{{ nombre() }}</h1>
-    <p class="pronto__texto">{{ descripcion() }}</p>
-    <p class="pronto__estado">
-      Esta pantalla está en construcción y llegará en una de las próximas fases.
-    </p>
-    <a class="boton" routerLink="/">Volver al catálogo</a>
+    <h1>{{ nombre() | t }}</h1>
+    <p class="pronto__texto">{{ descripcion() | t }}</p>
+    <p class="pronto__estado">{{ 'compartido.proximamente.estado' | t }}</p>
+    <a class="boton" routerLink="/">{{ 'compartido.proximamente.volver' | t }}</a>
   </div>
 </section>

@@ -10,6 +10,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { Foto } from '../../core/api/modelos';
+import { TPipe } from '../../core/idioma/t.pipe';
+import { traducir } from '../../core/idioma/traducir';
 import { Icono } from '../icono/icono';
 import { indiceCircular } from './navegacion';
 
@@ -23,7 +25,7 @@ const FOTOS_EN_MOSAICO = 3;
  */
 @Component({
   selector: 'app-galeria-fotos',
-  imports: [Icono],
+  imports: [Icono, TPipe],
   templateUrl: './galeria-fotos.html',
   styleUrl: './galeria-fotos.css',
 })
@@ -92,7 +94,11 @@ export class GaleriaFotos {
    * posición de la foto y el nombre de la oferta.
    */
   protected textoAlternativo(indice: number): string {
-    return `Foto ${indice + 1} de ${this.total()} de «${this.nombre()}»`;
+    return traducir('compartido.galeria.alt', {
+      indice: indice + 1,
+      total: this.total(),
+      nombre: this.nombre(),
+    });
   }
 
   private soltarPagina(): void {
