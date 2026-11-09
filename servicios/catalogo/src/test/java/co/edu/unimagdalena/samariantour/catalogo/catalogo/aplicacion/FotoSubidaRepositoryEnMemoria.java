@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Doble en memoria del registro de fotos, con el mismo borrado condicionado que los adaptadores (DC-47). */
 class FotoSubidaRepositoryEnMemoria implements FotoSubidaRepositoryPort {
@@ -26,6 +27,11 @@ class FotoSubidaRepositoryEnMemoria implements FotoSubidaRepositoryPort {
     @Override
     public List<FotoSubida> buscar(Collection<Foto> buscadas) {
         return buscadas.stream().distinct().map(fotos::get).filter(Objects::nonNull).toList();
+    }
+
+    @Override
+    public List<FotoSubida> delPrestador(UUID prestadorId) {
+        return fotos.values().stream().filter(subida -> subida.prestadorId().equals(prestadorId)).toList();
     }
 
     @Override

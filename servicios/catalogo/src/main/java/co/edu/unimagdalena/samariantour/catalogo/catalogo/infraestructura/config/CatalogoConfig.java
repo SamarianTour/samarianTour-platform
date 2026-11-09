@@ -132,8 +132,12 @@ public class CatalogoConfig {
     @Bean
     AplicarAvisoNucleoUseCase aplicarAvisoNucleo(OfertaRepositoryPort ofertas,
                                                  PrestadorCatalogoRepositoryPort prestadores,
+                                                 PerfilRepositoryPort perfiles,
+                                                 FotoSubidaRepositoryPort registroFotos,
+                                                 FileStoragePort almacenamiento,
                                                  AvisoProcesadoPort avisosProcesados, Clock reloj,
                                                  EjecutorConReintento reintento) {
-        return new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados, reloj, reintento);
+        return new AplicarAvisoNucleoService(ofertas, prestadores, perfiles, registroFotos, almacenamiento,
+                avisosProcesados, reloj, reintento);
     }
 }

@@ -35,6 +35,7 @@ import static org.springframework.data.mongodb.core.query.Query.query;
  *       uso antes de borrarla (DC-47).</li>
  *   <li>{@code fotos_por_ultimo_uso}: para que la limpieza recorra las fotos sin uso de la más antigua a la más
  *       reciente (DC-47).</li>
+ *   <li>{@code fotos_por_prestador}: para borrar las fotos del prestador que suprime sus datos (DC-52).</li>
  *   <li>{@code zona_por_nombre}: único, para que dos zonas no se llamen igual sin distinguir mayúsculas ni tildes
  *       (DC-49).</li>
  * </ul>
@@ -94,10 +95,14 @@ public class IndicesMongo implements InitializingBean {
         perfiles.createIndex(new Index()
                 .named("fotos_del_perfil")
                 .on(PerfilDocument.FOTOS, Sort.Direction.ASC));
-        mongo.indexOps(FotoSubidaDocument.class).createIndex(new Index()
+        IndexOperations fotos = mongo.indexOps(FotoSubidaDocument.class);
+        fotos.createIndex(new Index()
                 .named("fotos_por_ultimo_uso")
                 .on(FotoSubidaDocument.ULTIMO_USO, Sort.Direction.ASC)
                 .on("_id", Sort.Direction.ASC));
+        fotos.createIndex(new Index()
+                .named("fotos_por_prestador")
+                .on(FotoSubidaDocument.PRESTADOR_ID, Sort.Direction.ASC));
         completarClaveDeLasZonas();
         mongo.indexOps(ZonaDocument.class).createIndex(new Index()
                 .named("zona_por_nombre")

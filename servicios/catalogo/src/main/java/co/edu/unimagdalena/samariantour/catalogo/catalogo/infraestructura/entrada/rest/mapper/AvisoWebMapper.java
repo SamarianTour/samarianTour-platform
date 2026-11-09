@@ -5,6 +5,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Validac
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoHabilitacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoNucleoCommand;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoSupresionPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.entrada.rest.dto.AvisoRequest;
 
@@ -24,6 +25,8 @@ public final class AvisoWebMapper {
             case HABILITACION -> new AvisoHabilitacion(Validaciones.texto(aviso.idAviso(), "idAviso"),
                     Conversiones.uuid(aviso.prestadorId(), "prestadorId"),
                     Validaciones.presente(aviso.rntActivo(), "rntActivo"), version(aviso.version()));
+            case SUPRESION_PRESTADOR -> new AvisoSupresionPrestador(Validaciones.texto(aviso.idAviso(), "idAviso"),
+                    Conversiones.uuid(aviso.prestadorId(), "prestadorId"));
         };
     }
 
@@ -37,6 +40,7 @@ public final class AvisoWebMapper {
     /** Tipos de aviso que el núcleo envía al catálogo. */
     private enum TipoAviso {
         MODERACION,
-        HABILITACION
+        HABILITACION,
+        SUPRESION_PRESTADOR
     }
 }

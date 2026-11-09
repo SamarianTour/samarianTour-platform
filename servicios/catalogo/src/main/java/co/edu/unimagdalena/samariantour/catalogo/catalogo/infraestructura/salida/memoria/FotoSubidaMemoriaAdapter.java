@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,6 +45,11 @@ public class FotoSubidaMemoriaAdapter implements FotoSubidaRepositoryPort {
     @Override
     public List<FotoSubida> buscar(Collection<Foto> buscadas) {
         return buscadas.stream().distinct().map(fotos::get).filter(Objects::nonNull).toList();
+    }
+
+    @Override
+    public List<FotoSubida> delPrestador(UUID prestadorId) {
+        return fotos.values().stream().filter(subida -> subida.prestadorId().equals(prestadorId)).toList();
     }
 
     @Override

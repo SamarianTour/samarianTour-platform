@@ -6,6 +6,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.FotoSub
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Registro de las fotos subidas (DC-47). El archivo vive en {@link FileStoragePort}; aquí solo queda de quién es y
@@ -21,6 +22,9 @@ public interface FotoSubidaRepositoryPort {
 
     /** Los registros de esas fotos, sin orden garantizado; omite las que no están registradas. */
     List<FotoSubida> buscar(Collection<Foto> fotos);
+
+    /** Todas las fotos que subió el prestador, para sus ofertas o su perfil, sin orden garantizado (DN-45). */
+    List<FotoSubida> delPrestador(UUID prestadorId);
 
     /** Marca el uso de esas fotos en ese momento; si ya tenían uno posterior, lo conserva. Omite las que no están. */
     void marcarEnUso(Collection<Foto> fotos, Instant ahora);

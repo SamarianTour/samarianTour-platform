@@ -1,10 +1,15 @@
 package co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion;
 
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.DestinoFoto;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.EstadoModeracion;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Foto;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.FotoSubida;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.Oferta;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PerfilPublico;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.modelo.PrestadorCatalogo;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoHabilitacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoModeracion;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoSupresionPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.EditarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.ResultadoAviso;
@@ -13,8 +18,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.AGENCIA;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.aplicacion.EscenarioAplicacion.actividad;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.AHORA;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.FOTO_OTRO_PRESTADOR;
+import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.OTRO_PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.PRESTADOR;
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.DatosDePrueba.ZONA_ACTIVA;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +43,46 @@ class AplicarAvisoNucleoServiceTest {
 
         assertThat(servicio.aplicar(aviso)).isEqualTo(ResultadoAviso.APLICADO);
         assertThat(servicio.aplicar(aviso)).isEqualTo(ResultadoAviso.DUPLICADO);
+    }
+
+    @Nested
+    @DisplayName("Supresión del prestador (RF-13, DC-52)")
+    class Supresion {
+
+        @Test
+        @DisplayName("retira todas sus ofertas y borra su perfil y sus fotos; las del otro prestador no se tocan")
+        void suprime() {
+            Oferta publicada = escenario.ofertaPublicada("Tour", "50000", ZONA_ACTIVA);
+            Oferta enModeracion = escenario.publicar(AGENCIA, actividad("Otro tour", "60000", ZONA_ACTIVA));
+            Foto delPerfil = Foto.nueva();
+            escenario.registroFotos.registrar(new FotoSubida(delPerfil, PRESTADOR, DestinoFoto.PERFIL, AHORA));
+            escenario.fotos.guardar(delPerfil, new byte[]{1});
+            escenario.perfiles.guardar(new PerfilPublico(PRESTADOR, "Mar y Selva", "Expediciones",
+                    List.of(delPerfil), null, null, List.of()));
+
+            assertThat(servicio.aplicar(new AvisoSupresionPrestador("supresion-1", PRESTADOR)))
+                    .isEqualTo(ResultadoAviso.APLICADO);
+
+            assertThat(List.of(escenario.guardada(publicada.id()), escenario.guardada(enModeracion.id())))
+                    .allMatch(Oferta::retirada).noneMatch(Oferta::estaVisible);
+            assertThat(escenario.perfiles.buscarPorPrestador(PRESTADOR)).isEmpty();
+            assertThat(escenario.registroFotos.de(FOTO)).isEmpty();
+            assertThat(escenario.registroFotos.de(delPerfil)).isEmpty();
+            assertThat(escenario.fotos.tiene(delPerfil)).isFalse();
+            assertThat(escenario.registroFotos.de(FOTO_OTRO_PRESTADOR)).isPresent();
+        }
+
+        @Test
+        @DisplayName("sin ofertas ni perfil también se aplica; repetido con otro id no cambia nada")
+        void sinNada() {
+            assertThat(servicio.aplicar(new AvisoSupresionPrestador("supresion-1", OTRO_PRESTADOR)))
+                    .isEqualTo(ResultadoAviso.APLICADO);
+            assertThat(servicio.aplicar(new AvisoSupresionPrestador("supresion-2", OTRO_PRESTADOR)))
+                    .isEqualTo(ResultadoAviso.APLICADO);
+
+            assertThat(escenario.registroFotos.de(FOTO_OTRO_PRESTADOR)).isEmpty();
+            assertThat(escenario.registroFotos.de(FOTO)).isPresent();
+        }
     }
 
     @Nested

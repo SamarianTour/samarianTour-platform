@@ -23,6 +23,9 @@ public interface PerfilRepositoryPort {
      */
     void guardar(PerfilPublico perfil);
 
+    /** Borra el perfil del prestador, si tiene (DN-45). */
+    void eliminar(UUID prestadorId);
+
     /** Cuáles de esas fotos usa algún perfil (DC-47). */
     Set<Foto> fotosEnUso(Collection<Foto> fotos);
 }

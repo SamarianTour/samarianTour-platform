@@ -81,8 +81,8 @@ class EscenarioAplicacion {
     final LimpiarFotosSinUsoService limpiezaFotos = new LimpiarFotosSinUsoService(registroFotos, fotos, ofertas,
             perfiles, reloj);
     final ConsultarFotoService consultaFoto = new ConsultarFotoService(fotos);
-    final AplicarAvisoNucleoService avisos = new AplicarAvisoNucleoService(ofertas, prestadores, avisosProcesados,
-            reloj, reintento);
+    final AplicarAvisoNucleoService avisos = new AplicarAvisoNucleoService(ofertas, prestadores, perfiles,
+            registroFotos, fotos, avisosProcesados, reloj, reintento);
 
     private int secuenciaAvisos;
 
