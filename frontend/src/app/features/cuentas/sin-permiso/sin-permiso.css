@@ -1,0 +1,26 @@
+.aviso-icono {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 0.5rem;
+  border-radius: 18px;
+  background: var(--acento-suave);
+  color: var(--enlace);
+}
+
+.aviso-icono app-icono {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+.vacio h1 {
+  font-size: 1.5rem;
+}
+
+.acciones {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

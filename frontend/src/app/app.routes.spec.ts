@@ -3,29 +3,102 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { routes } from './app.routes';
+import { Rol } from './core/api/modelos-nucleo';
+import { CLAVE_SESION, aSesionGuardada } from './core/sesion/almacen-sesion';
+import { respuestaDeSesion } from './core/sesion/testing';
 
 describe('rutas de la aplicación', () => {
   let router: Router;
 
+  function conSesion(rol: Rol): void {
+    localStorage.setItem(CLAVE_SESION, JSON.stringify(aSesionGuardada(respuestaDeSesion({ rol }))));
+  }
+
+  /** Navega y devuelve dónde terminó, con redirecciones y guards ya aplicados. */
+  async function ir(url: string): Promise<string> {
+    await router.navigateByUrl(url);
+    return router.url;
+  }
+
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
     });
     router = TestBed.inject(Router);
   });
 
-  it.each(['/iniciar-sesion', '/ofertas/abc', '/mis-opiniones', '/prestador/ofertas'])(
-    '%s existe y no cae en el comodín',
-    async (url) => {
-      await router.navigateByUrl(url);
+  describe('sin sesión', () => {
+    it.each(['/', '/ofertas/abc', '/iniciar-sesion'])('%s es pública', async (url) => {
+      expect(await ir(url)).toBe(url);
+    });
 
-      expect(router.url).toBe(url);
-    },
-  );
+    it.each([
+      '/prestador/ofertas',
+      '/mis-opiniones',
+      '/turista/solicitudes/abc',
+      '/operador',
+      '/gestor',
+      '/admin/zonas',
+      '/sin-permiso',
+    ])('%s lleva a iniciar sesión y recuerda la página', async (url) => {
+      expect(await ir(url)).toBe(`/iniciar-sesion?volver=${encodeURIComponent(url)}`);
+    });
 
-  it('una dirección desconocida vuelve al catálogo', async () => {
-    await router.navigateByUrl('/no-existe');
+    it('una dirección desconocida vuelve al catálogo', async () => {
+      expect(await ir('/no-existe')).toBe('/');
+    });
+  });
 
-    expect(router.url).toBe('/');
+  describe('con la sesión de cada rol', () => {
+    it.each([
+      ['PRESTADOR', '/prestador/ofertas'],
+      ['PRESTADOR', '/prestador/ofertas/nueva'],
+      ['TURISTA', '/mis-opiniones'],
+      ['TURISTA', '/turista/solicitudes/abc'],
+      ['OPERADOR_DISPONIBILIDAD', '/operador'],
+      ['OPERADOR_DISPONIBILIDAD', '/operador/solicitudes/abc'],
+      ['GESTOR_DESTINO', '/gestor'],
+      ['ADMINISTRADOR', '/admin/zonas'],
+    ] as const)('un %s entra a %s', async (rol, url) => {
+      conSesion(rol);
+
+      expect(await ir(url)).toBe(url);
+    });
+
+    it.each([
+      ['TURISTA', '/prestador/ofertas'],
+      ['TURISTA', '/admin'],
+      ['PRESTADOR', '/mis-opiniones'],
+      ['PRESTADOR', '/turista/solicitudes/abc'],
+      ['PRESTADOR', '/operador'],
+      ['OPERADOR_DISPONIBILIDAD', '/gestor'],
+      ['GESTOR_DESTINO', '/admin'],
+      ['ADMINISTRADOR', '/prestador/ofertas'],
+    ] as const)('un %s que abre %s ve "no tienes permiso"', async (rol, url) => {
+      conSesion(rol);
+
+      expect(await ir(url)).toBe('/sin-permiso');
+    });
+
+    it('/turista lleva a la lista de solicitudes', async () => {
+      conSesion('TURISTA');
+
+      expect(await ir('/turista')).toBe('/turista/solicitudes');
+    });
+
+    it('el catálogo y la ficha siguen abiertos a todos los roles', async () => {
+      conSesion('ADMINISTRADOR');
+
+      expect(await ir('/')).toBe('/');
+      expect(await ir('/ofertas/abc')).toBe('/ofertas/abc');
+    });
+
+    it('/sin-permiso se ve con cualquier sesión', async () => {
+      conSesion('TURISTA');
+
+      expect(await ir('/sin-permiso')).toBe('/sin-permiso');
+    });
   });
 });

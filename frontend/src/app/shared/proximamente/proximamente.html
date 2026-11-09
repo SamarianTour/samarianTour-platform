@@ -1,0 +1,14 @@
+<section class="pronto">
+  <div class="pronto__caja">
+    <span class="pronto__icono" aria-hidden="true"><app-icono nombre="hoja" /></span>
+    @if (codigo(); as pantalla) {
+      <p class="rotulo">{{ pantalla }}</p>
+    }
+    <h1>{{ nombre() }}</h1>
+    <p class="pronto__texto">{{ descripcion() }}</p>
+    <p class="pronto__estado">
+      Esta pantalla está en construcción y llegará en una de las próximas fases.
+    </p>
+    <a class="boton" routerLink="/">Volver al catálogo</a>
+  </div>
+</section>

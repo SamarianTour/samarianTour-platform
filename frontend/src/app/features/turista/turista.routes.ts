@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { rolGuard } from '../../core/sesion/guards';
 
 /** Rutas del turista: el catálogo, la ficha de una oferta y sus opiniones propias. */
 export const RUTAS_TURISTA: Routes = [
@@ -11,6 +12,7 @@ export const RUTAS_TURISTA: Routes = [
   {
     path: 'mis-opiniones',
     title: 'Mis opiniones · Samarian Tour',
+    canActivate: [rolGuard('TURISTA')],
     loadComponent: () => import('./mis-opiniones/mis-opiniones').then((modulo) => modulo.MisOpiniones),
   },
   {
