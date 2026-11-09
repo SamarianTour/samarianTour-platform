@@ -20,6 +20,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Set;
 import java.util.UUID;
@@ -51,6 +53,9 @@ class PrestadoresIT extends IntegracionPostgresBase {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private Clock reloj;
 
     @MockitoSpyBean
     private NotificacionPrestadorPort whatsapp;
@@ -226,23 +231,26 @@ class PrestadoresIT extends IntegracionPostgresBase {
                                           creada_en)
                 VALUES (?, ?, ?, 300000, 4.00, 12000, 0, 288000, 'PENDIENTE', 0, '******0707', now())
                 """, dispersion, UUID.randomUUID(), hostal);
+        // Hoy en Colombia, como lo cuenta el núcleo. No sirve current_date: PostgreSQL lo calcula en la zona de la
+        // sesión, que el driver toma de la JVM, y en el CI es UTC, que de 19:00 a 24:00 de Colombia va un día adelante.
+        LocalDate hoy = LocalDate.now(reloj);
         UUID pagada = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO solicitudes (id, turista_id, oferta_id, tipo_oferta, nombre_oferta, prestador_id, zona_id,
                                          fecha_inicio, fecha_salida, personas, operador_id, estado,
                                          intento_pago_en_curso, intentos_pago_fallidos, creada_en, actualizada_en,
                                          revision)
-                VALUES (?, ?, 'OF-IT', 'ALOJAMIENTO', 'Hostal', ?, 'taganga', current_date - 1,
-                        current_date + 1, 2, ?, 'PAGADA', false, 0, now(), now(), 0)
-                """, pagada, UUID.randomUUID(), hostal, UUID.randomUUID());
+                VALUES (?, ?, 'OF-IT', 'ALOJAMIENTO', 'Hostal', ?, 'taganga', ?, ?, 2, ?, 'PAGADA', false, 0, now(),
+                        now(), 0)
+                """, pagada, UUID.randomUUID(), hostal, hoy.minusDays(1), hoy.plusDays(1), UUID.randomUUID());
         suprimir(hostal, "Minca2026")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("PRESTADOR_CON_COMPROMISOS"))
                 .andExpect(jsonPath("$.compromisos.length()").value(2));
 
         jdbc.update("DELETE FROM dispersiones WHERE id = ?", dispersion);
-        jdbc.update("UPDATE solicitudes SET fecha_salida = current_date - 1, fecha_inicio = current_date - 2 "
-                + "WHERE id = ?", pagada);
+        jdbc.update("UPDATE solicitudes SET fecha_inicio = ?, fecha_salida = ? WHERE id = ?", hoy.minusDays(2),
+                hoy.minusDays(1), pagada);
         SUPRIMIDAS.add(hostal);
         suprimir(hostal, "Minca2026").andExpect(status().isNoContent());
 
