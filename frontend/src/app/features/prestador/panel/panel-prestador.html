@@ -1,14 +1,28 @@
 <aside class="lateral">
-  @if (prestador(); as actual) {
+  @if (cuenta(); as actual) {
     <div class="identidad">
-      <span class="identidad__avatar" aria-hidden="true">{{ actual.nombre.charAt(0).toUpperCase() }}</span>
+      <span class="identidad__avatar" aria-hidden="true">{{ actual.nombre.trim().charAt(0).toUpperCase() }}</span>
       <div class="identidad__datos">
         <p class="rotulo">Prestador</p>
         <p class="identidad__nombre">{{ actual.nombre }}</p>
-        <p class="identidad__tipo">{{ etiquetaTipo[actual.tipo] }}</p>
+        <p class="identidad__tipo">
+          @if (tipo(); as tipoActual) {
+            {{ etiquetaTipo[tipoActual] }}
+          } @else {
+            RNT por registrar
+          }
+        </p>
       </div>
     </div>
-    <p class="campo__ayuda">Para entrar como otro prestador, cámbialo en «Usuario demo», arriba.</p>
+    @if (!tipo()) {
+      <p class="alerta alerta--aviso">
+        <app-icono nombre="alerta" />
+        <span>
+          Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ofertas. Esa pantalla llegará
+          en una próxima fase.
+        </span>
+      </p>
+    }
   }
 
   <nav aria-labelledby="panel-titulo">
@@ -35,14 +49,5 @@
 </aside>
 
 <div class="contenido">
-  @if (prestador()) {
-    <router-outlet />
-  } @else {
-    <section class="pagina">
-      <div class="tarjeta vacio">
-        <h1>El panel es para prestadores</h1>
-        <p class="texto-suave">Elige un prestador en «Usuario demo», en la cabecera, para ver y publicar sus ofertas.</p>
-      </div>
-    </section>
-  }
+  <router-outlet />
 </div>

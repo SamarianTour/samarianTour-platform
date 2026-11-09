@@ -7,7 +7,7 @@ import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.ser
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
-import { IdentidadService } from '../../../core/identidad/identidad.service';
+import { SesionService } from '../../../core/sesion/sesion.service';
 import { DialogoConfirmacion } from '../../../shared/dialogo-confirmacion/dialogo-confirmacion';
 import { TIPO_OFERTA, UNIDAD_PRECIO } from '../../../shared/etiquetas';
 import { Icono } from '../../../shared/icono/icono';
@@ -40,12 +40,14 @@ export class MisOfertas {
   private readonly ruta = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly servicio = inject(OfertasPrestadorService);
-  private readonly identidad = inject(IdentidadService);
+  private readonly sesion = inject(SesionService);
   private readonly avisos = inject(AvisosService);
   private readonly injector = inject(Injector);
 
   private readonly dialogo = viewChild.required(DialogoConfirmacion);
   private readonly recarga = new BehaviorSubject<void>(undefined);
+  /** Solo cambia si entra otra cuenta: editar los datos personales no vuelve a pedir la lista. */
+  private readonly idDeLaCuenta = computed(() => this.sesion.cuenta()?.id);
 
   protected readonly etiquetaTipo = TIPO_OFERTA;
   protected readonly etiquetaEstado = ESTADO_OFERTA;
@@ -67,8 +69,8 @@ export class MisOfertas {
   constructor() {
     const numeroDePagina = this.ruta.queryParamMap.pipe(map((params) => aPagina(params.get('page'))));
 
-    // Se vuelve a pedir la lista al cambiar de página, de prestador demo o después de un retiro.
-    combineLatest([numeroDePagina, toObservable(this.identidad.prestador), this.recarga])
+    // Se vuelve a pedir la lista al cambiar de página, de cuenta o después de un retiro.
+    combineLatest([numeroDePagina, toObservable(this.idDeLaCuenta), this.recarga])
       .pipe(
         tap(() => this.cargando.set(true)),
         switchMap(([pagina]) =>

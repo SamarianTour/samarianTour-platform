@@ -52,6 +52,11 @@
   font-size: 0.8125rem;
 }
 
+.lateral .alerta {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
 .menu {
   display: flex;
   flex-direction: column;
