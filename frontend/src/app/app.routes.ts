@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { rolGuard } from './core/sesion/guards';
+import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
 
 /** Las secciones que llegan en ramas posteriores ocupan su lugar con esta pantalla, ya protegida por rol. */
 const proximamente = () =>
@@ -86,11 +87,11 @@ export const routes: Routes = [
       },
     ],
   },
-  {
-    path: '',
-    loadChildren: () =>
-      import('./features/cuentas/cuentas.routes').then((modulo) => modulo.RUTAS_CUENTAS),
-  },
+  // Las pantallas de cuentas van sueltas en la raíz y NO dentro de un grupo `path: ''`. Un grupo de ruta vacía que no
+  // tiene un hijo para la dirección vacía "coincide" igual con "/" y la deja sin pantalla: el contenido queda en blanco,
+  // sin errores y sin peticiones, y las rutas que vienen después ni se intentan. Solo la definición de cada ruta se
+  // importa aquí; cada pantalla sigue cargándose por demanda.
+  ...RUTAS_CUENTAS,
   {
     path: '',
     loadChildren: () =>
