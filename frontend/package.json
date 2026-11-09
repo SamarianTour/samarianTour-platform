@@ -7,7 +7,10 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "gen:api": "openapi-typescript ../contratos/catalogo.openapi.yaml -o src/app/core/api/catalogo-api.ts --enum-values"
+    "gen:api": "npm run gen:api:catalogo && npm run gen:api:nucleo && npm run gen:api:recomendacion",
+    "gen:api:catalogo": "openapi-typescript ../contratos/catalogo.openapi.yaml -o src/app/core/api/catalogo-api.ts --enum-values",
+    "gen:api:nucleo": "openapi-typescript ../contratos/nucleo.openapi.yaml -o src/app/core/api/nucleo-api.ts --enum-values",
+    "gen:api:recomendacion": "openapi-typescript ../contratos/recomendacion.openapi.yaml -o src/app/core/api/recomendacion-api.ts --enum-values"
   },
   "private": true,
   "packageManager": "npm@11.12.1",

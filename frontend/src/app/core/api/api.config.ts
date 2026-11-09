@@ -4,6 +4,12 @@
  */
 export const API_CATALOGO = '/api/catalogo';
 
+/** Base de la API del núcleo: cuentas, solicitudes, pagos, prestadores, administración e indicadores. */
+export const API_NUCLEO = '/api/nucleo';
+
+/** Base de la API de recomendación: chatbot, alertas del destino y alternativas. */
+export const API_RECOMENDACION = '/api/recomendacion';
+
 /** Rutas que exigen la identidad del prestador. */
 export const API_PRESTADOR = `${API_CATALOGO}/prestador/`;
 
