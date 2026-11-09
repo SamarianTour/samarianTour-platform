@@ -1,0 +1,56 @@
+.visor {
+  display: none;
+  flex-direction: column;
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: min(40rem, calc(100vh - 2rem));
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-lg);
+  padding: 0;
+  background: var(--superficie);
+  box-shadow: var(--sombra-3);
+  color: var(--texto);
+}
+
+.visor[open] {
+  display: flex;
+}
+
+.visor::backdrop {
+  background: rgb(15 23 42 / 55%);
+}
+
+.visor__cabecera {
+  border-bottom: 1px solid var(--borde);
+  padding: 1.25rem 1.5rem 1rem;
+}
+
+.visor__cabecera h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.visor__cabecera p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+
+.visor__cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+
+/* El Markdown se muestra sin interpretar: los saltos de línea del texto se respetan. */
+.visor__texto {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.visor__pie {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--borde);
+  padding: 0.875rem 1.5rem;
+}

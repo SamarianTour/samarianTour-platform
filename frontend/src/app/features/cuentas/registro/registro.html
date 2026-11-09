@@ -1,0 +1,200 @@
+<app-pagina-acceso
+  titulo="Crear una cuenta"
+  subtitulo="Regístrate como turista para solicitar actividades, o como prestador para publicar las tuyas."
+  [ancha]="true"
+>
+  <form class="formulario" [formGroup]="formulario" (ngSubmit)="registrar()" novalidate>
+    <p class="campo__ayuda">
+      Los campos con <span class="requerido" aria-hidden="true">*</span
+      ><span class="solo-lectores">asterisco</span> son obligatorios.
+    </p>
+
+    <fieldset class="grupo">
+      <legend>¿Qué tipo de cuenta necesitas?</legend>
+      <div class="tipos">
+        <label class="tipo">
+          <input type="radio" formControlName="rol" value="TURISTA" />
+          <span class="tipo__icono" aria-hidden="true"><app-icono nombre="personas" /></span>
+          <span>
+            <b>Turista</b>
+            <small>Quiero descubrir y solicitar planes en Santa Marta.</small>
+          </span>
+        </label>
+        <label class="tipo">
+          <input type="radio" formControlName="rol" value="PRESTADOR" />
+          <span class="tipo__icono" aria-hidden="true"><app-icono nombre="paquete" /></span>
+          <span>
+            <b>Prestador</b>
+            <small>Ofrezco actividades, hospedaje o restaurante y quiero publicarlos.</small>
+          </span>
+        </label>
+      </div>
+    </fieldset>
+
+    @if (errorGeneral(); as mensaje) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensaje }}</span>
+      </p>
+    }
+
+    <div class="campos">
+      <div class="campo campos__ancho">
+        <!-- [SUPUESTO] El núcleo guarda un solo nombre: el del turista es su nombre completo y el del prestador, el de su negocio. -->
+        <label for="nombre">
+          {{ esTurista() ? 'Nombre completo' : 'Nombre comercial del negocio' }}
+          <span class="requerido" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="nombre"
+          type="text"
+          formControlName="nombre"
+          [autocomplete]="esTurista() ? 'name' : 'organization'"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('nombre') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('nombre') ? 'nombre-error' : null"
+        />
+        @if (!esTurista()) {
+          <p class="campo__ayuda">Como aparece en tu Registro Nacional de Turismo.</p>
+        }
+        @if (errorDe('nombre'); as mensaje) {
+          <p class="campo__error" id="nombre-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo campos__ancho">
+        <label for="correo"
+          >Correo electrónico <span class="requerido" aria-hidden="true">*</span></label
+        >
+        <input
+          id="correo"
+          type="email"
+          formControlName="correo"
+          autocomplete="email"
+          autocapitalize="none"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('correo') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('correo') ? 'correo-error' : null"
+        />
+        @if (errorDe('correo'); as mensaje) {
+          <p class="campo__error" id="correo-error">
+            {{ mensaje }}
+            @if (correoRepetido()) {
+              <a routerLink="/iniciar-sesion">Iniciar sesión</a> ·
+              <a routerLink="/recuperar-contrasena">Recuperar contraseña</a>
+            }
+          </p>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="contrasena"
+          >Contraseña <span class="requerido" aria-hidden="true">*</span></label
+        >
+        <input
+          id="contrasena"
+          type="password"
+          formControlName="contrasena"
+          autocomplete="new-password"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('contrasena') ? 'true' : null"
+          [attr.aria-describedby]="
+            errorDe('contrasena') ? 'contrasena-error contrasena-ayuda' : 'contrasena-ayuda'
+          "
+        />
+        <p class="campo__ayuda" id="contrasena-ayuda">
+          Mínimo {{ contrasenaMinima }} caracteres, con al menos una letra y un número.
+        </p>
+        @if (errorDe('contrasena'); as mensaje) {
+          <p class="campo__error" id="contrasena-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="repetir"
+          >Repite la contraseña <span class="requerido" aria-hidden="true">*</span></label
+        >
+        <input
+          id="repetir"
+          type="password"
+          formControlName="repetir"
+          autocomplete="new-password"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('repetir') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('repetir') ? 'repetir-error' : null"
+        />
+        @if (errorDe('repetir'); as mensaje) {
+          <p class="campo__error" id="repetir-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      @if (esTurista()) {
+        <div class="campo campos__ancho">
+          <label for="whatsapp">WhatsApp <span class="requerido" aria-hidden="true">*</span></label>
+          <input
+            id="whatsapp"
+            type="tel"
+            formControlName="whatsapp"
+            autocomplete="tel"
+            inputmode="tel"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('whatsapp') ? 'true' : null"
+            [attr.aria-describedby]="
+              errorDe('whatsapp') ? 'whatsapp-error whatsapp-ayuda' : 'whatsapp-ayuda'
+            "
+          />
+          <p class="campo__ayuda" id="whatsapp-ayuda">
+            Con el indicativo del país, por ejemplo +573001234567. Es el único canal por el que te
+            avisamos de tus solicitudes; te enviaremos un código para verificarlo.
+          </p>
+          @if (errorDe('whatsapp'); as mensaje) {
+            <p class="campo__error" id="whatsapp-error">{{ mensaje }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="consentimiento" [class.consentimiento--error]="errorDe('acepta')">
+      <input
+        id="acepta"
+        type="checkbox"
+        formControlName="acepta"
+        aria-required="true"
+        [attr.aria-invalid]="errorDe('acepta') ? 'true' : null"
+        [attr.aria-describedby]="errorDe('acepta') ? 'acepta-error' : null"
+      />
+      <div>
+        <label for="acepta">
+          Autorizo el tratamiento de mis datos personales conforme a la Política de Tratamiento de
+          Datos y a la Ley 1581 de 2012. Entiendo mis derechos como titular y que puedo
+          consultarlos, actualizarlos o solicitar su supresión.
+        </label>
+        @if (politica(); as vigente) {
+          <button type="button" class="enlace-texto" (click)="abrirPolitica()">
+            Leer la política (versión {{ vigente.version }})
+          </button>
+        } @else if (errorDePolitica(); as mensaje) {
+          <p class="campo__error">
+            {{ mensaje }}
+            <button type="button" class="enlace-texto" (click)="cargarPolitica()">
+              Intentar de nuevo
+            </button>
+          </p>
+        } @else {
+          <p class="campo__ayuda">Cargando la política…</p>
+        }
+        @if (errorDe('acepta'); as mensaje) {
+          <p class="campo__error" id="acepta-error">{{ mensaje }}</p>
+        }
+      </div>
+    </div>
+
+    <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
+      {{ enviando() ? 'Creando tu cuenta…' : 'Crear cuenta' }}
+    </button>
+  </form>
+
+  <p pie>¿Ya tienes cuenta? <a routerLink="/iniciar-sesion">Inicia sesión</a></p>
+</app-pagina-acceso>
+
+<app-visor-politica [version]="politica()?.version ?? ''" />

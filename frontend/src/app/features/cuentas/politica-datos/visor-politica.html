@@ -1,0 +1,32 @@
+<dialog #dialogo class="visor" aria-labelledby="visor-politica-titulo">
+  <header class="visor__cabecera">
+    <h2 id="visor-politica-titulo">Política de tratamiento de datos</h2>
+    <p class="texto-suave">Versión {{ version() }}</p>
+  </header>
+
+  <div
+    class="visor__cuerpo"
+    tabindex="0"
+    aria-label="Texto de la política"
+    role="region"
+    aria-live="polite"
+    [attr.aria-busy]="cargando()"
+  >
+    @if (cargando()) {
+      <p class="texto-suave">Cargando el texto…</p>
+    } @else if (error(); as mensaje) {
+      <p class="alerta alerta--error" role="alert">
+        <span>{{ mensaje }}</span>
+      </p>
+      <button type="button" class="boton boton--secundario" (click)="cargar()">
+        Intentar de nuevo
+      </button>
+    } @else if (texto(); as contenido) {
+      <div class="visor__texto">{{ contenido }}</div>
+    }
+  </div>
+
+  <footer class="visor__pie">
+    <button type="button" class="boton" (click)="cerrar()">Cerrar</button>
+  </footer>
+</dialog>

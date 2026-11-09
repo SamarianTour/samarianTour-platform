@@ -10,6 +10,11 @@ export const RUTAS_CUENTAS: Routes = [
       import('./iniciar-sesion/iniciar-sesion').then((modulo) => modulo.IniciarSesion),
   },
   {
+    path: 'registro',
+    title: 'Crear cuenta · Samarian Tour',
+    loadComponent: () => import('./registro/registro').then((modulo) => modulo.Registro),
+  },
+  {
     path: 'sin-permiso',
     title: 'Sin permiso · Samarian Tour',
     canActivate: [autenticadoGuard],
