@@ -27,6 +27,16 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'solicitudes' },
       {
+        // P02.2: la lista. El detalle (/turista/solicitudes/:id) sigue siendo "Próximamente" hasta su commit.
+        path: 'solicitudes',
+        pathMatch: 'full',
+        title: 'app.titulo.misSolicitudes',
+        loadComponent: () =>
+          import('./features/turista/solicitudes/mis-solicitudes/mis-solicitudes').then(
+            (modulo) => modulo.MisSolicitudes,
+          ),
+      },
+      {
         // P02.1: el botón "Solicitar disponibilidad" de la ficha lleva aquí. Sin sesión, el guard lleva a iniciar sesión y vuelve.
         path: 'solicitar/:ofertaId',
         title: 'app.titulo.solicitar',

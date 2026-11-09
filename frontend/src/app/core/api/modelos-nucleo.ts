@@ -31,3 +31,5 @@ export type CondicionesSolicitud = Esquemas['Condiciones'];
 export type TransicionSolicitud = Esquemas['Transicion'];
 /** Lo que el turista decide sobre las condiciones de una solicitud atendida (RF-43). */
 export type DecisionCondiciones = Esquemas['RespuestaCondicionesRequest']['decision'];
+/** Una solicitud como aparece en la lista: sin historial ni condiciones (esas llegan al abrirla). */
+export type SolicitudResumen = Esquemas['SolicitudResumen'];
