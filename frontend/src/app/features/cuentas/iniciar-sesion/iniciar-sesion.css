@@ -1,0 +1,25 @@
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.formulario .alerta {
+  margin: 0;
+}
+
+.opciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+
+.opciones a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}

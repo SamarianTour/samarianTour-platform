@@ -8,6 +8,10 @@ export const routes: Routes = [
   },
   {
     path: '',
+    loadChildren: () => import('./features/cuentas/cuentas.routes').then((modulo) => modulo.RUTAS_CUENTAS),
+  },
+  {
+    path: '',
     loadChildren: () => import('./features/turista/turista.routes').then((modulo) => modulo.RUTAS_TURISTA),
   },
   { path: '**', redirectTo: '' },

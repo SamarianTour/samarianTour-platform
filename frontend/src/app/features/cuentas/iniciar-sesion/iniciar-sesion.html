@@ -1,0 +1,60 @@
+<app-pagina-acceso
+  titulo="Iniciar sesión"
+  subtitulo="Entra para gestionar tus solicitudes, opiniones y datos."
+>
+  <form class="formulario" [formGroup]="formulario" (ngSubmit)="entrar()" novalidate>
+    @if (error(); as mensaje) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensaje }}</span>
+      </p>
+    }
+
+    <div class="campo">
+      <label for="correo">Correo electrónico</label>
+      <input
+        id="correo"
+        type="email"
+        formControlName="correo"
+        autocomplete="email"
+        autocapitalize="none"
+        aria-required="true"
+        [attr.aria-invalid]="errorDe('correo') ? 'true' : null"
+        [attr.aria-describedby]="errorDe('correo') ? 'correo-error' : null"
+      />
+      @if (errorDe('correo'); as mensaje) {
+        <p class="campo__error" id="correo-error">{{ mensaje }}</p>
+      }
+    </div>
+
+    <div class="campo">
+      <label for="contrasena">Contraseña</label>
+      <input
+        id="contrasena"
+        type="password"
+        formControlName="contrasena"
+        autocomplete="current-password"
+        aria-required="true"
+        [attr.aria-invalid]="errorDe('contrasena') ? 'true' : null"
+        [attr.aria-describedby]="errorDe('contrasena') ? 'contrasena-error' : null"
+      />
+      @if (errorDe('contrasena'); as mensaje) {
+        <p class="campo__error" id="contrasena-error">{{ mensaje }}</p>
+      }
+    </div>
+
+    <div class="opciones">
+      <label class="opcion">
+        <input type="checkbox" formControlName="recordar" />
+        <span>Recordarme</span>
+      </label>
+      <a routerLink="/recuperar-contrasena">¿Olvidaste tu contraseña?</a>
+    </div>
+
+    <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
+      {{ enviando() ? 'Entrando…' : 'Entrar' }}
+    </button>
+  </form>
+
+  <p pie>¿No tienes cuenta? <a routerLink="/registro">Crea una</a></p>
+</app-pagina-acceso>
