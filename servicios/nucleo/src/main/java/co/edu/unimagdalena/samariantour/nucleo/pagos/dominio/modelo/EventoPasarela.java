@@ -68,6 +68,21 @@ public record EventoPasarela(UUID id, String claveUnica, String transaccionId, S
                 procesadoEn, resultado, procesamiento, intentosProcesamiento, ultimoError, siguienteIntentoEn, ahora);
     }
 
+    /**
+     * El administrador lo devuelve a la cola tras revisarlo (DN-44): queda pendiente, con los fallos en cero, para
+     * procesarse de inmediato. El último error se conserva como referencia; el aviso de fallido se borra, así que si
+     * vuelve a fallar cinco veces se avisa otra vez.
+     *
+     * @throws IllegalStateException si no está fallido
+     */
+    public EventoPasarela reintentado(Instant ahora) {
+        if (procesamiento != EstadoProcesamiento.FALLIDO) {
+            throw new IllegalStateException("El evento " + id + " no está fallido: " + procesamiento);
+        }
+        return new EventoPasarela(id, claveUnica, transaccionId, referencia, estado, montoCentavos, cuerpo, recibidoEn,
+                procesadoEn, resultado, EstadoProcesamiento.PENDIENTE, 0, ultimoError, ahora, null);
+    }
+
     private static String recortar(String error) {
         if (error == null) {
             return null;

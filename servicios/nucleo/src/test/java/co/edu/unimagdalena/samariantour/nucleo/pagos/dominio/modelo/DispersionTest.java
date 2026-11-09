@@ -80,4 +80,25 @@ class DispersionTest {
         assertThat(cuenta.toString()).doesNotContain("4011223344").contains("******0101");
         assertThat(new CuentaCobro(TipoCuenta.NEQUI, "Nequi", "12").enmascarada()).isEqualTo("****");
     }
+
+    @Test
+    @DisplayName("fallida, vuelve a pendiente al cambiar la cuenta: intentos en cero y la causa como pista (DN-44)")
+    void reactivar() {
+        Dispersion dispersion = pendiente();
+        for (int i = 0; i < 4; i++) {
+            dispersion.registrarFallo("cuenta inexistente", "******0404", AHORA, BASE);
+        }
+        dispersion.registrarAviso(AHORA);
+        Instant despues = AHORA.plus(Duration.ofHours(2));
+
+        dispersion.reactivar(despues);
+
+        assertThat(dispersion.estado()).isEqualTo(EstadoDispersion.PENDIENTE);
+        assertThat(dispersion.intentos()).isZero();
+        assertThat(dispersion.proximoIntento()).isEqualTo(despues);
+        assertThat(dispersion.avisoEnviadoEn()).isNull();
+        assertThat(dispersion.ultimaCausa()).isEqualTo("cuenta inexistente");
+        assertThat(dispersion.reactivaciones()).isEqualTo(1);
+        assertThatThrownBy(() -> dispersion.reactivar(despues)).isInstanceOf(IllegalStateException.class);
+    }
 }

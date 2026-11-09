@@ -22,4 +22,14 @@ public interface PagosAdministracionApi {
 
     /** Del más reciente al más antiguo. */
     List<PagoTardioRegistrado> pagosTardios();
+
+    /** Los eventos que fallaron cinco veces al procesarse, del recibido más reciente al más antiguo (DN-44). */
+    List<EventoPagoFallido> eventosFallidos();
+
+    /**
+     * Devuelve el evento a la cola, con los fallos en cero (DN-44).
+     *
+     * @throws EventoNoReintentableException si no existe o no está fallido
+     */
+    EventoPagoFallido reintentarEvento(UUID eventoId);
 }
