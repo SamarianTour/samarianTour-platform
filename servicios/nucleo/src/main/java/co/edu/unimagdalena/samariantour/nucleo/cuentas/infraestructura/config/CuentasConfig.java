@@ -15,6 +15,7 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.RenovarSesionS
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.RestablecerContrasenaService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.SolicitarRestablecimientoService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.SolicitarSupresionService;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.SuprimirCuentaPrestadorService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.aplicacion.VerificarWhatsAppService;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.CerrarSesionUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.ConsultarContactoUseCase;
@@ -29,6 +30,7 @@ import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.Re
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.RestablecerContrasenaUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.SolicitarRestablecimientoUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.SolicitarSupresionUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.SuprimirCuentaPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.entrada.VerificarWhatsAppUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.AvisosCatalogoPort;
 import co.edu.unimagdalena.samariantour.nucleo.cuentas.dominio.puerto.salida.CodigoRepositoryPort;
@@ -119,6 +121,13 @@ public class CuentasConfig {
     SolicitarSupresionUseCase solicitarSupresion(UsuarioRepositoryPort usuarios, SesionRepositoryPort sesiones,
                                                  AvisosCatalogoPort avisos, PasswordHasherPort hasher, Clock reloj) {
         return new SolicitarSupresionService(usuarios, sesiones, avisos, hasher, reloj);
+    }
+
+    @Bean
+    SuprimirCuentaPrestadorUseCase suprimirCuentaPrestador(UsuarioRepositoryPort usuarios,
+                                                           SesionRepositoryPort sesiones, PasswordHasherPort hasher,
+                                                           Clock reloj) {
+        return new SuprimirCuentaPrestadorService(usuarios, sesiones, hasher, reloj);
     }
 
     @Bean
