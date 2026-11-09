@@ -1,3 +1,4 @@
+import { establecerIdioma } from '../idioma/idioma';
 import { mensajeDeBloqueo } from './bloqueo';
 
 const AHORA = new Date('2026-11-08T15:00:00').getTime();
@@ -28,6 +29,31 @@ describe('mensajeDeBloqueo', () => {
     const mensaje = mensajeDeBloqueo(new Date(AHORA + 10 * 3600_000).toISOString(), AHORA);
 
     expect(mensaje).toContain('9 de noviembre');
+  });
+
+  describe('en inglés', () => {
+    beforeEach(() => establecerIdioma('en', { recordar: false }));
+
+    it('dice cuántos minutos faltan, con singular y plural', () => {
+      expect(mensajeDeBloqueo(enMinutos(15), AHORA)).toContain('in 15 minutes');
+      expect(mensajeDeBloqueo(enMinutos(1), AHORA)).toContain('in 1 minute,');
+    });
+
+    it('incluye la hora a la que se puede intentar de nuevo', () => {
+      expect(mensajeDeBloqueo(enMinutos(15), AHORA)).toMatch(/at 3:15\s?PM/);
+    });
+
+    it('si el bloqueo termina otro día, incluye el día', () => {
+      const mensaje = mensajeDeBloqueo(new Date(AHORA + 10 * 3600_000).toISOString(), AHORA);
+
+      expect(mensaje).toContain('on November 9');
+    });
+
+    it('da un mensaje general cuando la fecha ya pasó', () => {
+      expect(mensajeDeBloqueo(new Date(AHORA - 1000).toISOString(), AHORA)).toBe(
+        'Your account is locked after too many failed attempts. Try again in a few minutes.',
+      );
+    });
   });
 
   it.each([

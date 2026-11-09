@@ -14,7 +14,7 @@ import {
 } from 'rxjs';
 import { API_NUCLEO } from '../api/api.config';
 import { Cuenta, RespuestaSesion } from '../api/modelos-nucleo';
-import { ErrorApi, MENSAJES } from '../errores/error-api';
+import { ErrorApi } from '../errores/error-api';
 import { aErrorApi } from '../errores/errores.interceptor';
 import {
   CLAVE_SESION,
@@ -92,7 +92,7 @@ export class SesionService {
     }
     const sesion = this.actual();
     if (!sesion) {
-      return throwError(() => new ErrorApi(401, 'SESION_INVALIDA', MENSAJES.SESION_INVALIDA));
+      return throwError(() => new ErrorApi(401, 'SESION_INVALIDA', 'errores.codigo.SESION_INVALIDA'));
     }
     // Otra pestaña puede haber renovado ya: su token es el vigente y el nuestro, que sirvió una vez, ya no.
     const deOtraPestana = leerSesion();

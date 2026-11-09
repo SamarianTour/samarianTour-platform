@@ -7,7 +7,10 @@ import { AREAS, TEXTOS } from './textos';
  */
 
 /** Textos que se escriben igual en los dos idiomas a propósito (nombres propios, siglas). */
-const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>();
+const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
+  // "Kayak" se escribe igual en español y en inglés.
+  'etiquetas.modalidad.KAYAK',
+]);
 
 /**
  * El glosario (`GLOSARIO.md`): si el texto en español usa el término de la izquierda, el inglés debe usar el de la
@@ -107,9 +110,10 @@ describe('diccionarios de la interfaz', () => {
   });
 
   it('las claves se escriben area.pantalla.texto', () => {
+    // Una clave puede terminar en el valor del contrato (`etiquetas.rol.OPERADOR_DISPONIBILIDAD`, `errores.codigo.X_Y`).
     const mal = entradas
       .map((e) => e.clave)
-      .filter((clave) => !/^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)+$/.test(clave));
+      .filter((clave) => !/^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9_]+)+$/.test(clave));
 
     expect(mal).toEqual([]);
   });

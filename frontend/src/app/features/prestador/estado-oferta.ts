@@ -1,15 +1,17 @@
 import { OfertaPrestador, VersionOferta } from '../../core/api/modelos';
+import { tablaDeTextos } from '../../core/idioma/tabla-de-textos';
 
 /** Estado de una oferta tal como lo ve su prestador. Se calcula: la API no lo envía. */
 export type EstadoOferta = 'PUBLICADA' | 'EN_MODERACION' | 'RECHAZADA' | 'PUBLICADA_CON_CAMBIOS' | 'RETIRADA';
 
-export const ESTADO_OFERTA: Record<EstadoOferta, string> = {
-  PUBLICADA: 'Publicada',
-  EN_MODERACION: 'En moderación',
-  RECHAZADA: 'Rechazada',
-  PUBLICADA_CON_CAMBIOS: 'Publicada con cambios en revisión',
-  RETIRADA: 'Retirada',
-};
+/** El nombre de cada estado en el idioma vigente (ver `core/idioma/etiquetas.i18n.ts`). */
+export const ESTADO_OFERTA = tablaDeTextos<EstadoOferta>({
+  PUBLICADA: 'etiquetas.estadoOferta.PUBLICADA',
+  EN_MODERACION: 'etiquetas.estadoOferta.EN_MODERACION',
+  RECHAZADA: 'etiquetas.estadoOferta.RECHAZADA',
+  PUBLICADA_CON_CAMBIOS: 'etiquetas.estadoOferta.PUBLICADA_CON_CAMBIOS',
+  RETIRADA: 'etiquetas.estadoOferta.RETIRADA',
+});
 
 /** Color de la etiqueta de cada estado: una clase de las etiquetas globales. */
 export const CLASE_DE_ESTADO: Record<EstadoOferta, string> = {
