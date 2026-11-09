@@ -118,10 +118,19 @@
         </button>
       </div>
     </form>
+  } @else if (autenticada()) {
+    <p class="alerta alerta--info">
+      <app-icono nombre="info" />
+      <span>Solo los turistas pueden dejar una opinión, y únicamente sobre ofertas que hayan pagado.</span>
+    </p>
   } @else {
     <p class="alerta alerta--info">
       <app-icono nombre="info" />
-      <span>Para dejar una opinión, elige un turista en «Usuario demo», en la cabecera.</span>
+      <span>
+        Para dejar una opinión,
+        <a routerLink="/iniciar-sesion" [queryParams]="{ volver: router.url }">inicia sesión</a> como turista. Solo puedes
+        opinar sobre ofertas que hayas pagado.
+      </span>
     </p>
   }
 </section>

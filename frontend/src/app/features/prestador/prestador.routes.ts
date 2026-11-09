@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-/** Rutas del prestador, todas dentro del panel que lleva el selector de prestador demo. */
+/** Rutas del prestador, todas dentro de su panel. Las protege la ruta `/prestador` (solo la sesión de un prestador). */
 export const RUTAS_PRESTADOR: Routes = [
   {
     path: '',

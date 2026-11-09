@@ -9,7 +9,7 @@ const TAMANO_MAXIMO = 100;
 
 /**
  * Ofertas del prestador: listar las propias, publicar, editar y retirar.
- * La identidad no se pasa aquí: la agrega el interceptor de identidad.
+ * La identidad no se pasa aquí: el interceptor de sesión agrega el token a cada petición.
  */
 @Injectable({ providedIn: 'root' })
 export class OfertasPrestadorService {

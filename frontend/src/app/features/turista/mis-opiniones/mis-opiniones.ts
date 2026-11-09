@@ -2,12 +2,12 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { BehaviorSubject, EMPTY, catchError, combineLatest, map, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { EstadoOpinion, PaginaMisOpiniones } from '../../../core/api/modelos';
 import { OpinionesService } from '../../../core/api/opiniones.service';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
-import { IdentidadService } from '../../../core/identidad/identidad.service';
+import { SesionService } from '../../../core/sesion/sesion.service';
 import { ESTADO_OPINION } from '../../../shared/etiquetas';
 import { Estrellas } from '../../../shared/estrellas/estrellas';
 import { Icono } from '../../../shared/icono/icono';
@@ -25,8 +25,8 @@ const CLASE_DE_ESTADO: Record<EstadoOpinion, string> = {
 type Resultado = { pagina: PaginaMisOpiniones } | { error: ErrorApi };
 
 /**
- * "Mis opiniones": las del turista demo elegido en cualquier estado, con el motivo si fue rechazada (DC-42). Se
- * recarga al cambiar de turista.
+ * "Mis opiniones": las del turista de la sesión en cualquier estado, con el motivo si fue rechazada (DC-42). La ruta
+ * solo la abre un turista. Se recarga si entra otra cuenta.
  */
 @Component({
   selector: 'app-mis-opiniones',
@@ -36,7 +36,9 @@ type Resultado = { pagina: PaginaMisOpiniones } | { error: ErrorApi };
 })
 export class MisOpiniones {
   private readonly servicio = inject(OpinionesService);
-  protected readonly turista = inject(IdentidadService).turista;
+  private readonly sesion = inject(SesionService);
+  /** Solo cambia si entra otra cuenta: editar los datos personales no vuelve a pedir la lista. */
+  private readonly idDeLaCuenta = computed(() => this.sesion.cuenta()?.id);
 
   protected readonly etiquetaEstado = ESTADO_OPINION;
   protected readonly claseDeEstado = CLASE_DE_ESTADO;
@@ -54,15 +56,10 @@ export class MisOpiniones {
   });
 
   constructor() {
-    combineLatest([toObservable(this.turista), this.pagina])
+    combineLatest([toObservable(this.idDeLaCuenta), this.pagina])
       .pipe(
-        switchMap(([turista, pagina]) => {
+        switchMap(([, pagina]) => {
           this.cargando.set(true);
-          if (!turista) {
-            this.resultado.set(null);
-            this.cargando.set(false);
-            return EMPTY;
-          }
           return this.servicio.mias(pagina, TAMANO_PAGINA).pipe(
             map((respuesta): Resultado => ({ pagina: respuesta })),
             catchError((fallo: unknown) => of<Resultado>({ error: aErrorApi(fallo) })),

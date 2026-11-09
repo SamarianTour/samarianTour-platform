@@ -78,7 +78,7 @@
   height: 1.25rem;
 }
 
-/* La navegación va al centro; el selector de usuario demo queda a la derecha. */
+/* La navegación va al centro; la cuenta (o los botones de acceso) queda a la derecha. */
 nav {
   margin-inline: auto;
 }

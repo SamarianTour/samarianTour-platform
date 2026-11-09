@@ -12,7 +12,6 @@ import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from 
 import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
 import { erroresInterceptor } from './core/errores/errores.interceptor';
-import { identidadInterceptor } from './core/identidad/identidad.interceptor';
 import { SesionService } from './core/sesion/sesion.service';
 import { sesionInterceptor } from './core/sesion/sesion.interceptor';
 
@@ -24,7 +23,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
     // La sesión va primero: recibe los errores ya traducidos y puede repetir la petición con un token renovado.
-    provideHttpClient(withInterceptors([sesionInterceptor, identidadInterceptor, erroresInterceptor])),
+    provideHttpClient(withInterceptors([sesionInterceptor, erroresInterceptor])),
     // Con una sesión guardada, se renueva antes de la primera petición si su token ya venció o está por vencer.
     provideAppInitializer(() => firstValueFrom(inject(SesionService).reanudar())),
     { provide: LOCALE_ID, useValue: 'es-CO' },
