@@ -48,11 +48,9 @@ export const APP = diccionario(
     'app.titulo.contrasenaNueva': 'Contraseña nueva',
     'app.titulo.sinPermiso': 'Sin permiso',
     'app.titulo.solicitar': 'Solicitar disponibilidad',
+    'app.titulo.detalleSolicitud': 'Detalle de la solicitud',
 
     // Pantallas que llegan en ramas posteriores (se ven con la ruta ya protegida por rol).
-    'app.proximamente.turista.nombre': 'Mis solicitudes',
-    'app.proximamente.turista.descripcion':
-      'Aquí verás el estado de tus solicitudes de disponibilidad, y podrás confirmar o declinar las condiciones y pagar.',
     'app.proximamente.operador.nombre': 'Cola de solicitudes',
     'app.proximamente.operador.descripcion':
       'Aquí atenderás la cola de solicitudes de disponibilidad de los prestadores que tienes asignados.',
@@ -102,10 +100,8 @@ export const APP = diccionario(
     'app.titulo.contrasenaNueva': 'New password',
     'app.titulo.sinPermiso': 'No permission',
     'app.titulo.solicitar': 'Request availability',
+    'app.titulo.detalleSolicitud': 'Request details',
 
-    'app.proximamente.turista.nombre': 'My requests',
-    'app.proximamente.turista.descripcion':
-      "Here you'll see the status of your availability requests, and you'll be able to accept or decline the terms and pay.",
     'app.proximamente.operador.nombre': 'Request queue',
     'app.proximamente.operador.descripcion':
       'Here you will handle the queue of availability requests from the providers assigned to you.',

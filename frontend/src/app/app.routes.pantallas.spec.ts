@@ -16,6 +16,7 @@ import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
+import { DetalleSolicitud } from './features/turista/solicitudes/detalle-solicitud/detalle-solicitud';
 import { MisSolicitudes } from './features/turista/solicitudes/mis-solicitudes/mis-solicitudes';
 import { FormularioSolicitud } from './features/turista/solicitudes/formulario-solicitud/formulario-solicitud';
 import { Ficha } from './features/turista/ficha/ficha';
@@ -93,9 +94,9 @@ describe('pantallas que crea cada ruta', () => {
       ['/ofertas/abc', Ficha],
       ['/mis-opiniones', MisOpiniones],
       ['/mis-datos', MisDatos],
-      // P02.2: la lista. El detalle sigue siendo "Próximamente" hasta su commit.
+      // P02.2: la lista y el detalle. El núcleo enlaza al detalle desde el regreso del pago y el aviso de WhatsApp.
       ['/turista/solicitudes', MisSolicitudes],
-      ['/turista/solicitudes/abc', Proximamente],
+      ['/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20', DetalleSolicitud],
       // P02.1: el botón "Solicitar disponibilidad" de la ficha.
       ['/turista/solicitar/b00000000000000000000001', FormularioSolicitud],
     ] as const)('%s crea su pantalla', async (url, pantalla) => {

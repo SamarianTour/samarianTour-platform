@@ -1,5 +1,6 @@
 import { EstadoSolicitud, TransicionSolicitud } from '../../../core/api/modelos-nucleo';
 import { tablaDeTextos } from '../../../core/idioma/tabla-de-textos';
+import type { PasoSolicitud } from '../../../shared/pasos-solicitud/pasos-solicitud';
 
 /** Los nueve estados de una solicitud (DN-09), en el orden del ciclo de vida. */
 export const ESTADOS_SOLICITUD: readonly EstadoSolicitud[] = [
@@ -118,4 +119,24 @@ export function accionPrincipal(estado: EstadoSolicitud): AccionSolicitud {
 /** El historial de la más antigua a la más reciente, sin modificar el original. */
 export function ordenarHistorial(historial: readonly TransicionSolicitud[]): TransicionSolicitud[] {
   return [...historial].sort((a, b) => Date.parse(a.en) - Date.parse(b.en));
+}
+
+/**
+ * En qué paso del flujo (solicitar → confirmar → pagar → listo) está una solicitud. Las que terminaron sin pagarse
+ * (no disponible, sin respuesta, declinada, vencida) ya no avanzan en el flujo y no tienen paso.
+ */
+export function pasoDe(estado: EstadoSolicitud): PasoSolicitud | null {
+  switch (estado) {
+    case 'PENDIENTE':
+      return 'solicitar';
+    case 'ATENDIDA':
+      return 'confirmar';
+    case 'CONFIRMADA':
+    case 'PAGO_FALLIDO':
+      return 'pagar';
+    case 'PAGADA':
+      return 'listo';
+    default:
+      return null;
+  }
 }

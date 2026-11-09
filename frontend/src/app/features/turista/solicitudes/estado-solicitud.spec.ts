@@ -12,6 +12,7 @@ import {
   coincideConFiltro,
   estaActiva,
   ordenarHistorial,
+  pasoDe,
 } from './estado-solicitud';
 
 describe('estados de una solicitud', () => {
@@ -140,5 +141,30 @@ describe('ordenarHistorial', () => {
     ordenarHistorial(pasos);
 
     expect(pasos.map((paso) => paso.a)).toEqual(antes);
+  });
+});
+
+describe('pasoDe (pasos del flujo)', () => {
+  it.each([
+    ['PENDIENTE', 'solicitar'],
+    ['ATENDIDA', 'confirmar'],
+    ['CONFIRMADA', 'pagar'],
+    ['PAGO_FALLIDO', 'pagar'],
+    ['PAGADA', 'listo'],
+  ] as const)('%s → %s', (estado, paso) => {
+    expect(pasoDe(estado)).toBe(paso);
+  });
+
+  it.each(['NO_DISPONIBLE', 'SIN_RESPUESTA', 'DECLINADA', 'VENCIDA'] as const)(
+    '%s ya no avanza: sin paso',
+    (estado) => {
+      expect(pasoDe(estado)).toBeNull();
+    },
+  );
+
+  it('todo estado activo o pagado tiene paso; ninguno terminal sin pagar lo tiene', () => {
+    for (const estado of ESTADOS_SOLICITUD) {
+      expect(pasoDe(estado) !== null, estado).toBe(estaActiva(estado) || estado === 'PAGADA');
+    }
   });
 });

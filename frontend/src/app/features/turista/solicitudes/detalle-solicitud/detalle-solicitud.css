@@ -1,0 +1,128 @@
+.detalle__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.detalle__icono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 12px;
+}
+
+.detalle__titulo {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.detalle__titulo h1 {
+  margin: 0;
+}
+
+.detalle__descripcion {
+  margin: 0.75rem 0 0;
+}
+
+/* El plazo: texto e icono, con más contraste cuando queda poco o ya terminó. */
+.plazo {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 1rem 0 0;
+  border: 1px solid var(--info-borde);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  background: var(--info-fondo);
+  color: var(--info-texto);
+  font-weight: 600;
+}
+
+.plazo--urgente {
+  border-color: var(--aviso-borde);
+  background: var(--aviso-fondo);
+  color: var(--aviso-texto);
+}
+
+.detalle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: 2rem;
+  align-items: start;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 56rem) {
+  .detalle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.detalle__principal,
+.detalle__lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.detalle h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.datos__ancho {
+  grid-column: 1 / -1;
+}
+
+.detalle__codigo {
+  font-variant-numeric: tabular-nums;
+}
+
+.detalle__precio {
+  color: var(--enlace-fuerte);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.historial {
+  display: flex;
+  flex-direction: column;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historial__paso {
+  position: relative;
+  padding: 0 0 1.25rem 1.5rem;
+  border-left: 2px solid var(--borde-control);
+}
+
+.historial__paso:last-child {
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+
+.historial__paso::before {
+  content: '';
+  position: absolute;
+  top: 0.25rem;
+  left: -0.4375rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--enlace);
+}
+
+.historial__paso p {
+  margin: 0;
+}
+
+.historial__fecha,
+.historial__motivo {
+  font-size: 0.875rem;
+}

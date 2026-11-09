@@ -27,7 +27,7 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'solicitudes' },
       {
-        // P02.2: la lista. El detalle (/turista/solicitudes/:id) sigue siendo "Próximamente" hasta su commit.
+        // P02.2: la lista.
         path: 'solicitudes',
         pathMatch: 'full',
         title: 'app.titulo.misSolicitudes',
@@ -46,14 +46,13 @@ export const routes: Routes = [
           ),
       },
       {
-        path: '**',
-        title: 'app.titulo.misSolicitudes',
-        data: {
-          codigo: 'P02.2',
-          nombre: 'app.proximamente.turista.nombre',
-          descripcion: 'app.proximamente.turista.descripcion',
-        },
-        loadComponent: proximamente,
+        // P02.2: el detalle. El núcleo enlaza exactamente aquí: el regreso de la pasarela de pago y el aviso de WhatsApp.
+        path: 'solicitudes/:id',
+        title: 'app.titulo.detalleSolicitud',
+        loadComponent: () =>
+          import('./features/turista/solicitudes/detalle-solicitud/detalle-solicitud').then(
+            (modulo) => modulo.DetalleSolicitud,
+          ),
       },
     ],
   },

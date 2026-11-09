@@ -1,0 +1,511 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { EstadoSolicitud, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { erroresInterceptor } from '../../../../core/errores/errores.interceptor';
+import { establecerIdioma } from '../../../../core/idioma/idioma';
+import { CLAVE_SESION, aSesionGuardada } from '../../../../core/sesion/almacen-sesion';
+import { respuestaDeSesion } from '../../../../core/sesion/testing';
+import { DetalleSolicitud } from './detalle-solicitud';
+
+const ID = '6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20';
+const URL = `/api/nucleo/turista/solicitudes/${ID}`;
+const ZONAS = [
+  { id: 'a05', nombre: 'Taganga', altaAfluencia: false, areaProtegida: false, buenasPracticas: [] },
+];
+const AHORA = Date.parse('2026-10-26T15:00:00Z');
+const HORA = 3_600_000;
+const en = (ms: number) => new Date(AHORA + ms).toISOString();
+
+function solicitud(
+  estado: EstadoSolicitud,
+  extra: Partial<SolicitudTurista> = {},
+): SolicitudTurista {
+  return {
+    id: ID,
+    oferta: {
+      id: 'b00000000000000000000001',
+      tipo: 'ACTIVIDAD',
+      nombre: 'Caminata a Marinka',
+      zonaId: 'a05',
+    },
+    fechaInicio: '2026-10-28',
+    horaSalida: '07:00:00',
+    personas: 2,
+    nota: 'Vamos con una niña de 8 años',
+    estado,
+    creadaEn: '2026-10-26T14:00:00',
+    actualizadaEn: '2026-10-26T14:30:00',
+    historial: [{ a: 'PENDIENTE', en: '2026-10-26T14:00:00', actor: 'TURISTA' }],
+    ...extra,
+  };
+}
+
+const ATENDIDA = solicitud('ATENDIDA', {
+  venceEn: en(3 * HORA),
+  condiciones: {
+    precioBase: 300000,
+    politicaCancelacion: 'Sin reembolso a menos de 24 horas del servicio',
+    nota: 'Incluye el ingreso al parque',
+    aparteHasta: en(3 * HORA),
+  },
+  historial: [
+    { de: 'PENDIENTE', a: 'ATENDIDA', en: '2026-10-26T14:30:00', actor: 'OPERADOR' },
+    { a: 'PENDIENTE', en: '2026-10-26T14:00:00', actor: 'TURISTA' },
+  ],
+});
+
+describe('DetalleSolicitud (P02.2)', () => {
+  let fixture: ComponentFixture<DetalleSolicitud>;
+  let http: HttpTestingController;
+
+  const raiz = () => fixture.nativeElement as HTMLElement;
+  const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
+  const consulta = () => http.expectOne(URL);
+
+  /** Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. */
+  function crear(contenido: SolicitudTurista, id = ID): void {
+    localStorage.setItem(
+      CLAVE_SESION,
+      JSON.stringify(aSesionGuardada(respuestaDeSesion({ rol: 'TURISTA' }))),
+    );
+    fixture = TestBed.createComponent(DetalleSolicitud);
+    fixture.componentRef.setInput('id', id);
+    fixture.detectChanges();
+    http.expectOne('/api/catalogo/zonas').flush(ZONAS);
+    http.expectOne(`/api/nucleo/turista/solicitudes/${id}`).flush(contenido);
+    fixture.detectChanges();
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: AHORA, toFake: ['Date', 'setInterval', 'clearInterval'] });
+    localStorage.clear();
+    sessionStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([erroresInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
+
+  describe('la solicitud', () => {
+    it('muestra la oferta, el estado y lo que significa', () => {
+      crear(ATENDIDA);
+
+      expect(raiz().querySelector('h1')?.textContent).toBe('Caminata a Marinka');
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe(
+        'Disponible, confirma',
+      );
+      expect(texto()).toContain(
+        'Hay cupo. Revisa las condiciones y confirma o declina antes del plazo.',
+      );
+      expect(texto()).toContain('Actividad');
+    });
+
+    it('muestra lo que pidió: fecha, hora sin segundos, personas, comentarios y zona', () => {
+      crear(ATENDIDA);
+
+      expect(texto()).toContain('28 de octubre de 2026');
+      expect(texto()).toContain('Hora de salida07:00');
+      expect(texto()).toContain('Personas2');
+      expect(texto()).toContain('Vamos con una niña de 8 años');
+      expect(texto()).toContain('ZonaTaganga'.replace('Zona', 'Zona'));
+      expect(texto()).toContain('Referencia6F1C2A9E');
+    });
+
+    it('un alojamiento muestra entrada, salida y unidades', () => {
+      crear(
+        solicitud('PENDIENTE', {
+          oferta: { id: 'b2', tipo: 'ALOJAMIENTO', nombre: 'Cabañas', zonaId: 'a05' },
+          horaSalida: undefined,
+          fechaSalida: '2026-10-30',
+          numeroUnidades: 2,
+          personas: 3,
+        }),
+      );
+
+      expect(texto()).toContain('Fecha de entrada28 de octubre de 2026');
+      expect(texto()).toContain('Fecha de salida30 de octubre de 2026');
+      expect(texto()).toContain('Unidades2');
+    });
+
+    it('un restaurante muestra la hora de la reserva', () => {
+      crear(
+        solicitud('PENDIENTE', {
+          oferta: { id: 'b3', tipo: 'RESTAURANTE', nombre: 'La Terraza', zonaId: 'a05' },
+          horaSalida: undefined,
+          horaReserva: '19:30',
+        }),
+      );
+
+      expect(texto()).toContain('Hora de la reserva19:30');
+    });
+
+    it('sin comentarios no muestra el bloque', () => {
+      crear(solicitud('PENDIENTE', { nota: undefined }));
+
+      expect(texto()).not.toContain('Tus comentarios');
+    });
+  });
+
+  describe('condiciones del operador', () => {
+    it('muestra el precio, la política de cancelación, la nota y hasta cuándo se aparta el cupo', () => {
+      crear(ATENDIDA);
+
+      expect(texto()).toContain('Total a pagar$ 300.000');
+      expect(texto()).toContain('Sin reembolso a menos de 24 horas del servicio');
+      expect(texto()).toContain('Nota del operador');
+      expect(texto()).toContain('Incluye el ingreso al parque');
+      expect(texto()).toContain('Cupo apartado hasta');
+    });
+
+    it('una solicitud pendiente todavía no tiene condiciones', () => {
+      crear(solicitud('PENDIENTE'));
+
+      expect(texto()).not.toContain('Total a pagar');
+      expect(raiz().querySelector('#condiciones-titulo')).toBeNull();
+    });
+
+    it('sin nota del operador, no muestra ese renglón', () => {
+      crear(
+        solicitud('CONFIRMADA', {
+          condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+        }),
+      );
+
+      expect(texto()).toContain('Sin reembolso');
+      expect(texto()).not.toContain('Nota del operador');
+    });
+  });
+
+  describe('historial', () => {
+    it('va del primer paso al último, con quién lo hizo y cuándo', () => {
+      crear(ATENDIDA);
+
+      const pasos = Array.from(raiz().querySelectorAll('.historial__paso')).map((p) =>
+        p.querySelector('.historial__estado')?.textContent?.replace(/\s+/g, ' ').trim(),
+      );
+      expect(pasos).toEqual(['Pendiente · Tú', 'Disponible, confirma · Operador']);
+      expect(raiz().querySelector('.historial time')?.getAttribute('datetime')).toBe(
+        '2026-10-26T14:00:00',
+      );
+    });
+
+    it('muestra el motivo de un cambio cuando lo hay', () => {
+      crear(
+        solicitud('SIN_RESPUESTA', {
+          historial: [
+            { a: 'PENDIENTE', en: '2026-10-26T14:00:00', actor: 'TURISTA' },
+            {
+              de: 'PENDIENTE',
+              a: 'SIN_RESPUESTA',
+              en: '2026-10-27T14:00:00',
+              actor: 'SISTEMA',
+              motivo: 'El plazo de 24 h terminó',
+            },
+          ],
+        }),
+      );
+
+      expect(texto()).toContain('Sin respuesta · Sistema');
+      expect(texto()).toContain('Motivo: El plazo de 24 h terminó');
+    });
+  });
+
+  describe('pasos del flujo', () => {
+    const actual = () =>
+      Array.from(raiz().querySelectorAll('app-pasos-solicitud li.paso')).map((p) =>
+        p.getAttribute('aria-current'),
+      );
+
+    it('atendida está en "Confirmar"', () => {
+      crear(ATENDIDA);
+
+      expect(actual()).toEqual([null, 'step', null, null]);
+    });
+
+    it.each([
+      ['PENDIENTE', [0]],
+      ['CONFIRMADA', [2]],
+      ['PAGO_FALLIDO', [2]],
+      ['PAGADA', [3]],
+    ] as const)('%s marca el paso %j', (estado, [indice]) => {
+      crear(solicitud(estado));
+
+      expect(actual()[indice]).toBe('step');
+    });
+
+    it.each(['NO_DISPONIBLE', 'SIN_RESPUESTA', 'DECLINADA', 'VENCIDA'] as const)(
+      '%s ya no avanza en el flujo: no muestra pasos',
+      (estado) => {
+        crear(solicitud(estado));
+
+        expect(raiz().querySelector('app-pasos-solicitud')).toBeNull();
+      },
+    );
+  });
+
+  describe('plazo', () => {
+    it('dice cuánto queda y se marca urgente con 6 horas o menos', () => {
+      crear(ATENDIDA);
+
+      expect(raiz().querySelector('.plazo')?.textContent).toContain(
+        'Te quedan 3 h 0 min para confirmar o declinar.',
+      );
+      expect(raiz().querySelector('.plazo')?.classList).toContain('plazo--urgente');
+    });
+
+    it('con más de 6 horas es un aviso informativo', () => {
+      crear(solicitud('PENDIENTE', { venceEn: en(20 * HORA) }));
+
+      expect(raiz().querySelector('.plazo')?.textContent).toContain(
+        'El operador tiene 20 h 0 min para responder.',
+      );
+      expect(raiz().querySelector('.plazo')?.classList).not.toContain('plazo--urgente');
+    });
+
+    it('una solicitud cerrada no tiene plazo', () => {
+      crear(solicitud('PAGADA'));
+
+      expect(raiz().querySelector('.plazo')).toBeNull();
+    });
+
+    it('se actualiza solo con el paso del tiempo', () => {
+      crear(ATENDIDA);
+
+      vi.advanceTimersByTime(30 * 60_000);
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('.plazo')?.textContent).toContain('Te quedan 2 h 30 min');
+    });
+
+    it('cuando termina consulta el estado real, una sola vez', () => {
+      crear(ATENDIDA);
+
+      vi.advanceTimersByTime(3 * HORA + 60_000);
+      fixture.detectChanges();
+      consulta().flush(ATENDIDA);
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('.plazo')?.textContent).toContain(
+        'El plazo terminó. Estamos actualizando el estado.',
+      );
+      vi.advanceTimersByTime(5 * 60_000);
+      fixture.detectChanges();
+      http.expectNone(URL);
+    });
+
+    it('si al volver a consultar el núcleo ya la cerró, el detalle lo refleja', () => {
+      crear(solicitud('PENDIENTE', { venceEn: en(10 * 60_000) }));
+
+      vi.advanceTimersByTime(11 * 60_000);
+      fixture.detectChanges();
+      consulta().flush(solicitud('SIN_RESPUESTA'));
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Sin respuesta');
+      expect(raiz().querySelector('.plazo')).toBeNull();
+    });
+  });
+
+  describe('qué puede hacer', () => {
+    const lateral = () => raiz().querySelector<HTMLAnchorElement>('.detalle__lateral > a')!;
+
+    it.each(['NO_DISPONIBLE', 'SIN_RESPUESTA', 'VENCIDA'] as const)(
+      '%s: volver a solicitar',
+      (estado) => {
+        crear(solicitud(estado));
+
+        expect(lateral().textContent).toContain('Volver a solicitar');
+        expect(lateral().getAttribute('href')).toBe('/turista/solicitar/b00000000000000000000001');
+      },
+    );
+
+    it('pagada: dejar su opinión', () => {
+      crear(solicitud('PAGADA'));
+
+      expect(lateral().textContent).toContain('Dejar opinión');
+      expect(lateral().getAttribute('href')).toBe('/ofertas/b00000000000000000000001');
+    });
+
+    it.each(['PENDIENTE', 'ATENDIDA', 'DECLINADA'] as const)('%s: ver la oferta', (estado) => {
+      crear(solicitud(estado));
+
+      expect(lateral().textContent).toContain('Ver oferta');
+    });
+
+    it('no hay botón de pagar: lo agrega la rama de pagos', () => {
+      crear(
+        solicitud('CONFIRMADA', { condiciones: { precioBase: 300000, politicaCancelacion: 'x' } }),
+      );
+
+      const controles = Array.from(raiz().querySelectorAll('a, button')).map(
+        (e) => e.textContent?.toLowerCase() ?? '',
+      );
+      expect(controles.some((c) => c.includes('pagar') || c.includes('pago'))).toBe(false);
+      expect(raiz().querySelector('a[href*="pago"]')).toBeNull();
+    });
+  });
+
+  describe('cuando no se puede ver', () => {
+    it('la solicitud de otro turista (404) se explica', () => {
+      fixture = TestBed.createComponent(DetalleSolicitud);
+      fixture.componentRef.setInput('id', 'ajena');
+      fixture.detectChanges();
+      http.expectOne('/api/catalogo/zonas').flush(ZONAS);
+
+      http
+        .expectOne('/api/nucleo/turista/solicitudes/ajena')
+        .flush(
+          { status: 404, codigo: 'SOLICITUD_NO_ENCONTRADA' },
+          { status: 404, statusText: 'Not Found' },
+        );
+      fixture.detectChanges();
+
+      expect(texto()).toContain('No encontramos esta solicitud');
+      expect(raiz().querySelector('.vacio a')?.getAttribute('href')).toBe('/turista/solicitudes');
+    });
+
+    it('un fallo del servidor se muestra y cambia de idioma', () => {
+      fixture = TestBed.createComponent(DetalleSolicitud);
+      fixture.componentRef.setInput('id', ID);
+      fixture.detectChanges();
+      http.expectOne('/api/catalogo/zonas').flush(ZONAS);
+
+      consulta().error(new ProgressEvent('error'));
+      fixture.detectChanges();
+      expect(raiz().querySelector('[role="alert"]')?.textContent).toContain(
+        'No pudimos conectar con el servidor',
+      );
+
+      establecerIdioma('en', { recordar: false });
+      fixture.detectChanges();
+      expect(raiz().querySelector('[role="alert"]')?.textContent).toContain(
+        "We couldn't connect to the server",
+      );
+    });
+
+    it('mientras carga lo dice', () => {
+      fixture = TestBed.createComponent(DetalleSolicitud);
+      fixture.componentRef.setInput('id', ID);
+      fixture.detectChanges();
+      http.expectOne('/api/catalogo/zonas').flush(ZONAS);
+
+      expect(texto()).toContain('Cargando la solicitud…');
+      consulta().flush(ATENDIDA);
+    });
+
+    it('si las zonas no cargan, el detalle igual se ve, sin la zona', () => {
+      fixture = TestBed.createComponent(DetalleSolicitud);
+      fixture.componentRef.setInput('id', ID);
+      fixture.detectChanges();
+      http.expectOne('/api/catalogo/zonas').error(new ProgressEvent('error'));
+      consulta().flush(ATENDIDA);
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('h1')?.textContent).toBe('Caminata a Marinka');
+      expect(texto()).not.toContain('Taganga');
+    });
+  });
+
+  describe('reconsulta (RF-33)', () => {
+    it('al volver a la pestaña actualiza el estado sin mostrar "cargando"', () => {
+      crear(solicitud('PENDIENTE', { venceEn: en(5 * HORA) }));
+
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(texto()).not.toContain('Cargando la solicitud…');
+      consulta().flush(ATENDIDA);
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe(
+        'Disponible, confirma',
+      );
+      expect(texto()).toContain('Sin reembolso a menos de 24 horas del servicio');
+    });
+
+    it('al reconectarse consulta de nuevo', () => {
+      crear(ATENDIDA);
+
+      window.dispatchEvent(new Event('online'));
+
+      consulta().flush(ATENDIDA);
+    });
+
+    it('si la reconsulta falla, conserva lo que ya se veía y avisa', () => {
+      crear(ATENDIDA);
+
+      window.dispatchEvent(new Event('online'));
+      consulta().error(new ProgressEvent('error'));
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('h1')?.textContent).toBe('Caminata a Marinka');
+      expect(texto()).toContain('No pudimos actualizar el estado.');
+
+      // Cuando una reconsulta sale bien, el aviso desaparece.
+      window.dispatchEvent(new Event('online'));
+      consulta().flush(ATENDIDA);
+      fixture.detectChanges();
+      expect(texto()).not.toContain('No pudimos actualizar el estado.');
+    });
+
+    it('si la solicitud ya no existe al reconsultar, lo dice', () => {
+      crear(ATENDIDA);
+
+      window.dispatchEvent(new Event('online'));
+      consulta().flush(
+        { status: 404, codigo: 'SOLICITUD_NO_ENCONTRADA' },
+        { status: 404, statusText: 'Not Found' },
+      );
+      fixture.detectChanges();
+
+      expect(texto()).toContain('No encontramos esta solicitud');
+    });
+
+    it('al cambiar de solicitud vuelve a cargar desde cero', () => {
+      crear(ATENDIDA);
+
+      fixture.componentRef.setInput('id', 'otra');
+      fixture.detectChanges();
+
+      expect(texto()).toContain('Cargando la solicitud…');
+      http
+        .expectOne('/api/nucleo/turista/solicitudes/otra')
+        .flush(solicitud('PAGADA', { id: 'otra' }));
+    });
+  });
+
+  describe('inglés', () => {
+    it('todo cambia al instante: estado, datos, condiciones, historial y plazo', () => {
+      crear(ATENDIDA);
+
+      establecerIdioma('en', { recordar: false });
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe(
+        'Available, confirm',
+      );
+      expect(texto()).toContain('Request details');
+      expect(texto()).toContain('Your request');
+      expect(texto()).toContain('Departure time07:00');
+      expect(texto()).toContain('October 28, 2026');
+      expect(texto()).toContain('Terms');
+      expect(texto()).toContain('Total to pay');
+      expect(texto()).toContain('COP 300,000');
+      expect(texto()).toContain('Cancellation policy');
+      expect(texto()).toContain('History');
+      expect(texto()).toContain('Pending · You');
+      expect(texto()).toContain('Available, confirm · Operator');
+      expect(texto()).toContain('You have 3 h 0 min left to confirm or decline.');
+      expect(texto()).toContain('View offer');
+    });
+  });
+});
