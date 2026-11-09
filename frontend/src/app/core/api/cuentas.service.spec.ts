@@ -53,6 +53,68 @@ describe('CuentasService', () => {
     http.expectOne(`${BASE}/politica-datos/v1%2F..%2F..%2Fadmin`).flush('');
   });
 
+  it('consulta los datos personales', () => {
+    let cuenta: unknown;
+
+    servicio.consultarCuenta().subscribe((c) => (cuenta = c));
+
+    const peticion = http.expectOne(`${BASE}/cuenta`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush({
+      id: 'x',
+      rol: 'TURISTA',
+      nombre: 'Laura',
+      correo: 'laura@demo.samariantour.co',
+    });
+    expect(cuenta).toMatchObject({ nombre: 'Laura' });
+  });
+
+  it('guarda el nombre y el WhatsApp con PUT', () => {
+    let cuenta: unknown;
+
+    servicio
+      .guardarDatos({ nombre: 'Laura Gómez Ruiz', whatsapp: '+573001234567' })
+      .subscribe((c) => (cuenta = c));
+
+    const peticion = http.expectOne(`${BASE}/cuenta`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual({
+      nombre: 'Laura Gómez Ruiz',
+      whatsapp: '+573001234567',
+    });
+    peticion.flush({ id: 'x', rol: 'TURISTA', nombre: 'Laura Gómez Ruiz', correo: 'a@b.co' });
+    expect(cuenta).toMatchObject({ nombre: 'Laura Gómez Ruiz' });
+  });
+
+  it('pide otro código de WhatsApp con POST y sin cuerpo', () => {
+    let terminó = false;
+
+    servicio.enviarCodigoWhatsapp().subscribe(() => (terminó = true));
+
+    const peticion = http.expectOne(`${BASE}/turista/whatsapp/codigo`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toBeNull();
+    peticion.flush(null, { status: 202, statusText: 'Accepted' });
+    expect(terminó).toBe(true);
+  });
+
+  it('verifica el WhatsApp con el código de 6 dígitos', () => {
+    let cuenta: unknown;
+
+    servicio.verificarWhatsapp('048213').subscribe((c) => (cuenta = c));
+
+    const peticion = http.expectOne(`${BASE}/turista/whatsapp/verificacion`);
+    expect(peticion.request.body).toEqual({ codigo: '048213' });
+    peticion.flush({
+      id: 'x',
+      rol: 'TURISTA',
+      nombre: 'Laura',
+      correo: 'a@b.co',
+      whatsappVerificado: true,
+    });
+    expect(cuenta).toMatchObject({ whatsappVerificado: true });
+  });
+
   it('pide el enlace para restablecer la contraseña con el correo', () => {
     let terminó = false;
 

@@ -51,6 +51,7 @@ describe('rutas de la aplicación', () => {
       '/gestor',
       '/admin/zonas',
       '/sin-permiso',
+      '/mis-datos',
     ])('%s lleva a iniciar sesión y recuerda la página', async (url) => {
       expect(await ir(url)).toBe(`/iniciar-sesion?volver=${encodeURIComponent(url)}`);
     });
@@ -102,6 +103,18 @@ describe('rutas de la aplicación', () => {
 
       expect(await ir('/')).toBe('/');
       expect(await ir('/ofertas/abc')).toBe('/ofertas/abc');
+    });
+
+    it.each([
+      'TURISTA',
+      'PRESTADOR',
+      'OPERADOR_DISPONIBILIDAD',
+      'GESTOR_DESTINO',
+      'ADMINISTRADOR',
+    ] as const)('un %s puede ver sus datos en /mis-datos', async (rol) => {
+      conSesion(rol);
+
+      expect(await ir('/mis-datos')).toBe('/mis-datos');
     });
 
     it('/sin-permiso se ve con cualquier sesión', async () => {

@@ -15,6 +15,12 @@ export const RUTAS_CUENTAS: Routes = [
     loadComponent: () => import('./registro/registro').then((modulo) => modulo.Registro),
   },
   {
+    path: 'mis-datos',
+    title: 'Mis datos · Samarian Tour',
+    canActivate: [autenticadoGuard],
+    loadComponent: () => import('./mis-datos/mis-datos').then((modulo) => modulo.MisDatos),
+  },
+  {
     path: 'recuperar-contrasena',
     title: 'Recuperar el acceso · Samarian Tour',
     loadComponent: () =>

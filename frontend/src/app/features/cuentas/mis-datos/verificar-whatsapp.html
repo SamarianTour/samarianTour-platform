@@ -1,0 +1,58 @@
+<section class="verificar tarjeta" aria-labelledby="verificar-titulo">
+  <h2 id="verificar-titulo">Verifica tu WhatsApp</h2>
+  <p class="texto-suave">
+    @if (whatsapp(); as numero) {
+      Te enviamos un código de 6 dígitos al <strong>{{ numero }}</strong
+      >.
+    } @else {
+      Te enviamos un código de 6 dígitos a tu WhatsApp.
+    }
+    Mientras no lo verifiques no podrás enviar solicitudes. El código vale 30 minutos.
+  </p>
+
+  @if (error(); as mensaje) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ mensaje }}</span>
+    </p>
+  }
+  @if (reenviado()) {
+    <p class="alerta alerta--exito" role="status">
+      <app-icono nombre="hoja" />
+      <span>Te enviamos un código nuevo. El anterior ya no sirve.</span>
+    </p>
+  }
+
+  <form class="verificar__formulario" [formGroup]="formulario" (ngSubmit)="verificar()" novalidate>
+    <div class="campo">
+      <label for="codigo">Código de 6 dígitos</label>
+      <input
+        id="codigo"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        formControlName="codigo"
+        aria-required="true"
+        [attr.aria-invalid]="errorDelCampo() ? 'true' : null"
+        [attr.aria-describedby]="errorDelCampo() ? 'codigo-error' : null"
+      />
+      @if (errorDelCampo(); as mensaje) {
+        <p class="campo__error" id="codigo-error">{{ mensaje }}</p>
+      }
+    </div>
+    <div class="verificar__acciones">
+      <button type="submit" class="boton" [disabled]="enviando()">
+        {{ enviando() ? 'Verificando…' : 'Verificar' }}
+      </button>
+      <button
+        type="button"
+        class="boton boton--secundario"
+        [disabled]="reenviando()"
+        (click)="reenviar()"
+      >
+        {{ reenviando() ? 'Enviando…' : 'Enviar otro código' }}
+      </button>
+    </div>
+  </form>
+</section>

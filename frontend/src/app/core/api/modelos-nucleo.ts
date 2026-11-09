@@ -11,5 +11,7 @@ export type Cuenta = Esquemas['Cuenta'];
 /** Lo que responden POST /cuentas/sesion y /cuentas/sesion/renovacion. */
 export type RespuestaSesion = Esquemas['Sesion'];
 export type RegistroRequest = Esquemas['RegistroRequest'];
+/** Lo que se reemplaza al actualizar los datos personales: el nombre y, solo el turista, su WhatsApp. */
+export type DatosPersonalesRequest = Esquemas['DatosPersonalesRequest'];
 /** La versión vigente de la política de datos y dónde leer su texto. */
 export type PoliticaDatos = Esquemas['PoliticaDatos'];

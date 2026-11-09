@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_NUCLEO } from './api.config';
-import { Cuenta, PoliticaDatos, RegistroRequest } from './modelos-nucleo';
+import { Cuenta, DatosPersonalesRequest, PoliticaDatos, RegistroRequest } from './modelos-nucleo';
 
 /**
  * Cuentas del núcleo (módulo 1): registro, política de datos y, en los siguientes bloques, recuperar la contraseña, los
@@ -27,6 +27,29 @@ export class CuentasService {
   /** Un turista o un prestador crea su cuenta (RF-01 a RF-03, RF-09 a RF-11). */
   registrar(solicitud: RegistroRequest): Observable<Cuenta> {
     return this.http.post<Cuenta>(`${API_NUCLEO}/cuentas/registro`, solicitud);
+  }
+
+  /** Los datos personales de quien tiene la sesión, de cualquier rol (RF-12). */
+  consultarCuenta(): Observable<Cuenta> {
+    return this.http.get<Cuenta>(`${API_NUCLEO}/cuenta`);
+  }
+
+  /**
+   * Reemplaza el nombre y, el turista, su WhatsApp (RF-12). Un WhatsApp distinto queda sin verificar y recibe un código
+   * nuevo (RF-03). El correo no se cambia (DN-31).
+   */
+  guardarDatos(datos: DatosPersonalesRequest): Observable<Cuenta> {
+    return this.http.put<Cuenta>(`${API_NUCLEO}/cuenta`, datos);
+  }
+
+  /** Envía otro código de 6 dígitos al WhatsApp del turista; el anterior deja de servir (RF-03). */
+  enviarCodigoWhatsapp(): Observable<void> {
+    return this.http.post<void>(`${API_NUCLEO}/turista/whatsapp/codigo`, null);
+  }
+
+  /** El turista confirma su WhatsApp con el código (RF-03). Devuelve la cuenta con el número verificado. */
+  verificarWhatsapp(codigo: string): Observable<Cuenta> {
+    return this.http.post<Cuenta>(`${API_NUCLEO}/turista/whatsapp/verificacion`, { codigo });
   }
 
   /**

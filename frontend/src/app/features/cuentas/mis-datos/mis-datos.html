@@ -1,0 +1,216 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">Mi cuenta</p>
+    <h1>Mis datos y derechos del titular</h1>
+    <p class="texto-suave">
+      Consulta y controla tu información personal. Samarian Tour trata tus datos conforme a la Ley
+      1581 de 2012 de protección de datos.
+    </p>
+  </header>
+
+  @if (errorDeCarga(); as mensaje) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>
+        {{ mensaje }}
+        <button type="button" class="enlace-texto" (click)="cargar()">Intentar de nuevo</button>
+      </span>
+    </p>
+  }
+
+  @if (cuenta(); as actual) {
+    <div class="contenido" [attr.aria-busy]="cargando()">
+      @if (faltaVerificar()) {
+        <app-verificar-whatsapp />
+      }
+
+      <section class="tarjeta" aria-labelledby="datos-titulo">
+        <div class="seccion__cabecera">
+          <h2 id="datos-titulo" tabindex="-1">Mis datos</h2>
+          @if (!editando()) {
+            <button
+              type="button"
+              id="editar"
+              class="boton boton--secundario"
+              (click)="empezarEdicion()"
+            >
+              Editar mis datos
+            </button>
+          }
+        </div>
+
+        @if (!editando()) {
+          <dl class="datos">
+            <div>
+              <dt>Nombre</dt>
+              <dd>{{ actual.nombre }}</dd>
+            </div>
+            <div>
+              <dt>Correo</dt>
+              <dd>
+                {{ actual.correo }}
+                <span class="campo__ayuda">El correo no se puede cambiar.</span>
+              </dd>
+            </div>
+            @if (esTurista()) {
+              <div>
+                <dt>WhatsApp</dt>
+                <dd>
+                  {{ actual.whatsapp }}
+                  @if (actual.whatsappVerificado) {
+                    <span class="etiqueta etiqueta--exito">Verificado</span>
+                  } @else {
+                    <span class="etiqueta etiqueta--aviso">Sin verificar</span>
+                  }
+                </dd>
+              </div>
+            }
+            <div>
+              <dt>Tipo de cuenta</dt>
+              <dd>{{ etiquetaRol[actual.rol] }}</dd>
+            </div>
+          </dl>
+        } @else {
+          <form class="edicion" [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+            @if (errorGeneral(); as mensaje) {
+              <p class="alerta alerta--error" role="alert">
+                <app-icono nombre="alerta" />
+                <span>{{ mensaje }}</span>
+              </p>
+            }
+
+            <div class="campo">
+              <label for="nombre">Nombre <span class="requerido" aria-hidden="true">*</span></label>
+              <input
+                id="nombre"
+                type="text"
+                formControlName="nombre"
+                autocomplete="name"
+                aria-required="true"
+                [attr.aria-invalid]="errorDe('nombre') ? 'true' : null"
+                [attr.aria-describedby]="errorDe('nombre') ? 'nombre-error' : null"
+              />
+              @if (errorDe('nombre'); as mensaje) {
+                <p class="campo__error" id="nombre-error">{{ mensaje }}</p>
+              }
+            </div>
+
+            <div class="campo">
+              <label for="correo-fijo">Correo</label>
+              <input
+                id="correo-fijo"
+                type="email"
+                [value]="actual.correo"
+                readonly
+                aria-describedby="correo-ayuda"
+              />
+              <p class="campo__ayuda" id="correo-ayuda">El correo no se puede cambiar.</p>
+            </div>
+
+            @if (esTurista()) {
+              <div class="campo">
+                <label for="whatsapp"
+                  >WhatsApp <span class="requerido" aria-hidden="true">*</span></label
+                >
+                <input
+                  id="whatsapp"
+                  type="tel"
+                  formControlName="whatsapp"
+                  autocomplete="tel"
+                  inputmode="tel"
+                  aria-required="true"
+                  [attr.aria-invalid]="errorDe('whatsapp') ? 'true' : null"
+                  [attr.aria-describedby]="
+                    errorDe('whatsapp') ? 'whatsapp-error whatsapp-ayuda' : 'whatsapp-ayuda'
+                  "
+                />
+                <p class="campo__ayuda" id="whatsapp-ayuda">
+                  Con el indicativo del país, por ejemplo +573001234567. Si lo cambias, te enviamos
+                  un código para verificar el número nuevo.
+                </p>
+                @if (errorDe('whatsapp'); as mensaje) {
+                  <p class="campo__error" id="whatsapp-error">{{ mensaje }}</p>
+                }
+              </div>
+            }
+
+            <div class="acciones">
+              <button type="submit" class="boton" [disabled]="guardando()">
+                {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+              </button>
+              <button type="button" class="boton boton--secundario" (click)="cancelarEdicion()">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        }
+      </section>
+
+      <section aria-labelledby="derechos-titulo">
+        <h2 id="derechos-titulo">Tus derechos</h2>
+        <p class="texto-suave">
+          Como titular de tus datos puedes ejercer estos derechos cuando quieras. Estos son los que
+          ya puedes usar desde la aplicación y los que todavía no.
+        </p>
+        <ul class="derechos">
+          <li class="tarjeta derecho">
+            <h3>Acceso</h3>
+            <p>Conocer qué datos tenemos sobre ti y cómo los usamos.</p>
+            <button type="button" class="boton boton--secundario" (click)="irADatos()">
+              Ver mis datos
+            </button>
+          </li>
+          <li class="tarjeta derecho">
+            <h3>Rectificación</h3>
+            <p>Corregir datos inexactos o incompletos.</p>
+            <button type="button" class="boton boton--secundario" (click)="empezarEdicion()">
+              Actualizar
+            </button>
+          </li>
+          <li class="tarjeta derecho">
+            <h3>Oposición</h3>
+            <p>Oponerte a ciertos usos de tus datos.</p>
+            <p class="texto-suave derecho__nota">
+              Todavía no se puede ejercer desde la aplicación.
+            </p>
+          </li>
+          <li class="tarjeta derecho">
+            <h3>Portabilidad</h3>
+            <p>Recibir una copia de tus datos en un archivo.</p>
+            <p class="texto-suave derecho__nota">
+              Todavía no se puede ejercer desde la aplicación.
+            </p>
+          </li>
+          <li class="tarjeta derecho">
+            <h3>Revocar la autorización</h3>
+            <p>Retirar el permiso que diste para el tratamiento de tus datos.</p>
+            <p class="texto-suave derecho__nota">
+              Todavía no se puede ejercer desde la aplicación.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="tarjeta" aria-labelledby="politica-titulo">
+        <h2 id="politica-titulo">Política de tratamiento de datos</h2>
+        @if (politica(); as vigente) {
+          <p class="texto-suave">
+            Versión vigente: <strong>{{ vigente.version }}</strong
+            >, publicada el {{ vigente.fechaPublicacion | date: 'd MMMM y' }}.
+          </p>
+          <div>
+            <button type="button" class="boton boton--secundario" (click)="abrirPolitica()">
+              Leer la política
+            </button>
+          </div>
+        } @else {
+          <p class="texto-suave">No pudimos cargar la política en este momento.</p>
+        }
+      </section>
+    </div>
+  } @else if (cargando()) {
+    <p class="texto-suave" aria-live="polite">Cargando tus datos…</p>
+  }
+</section>
+
+<app-visor-politica [version]="politica()?.version ?? ''" />
