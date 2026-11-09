@@ -50,6 +50,19 @@ curl -s http://localhost:8080/api/nucleo/cuenta -H "Authorization: Bearer $TOKEN
 - **Entre servicios:** el cliente del catálogo agrega a cada petición a `/internal/**` el token de servicio del núcleo, firmado con su misma clave (`EmisorTokenServicio`, DN-38).
 - **Pendiente:** el TLS de Nginx (DN-37).
 
+## Bandeja de salida
+
+Los avisos al catálogo se publican cada 15 s (DN-06). Lo que el administrador puede hacer con ellos (DN-44):
+
+```bash
+# Los que el catálogo rechazó (un 4xx que no es 409), del más reciente al más antiguo
+curl -s http://localhost:8080/api/nucleo/admin/bandeja/rechazados -H "Authorization: Bearer $TOKEN_ADMIN"
+# Corregido lo que fallaba, se reenvía: vuelve a pendiente y sale en los siguientes 15 s
+curl -s -X POST http://localhost:8080/api/nucleo/admin/bandeja/<idAviso>/reenvio -H "Authorization: Bearer $TOKEN_ADMIN"
+```
+
+- **Limpieza:** cada día a las 4:30 (`nucleo.bandeja.limpieza.cron`) se borran los enviados de hace más de 30 días. Los rechazados se conservan.
+
 ## Enviar un aviso al catálogo
 
 Un módulo que tiene que avisar al catálogo declara su propio puerto de salida y lo implementa con la bandeja. Así lo hace Cuentas cuando suprime los datos de un turista (RF-13, DC-45 del catálogo; `AvisosSupresionBandejaAdapter`):
@@ -113,6 +126,7 @@ curl -s -X POST http://localhost:8080/api/nucleo/turista/solicitudes/<id>/pago  
 - **Tareas programadas** (`nucleo.pagos.*.cron`; con `-` no corren): los eventos cada 5 s, los intentos abandonados cada minuto, las dispersiones y los avisos cada 15 s y las claves de idempotencia vencidas cada hora. Las dos réplicas trabajan sin pisarse con `FOR UPDATE SKIP LOCKED`.
 - **Comisión y dispersión:** el 4 % inicial, con historial (`/admin/comision`), y el costo transaccional configurable (`nucleo.pagos.costo-transaccional`, DN-23). La dispersión se reintenta 3 veces; con Wompi también es simulada, porque "Pagos a terceros" exige activarlo en la cuenta del comercio (DN-24).
 - **Cuentas de cobro:** salen de `PrestadoresApiInterna` (DN-35); fuera de la dispersión solo se ven enmascaradas (RF-75). El WhatsApp del administrador sigue en `application-demo.yml` (DN-26).
+- **Lo que falla** (DN-44): `GET /admin/pagos/eventos-fallidos` lista los eventos que no se pudieron procesar y `POST /admin/pagos/eventos-fallidos/{id}/reintento` los vuelve a la cola. Las dispersiones fallidas vuelven solas a pendiente cuando el prestador cambia su cuenta de cobro.
 - **Pruebas:** `PagosIT` recorre los pagos con PostgreSQL y eventos firmados; `PasarelaSimuladaIT`, la página y su envío al webhook; `FormatoWompiTest`, las firmas con los vectores de la documentación de Wompi.
 
 ## Cuentas
@@ -134,7 +148,8 @@ Registro con el RNT, tipo, WhatsApp verificado, cuenta de cobro y sincronizació
 - **Habilitación:** solo con el RNT ACTIVO se publica y se aprueban ofertas (409 `PRESTADOR_NO_HABILITADO` en la moderación). Cada cambio llega al catálogo con el aviso `HABILITACION` por la bandeja.
 - **Sincronización** (RF-76 a RF-78): los lunes a las 3:00 (`nucleo.administracion.sincronizacion-rnt.cron`) o con `POST /admin/rnt/sincronizacion`. Para la demo, `DELETE /admin/rnt-simulado/910001` da de baja el RNT de la agencia y sincroniza: queda INACTIVA, el catálogo retira sus ofertas, recibe un WhatsApp (`grep CATALOGO_RETIRADO_RNT`) y sus solicitudes no pagadas se cierran en el minuto siguiente. `PUT` lo restituye. Las bajas quedan en PostgreSQL (`rnt_simulado_bajas`), así las dos réplicas las ven.
 - **WhatsApp simulado:** el código de verificación sale en el log (`grep CODIGO_VERIFICACION_PRESTADOR`).
-- **Para otros módulos:** `prestadores.api.PrestadoresApiInterna`. Los prestadores solo dependen de `cuentas.api`.
+- **Supresión** (RF-13, DN-45): `POST /prestador/supresion {"contrasena": ...}`. Si tiene solicitudes pagadas por prestar, pagos en curso o dispersiones por recibir, responde 409 `PRESTADOR_CON_COMPROMISOS` con la lista. Si no, anonimiza la cuenta, quita el WhatsApp y la habilitación, y el catálogo retira sus ofertas y borra su perfil y sus fotos (DC-52). El RNT, las cuentas de cobro y las dispersiones se conservan como soporte contable, y el RNT queda libre para otra cuenta.
+- **Para otros módulos:** `prestadores.api.PrestadoresApiInterna`. Los prestadores solo dependen de `cuentas.api`; pagos y solicitudes los escuchan por `ObservadorCuentaCobro` y `CompromisosPrestador`, que ellos implementan.
 
 ## Moderar
 
