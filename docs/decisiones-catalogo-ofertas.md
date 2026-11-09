@@ -61,6 +61,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 | DC-49 | El administrador registra, edita, marca e inactiva las zonas; nunca se eliminan | ✅ HU-ADM-06, RF-84, RF-25 |
 | DC-50 | El prestador consulta su oferta completa, también la que nunca se publicó | 🆕 RF-65, RF-66, RF-79 |
 | DC-51 | El núcleo pide cuántas ofertas visibles tiene cada prestador, para el índice de sesgo | ✅ RET-02, DN-43 |
+| DC-52 | Cuando el prestador suprime sus datos, se retiran sus ofertas y se borran su perfil y sus fotos | ✅ RF-13, RF-65, DN-45 |
 
 ## Identidad y habilitación del prestador
 
@@ -465,6 +466,16 @@ Las dos rutas no exigen rol de usuario: Nginx bloquea `/api/catalogo/internal/` 
 - **La misma visibilidad que el turista:** recorre la búsqueda pública por páginas de 100, así que una oferta retirada, sin versión aprobada, de un prestador sin el RNT activo o un paquete con una actividad no visible no cuentan. No hizo falta una consulta propia en Mongo ni en memoria.
 - **Solo el núcleo** (DN-38): la regla `GET /internal/ofertas/*` ya era suya; la recomendación recibe 403.
 
+## Supresión del prestador
+
+**DC-52. Cuando el prestador suprime sus datos, se retiran sus ofertas y se borran su perfil y sus fotos** (RF-13, Ley 1581; DN-45 del núcleo). El núcleo lo avisa con `SUPRESION_PRESTADOR {idAviso, prestadorId}` por la bandeja de salida, en la misma transacción que la supresión, y después del aviso HABILITACION que le quita la habilitación.
+- **Las ofertas:** se retiran todas, definitivamente (RF-65), estén publicadas, en moderación o rechazadas. Se recorren por páginas de 100, y la que ya estaba retirada no se toca.
+- **El perfil público** se borra, y con él su nombre comercial, su descripción y sus redes.
+- **Las fotos:** se borran enseguida todas las que subió, para sus ofertas o su perfil (`FotoSubidaRepositoryPort.delPrestador`, índice `fotos_por_prestador`), primero el registro y después el archivo, como la limpieza de DC-47. Ya nadie las usa: solo el prestador podía ponerlas en sus ofertas.
+- **Se conserva** la réplica de su habilitación (DC-02), que sigue ordenando los avisos por versión: si llegara uno atrasado, no lo vuelve a habilitar.
+- **Idempotente** (DC-04): siempre responde `APLICADO`, y repetir el trabajo no cambia nada. Si el proceso se cae a mitad, el aviso no queda procesado y el reintento del núcleo termina; si otra escritura se cruza con una oferta, el aviso completo se vuelve a aplicar (ADR-05).
+- **Pruebas:** `AplicarAvisoNucleoServiceTest` y `AvisoInternoControllerTest`, y los contratos de perfiles y fotos, en memoria y en MongoDB.
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Vista general de paquetes, interacción 2:** quitar "tipo de prestador" de los avisos del núcleo al catálogo (DC-01).
@@ -501,6 +512,7 @@ Las dos rutas no exigen rol de usuario: Nginx bloquea `/api/catalogo/internal/` 
 18. **Modelo documental (MongoDB):** agregar en `zonas` el campo `nombreClave` y su índice único `zona_por_nombre` (DC-49).
 19. **Diagrama del módulo catálogo:** agregar la operación `consultarMia` a `GestionarOfertaUseCase` (DC-50).
 20. **Diagrama del módulo catálogo:** agregar `ContarOfertasVisiblesUseCase` y la ruta interna `GET /internal/ofertas/por-prestador`, que usa el núcleo (DC-51).
+21. **Vista general y diagrama del módulo catálogo:** agregar el aviso `SUPRESION_PRESTADOR` del núcleo, `PerfilRepositoryPort.eliminar` y `FotoSubidaRepositoryPort.delPrestador`; en el modelo documental, el índice `fotos_por_prestador` de la colección `fotos` (DC-52).
 
 ## Fuera del alcance del prototipo
 
