@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Cuenta, Rol } from '../../../core/api/modelos-nucleo';
+import { establecerIdioma } from '../../../core/idioma/idioma';
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { erroresInterceptor } from '../../../core/errores/errores.interceptor';
 import { CLAVE_SESION, aSesionGuardada } from '../../../core/sesion/almacen-sesion';
@@ -388,6 +389,56 @@ describe('MisDatos', () => {
 
       expect(raiz().querySelector('app-visor-politica dialog')!.hasAttribute('open')).toBe(true);
       http.expectOne(`${BASE}/politica-datos/v1`).flush('Texto de la política');
+    });
+  });
+
+  describe('idioma', () => {
+    it('en inglés muestra la pantalla, los derechos y la supresión con el glosario', () => {
+      establecerIdioma('en', { recordar: false });
+      crear('TURISTA');
+
+      expect(raiz().querySelector('h1')?.textContent).toContain('My data and data subject rights');
+      expect(texto()).toContain('Verified');
+      expect(texto()).toContain('Tourist');
+      expect(texto()).toContain('Your rights');
+      expect(texto()).toContain('Rectification');
+      expect(texto()).toContain('Current version: v1, published on October 28, 2026');
+      expect(texto()).toContain('Delete my account');
+      expect(texto()).toContain('remove your reviews from the catalog');
+      expect(texto()).not.toContain('Tus derechos');
+    });
+
+    it('cambia de idioma con la pantalla abierta, también el rol y la fecha', () => {
+      crear('PRESTADOR');
+      expect(texto()).toContain('Prestador');
+      expect(texto()).toContain('publicada el 28 de octubre de 2026');
+
+      establecerIdioma('en', { recordar: false });
+      fixture.detectChanges();
+
+      expect(texto()).toContain('Provider');
+      expect(texto()).toContain('published on October 28, 2026');
+      expect(texto()).toContain('Your offers are withdrawn permanently');
+    });
+
+    it('un error al guardar que ya se mostró cambia de idioma', () => {
+      crear('TURISTA');
+      editar();
+      escribir('nombre', 'Laura Gómez');
+      guardar();
+      http
+        .expectOne(`${BASE}/cuenta`)
+        .flush(
+          { status: 409, codigo: 'CONFLICTO_CONCURRENCIA' },
+          { status: 409, statusText: 'Conflict' },
+        );
+      fixture.detectChanges();
+      expect(texto()).toContain('Tus datos cambiaron mientras los editabas.');
+
+      establecerIdioma('en', { recordar: false });
+      fixture.detectChanges();
+
+      expect(texto()).toContain('Your data changed while you were editing it.');
     });
   });
 });

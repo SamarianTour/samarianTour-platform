@@ -1,6 +1,8 @@
 import { Component, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { CuentasService } from '../../../core/api/cuentas.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../core/idioma/texto-vivo';
 
 /**
  * Muestra el texto de una versión de la política de datos en un `<dialog>` (RF-09, RF-11). El texto llega en Markdown;
@@ -10,6 +12,7 @@ import { aErrorApi } from '../../../core/errores/errores.interceptor';
  */
 @Component({
   selector: 'app-visor-politica',
+  imports: [TPipe],
   templateUrl: './visor-politica.html',
   styleUrl: './visor-politica.css',
 })
@@ -22,7 +25,7 @@ export class VisorPolitica {
 
   protected readonly cargando = signal(false);
   protected readonly texto = signal<string | null>(null);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<TextoVivo | null>(null);
   /** La versión cuyo texto ya se cargó, para no volver a pedirlo al reabrir. */
   private versionCargada: string | null = null;
 
@@ -48,7 +51,8 @@ export class VisorPolitica {
         this.cargando.set(false);
       },
       error: (fallo: unknown) => {
-        this.error.set(aErrorApi(fallo).mensaje);
+        const problema = aErrorApi(fallo);
+        this.error.set(() => problema.mensaje);
         this.cargando.set(false);
       },
     });

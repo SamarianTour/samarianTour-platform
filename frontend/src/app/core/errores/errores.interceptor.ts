@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 import { Problema } from '../api/modelos';
-import { ErrorApi, ExtrasError, MENSAJES, MENSAJE_GENERICO, MENSAJE_SIN_CONEXION } from './error-api';
+import { ErrorApi, ExtrasError, claveDeError } from './error-api';
 
 /**
  * Convierte los errores HTTP en ErrorApi. Lee el application/problem+json de la API y traduce su `codigo`
@@ -15,20 +15,20 @@ export function aErrorApi(error: unknown): ErrorApi {
     return error;
   }
   if (!(error instanceof HttpErrorResponse)) {
-    return new ErrorApi(0, undefined, MENSAJE_GENERICO);
+    return new ErrorApi(0, undefined, 'errores.generico');
   }
   if (error.status === 0) {
-    return new ErrorApi(0, undefined, MENSAJE_SIN_CONEXION);
+    return new ErrorApi(0, undefined, 'errores.sinConexion');
   }
   const problema = aProblema(error.error);
   const codigo = problema?.codigo;
-  const mensaje = codigo ? (MENSAJES[codigo] ?? MENSAJE_GENERICO) : MENSAJE_GENERICO;
+  const clave = claveDeError(codigo);
   const extras = extrasDe(problema);
   if (codigo === 'DATO_INVALIDO') {
     const { campo, detalle } = campoDe(problema?.detail);
-    return new ErrorApi(error.status, codigo, mensaje, campo, detalle, extras);
+    return new ErrorApi(error.status, codigo, clave, campo, detalle, extras);
   }
-  return new ErrorApi(error.status, codigo, mensaje, undefined, undefined, extras);
+  return new ErrorApi(error.status, codigo, clave, undefined, undefined, extras);
 }
 
 /** Lee las propiedades extra del núcleo; descarta las que lleguen con otro tipo para que la pantalla no se rompa. */

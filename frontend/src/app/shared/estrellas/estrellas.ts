@@ -1,4 +1,6 @@
 import { Component, computed, input } from '@angular/core';
+import { LOCALE, idiomaActual } from '../../core/idioma/idioma';
+import { traducir } from '../../core/idioma/traducir';
 import { Icono } from '../icono/icono';
 
 /**
@@ -36,7 +38,11 @@ export class Estrellas {
 
   protected readonly posiciones = [1, 2, 3, 4, 5];
   protected readonly llenas = computed(() => Math.round(this.valor()));
-  protected readonly descripcion = computed(
-    () => `${this.valor().toLocaleString('es-CO', { maximumFractionDigits: 1 })} de 5 estrellas`,
-  );
+  /** "4,7 de 5 estrellas" / "4.7 out of 5 stars": el número también sigue el formato del idioma. */
+  protected readonly descripcion = computed(() => {
+    const idioma = idiomaActual();
+    return traducir('compartido.estrellas.descripcion', {
+      valor: this.valor().toLocaleString(LOCALE[idioma], { maximumFractionDigits: 1 }),
+    });
+  });
 }

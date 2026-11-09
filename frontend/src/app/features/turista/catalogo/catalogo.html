@@ -1,25 +1,24 @@
 <section class="pagina catalogo">
   <header class="catalogo__cabecera">
     <div>
-      <h1>Catálogo turístico</h1>
-      <p class="texto-suave">Actividades, paquetes, alojamientos y restaurantes de prestadores con el RNT activo.</p>
+      <h1>{{ 'turista.catalogo.titulo' | t }}</h1>
+      <p class="texto-suave">{{ 'turista.catalogo.subtitulo' | t }}</p>
     </div>
     @if (pagina(); as resultado) {
       <p class="resultados__total" aria-live="polite">
-        {{ resultado.totalElementos }}
-        {{ resultado.totalElementos === 1 ? 'oferta encontrada' : 'ofertas encontradas' }}
+        {{ 'turista.catalogo.encontradas' | t: { n: resultado.totalElementos } }}
       </p>
     }
   </header>
 
   <form class="filtros tarjeta" [formGroup]="formulario" aria-labelledby="filtros-titulo">
-    <h2 id="filtros-titulo" class="filtros__titulo">Filtros</h2>
+    <h2 id="filtros-titulo" class="filtros__titulo">{{ 'turista.catalogo.filtros' | t }}</h2>
 
     <fieldset class="grupo">
-      <legend>Tipo de oferta</legend>
+      <legend>{{ 'turista.catalogo.tipoOferta' | t }}</legend>
       <label class="opcion">
         <input type="radio" formControlName="tipo" value="" />
-        <span>Todas</span>
+        <span>{{ 'turista.catalogo.todas' | t }}</span>
       </label>
       @for (tipo of tipos; track tipo) {
         <label class="opcion">
@@ -32,9 +31,9 @@
     <hr class="separador" />
 
     <div class="campo">
-      <label for="zonaId">Zona</label>
+      <label for="zonaId">{{ 'turista.catalogo.zona' | t }}</label>
       <select id="zonaId" formControlName="zonaId">
-        <option value="">Todas las zonas</option>
+        <option value="">{{ 'turista.catalogo.todasLasZonas' | t }}</option>
         @for (zona of zonas(); track zona.id) {
           <option [value]="zona.id">{{ zona.nombre }}</option>
         }
@@ -42,23 +41,23 @@
     </div>
 
     <div class="campo">
-      <label for="tipoActividad">Tipo de actividad</label>
+      <label for="tipoActividad">{{ 'turista.catalogo.tipoActividad' | t }}</label>
       <select id="tipoActividad" formControlName="tipoActividad" aria-describedby="tipoActividad-ayuda">
-        <option value="">Cualquiera</option>
+        <option value="">{{ 'turista.catalogo.cualquiera' | t }}</option>
         @for (tipo of tiposActividad; track tipo) {
           <option [value]="tipo">{{ etiquetaActividad[tipo] }}</option>
         }
       </select>
-      <p class="campo__ayuda" id="tipoActividad-ayuda">Incluye los paquetes que tienen una actividad de ese tipo.</p>
+      <p class="campo__ayuda" id="tipoActividad-ayuda">{{ 'turista.catalogo.ayudaTipoActividad' | t }}</p>
     </div>
 
     <hr class="separador" />
 
     <fieldset class="grupo">
-      <legend>Rango de precio (COP)</legend>
+      <legend>{{ 'turista.catalogo.rangoPrecio' | t }}</legend>
       <div class="campo-doble">
         <div class="campo">
-          <label for="precioMin">Mínimo</label>
+          <label for="precioMin">{{ 'turista.catalogo.minimo' | t }}</label>
           <input
             id="precioMin"
             type="number"
@@ -71,7 +70,7 @@
           />
         </div>
         <div class="campo">
-          <label for="precioMax">Máximo</label>
+          <label for="precioMax">{{ 'turista.catalogo.maximo' | t }}</label>
           <input
             id="precioMax"
             type="number"
@@ -95,26 +94,28 @@
     <hr class="separador" />
 
     <div class="campo">
-      <label for="nivelEsfuerzoMaximo">Esfuerzo físico máximo</label>
+      <label for="nivelEsfuerzoMaximo">{{ 'turista.catalogo.esfuerzoMaximo' | t }}</label>
       <select id="nivelEsfuerzoMaximo" formControlName="nivelEsfuerzoMaximo" aria-describedby="esfuerzo-ayuda">
-        <option value="">Cualquiera</option>
+        <option value="">{{ 'turista.catalogo.cualquiera' | t }}</option>
         @for (nivel of niveles; track nivel) {
-          <option [value]="nivel">Hasta {{ etiquetaNivel[nivel].toLowerCase() }}</option>
+          <option [value]="nivel">
+            {{ 'turista.catalogo.hastaNivel' | t: { nivel: etiquetaNivel[nivel].toLowerCase() } }}
+          </option>
         }
       </select>
-      <p class="campo__ayuda" id="esfuerzo-ayuda">Muestra actividades y paquetes de ese nivel o de uno menor.</p>
+      <p class="campo__ayuda" id="esfuerzo-ayuda">{{ 'turista.catalogo.ayudaEsfuerzo' | t }}</p>
     </div>
 
     <fieldset class="grupo">
-      <legend>Accesibilidad</legend>
+      <legend>{{ 'turista.catalogo.accesibilidad' | t }}</legend>
       <label class="opcion">
         <input type="checkbox" formControlName="accesibleSillaRuedas" />
-        <span>Accesible en silla de ruedas</span>
+        <span>{{ 'turista.accesible' | t }}</span>
       </label>
     </fieldset>
 
     <button type="button" class="boton boton--secundario boton--ancho" [disabled]="!conFiltros()" (click)="limpiar()">
-      Limpiar filtros
+      {{ 'turista.catalogo.limpiar' | t }}
     </button>
   </form>
 
@@ -123,14 +124,18 @@
       @if (zona.altaAfluencia) {
         <p class="alerta alerta--aviso">
           <app-icono nombre="alerta" />
-          <span><strong>Zona de alta afluencia: {{ zona.nombre }}.</strong> Suele estar congestionada en temporada alta.</span>
+          <span
+            ><strong>{{ 'turista.catalogo.altaAfluencia' | t: { zona: zona.nombre } }}</strong>
+            {{ 'turista.zona.congestionada' | t }}</span
+          >
         </p>
       }
       @if (zona.areaProtegida) {
         <p class="alerta alerta--exito">
           <app-icono nombre="hoja" />
           <span>
-            <strong>Área protegida: {{ zona.nombre }}.</strong> Cada ficha trae las buenas prácticas para visitarla.
+            <strong>{{ 'turista.catalogo.areaProtegida' | t: { zona: zona.nombre } }}</strong>
+            {{ 'turista.catalogo.areaProtegidaAyuda' | t }}
           </span>
         </p>
       }
@@ -161,7 +166,7 @@
                   }
                 </div>
                 <div class="oferta__cuerpo">
-                  <span class="etiqueta etiqueta--sello">RNT verificado</span>
+                  <span class="etiqueta etiqueta--sello">{{ 'turista.rntVerificado' | t }}</span>
                   <h2 class="oferta__nombre">{{ oferta.nombre }}</h2>
                   @if (zona(oferta.zonaId); as nombreZona) {
                     <p class="oferta__zona">{{ nombreZona }}</p>
@@ -170,7 +175,7 @@
                   <div class="oferta__pie">
                     <p class="oferta__precio">
                       <strong>{{ oferta.precioReferencia | precio }}</strong>&ngsp;
-                      <span>{{ oferta.unidadPrecio }}</span>
+                      <span>{{ oferta.unidadPrecio | unidad }}</span>
                     </p>
                     <app-icono class="oferta__flecha" nombre="flecha" />
                   </div>
@@ -186,13 +191,13 @@
         />
       } @else {
         <div class="vacio tarjeta">
-          <h2>No encontramos ofertas con esos filtros</h2>
-          <p class="texto-suave">Prueba con otra zona, otro rango de precio o un nivel de esfuerzo mayor.</p>
-          <button type="button" class="boton" (click)="limpiar()">Limpiar filtros</button>
+          <h2>{{ 'turista.catalogo.sinResultados' | t }}</h2>
+          <p class="texto-suave">{{ 'turista.catalogo.sinResultadosAyuda' | t }}</p>
+          <button type="button" class="boton" (click)="limpiar()">{{ 'turista.catalogo.limpiar' | t }}</button>
         </div>
       }
     } @else if (cargando()) {
-      <p class="texto-suave">Buscando ofertas…</p>
+      <p class="texto-suave">{{ 'turista.catalogo.buscando' | t }}</p>
     }
   </div>
 </section>

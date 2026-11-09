@@ -8,6 +8,9 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { mensajeDeBloqueo } from '../../../core/sesion/bloqueo';
 import { destinoTrasIniciarSesion } from '../../../core/sesion/rutas-por-rol';
 import { SesionService } from '../../../core/sesion/sesion.service';
@@ -25,7 +28,7 @@ const obligatorio: ValidatorFn = (control) =>
  */
 @Component({
   selector: 'app-iniciar-sesion',
-  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono],
+  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono, TPipe],
   templateUrl: './iniciar-sesion.html',
   styleUrl: './iniciar-sesion.css',
 })
@@ -43,7 +46,7 @@ export class IniciarSesion implements OnInit {
     recordar: new FormControl(false, { nonNullable: true }),
   });
   protected readonly enviando = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<TextoVivo | null>(null);
 
   ngOnInit(): void {
     // Quien ya tiene sesión no necesita esta pantalla.
@@ -61,11 +64,11 @@ export class IniciarSesion implements OnInit {
       return null;
     }
     if (campo === 'contrasena') {
-      return 'Escribe tu contraseña.';
+      return traducir('cuentas.login.errorContrasena');
     }
     return control.errors?.['required']
-      ? 'Escribe tu correo.'
-      : 'Escribe un correo válido, por ejemplo nombre@correo.co.';
+      ? traducir('cuentas.login.errorCorreo')
+      : traducir('cuentas.error.correoInvalido');
   }
 
   protected entrar(): void {
@@ -90,10 +93,12 @@ export class IniciarSesion implements OnInit {
       error: (fallo: unknown) => {
         const problema = aErrorApi(fallo);
         const bloqueadaHasta = problema.extras?.bloqueadaHasta;
+        const ahora = Date.now();
+        // Se guarda una función: el mensaje se arma al mostrarlo y cambia de idioma con la interfaz.
         this.error.set(
           problema.codigo === 'CUENTA_BLOQUEADA' && bloqueadaHasta
-            ? mensajeDeBloqueo(bloqueadaHasta, Date.now())
-            : problema.mensaje,
+            ? () => mensajeDeBloqueo(bloqueadaHasta, ahora)
+            : () => problema.mensaje,
         );
         this.enviando.set(false);
         // La contraseña se escribe de nuevo; el correo se conserva.

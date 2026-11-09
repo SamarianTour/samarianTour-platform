@@ -11,7 +11,7 @@
     >
       <span class="menu__avatar" aria-hidden="true">{{ inicial() }}</span>
       <span class="menu__nombre">{{ actual.nombre }}</span>
-      <span class="solo-lectores">, menú de la cuenta</span>
+      <span class="solo-lectores">, {{ 'app.menu.cuenta' | t }}</span>
       <app-icono class="menu__flecha" nombre="chevron" />
     </button>
 
@@ -24,10 +24,10 @@
         </div>
         <ul class="menu__lista">
           <li>
-            <a routerLink="/mis-datos" (click)="cerrar()">Mis datos</a>
+            <a routerLink="/mis-datos" (click)="cerrar()">{{ 'app.menu.misDatos' | t }}</a>
           </li>
           <li>
-            <button type="button" (click)="cerrarSesion()">Cerrar sesión</button>
+            <button type="button" (click)="cerrarSesion()">{{ 'app.menu.cerrarSesion' | t }}</button>
           </li>
         </ul>
       </div>

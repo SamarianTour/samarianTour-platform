@@ -3,13 +3,13 @@
     <div class="identidad">
       <span class="identidad__avatar" aria-hidden="true">{{ actual.nombre.trim().charAt(0).toUpperCase() }}</span>
       <div class="identidad__datos">
-        <p class="rotulo">Prestador</p>
+        <p class="rotulo">{{ 'etiquetas.rol.PRESTADOR' | t }}</p>
         <p class="identidad__nombre">{{ actual.nombre }}</p>
         <p class="identidad__tipo">
           @if (tipo(); as tipoActual) {
             {{ etiquetaTipo[tipoActual] }}
           } @else {
-            RNT por registrar
+            {{ 'prestador.panel.rntPorRegistrar' | t }}
           }
         </p>
       </div>
@@ -17,21 +17,18 @@
     @if (!tipo()) {
       <p class="alerta alerta--aviso">
         <app-icono nombre="alerta" />
-        <span>
-          Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ofertas. Esa pantalla llegará
-          en una próxima fase.
-        </span>
+        <span>{{ 'prestador.panel.sinRnt' | t }}</span>
       </p>
     }
   }
 
   <nav aria-labelledby="panel-titulo">
-    <p class="rotulo" id="panel-titulo">Panel de control</p>
+    <p class="rotulo" id="panel-titulo">{{ 'prestador.panel.control' | t }}</p>
     <ul class="menu">
       <li>
         <a routerLink="/prestador/ofertas" [class.activo]="!enPublicar()" [attr.aria-current]="enPublicar() ? null : 'page'">
           <app-icono nombre="paquete" />
-          Mis ofertas
+          {{ 'app.nav.misOfertas' | t }}
         </a>
       </li>
       <li>
@@ -41,7 +38,7 @@
           [attr.aria-current]="enPublicar() ? 'page' : null"
         >
           <app-icono nombre="mas" />
-          Publicar oferta
+          {{ 'app.titulo.publicarOferta' | t }}
         </a>
       </li>
     </ul>

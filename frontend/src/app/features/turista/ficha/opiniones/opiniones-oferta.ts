@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
@@ -9,10 +8,15 @@ import { OpinionesService } from '../../../../core/api/opiniones.service';
 import { AvisosService } from '../../../../core/avisos/avisos.service';
 import { ErrorApi } from '../../../../core/errores/error-api';
 import { aErrorApi } from '../../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../../core/idioma/texto-vivo';
+import { traducir } from '../../../../core/idioma/traducir';
 import { SesionService } from '../../../../core/sesion/sesion.service';
 import { CALIFICACION } from '../../../../shared/etiquetas';
 import { Estrellas } from '../../../../shared/estrellas/estrellas';
+import { FechaPipe } from '../../../../shared/fecha.pipe';
 import { Icono } from '../../../../shared/icono/icono';
+import { NumeroPipe } from '../../../../shared/numero.pipe';
 import { Paginacion } from '../../../../shared/paginacion/paginacion';
 
 const TAMANO_PAGINA = 5;
@@ -37,7 +41,7 @@ const largoDelComentario: ValidatorFn = (control) => {
  */
 @Component({
   selector: 'app-opiniones-oferta',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, Estrellas, Icono, Paginacion],
+  imports: [ReactiveFormsModule, RouterLink, FechaPipe, NumeroPipe, Estrellas, Icono, Paginacion, TPipe],
   templateUrl: './opiniones-oferta.html',
   styleUrl: './opiniones-oferta.css',
 })
@@ -77,9 +81,9 @@ export class OpinionesDeLaOferta {
   protected readonly largoComentario = signal(0);
   protected readonly enviando = signal(false);
   protected readonly enviada = signal(false);
-  protected readonly errorDeEnvio = signal<string | null>(null);
+  protected readonly errorDeEnvio = signal<TextoVivo | null>(null);
   /** Error de un campo que devolvió la API (DATO_INVALIDO), por nombre de campo. */
-  private readonly erroresDeApi = signal<Record<string, string>>({});
+  private readonly erroresDeApi = signal<Record<string, TextoVivo>>({});
   private readonly cambios = signal(0);
 
   constructor() {
@@ -112,18 +116,21 @@ export class OpinionesDeLaOferta {
     this.cambios();
     const deApi = this.erroresDeApi()[campo];
     if (deApi) {
-      return deApi;
+      return deApi();
     }
     const control = this.formulario.controls[campo];
     if (!control.invalid || !control.touched) {
       return null;
     }
     if (campo === 'calificacion') {
-      return 'Elige de 1 a 5 estrellas.';
+      return traducir('turista.opiniones.errorCalificacion');
     }
     return control.errors?.['required']
-      ? 'Escribe tu comentario.'
-      : `El comentario debe tener entre ${COMENTARIO_MINIMO} y ${COMENTARIO_MAXIMO} caracteres.`;
+      ? traducir('turista.opiniones.errorVacio')
+      : traducir('turista.opiniones.errorLargo', {
+          minimo: COMENTARIO_MINIMO,
+          maximo: COMENTARIO_MAXIMO,
+        });
   }
 
   protected enviar(): void {
@@ -146,15 +153,15 @@ export class OpinionesDeLaOferta {
           this.enviando.set(false);
           this.enviada.set(true);
           this.formulario.reset({ calificacion: null, comentario: '' });
-          this.avisos.mostrar('Tu opinión quedó en moderación');
+          this.avisos.mostrar(traducir('turista.opiniones.aviso'));
         },
         error: (fallo: unknown) => {
           this.enviando.set(false);
           const error = aErrorApi(fallo);
           if (error.campo === 'calificacion' || error.campo === 'comentario') {
-            this.erroresDeApi.set({ [error.campo]: error.detalleCampo ?? error.mensaje });
+            this.erroresDeApi.set({ [error.campo]: () => error.detalleCampo ?? error.mensaje });
           } else {
-            this.errorDeEnvio.set(error.mensaje);
+            this.errorDeEnvio.set(() => error.mensaje);
           }
         },
       });

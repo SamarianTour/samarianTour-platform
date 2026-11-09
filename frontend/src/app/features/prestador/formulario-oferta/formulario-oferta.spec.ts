@@ -5,7 +5,8 @@ import { provideRouter } from '@angular/router';
 import { TipoPrestador } from '../../../core/api/modelos';
 import { CLAVE_SESION, aSesionGuardada } from '../../../core/sesion/almacen-sesion';
 import { respuestaDeSesion } from '../../../core/sesion/testing';
-import { FormularioOferta, MENSAJE_SIN_TIPO } from './formulario-oferta';
+import { traducir } from '../../../core/idioma/traducir';
+import { FormularioOferta } from './formulario-oferta';
 
 describe('FormularioOferta (según la sesión)', () => {
   let fixture: ComponentFixture<FormularioOferta>;
@@ -44,7 +45,7 @@ describe('FormularioOferta (según la sesión)', () => {
   it('un prestador sin RNT registrado no puede publicar: se le explica por qué, sin pedir nada al servidor', () => {
     crear();
 
-    expect(texto()).toContain(MENSAJE_SIN_TIPO);
+    expect(texto()).toContain(traducir('prestador.form.sinTipo'));
     expect(raiz().querySelector('form')).toBeNull();
     http.expectNone('/api/catalogo/zonas');
   });

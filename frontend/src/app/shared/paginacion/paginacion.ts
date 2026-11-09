@@ -1,17 +1,21 @@
 import { Component, computed, input, output } from '@angular/core';
+import { TPipe } from '../../core/idioma/t.pipe';
 
 /** Paginación con páginas que empiezan en 0, como en la API (DC-14). */
 @Component({
   selector: 'app-paginacion',
+  imports: [TPipe],
   template: `
     @if (totalPaginas() > 1) {
-      <nav class="paginacion" aria-label="Paginación">
+      <nav class="paginacion" [attr.aria-label]="'compartido.paginacion.etiqueta' | t">
         <button type="button" class="boton boton--secundario" [disabled]="pagina() === 0" (click)="ir(pagina() - 1)">
-          Anterior
+          {{ 'compartido.paginacion.anterior' | t }}
         </button>
-        <span aria-live="polite">Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+        <span aria-live="polite">{{
+          'comun.pagina' | t: { pagina: pagina() + 1, total: totalPaginas() }
+        }}</span>
         <button type="button" class="boton boton--secundario" [disabled]="esUltima()" (click)="ir(pagina() + 1)">
-          Siguiente
+          {{ 'compartido.paginacion.siguiente' | t }}
         </button>
       </nav>
     }

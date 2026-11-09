@@ -1,19 +1,19 @@
 <section class="pagina">
-  <nav class="migas" aria-label="Ruta de navegación">
-    <a routerLink="/prestador/ofertas">Mis ofertas</a>
+  <nav class="migas" [attr.aria-label]="'turista.ficha.migas' | t">
+    <a routerLink="/prestador/ofertas">{{ 'app.nav.misOfertas' | t }}</a>
     <app-icono nombre="chevron" />
-    <span aria-current="page">Detalle de la oferta</span>
+    <span aria-current="page">{{ 'app.titulo.detalleOferta' | t }}</span>
   </nav>
 
   @switch (estado().tipo) {
     @case ('cargando') {
-      <p class="texto-suave" aria-live="polite">Cargando la oferta…</p>
+      <p class="texto-suave" aria-live="polite">{{ 'turista.ficha.cargando' | t }}</p>
     }
     @case ('no-encontrada') {
       <div class="tarjeta vacio" role="alert">
-        <h1>No encontramos esta oferta entre las tuyas</h1>
-        <p class="texto-suave">Puede que no sea tuya, o que ya no exista. Revisa la lista de tus ofertas.</p>
-        <a class="boton" routerLink="/prestador/ofertas">Ver mis ofertas</a>
+        <h1>{{ 'prestador.detalle.noEncontrada' | t }}</h1>
+        <p class="texto-suave">{{ 'prestador.detalle.noEncontradaAyuda' | t }}</p>
+        <a class="boton" routerLink="/prestador/ofertas">{{ 'prestador.detalle.verMis' | t }}</a>
       </div>
     }
     @case ('error') {
@@ -35,39 +35,41 @@
       </header>
 
       <div class="versiones">
-        @for (columna of versiones(); track columna.titulo) {
+        @for (columna of versiones(); track columna.clave) {
           <section class="tarjeta" [attr.aria-label]="columna.titulo">
             <h2>{{ columna.titulo }}</h2>
             @if (columna.version; as version) {
               <dl class="renglones">
                 <div>
-                  <dt>Número de versión</dt>
+                  <dt>{{ 'prestador.detalle.numero' | t }}</dt>
                   <dd>{{ version.numero }}</dd>
                 </div>
                 <div>
-                  <dt>Estado de moderación</dt>
+                  <dt>{{ 'prestador.detalle.moderacion' | t }}</dt>
                   <dd>{{ etiquetaModeracion[version.estadoModeracion] }}</dd>
                 </div>
                 <div>
-                  <dt>Enviada a moderación</dt>
-                  <dd>{{ version.enviadaEn | date: 'd MMM y, h:mm a' }}</dd>
+                  <dt>{{ 'prestador.detalle.enviada' | t }}</dt>
+                  <dd>{{ version.enviadaEn | fecha: 'conHora' }}</dd>
                 </div>
                 <div>
-                  <dt>Revisada</dt>
-                  <dd>{{ version.revisadaEn ? (version.revisadaEn | date: 'd MMM y, h:mm a') : 'Aún no' }}</dd>
+                  <dt>{{ 'prestador.detalle.revisada' | t }}</dt>
+                  <dd>
+                    {{ version.revisadaEn ? (version.revisadaEn | fecha: 'conHora') : ('prestador.detalle.aunNo' | t) }}
+                  </dd>
                 </div>
                 @if (version.motivoRechazo) {
                   <div class="renglon--rechazo">
-                    <dt>Motivo del rechazo</dt>
+                    <dt>{{ 'prestador.detalle.motivoRechazo' | t }}</dt>
                     <dd>{{ version.motivoRechazo }}</dd>
                   </div>
                 }
                 <div>
-                  <dt>Nombre</dt>
+                  <dt>{{ 'prestador.detalle.nombre' | t }}</dt>
                   <dd>{{ version.nombre }}</dd>
                 </div>
                 <div>
-                  <dt>Precio de referencia</dt>
+                  <dt>{{ 'prestador.detalle.precio' | t }}</dt>
                   <dd class="renglon__precio">{{ version.precioReferencia | precio: unidad[propia.tipo] }}</dd>
                 </div>
               </dl>
@@ -80,15 +82,15 @@
 
       <div class="acciones">
         @if (editable()) {
-          <a class="boton" [routerLink]="['/prestador/ofertas', propia.id, 'editar']">Editar oferta</a>
+          <a class="boton" [routerLink]="['/prestador/ofertas', propia.id, 'editar']">{{ 'app.titulo.editarOferta' | t }}</a>
         } @else if (!propia.retirada) {
           <p class="alerta alerta--info">
             <app-icono nombre="info" />
-            <span>Podrás editarla cuando tenga una versión publicada.</span>
+            <span>{{ 'prestador.ofertas.nota' | t }}</span>
           </p>
         }
         @if (propia.publicada && !propia.retirada) {
-          <a class="boton boton--secundario" [routerLink]="['/ofertas', propia.id]">Ver en el catálogo</a>
+          <a class="boton boton--secundario" [routerLink]="['/ofertas', propia.id]">{{ 'prestador.detalle.verEnCatalogo' | t }}</a>
         }
       </div>
     }

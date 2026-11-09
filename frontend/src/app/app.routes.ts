@@ -7,6 +7,9 @@ const proximamente = () =>
   import('./shared/proximamente/proximamente').then((modulo) => modulo.Proximamente);
 
 /**
+ * El `title` de cada ruta es una clave de texto (`app.titulo.*`), no el texto: `EstrategiaDeTitulo` lo traduce y lo
+ * mantiene al cambiar de idioma. Lo mismo vale para el `nombre` y la `descripcion` de las pantallas "próximamente".
+ *
  * Cada funcionalidad se carga solo cuando se entra a ella. Las secciones de un rol solo las abre ese rol: sin sesión
  * llevan a iniciar sesión y con otro rol, a "no tienes permiso".
  */
@@ -25,12 +28,11 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'solicitudes' },
       {
         path: '**',
-        title: 'Mis solicitudes · Samarian Tour',
+        title: 'app.titulo.misSolicitudes',
         data: {
           codigo: 'P02.2',
-          nombre: 'Mis solicitudes',
-          descripcion:
-            'Aquí verás el estado de tus solicitudes de disponibilidad, y podrás confirmar o declinar las condiciones y pagar.',
+          nombre: 'app.proximamente.turista.nombre',
+          descripcion: 'app.proximamente.turista.descripcion',
         },
         loadComponent: proximamente,
       },
@@ -42,12 +44,11 @@ export const routes: Routes = [
     children: [
       {
         path: '**',
-        title: 'Cola de solicitudes · Samarian Tour',
+        title: 'app.titulo.cola',
         data: {
           codigo: 'P02.4',
-          nombre: 'Cola de solicitudes',
-          descripcion:
-            'Aquí atenderás la cola de solicitudes de disponibilidad de los prestadores que tienes asignados.',
+          nombre: 'app.proximamente.operador.nombre',
+          descripcion: 'app.proximamente.operador.descripcion',
         },
         loadComponent: proximamente,
       },
@@ -59,12 +60,11 @@ export const routes: Routes = [
     children: [
       {
         path: '**',
-        title: 'Indicadores · Samarian Tour',
+        title: 'app.titulo.indicadores',
         data: {
           codigo: 'P09.1',
-          nombre: 'Panel de indicadores',
-          descripcion:
-            'Aquí verás la demanda por zona, el embudo de solicitudes y la distribución por categorías del destino.',
+          nombre: 'app.proximamente.gestor.nombre',
+          descripcion: 'app.proximamente.gestor.descripcion',
         },
         loadComponent: proximamente,
       },
@@ -76,12 +76,11 @@ export const routes: Routes = [
     children: [
       {
         path: '**',
-        title: 'Administración · Samarian Tour',
+        title: 'app.titulo.administracion',
         data: {
           codigo: 'P05.1',
-          nombre: 'Administración',
-          descripcion:
-            'Aquí revisarás los prestadores y su RNT, la moderación de ofertas y opiniones, las cuentas internas y las zonas.',
+          nombre: 'app.proximamente.admin.nombre',
+          descripcion: 'app.proximamente.admin.descripcion',
         },
         loadComponent: proximamente,
       },

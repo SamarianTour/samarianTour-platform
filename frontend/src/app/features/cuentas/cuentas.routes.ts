@@ -5,24 +5,24 @@ import { autenticadoGuard } from '../../core/sesion/guards';
 export const RUTAS_CUENTAS: Routes = [
   {
     path: 'iniciar-sesion',
-    title: 'Iniciar sesión · Samarian Tour',
+    title: 'app.titulo.iniciarSesion',
     loadComponent: () =>
       import('./iniciar-sesion/iniciar-sesion').then((modulo) => modulo.IniciarSesion),
   },
   {
     path: 'registro',
-    title: 'Crear cuenta · Samarian Tour',
+    title: 'app.titulo.crearCuenta',
     loadComponent: () => import('./registro/registro').then((modulo) => modulo.Registro),
   },
   {
     path: 'mis-datos',
-    title: 'Mis datos · Samarian Tour',
+    title: 'app.titulo.misDatos',
     canActivate: [autenticadoGuard],
     loadComponent: () => import('./mis-datos/mis-datos').then((modulo) => modulo.MisDatos),
   },
   {
     path: 'recuperar-contrasena',
-    title: 'Recuperar el acceso · Samarian Tour',
+    title: 'app.titulo.recuperarAcceso',
     loadComponent: () =>
       import('./recuperar-contrasena/recuperar-contrasena').then(
         (modulo) => modulo.RecuperarContrasena,
@@ -31,7 +31,7 @@ export const RUTAS_CUENTAS: Routes = [
   {
     // El correo de recuperación del núcleo enlaza exactamente a este nombre, con ?token=…
     path: 'restablecer-contrasena',
-    title: 'Contraseña nueva · Samarian Tour',
+    title: 'app.titulo.contrasenaNueva',
     loadComponent: () =>
       import('./restablecer-contrasena/restablecer-contrasena').then(
         (modulo) => modulo.RestablecerContrasena,
@@ -39,7 +39,7 @@ export const RUTAS_CUENTAS: Routes = [
   },
   {
     path: 'sin-permiso',
-    title: 'Sin permiso · Samarian Tour',
+    title: 'app.titulo.sinPermiso',
     canActivate: [autenticadoGuard],
     loadComponent: () => import('./sin-permiso/sin-permiso').then((modulo) => modulo.SinPermiso),
   },

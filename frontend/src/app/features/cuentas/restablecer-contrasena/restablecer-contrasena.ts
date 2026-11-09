@@ -5,6 +5,9 @@ import { Router, RouterLink } from '@angular/router';
 import { CuentasService } from '../../../core/api/cuentas.service';
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { Icono } from '../../../shared/icono/icono';
 import { PaginaAcceso } from '../../../shared/pagina-acceso/pagina-acceso';
@@ -24,7 +27,7 @@ import {
  */
 @Component({
   selector: 'app-restablecer-contrasena',
-  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono],
+  imports: [ReactiveFormsModule, RouterLink, PaginaAcceso, Icono, TPipe],
   templateUrl: './restablecer-contrasena.html',
   styleUrl: './restablecer-contrasena.css',
 })
@@ -50,11 +53,11 @@ export class RestablecerContrasena {
     }),
   });
   protected readonly enviando = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<TextoVivo | null>(null);
   /** El enlace venció, ya se usó o se pidió uno más reciente: no se puede seguir con este. */
   protected readonly enlaceVencido = signal(false);
   /** Error de la contraseña que devolvió la API (DATO_INVALIDO). */
-  private readonly errorDeApi = signal<string | null>(null);
+  private readonly errorDeApi = signal<TextoVivo | null>(null);
 
   constructor() {
     // "Repite la contraseña" se vuelve a comprobar al cambiar la contraseña.
@@ -67,8 +70,9 @@ export class RestablecerContrasena {
   }
 
   protected errorDe(campo: 'contrasena' | 'repetir'): string | null {
-    if (campo === 'contrasena' && this.errorDeApi()) {
-      return this.errorDeApi();
+    const deApi = this.errorDeApi();
+    if (campo === 'contrasena' && deApi) {
+      return deApi();
     }
     const control = this.formulario.controls[campo];
     if (!control.invalid || !control.touched) {
@@ -76,15 +80,18 @@ export class RestablecerContrasena {
     }
     if (campo === 'repetir') {
       return control.errors?.['required']
-        ? 'Repite la contraseña.'
-        : 'Las contraseñas no coinciden.';
+        ? traducir('cuentas.error.repiteContrasena')
+        : traducir('cuentas.error.noCoinciden');
     }
     if (control.errors?.['required']) {
-      return 'Escribe una contraseña.';
+      return traducir('cuentas.error.escribeContrasena');
     }
     return control.errors?.['largo']
-      ? `La contraseña debe tener entre ${CONTRASENA_MINIMA} y ${CONTRASENA_MAXIMA} caracteres.`
-      : 'La contraseña debe tener al menos una letra y un número.';
+      ? traducir('cuentas.error.contrasenaLargo', {
+          minimo: CONTRASENA_MINIMA,
+          maximo: CONTRASENA_MAXIMA,
+        })
+      : traducir('cuentas.error.contrasenaLetraNumero');
   }
 
   protected cambiar(): void {
@@ -104,7 +111,7 @@ export class RestablecerContrasena {
       next: () => {
         // El núcleo cerró todas las sesiones de la cuenta: la de este navegador, si la había, ya no sirve.
         this.sesion.descartarSesion();
-        this.avisos.mostrar('Cambiaste tu contraseña. Inicia sesión con la nueva.');
+        this.avisos.mostrar(traducir('cuentas.restablecer.aviso'));
         void this.router.navigate(['/iniciar-sesion'], { replaceUrl: true });
       },
       error: (fallo: unknown) => {
@@ -113,10 +120,10 @@ export class RestablecerContrasena {
         if (problema.codigo === 'CODIGO_NO_VIGENTE') {
           this.enlaceVencido.set(true);
         } else if (problema.campo === 'contrasena') {
-          this.errorDeApi.set(mayusculaInicial(problema.detalleCampo ?? problema.mensaje));
+          this.errorDeApi.set(() => mayusculaInicial(problema.detalleCampo ?? problema.mensaje));
           this.enfocar('contrasena');
         } else {
-          this.error.set(problema.mensaje);
+          this.error.set(() => problema.mensaje);
         }
       },
     });

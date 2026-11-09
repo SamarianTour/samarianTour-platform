@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { TPipe } from '../../../core/idioma/t.pipe';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { TIPO_PRESTADOR } from '../../../shared/etiquetas';
 import { Icono } from '../../../shared/icono/icono';
@@ -15,7 +16,7 @@ const RUTA_NUEVA = '/prestador/ofertas/nueva';
  */
 @Component({
   selector: 'app-panel-prestador',
-  imports: [RouterOutlet, RouterLink, Icono],
+  imports: [RouterOutlet, RouterLink, Icono, TPipe],
   templateUrl: './panel-prestador.html',
   styleUrl: './panel-prestador.css',
 })

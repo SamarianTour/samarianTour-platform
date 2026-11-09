@@ -1,17 +1,16 @@
 <section class="pagina">
   <div class="tarjeta vacio" role="alert">
     <span class="aviso-icono" aria-hidden="true"><app-icono nombre="escudo" /></span>
-    <h1>No tienes permiso para ver esta página</h1>
+    <h1>{{ 'cuentas.sinPermiso.titulo' | t }}</h1>
     @if (rol(); as actual) {
       <p class="texto-suave">
-        Entraste como <strong>{{ etiquetaRol[actual] }}</strong
-        >, y esta sección es de otro tipo de cuenta. Si crees que es un error, inicia sesión con la
-        cuenta correcta.
+        {{ 'cuentas.sinPermiso.entraste' | t }} <strong>{{ etiquetaRol[actual] }}</strong
+        >{{ 'cuentas.sinPermiso.explicacion' | t }}
       </p>
       <div class="acciones">
-        <a class="boton" [routerLink]="inicio[actual]">Ir a mi inicio</a>
+        <a class="boton" [routerLink]="inicio[actual]">{{ 'cuentas.sinPermiso.irInicio' | t }}</a>
         <button type="button" class="boton boton--secundario" (click)="cambiarDeCuenta()">
-          Entrar con otra cuenta
+          {{ 'cuentas.sinPermiso.otraCuenta' | t }}
         </button>
       </div>
     }

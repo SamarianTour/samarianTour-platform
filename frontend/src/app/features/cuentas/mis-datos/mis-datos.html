@@ -1,19 +1,18 @@
 <section class="pagina">
   <header class="encabezado">
-    <p class="rotulo">Mi cuenta</p>
-    <h1>Mis datos y derechos del titular</h1>
-    <p class="texto-suave">
-      Consulta y controla tu información personal. Samarian Tour trata tus datos conforme a la Ley
-      1581 de 2012 de protección de datos.
-    </p>
+    <p class="rotulo">{{ 'cuentas.misDatos.rotulo' | t }}</p>
+    <h1>{{ 'cuentas.misDatos.titulo' | t }}</h1>
+    <p class="texto-suave">{{ 'cuentas.misDatos.intro' | t }}</p>
   </header>
 
   @if (errorDeCarga(); as mensaje) {
     <p class="alerta alerta--error" role="alert">
       <app-icono nombre="alerta" />
       <span>
-        {{ mensaje }}
-        <button type="button" class="enlace-texto" (click)="cargar()">Intentar de nuevo</button>
+        {{ mensaje() }}
+        <button type="button" class="enlace-texto" (click)="cargar()">
+          {{ 'comun.reintentar' | t }}
+        </button>
       </span>
     </p>
   }
@@ -26,7 +25,7 @@
 
       <section class="tarjeta" aria-labelledby="datos-titulo">
         <div class="seccion__cabecera">
-          <h2 id="datos-titulo" tabindex="-1">Mis datos</h2>
+          <h2 id="datos-titulo" tabindex="-1">{{ 'cuentas.misDatos.seccion' | t }}</h2>
           @if (!editando()) {
             <button
               type="button"
@@ -34,7 +33,7 @@
               class="boton boton--secundario"
               (click)="empezarEdicion()"
             >
-              Editar mis datos
+              {{ 'cuentas.misDatos.editar' | t }}
             </button>
           }
         </div>
@@ -42,31 +41,35 @@
         @if (!editando()) {
           <dl class="datos">
             <div>
-              <dt>Nombre</dt>
+              <dt>{{ 'cuentas.campo.nombre' | t }}</dt>
               <dd>{{ actual.nombre }}</dd>
             </div>
             <div>
-              <dt>Correo</dt>
+              <dt>{{ 'cuentas.misDatos.correo' | t }}</dt>
               <dd>
                 {{ actual.correo }}
-                <span class="campo__ayuda">El correo no se puede cambiar.</span>
+                <span class="campo__ayuda">{{ 'cuentas.misDatos.correoFijo' | t }}</span>
               </dd>
             </div>
             @if (esTurista()) {
               <div>
-                <dt>WhatsApp</dt>
+                <dt>{{ 'cuentas.campo.whatsapp' | t }}</dt>
                 <dd>
                   {{ actual.whatsapp }}
                   @if (actual.whatsappVerificado) {
-                    <span class="etiqueta etiqueta--exito">Verificado</span>
+                    <span class="etiqueta etiqueta--exito">{{
+                      'cuentas.misDatos.verificado' | t
+                    }}</span>
                   } @else {
-                    <span class="etiqueta etiqueta--aviso">Sin verificar</span>
+                    <span class="etiqueta etiqueta--aviso">{{
+                      'cuentas.misDatos.sinVerificar' | t
+                    }}</span>
                   }
                 </dd>
               </div>
             }
             <div>
-              <dt>Tipo de cuenta</dt>
+              <dt>{{ 'cuentas.misDatos.tipoCuenta' | t }}</dt>
               <dd>{{ etiquetaRol[actual.rol] }}</dd>
             </div>
           </dl>
@@ -75,12 +78,15 @@
             @if (errorGeneral(); as mensaje) {
               <p class="alerta alerta--error" role="alert">
                 <app-icono nombre="alerta" />
-                <span>{{ mensaje }}</span>
+                <span>{{ mensaje() }}</span>
               </p>
             }
 
             <div class="campo">
-              <label for="nombre">Nombre <span class="requerido" aria-hidden="true">*</span></label>
+              <label for="nombre"
+                >{{ 'cuentas.campo.nombre' | t }}
+                <span class="requerido" aria-hidden="true">*</span></label
+              >
               <input
                 id="nombre"
                 type="text"
@@ -96,7 +102,7 @@
             </div>
 
             <div class="campo">
-              <label for="correo-fijo">Correo</label>
+              <label for="correo-fijo">{{ 'cuentas.misDatos.correo' | t }}</label>
               <input
                 id="correo-fijo"
                 type="email"
@@ -104,13 +110,14 @@
                 readonly
                 aria-describedby="correo-ayuda"
               />
-              <p class="campo__ayuda" id="correo-ayuda">El correo no se puede cambiar.</p>
+              <p class="campo__ayuda" id="correo-ayuda">{{ 'cuentas.misDatos.correoFijo' | t }}</p>
             </div>
 
             @if (esTurista()) {
               <div class="campo">
                 <label for="whatsapp"
-                  >WhatsApp <span class="requerido" aria-hidden="true">*</span></label
+                  >{{ 'cuentas.campo.whatsapp' | t }}
+                  <span class="requerido" aria-hidden="true">*</span></label
                 >
                 <input
                   id="whatsapp"
@@ -125,8 +132,7 @@
                   "
                 />
                 <p class="campo__ayuda" id="whatsapp-ayuda">
-                  Con el indicativo del país, por ejemplo +573001234567. Si lo cambias, te enviamos
-                  un código para verificar el número nuevo.
+                  {{ 'cuentas.misDatos.ayudaWhatsapp' | t }}
                 </p>
                 @if (errorDe('whatsapp'); as mensaje) {
                   <p class="campo__error" id="whatsapp-error">{{ mensaje }}</p>
@@ -136,10 +142,10 @@
 
             <div class="acciones">
               <button type="submit" class="boton" [disabled]="guardando()">
-                {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+                {{ (guardando() ? 'cuentas.misDatos.guardando' : 'cuentas.misDatos.guardar') | t }}
               </button>
               <button type="button" class="boton boton--secundario" (click)="cancelarEdicion()">
-                Cancelar
+                {{ 'comun.cancelar' | t }}
               </button>
             </div>
           </form>
@@ -147,84 +153,76 @@
       </section>
 
       <section aria-labelledby="derechos-titulo">
-        <h2 id="derechos-titulo">Tus derechos</h2>
-        <p class="texto-suave">
-          Como titular de tus datos puedes ejercer estos derechos cuando quieras. Estos son los que
-          ya puedes usar desde la aplicación y los que todavía no.
-        </p>
+        <h2 id="derechos-titulo">{{ 'cuentas.misDatos.derechosTitulo' | t }}</h2>
+        <p class="texto-suave">{{ 'cuentas.misDatos.derechosIntro' | t }}</p>
         <ul class="derechos">
           <li class="tarjeta derecho">
-            <h3>Acceso</h3>
-            <p>Conocer qué datos tenemos sobre ti y cómo los usamos.</p>
+            <h3>{{ 'cuentas.misDatos.acceso' | t }}</h3>
+            <p>{{ 'cuentas.misDatos.accesoDesc' | t }}</p>
             <button type="button" class="boton boton--secundario" (click)="irADatos()">
-              Ver mis datos
+              {{ 'cuentas.misDatos.verDatos' | t }}
             </button>
           </li>
           <li class="tarjeta derecho">
-            <h3>Rectificación</h3>
-            <p>Corregir datos inexactos o incompletos.</p>
+            <h3>{{ 'cuentas.misDatos.rectificacion' | t }}</h3>
+            <p>{{ 'cuentas.misDatos.rectificacionDesc' | t }}</p>
             <button type="button" class="boton boton--secundario" (click)="empezarEdicion()">
-              Actualizar
+              {{ 'cuentas.misDatos.actualizar' | t }}
             </button>
           </li>
           <li class="tarjeta derecho">
-            <h3>Supresión</h3>
-            <p>Pedir que eliminemos tus datos cuando proceda.</p>
+            <h3>{{ 'cuentas.misDatos.supresion' | t }}</h3>
+            <p>{{ 'cuentas.misDatos.supresionDesc' | t }}</p>
             @if (puedeEliminar()) {
               <button type="button" class="boton boton--secundario" (click)="irAEliminar()">
-                Solicitar
+                {{ 'cuentas.misDatos.solicitar' | t }}
               </button>
             } @else {
-              <p class="texto-suave derecho__nota">
-                Tu cuenta es interna: la gestiona un administrador.
-              </p>
+              <p class="texto-suave derecho__nota">{{ 'cuentas.misDatos.cuentaInterna' | t }}</p>
             }
           </li>
           <li class="tarjeta derecho">
-            <h3>Oposición</h3>
-            <p>Oponerte a ciertos usos de tus datos.</p>
-            <p class="texto-suave derecho__nota">
-              Todavía no se puede ejercer desde la aplicación.
-            </p>
+            <h3>{{ 'cuentas.misDatos.oposicion' | t }}</h3>
+            <p>{{ 'cuentas.misDatos.oposicionDesc' | t }}</p>
+            <p class="texto-suave derecho__nota">{{ 'cuentas.misDatos.noDisponible' | t }}</p>
           </li>
           <li class="tarjeta derecho">
-            <h3>Portabilidad</h3>
-            <p>Recibir una copia de tus datos en un archivo.</p>
-            <p class="texto-suave derecho__nota">
-              Todavía no se puede ejercer desde la aplicación.
-            </p>
+            <h3>{{ 'cuentas.misDatos.portabilidad' | t }}</h3>
+            <p>{{ 'cuentas.misDatos.portabilidadDesc' | t }}</p>
+            <p class="texto-suave derecho__nota">{{ 'cuentas.misDatos.noDisponible' | t }}</p>
           </li>
           <li class="tarjeta derecho">
-            <h3>Revocar la autorización</h3>
-            <p>Retirar el permiso que diste para el tratamiento de tus datos.</p>
-            <p class="texto-suave derecho__nota">
-              Todavía no se puede ejercer desde la aplicación.
-            </p>
+            <h3>{{ 'cuentas.misDatos.revocar' | t }}</h3>
+            <p>{{ 'cuentas.misDatos.revocarDesc' | t }}</p>
+            <p class="texto-suave derecho__nota">{{ 'cuentas.misDatos.noDisponible' | t }}</p>
           </li>
         </ul>
       </section>
 
       <section class="tarjeta" aria-labelledby="politica-titulo">
-        <h2 id="politica-titulo">Política de tratamiento de datos</h2>
+        <h2 id="politica-titulo">{{ 'cuentas.politica.titulo' | t }}</h2>
         @if (politica(); as vigente) {
           <p class="texto-suave">
-            Versión vigente: <strong>{{ vigente.version }}</strong
-            >, publicada el {{ vigente.fechaPublicacion | date: 'd MMMM y' }}.
+            {{ 'cuentas.misDatos.vigenteAntes' | t }} <strong>{{ vigente.version }}</strong
+            >{{
+              'cuentas.misDatos.vigenteDespues'
+                | t: { fecha: (vigente.fechaPublicacion | fecha: 'larga') }
+            }}
           </p>
           <div>
             <button type="button" class="boton boton--secundario" (click)="abrirPolitica()">
-              Leer la política
+              {{ 'cuentas.misDatos.leerPolitica' | t }}
             </button>
           </div>
         } @else {
-          <p class="texto-suave">No pudimos cargar la política en este momento.</p>
+          <p class="texto-suave">{{ 'cuentas.misDatos.sinPolitica' | t }}</p>
         }
       </section>
 
       <app-eliminar-cuenta />
     </div>
   } @else if (cargando()) {
-    <p class="texto-suave" aria-live="polite">Cargando tus datos…</p>
+    <p class="texto-suave" aria-live="polite">{{ 'cuentas.misDatos.cargando' | t }}</p>
   }
 </section>
 

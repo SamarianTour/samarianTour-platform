@@ -1,4 +1,6 @@
-import { Component, ElementRef, input, output, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, input, output, viewChild } from '@angular/core';
+import { TPipe } from '../../core/idioma/t.pipe';
+import { traducir } from '../../core/idioma/traducir';
 
 /**
  * Diálogo de confirmación propio, sobre el elemento <dialog>: atrapa el foco, se cierra con Escape
@@ -6,13 +8,14 @@ import { Component, ElementRef, input, output, viewChild } from '@angular/core';
  */
 @Component({
   selector: 'app-dialogo-confirmacion',
+  imports: [TPipe],
   template: `
     <dialog #dialogo class="dialogo" aria-labelledby="dialogo-titulo" (close)="cerrado()">
       <h2 id="dialogo-titulo">{{ titulo() }}</h2>
       <p>{{ mensaje() }}</p>
       <div class="dialogo__acciones">
-        <button type="button" class="boton boton--secundario" (click)="cancelar()">Cancelar</button>
-        <button type="button" class="boton boton--peligro" (click)="aceptar()">{{ accion() }}</button>
+        <button type="button" class="boton boton--secundario" (click)="cancelar()">{{ 'comun.cancelar' | t }}</button>
+        <button type="button" class="boton boton--peligro" (click)="aceptar()">{{ textoAccion() }}</button>
       </div>
     </dialog>
   `,
@@ -43,7 +46,9 @@ import { Component, ElementRef, input, output, viewChild } from '@angular/core';
 export class DialogoConfirmacion {
   readonly titulo = input.required<string>();
   readonly mensaje = input.required<string>();
-  readonly accion = input('Confirmar');
+  /** El texto del botón de confirmar; sin él, "Confirmar" / "Confirm". */
+  readonly accion = input<string | null>(null);
+  protected readonly textoAccion = computed(() => this.accion() ?? traducir('compartido.dialogo.confirmar'));
   readonly confirmado = output<void>();
 
   private readonly dialogo = viewChild.required<ElementRef<HTMLDialogElement>>('dialogo');

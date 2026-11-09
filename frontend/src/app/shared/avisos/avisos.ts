@@ -1,15 +1,17 @@
 import { Component, inject } from '@angular/core';
 import { AvisosService } from '../../core/avisos/avisos.service';
+import { TPipe } from '../../core/idioma/t.pipe';
 
 /** Muestra los mensajes de confirmación en una esquina; los lectores de pantalla los anuncian. */
 @Component({
   selector: 'app-avisos',
+  imports: [TPipe],
   template: `
     <div class="avisos" role="status" aria-live="polite">
       @for (aviso of avisos(); track aviso.id) {
         <div class="aviso">
           <span>{{ aviso.texto }}</span>
-          <button type="button" class="aviso__cerrar" aria-label="Cerrar mensaje" (click)="cerrar(aviso.id)">
+          <button type="button" class="aviso__cerrar" [attr.aria-label]="'compartido.avisos.cerrar' | t" (click)="cerrar(aviso.id)">
             ×
           </button>
         </div>

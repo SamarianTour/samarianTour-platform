@@ -6,18 +6,18 @@ export const RUTAS_TURISTA: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    title: 'Catálogo · Samarian Tour',
+    title: 'app.titulo.catalogo',
     loadComponent: () => import('./catalogo/catalogo').then((modulo) => modulo.Catalogo),
   },
   {
     path: 'mis-opiniones',
-    title: 'Mis opiniones · Samarian Tour',
+    title: 'app.titulo.misOpiniones',
     canActivate: [rolGuard('TURISTA')],
     loadComponent: () => import('./mis-opiniones/mis-opiniones').then((modulo) => modulo.MisOpiniones),
   },
   {
     path: 'ofertas/:id',
-    title: 'Oferta · Samarian Tour',
+    title: 'app.titulo.oferta',
     loadComponent: () => import('./ficha/ficha').then((modulo) => modulo.Ficha),
   },
 ];

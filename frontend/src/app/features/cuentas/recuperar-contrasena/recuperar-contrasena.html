@@ -1,25 +1,25 @@
 <app-pagina-acceso
-  titulo="Recuperar el acceso"
-  subtitulo="Escribe el correo de tu cuenta y te enviamos un enlace para elegir una contraseña nueva."
+  [titulo]="'cuentas.recuperar.titulo' | t"
+  [subtitulo]="'cuentas.recuperar.subtitulo' | t"
 >
   @if (enviadoA(); as correo) {
     <div class="confirmacion">
       <p class="alerta alerta--exito" role="status">
         <app-icono nombre="hoja" />
         <span>
-          Si hay una cuenta activa con <strong>{{ correo }}</strong
-          >, te enviamos un enlace para elegir una contraseña nueva.
+          {{ 'cuentas.recuperar.confirmacionAntes' | t }} <strong>{{ correo }}</strong
+          >{{ 'cuentas.recuperar.confirmacionDespues' | t }}
         </span>
       </p>
       <ul class="notas">
-        <li>El enlace vence a los 30 minutos y sirve una sola vez.</li>
-        <li>Si no lo ves, revisa la carpeta de correo no deseado.</li>
-        <li>Si pides otro enlace, el anterior deja de servir.</li>
+        <li>{{ 'cuentas.recuperar.nota1' | t }}</li>
+        <li>{{ 'cuentas.recuperar.nota2' | t }}</li>
+        <li>{{ 'cuentas.recuperar.nota3' | t }}</li>
       </ul>
       <div class="acciones">
-        <a class="boton" routerLink="/iniciar-sesion">Volver a iniciar sesión</a>
+        <a class="boton" routerLink="/iniciar-sesion">{{ 'cuentas.recuperar.volver' | t }}</a>
         <button type="button" class="boton boton--secundario" (click)="pedirOtro()">
-          Pedir otro enlace
+          {{ 'cuentas.recuperar.pedirOtro' | t }}
         </button>
       </div>
     </div>
@@ -28,12 +28,12 @@
       @if (error(); as mensaje) {
         <p class="alerta alerta--error" role="alert">
           <app-icono nombre="alerta" />
-          <span>{{ mensaje }}</span>
+          <span>{{ mensaje() }}</span>
         </p>
       }
 
       <div class="campo">
-        <label for="correo">Correo electrónico</label>
+        <label for="correo">{{ 'cuentas.campo.correo' | t }}</label>
         <input
           id="correo"
           type="email"
@@ -50,10 +50,13 @@
       </div>
 
       <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
-        {{ enviando() ? 'Enviando…' : 'Enviar el enlace' }}
+        {{ (enviando() ? 'cuentas.recuperar.enviando' : 'cuentas.recuperar.enviar') | t }}
       </button>
     </form>
   }
 
-  <p pie>¿Te acordaste? <a routerLink="/iniciar-sesion">Inicia sesión</a></p>
+  <p pie>
+    {{ 'cuentas.recuperar.recuerdas' | t }}
+    <a routerLink="/iniciar-sesion">{{ 'cuentas.recuperar.inicia' | t }}</a>
+  </p>
 </app-pagina-acceso>

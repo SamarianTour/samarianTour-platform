@@ -28,6 +28,9 @@ import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.ser
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { MENSAJES } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo, textoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import {
   MODALIDAD,
@@ -46,7 +49,7 @@ import { SelectorFotos } from './selector-fotos/selector-fotos';
 
 type Campo = keyof ValoresOferta;
 
-type Estado = { tipo: 'cargando' } | { tipo: 'lista' } | { tipo: 'bloqueada'; mensaje: string };
+type Estado = { tipo: 'cargando' } | { tipo: 'lista' } | { tipo: 'bloqueada'; mensaje: TextoVivo };
 
 /** Lo que hace falta para mostrar el formulario; `bloqueo` explica por qué no se puede editar. */
 interface Carga {
@@ -54,7 +57,8 @@ interface Carga {
   readonly propias: OfertaPrestador[];
   readonly ficha?: FichaOferta;
   readonly conCambiosEnRevision?: boolean;
-  readonly bloqueo?: string;
+  /** Por qué no se puede mostrar el formulario; se arma al mostrarlo para que siga el idioma. */
+  readonly bloqueo?: TextoVivo;
 }
 
 /** Una actividad propia que se puede incluir en un paquete. */
@@ -67,8 +71,7 @@ interface ActividadPropia {
 const MINIMO_ACTIVIDADES = 2;
 
 /** Sin tipo de prestador no se sabe qué ofertas puede publicar (DC-10): primero debe registrar su RNT. */
-export const MENSAJE_SIN_TIPO =
-  'Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ni editar ofertas. Esa pantalla llegará en una próxima fase.';
+const BLOQUEO_SIN_TIPO = textoVivo('prestador.form.sinTipo');
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const IDIOMA = /^[a-z]{2}$/;
 
@@ -95,7 +98,7 @@ const minimoDeActividades: ValidatorFn = (control) =>
  */
 @Component({
   selector: 'app-formulario-oferta',
-  imports: [ReactiveFormsModule, RouterLink, Mapa, Icono, SelectorFotos],
+  imports: [ReactiveFormsModule, RouterLink, Mapa, Icono, SelectorFotos, TPipe],
   templateUrl: './formulario-oferta.html',
   styleUrl: './formulario-oferta.css',
 })
@@ -161,12 +164,12 @@ export class FormularioOferta {
   /** Se activa al intentar enviar; desde entonces la falta de fotos se muestra como error. */
   private readonly intentoDeEnvio = signal(false);
   /** Error sobre `fotos` que devolvió la API; se quita al cambiar las fotos. */
-  private readonly errorDeFotosApi = signal<string | null>(null);
+  private readonly errorDeFotosApi = signal<TextoVivo | null>(null);
   protected readonly conCambiosEnRevision = signal(false);
   protected readonly guardando = signal(false);
-  protected readonly errorGeneral = signal<string | null>(null);
+  protected readonly errorGeneral = signal<TextoVivo | null>(null);
   /** Errores de campo que devolvió la API, por nombre de campo. */
-  private readonly erroresDeApi = signal<Partial<Record<Campo, string>>>({});
+  private readonly erroresDeApi = signal<Partial<Record<Campo, TextoVivo>>>({});
   /** Cambia con cada edición del formulario, para que los mensajes de error se vuelvan a calcular. */
   private readonly cambios = signal(0);
 
@@ -177,12 +180,12 @@ export class FormularioOferta {
   protected readonly editando = computed(() => !!this.id());
   protected readonly errorDeFotos = computed(
     () =>
-      this.errorDeFotosApi() ??
-      (this.intentoDeEnvio() && this.faltanFotos() ? 'Agrega al menos una foto: la primera es la portada.' : null),
+      this.errorDeFotosApi()?.() ??
+      (this.intentoDeEnvio() && this.faltanFotos() ? traducir('prestador.form.faltaFoto') : null),
   );
   protected readonly mensajeDeBloqueo = computed(() => {
     const estado = this.estado();
-    return estado.tipo === 'bloqueada' ? estado.mensaje : '';
+    return estado.tipo === 'bloqueada' ? estado.mensaje() : '';
   });
 
   constructor() {
@@ -203,7 +206,7 @@ export class FormularioOferta {
         switchMap((id) =>
           this.cargar(id).pipe(
             catchError((error: unknown) =>
-              of<Carga>({ zonas: [], propias: [], bloqueo: aErrorApi(error).mensaje }),
+              of<Carga>({ zonas: [], propias: [], bloqueo: mensajeDeError(error) }),
             ),
           ),
         ),
@@ -217,7 +220,7 @@ export class FormularioOferta {
     this.cambios();
     const deApi = this.erroresDeApi()[campo];
     if (deApi) {
-      return deApi;
+      return deApi();
     }
     const control = this.formulario.controls[campo];
     return control.invalid && control.touched ? mensajeDe(control.errors) : null;
@@ -266,7 +269,7 @@ export class FormularioOferta {
       return;
     }
     if (this.subiendoFotos()) {
-      this.errorGeneral.set('Espera a que terminen de subir las fotos y vuelve a enviar la oferta.');
+      this.errorGeneral.set(textoVivo('prestador.form.esperaFotos'));
       this.enfocarFotos();
       return;
     }
@@ -283,7 +286,9 @@ export class FormularioOferta {
         this.guardando.set(false);
         const numero = oferta.pendiente?.numero;
         this.avisos.mostrar(
-          numero ? `Enviamos tu oferta a moderación (versión ${numero})` : 'Enviamos tu oferta a moderación',
+          numero
+            ? traducir('prestador.form.enviadaConVersion', { numero })
+            : traducir('prestador.form.enviada'),
         );
         void this.router.navigate(['/prestador/ofertas']);
       },
@@ -297,7 +302,7 @@ export class FormularioOferta {
   /** Zonas, ofertas propias y, al editar, la ficha publicada de la oferta. */
   private cargar(id: string | undefined): Observable<Carga> {
     if (!this.tipoPrestador) {
-      return of({ zonas: [], propias: [], bloqueo: MENSAJE_SIN_TIPO });
+      return of({ zonas: [], propias: [], bloqueo: BLOQUEO_SIN_TIPO });
     }
     return forkJoin({ zonas: this.catalogo.zonas(), propias: this.servicio.todas() }).pipe(
       switchMap((base): Observable<Carga> => {
@@ -306,16 +311,15 @@ export class FormularioOferta {
         }
         const propia = base.propias.find((oferta) => oferta.id === id);
         if (!propia) {
-          return of({ ...base, bloqueo: 'No encontramos esta oferta entre las tuyas.' });
+          return of({ ...base, bloqueo: textoVivo('prestador.form.noPropia') });
         }
         if (propia.retirada) {
-          return of({ ...base, bloqueo: MENSAJES.OFERTA_NO_EDITABLE });
+          return of({ ...base, bloqueo: () => MENSAJES.OFERTA_NO_EDITABLE });
         }
         if (!propia.publicada) {
           return of({
             ...base,
-            bloqueo:
-              'Esta oferta todavía no tiene una versión publicada. Podrás editarla cuando la moderación la apruebe.',
+            bloqueo: textoVivo('prestador.form.sinPublicada'),
           });
         }
         return this.catalogo.ficha(id).pipe(
@@ -324,9 +328,7 @@ export class FormularioOferta {
             const fallo = aErrorApi(error);
             return of<Carga>({
               ...base,
-              bloqueo: fallo.noEncontrado
-                ? 'No podemos cargar esta oferta para editarla porque ahora no está visible en el catálogo.'
-                : fallo.mensaje,
+              bloqueo: fallo.noEncontrado ? textoVivo('prestador.form.noVisible') : () => fallo.mensaje,
             });
           }),
         );
@@ -346,7 +348,10 @@ export class FormularioOferta {
         .filter((oferta) => oferta.tipo === 'ACTIVIDAD' && !oferta.retirada)
         .map((oferta) => ({
           id: oferta.id,
-          nombre: versionVigente(oferta)?.nombre ?? 'Actividad sin nombre',
+          // Un getter: el texto de respaldo sigue el idioma aunque la lista ya esté en pantalla.
+          get nombre() {
+            return versionVigente(oferta)?.nombre ?? traducir('prestador.form.actividadSinNombre');
+          },
           sinAprobar: !oferta.publicada,
         })),
     );
@@ -396,16 +401,20 @@ export class FormularioOferta {
     const campo = error.campo;
     if (campo === 'fotos') {
       // Por ejemplo una foto que ya se borró porque pasaron 24 horas sin usarla (DC-47).
-      this.errorDeFotosApi.set(mayusculaInicial(error.detalleCampo ?? error.mensaje));
+      this.errorDeFotosApi.set(() => mayusculaInicial(error.detalleCampo ?? error.mensaje));
       this.enfocarFotos();
       return;
     }
     if (campo && esCampo(campo, this.formulario.controls)) {
-      this.erroresDeApi.set({ [campo]: mayusculaInicial(error.detalleCampo ?? error.mensaje) });
+      this.erroresDeApi.set({ [campo]: () => mayusculaInicial(error.detalleCampo ?? error.mensaje) });
       this.enfocar(campo);
       return;
     }
-    this.errorGeneral.set(error.detalleCampo ? `${error.mensaje} Detalle: ${error.detalleCampo}.` : error.mensaje);
+    this.errorGeneral.set(() =>
+      error.detalleCampo
+        ? traducir('prestador.form.conDetalle', { mensaje: error.mensaje, detalle: error.detalleCampo })
+        : error.mensaje,
+    );
   }
 
   private primerCampoInvalido(): Campo | undefined {
@@ -434,6 +443,12 @@ function esCampo(nombre: string, controles: Record<Campo, AbstractControl>): nom
   return nombre in controles;
 }
 
+/** Un error de la API como texto que se arma al mostrarlo. */
+function mensajeDeError(error: unknown): TextoVivo {
+  const fallo = aErrorApi(error);
+  return () => fallo.mensaje;
+}
+
 function mayusculaInicial(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
@@ -443,22 +458,22 @@ function mensajeDe(errores: ValidationErrors | null): string | null {
     return null;
   }
   if (errores['required']) {
-    return 'Este dato es obligatorio.';
+    return traducir('prestador.form.errorObligatorio');
   }
   if (errores['min']) {
-    return `Debe ser ${errores['min'].min} o más.`;
+    return traducir('prestador.form.errorMinimo', { minimo: errores['min'].min });
   }
   if (errores['entero']) {
-    return 'Debe ser un número entero.';
+    return traducir('prestador.form.errorEntero');
   }
   if (errores['horas']) {
-    return 'Escribe cada hora con el formato 07:30 y sepáralas con comas.';
+    return traducir('prestador.form.errorHoras');
   }
   if (errores['idiomas']) {
-    return 'Usa códigos de dos letras en minúscula, como es o en, separados por comas.';
+    return traducir('prestador.form.errorIdiomas');
   }
   if (errores['actividades']) {
-    return `Elige al menos ${MINIMO_ACTIVIDADES} actividades.`;
+    return traducir('prestador.form.errorActividades', { minimo: MINIMO_ACTIVIDADES });
   }
-  return 'Revisa este dato.';
+  return traducir('prestador.form.errorRevisa');
 }

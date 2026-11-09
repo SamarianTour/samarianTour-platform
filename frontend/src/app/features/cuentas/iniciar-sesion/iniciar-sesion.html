@@ -1,17 +1,17 @@
 <app-pagina-acceso
-  titulo="Iniciar sesión"
-  subtitulo="Entra para gestionar tus solicitudes, opiniones y datos."
+  [titulo]="'cuentas.login.titulo' | t"
+  [subtitulo]="'cuentas.login.subtitulo' | t"
 >
   <form class="formulario" [formGroup]="formulario" (ngSubmit)="entrar()" novalidate>
     @if (error(); as mensaje) {
       <p class="alerta alerta--error" role="alert">
         <app-icono nombre="alerta" />
-        <span>{{ mensaje }}</span>
+        <span>{{ mensaje() }}</span>
       </p>
     }
 
     <div class="campo">
-      <label for="correo">Correo electrónico</label>
+      <label for="correo">{{ 'cuentas.campo.correo' | t }}</label>
       <input
         id="correo"
         type="email"
@@ -28,7 +28,7 @@
     </div>
 
     <div class="campo">
-      <label for="contrasena">Contraseña</label>
+      <label for="contrasena">{{ 'cuentas.campo.contrasena' | t }}</label>
       <input
         id="contrasena"
         type="password"
@@ -46,15 +46,18 @@
     <div class="opciones">
       <label class="opcion">
         <input type="checkbox" formControlName="recordar" />
-        <span>Recordarme</span>
+        <span>{{ 'cuentas.login.recordar' | t }}</span>
       </label>
-      <a routerLink="/recuperar-contrasena">¿Olvidaste tu contraseña?</a>
+      <a routerLink="/recuperar-contrasena">{{ 'cuentas.login.olvido' | t }}</a>
     </div>
 
     <button type="submit" class="boton boton--ancho" [disabled]="enviando()">
-      {{ enviando() ? 'Entrando…' : 'Entrar' }}
+      {{ (enviando() ? 'cuentas.login.entrando' : 'cuentas.login.entrar') | t }}
     </button>
   </form>
 
-  <p pie>¿No tienes cuenta? <a routerLink="/registro">Crea una</a></p>
+  <p pie>
+    {{ 'cuentas.login.sinCuenta' | t }}
+    <a routerLink="/registro">{{ 'cuentas.login.crear' | t }}</a>
+  </p>
 </app-pagina-acceso>

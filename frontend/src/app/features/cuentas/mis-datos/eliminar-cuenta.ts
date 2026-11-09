@@ -4,6 +4,9 @@ import { Router } from '@angular/router';
 import { CuentasService } from '../../../core/api/cuentas.service';
 import { AvisosService } from '../../../core/avisos/avisos.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { traducir } from '../../../core/idioma/traducir';
 import { mensajeDeBloqueo } from '../../../core/sesion/bloqueo';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { Icono } from '../../../shared/icono/icono';
@@ -16,7 +19,7 @@ import { obligatorio } from '../validaciones';
  */
 @Component({
   selector: 'app-eliminar-cuenta',
-  imports: [ReactiveFormsModule, Icono],
+  imports: [ReactiveFormsModule, Icono, TPipe],
   templateUrl: './eliminar-cuenta.html',
   styleUrl: './eliminar-cuenta.css',
 })
@@ -39,7 +42,7 @@ export class EliminarCuenta {
     contrasena: new FormControl('', { nonNullable: true, validators: obligatorio }),
   });
   protected readonly eliminando = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<TextoVivo | null>(null);
   /** Lo que el prestador debe cumplir antes de poder eliminar sus datos (409). */
   protected readonly compromisos = signal<readonly string[]>([]);
 
@@ -56,7 +59,7 @@ export class EliminarCuenta {
 
   protected errorDeContrasena(): string | null {
     const control = this.formulario.controls.contrasena;
-    return control.invalid && control.touched ? 'Escribe tu contraseña para confirmar.' : null;
+    return control.invalid && control.touched ? traducir('cuentas.eliminar.errorContrasena') : null;
   }
 
   protected eliminar(): void {
@@ -82,9 +85,7 @@ export class EliminarCuenta {
         this.cerrar();
         // El núcleo cerró todas las sesiones de la cuenta: la de este navegador ya no sirve.
         this.sesion.descartarSesion();
-        this.avisos.mostrar(
-          'Eliminamos tus datos personales. Gracias por haber usado Samarian Tour.',
-        );
+        this.avisos.mostrar(traducir('cuentas.eliminar.aviso'));
         void this.router.navigateByUrl('/', { replaceUrl: true });
       },
       error: (fallo: unknown) => {
@@ -98,14 +99,15 @@ export class EliminarCuenta {
     const problema = aErrorApi(fallo);
     if (problema.codigo === 'PRESTADOR_CON_COMPROMISOS') {
       this.compromisos.set(problema.extras?.compromisos ?? []);
-      this.error.set(problema.mensaje);
+      this.error.set(() => problema.mensaje);
       return;
     }
     const bloqueadaHasta = problema.extras?.bloqueadaHasta;
+    const ahora = Date.now();
     this.error.set(
       problema.codigo === 'CUENTA_BLOQUEADA' && bloqueadaHasta
-        ? mensajeDeBloqueo(bloqueadaHasta, Date.now())
-        : problema.mensaje,
+        ? () => mensajeDeBloqueo(bloqueadaHasta, ahora)
+        : () => problema.mensaje,
     );
     // Una contraseña equivocada se escribe de nuevo.
     this.formulario.controls.contrasena.reset('');

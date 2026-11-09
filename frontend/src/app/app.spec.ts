@@ -111,6 +111,54 @@ describe('App (cabecera)', () => {
     });
   });
 
+  describe('idioma', () => {
+    const botonDeIdioma = (codigo: string) =>
+      Array.from(raiz().querySelectorAll<HTMLButtonElement>('app-selector-idioma button')).find(
+        (b) => b.textContent?.trim() === codigo,
+      )!;
+
+    it('tiene el selector ES | EN en la cabecera', () => {
+      crear();
+
+      expect(raiz().querySelector('header app-selector-idioma')).not.toBeNull();
+    });
+
+    it('al elegir EN, la cabecera, el menú y el pie pasan a inglés sin recargar', () => {
+      crear();
+
+      botonDeIdioma('EN').click();
+      fixture.detectChanges();
+
+      expect(enlaces()).toEqual(['Catalog', "I'm a provider"]);
+      expect(botonesDeCuenta().map((a) => a.textContent?.trim())).toEqual(['Log in', 'Sign up']);
+      expect(raiz().querySelector('.saltar')?.textContent).toBe('Skip to content');
+      expect(raiz().querySelector('nav')?.getAttribute('aria-label')).toBe('Main');
+      expect(raiz().querySelector('footer')?.textContent).toContain(
+        'Sustainable tourism in Santa Marta',
+      );
+    });
+
+    it('el menú de un rol también cambia, y vuelve a español', () => {
+      crear('TURISTA');
+
+      botonDeIdioma('EN').click();
+      fixture.detectChanges();
+      expect(enlaces()).toEqual(['Catalog', 'My requests', 'My reviews']);
+
+      botonDeIdioma('ES').click();
+      fixture.detectChanges();
+      expect(enlaces()).toEqual(['Catálogo', 'Mis solicitudes', 'Mis opiniones']);
+    });
+
+    it('la elección se recuerda: una página nueva arranca en el idioma elegido', () => {
+      crear();
+      botonDeIdioma('EN').click();
+      fixture.detectChanges();
+
+      expect(localStorage.getItem('samarian-tour.idioma')).toBe('en');
+    });
+  });
+
   describe('sección actual', () => {
     const marcado = () =>
       Array.from(raiz().querySelectorAll<HTMLAnchorElement>('nav a[aria-current="page"]')).map(

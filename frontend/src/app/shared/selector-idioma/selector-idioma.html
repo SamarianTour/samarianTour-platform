@@ -1,0 +1,15 @@
+<div class="idioma" role="group" [attr.aria-label]="'comun.idioma.etiqueta' | t">
+  @for (codigo of idiomas; track codigo) {
+    @if (!$first) {
+      <span class="idioma__separador" aria-hidden="true">|</span>
+    }
+    <button
+      type="button"
+      [attr.lang]="codigo"
+      [attr.aria-pressed]="idioma() === codigo"
+      (click)="elegir(codigo)"
+    >
+      {{ codigo.toUpperCase() }}
+    </button>
+  }
+</div>

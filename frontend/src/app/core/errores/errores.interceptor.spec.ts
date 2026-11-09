@@ -2,8 +2,14 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { CodigoError } from '../api/modelos';
-import { ErrorApi, MENSAJES, MENSAJE_GENERICO, MENSAJE_SIN_CONEXION } from './error-api';
+import { establecerIdioma } from '../idioma/idioma';
+import { traducir } from '../idioma/traducir';
+import { ErrorApi, MENSAJES } from './error-api';
 import { erroresInterceptor } from './errores.interceptor';
+
+const MENSAJE_GENERICO = 'Algo salió mal. Vuelve a intentarlo en un momento.';
+const MENSAJE_SIN_CONEXION =
+  'No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.';
 
 describe('erroresInterceptor', () => {
   let cliente: HttpClient;
@@ -71,6 +77,54 @@ describe('erroresInterceptor', () => {
       expect(mensaje, codigo).not.toContain(codigo);
       expect(mensaje.toLowerCase(), codigo).not.toContain('usuario demo');
     }
+  });
+
+  describe('idioma', () => {
+    it('el mensaje sale en inglés con la interfaz en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+
+      const error = fallar(401, { status: 401, codigo: 'NO_AUTENTICADO' });
+
+      expect(error.mensaje).toBe('Log in to continue.');
+    });
+
+    it('un error que ya existe cambia de idioma junto con la interfaz', () => {
+      const error = fallar(409, { status: 409, codigo: 'OFERTA_NO_EDITABLE' });
+      expect(error.mensaje).toBe('Esta oferta está retirada y ya no se puede editar.');
+
+      establecerIdioma('en', { recordar: false });
+      expect(error.mensaje).toBe('This offer has been withdrawn and can no longer be edited.');
+
+      establecerIdioma('es', { recordar: false });
+      expect(error.mensaje).toBe('Esta oferta está retirada y ya no se puede editar.');
+    });
+
+    it('los errores sin código también: genérico y sin conexión', () => {
+      establecerIdioma('en', { recordar: false });
+
+      expect(fallar(500, '<html>Bad Gateway</html>').mensaje).toBe(
+        'Something went wrong. Please try again in a moment.',
+      );
+      expect(traducir('errores.sinConexion')).toContain("couldn't connect");
+    });
+
+    it('MENSAJES entrega cada texto en el idioma vigente', () => {
+      expect(MENSAJES.CORREO_YA_REGISTRADO).toContain('Ya hay una cuenta');
+
+      establecerIdioma('en', { recordar: false });
+
+      expect(MENSAJES.CORREO_YA_REGISTRADO).toContain('There is already an account');
+    });
+
+    it('en inglés ningún mensaje queda vacío ni muestra su código', () => {
+      establecerIdioma('en', { recordar: false });
+
+      for (const [codigo, mensaje] of Object.entries(MENSAJES)) {
+        expect(mensaje.trim(), codigo).not.toBe('');
+        expect(mensaje, codigo).not.toContain(codigo);
+        expect(mensaje, codigo).not.toMatch(/[áéíóúñ¿¡]/i);
+      }
+    });
   });
 
   it('pide iniciar sesión cuando falta el token', () => {

@@ -1,54 +1,55 @@
 <section class="pagina">
-  <nav class="migas" aria-label="Ruta de navegación">
-    <a routerLink="/prestador/ofertas">Mis ofertas</a>
+  <nav class="migas" [attr.aria-label]="'turista.ficha.migas' | t">
+    <a routerLink="/prestador/ofertas">{{ 'app.nav.misOfertas' | t }}</a>
     <app-icono nombre="chevron" />
-    <span aria-current="page">{{ editando() ? 'Editar oferta' : 'Publicar oferta' }}</span>
+    <span aria-current="page">{{ (editando() ? 'app.titulo.editarOferta' : 'app.titulo.publicarOferta') | t }}</span>
   </nav>
 
   <header class="encabezado">
-    <h1>{{ editando() ? 'Editar oferta' : 'Publicar oferta' }}</h1>
+    <h1>{{ (editando() ? 'app.titulo.editarOferta' : 'app.titulo.publicarOferta') | t }}</h1>
     <p class="texto-suave">
-      Al guardar, la oferta va a moderación.
+      {{ 'prestador.form.alGuardar' | t }}
       @if (editando()) {
-        La versión publicada sigue visible mientras se revisan los cambios.
+        {{ 'prestador.form.versionSigue' | t }}
       }
     </p>
   </header>
 
   @switch (estado().tipo) {
     @case ('cargando') {
-      <p class="texto-suave" aria-live="polite">Cargando el formulario…</p>
+      <p class="texto-suave" aria-live="polite">{{ 'prestador.form.cargando' | t }}</p>
     }
     @case ('bloqueada') {
       <p class="alerta alerta--aviso" role="alert">
         <app-icono nombre="alerta" />
         <span>{{ mensajeDeBloqueo() }}</span>
       </p>
-      <a class="boton boton--secundario" routerLink="/prestador/ofertas">Volver a mis ofertas</a>
+      <a class="boton boton--secundario" routerLink="/prestador/ofertas">{{ 'prestador.form.volver' | t }}</a>
     }
     @case ('lista') {
       @if (conCambiosEnRevision()) {
         <p class="alerta alerta--aviso formulario__aviso">
           <app-icono nombre="alerta" />
-          <span>
-            Esta oferta ya tiene cambios en revisión. El formulario parte de la versión publicada; al guardar, la
-            versión nueva reemplaza a la que está pendiente.
-          </span>
+          <span>{{ 'prestador.form.cambiosEnRevision' | t }}</span>
         </p>
       }
 
       <form class="formulario" [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
-        <p class="campo__ayuda">Los campos con <span class="requerido" aria-hidden="true">*</span><span class="solo-lectores">asterisco</span> son obligatorios.</p>
+        <p class="campo__ayuda">
+          {{ 'cuentas.registro.obligatoriosAntes' | t }} <span class="requerido" aria-hidden="true">*</span
+          ><span class="solo-lectores">{{ 'cuentas.campo.asterisco' | t }}</span>
+          {{ 'cuentas.registro.obligatoriosDespues' | t }}
+        </p>
         <section class="tarjeta seccion" aria-labelledby="general-titulo">
-          <h2 id="general-titulo">Datos generales</h2>
+          <h2 id="general-titulo">{{ 'prestador.form.generales' | t }}</h2>
 
           @if (editando()) {
             <p class="tipo-fijo">
-              Tipo de oferta: <strong>{{ etiquetaTipo[tipo()] }}</strong>
+              {{ 'turista.catalogo.tipoOferta' | t }}: <strong>{{ etiquetaTipo[tipo()] }}</strong>
             </p>
           } @else if (tiposPermitidos.length > 1) {
             <fieldset class="grupo">
-              <legend>Tipo de oferta</legend>
+              <legend>{{ 'turista.catalogo.tipoOferta' | t }}</legend>
               <div class="opciones">
                 @for (opcion of tiposPermitidos; track opcion) {
                   <label class="opcion">
@@ -60,13 +61,13 @@
             </fieldset>
           } @else {
             <p class="tipo-fijo">
-              Tipo de oferta: <strong>{{ etiquetaTipo[tipo()] }}</strong>
-              <span class="texto-suave"> (el único que publica tu tipo de prestador)</span>
+              {{ 'turista.catalogo.tipoOferta' | t }}: <strong>{{ etiquetaTipo[tipo()] }}</strong>
+              <span class="texto-suave"> {{ 'prestador.form.unicoTipo' | t }}</span>
             </p>
           }
 
           <div class="campo">
-            <label for="nombre">Nombre <span class="requerido" aria-hidden="true">*</span></label>
+            <label for="nombre">{{ 'cuentas.campo.nombre' | t }} <span class="requerido" aria-hidden="true">*</span></label>
             <input
               id="nombre"
               type="text"
@@ -82,7 +83,7 @@
           </div>
 
           <div class="campo">
-            <label for="descripcion">Descripción <span class="requerido" aria-hidden="true">*</span></label>
+            <label for="descripcion">{{ 'turista.ficha.descripcion' | t }} <span class="requerido" aria-hidden="true">*</span></label>
             <textarea
               id="descripcion"
               formControlName="descripcion"
@@ -97,7 +98,7 @@
 
           <div class="campo-doble">
             <div class="campo">
-              <label for="precioReferencia">Precio de referencia (COP) <span class="requerido" aria-hidden="true">*</span></label>
+              <label for="precioReferencia">{{ 'prestador.form.precio' | t }} <span class="requerido" aria-hidden="true">*</span></label>
               <input
                 id="precioReferencia"
                 type="number"
@@ -111,14 +112,16 @@
                   errorDe('precioReferencia') ? 'precioReferencia-error precioReferencia-ayuda' : 'precioReferencia-ayuda'
                 "
               />
-              <p class="campo__ayuda" id="precioReferencia-ayuda">Se muestra {{ unidad[tipo()] }}. Es informativo.</p>
+              <p class="campo__ayuda" id="precioReferencia-ayuda">
+                {{ 'prestador.form.ayudaPrecio' | t: { unidad: unidad[tipo()] } }}
+              </p>
               @if (errorDe('precioReferencia'); as mensaje) {
                 <p class="campo__error" id="precioReferencia-error">{{ mensaje }}</p>
               }
             </div>
 
             <div class="campo">
-              <label for="capacidadMaxima">Capacidad máxima <span class="requerido" aria-hidden="true">*</span></label>
+              <label for="capacidadMaxima">{{ 'prestador.form.capacidad' | t }} <span class="requerido" aria-hidden="true">*</span></label>
               <input
                 id="capacidadMaxima"
                 type="number"
@@ -132,7 +135,7 @@
                   errorDe('capacidadMaxima') ? 'capacidadMaxima-error capacidadMaxima-ayuda' : 'capacidadMaxima-ayuda'
                 "
               />
-              <p class="campo__ayuda" id="capacidadMaxima-ayuda">Personas por solicitud.</p>
+              <p class="campo__ayuda" id="capacidadMaxima-ayuda">{{ 'prestador.form.ayudaCapacidad' | t }}</p>
               @if (errorDe('capacidadMaxima'); as mensaje) {
                 <p class="campo__error" id="capacidadMaxima-error">{{ mensaje }}</p>
               }
@@ -140,7 +143,7 @@
           </div>
 
           <div class="campo">
-            <label for="zonaId">Zona <span class="requerido" aria-hidden="true">*</span></label>
+            <label for="zonaId">{{ 'turista.catalogo.zona' | t }} <span class="requerido" aria-hidden="true">*</span></label>
             <select
               id="zonaId"
               formControlName="zonaId"
@@ -148,7 +151,7 @@
               [attr.aria-invalid]="errorDe('zonaId') ? 'true' : null"
               [attr.aria-describedby]="errorDe('zonaId') ? 'zonaId-error' : null"
             >
-              <option value="">Elige una zona</option>
+              <option value="">{{ 'prestador.form.eligeZona' | t }}</option>
               @for (zona of zonas(); track zona.id) {
                 <option [value]="zona.id">{{ zona.nombre }}</option>
               }
@@ -159,7 +162,7 @@
           </div>
 
           <div class="campo">
-            <label for="horarios">Horarios</label>
+            <label for="horarios">{{ 'prestador.form.horarios' | t }}</label>
             <input
               id="horarios"
               type="text"
@@ -168,7 +171,7 @@
               aria-describedby="horarios-ayuda"
               [attr.aria-invalid]="errorDe('horarios') ? 'true' : null"
             />
-            <p class="campo__ayuda" id="horarios-ayuda">Días o franja de operación, por ejemplo “Todos los días, 8:00 a 17:00”.</p>
+            <p class="campo__ayuda" id="horarios-ayuda">{{ 'prestador.form.ayudaHorarios' | t }}</p>
             @if (errorDe('horarios'); as mensaje) {
               <p class="campo__error">{{ mensaje }}</p>
             }
@@ -177,13 +180,13 @@
           @if (tipo() !== 'PAQUETE') {
             <label class="opcion">
               <input id="accesibleSillaRuedas" type="checkbox" formControlName="accesibleSillaRuedas" />
-              <span>Accesible en silla de ruedas</span>
+              <span>{{ 'turista.accesible' | t }}</span>
             </label>
           }
         </section>
 
         <section class="tarjeta seccion" aria-labelledby="fotos-titulo">
-          <h2 id="fotos-titulo">Fotos</h2>
+          <h2 id="fotos-titulo">{{ 'prestador.form.fotos' | t }}</h2>
           <app-selector-fotos
             [fotos]="fotos()"
             (fotosChange)="cambiarFotos($event)"
@@ -194,14 +197,14 @@
 
         @if (tipo() === 'ACTIVIDAD') {
           <section class="tarjeta seccion" aria-labelledby="actividad-titulo">
-            <h2 id="actividad-titulo">Datos de la actividad</h2>
+            <h2 id="actividad-titulo">{{ 'prestador.form.actividad' | t }}</h2>
             @if (exigeRecorrido) {
-              <p class="campo__ayuda">Como guía independiente debes completar los datos del recorrido.</p>
+              <p class="campo__ayuda">{{ 'prestador.form.ayudaGuia' | t }}</p>
             }
 
             <div class="campo-doble">
               <div class="campo">
-                <label for="tipoActividad">Tipo de actividad <span class="requerido" aria-hidden="true">*</span></label>
+                <label for="tipoActividad">{{ 'turista.catalogo.tipoActividad' | t }} <span class="requerido" aria-hidden="true">*</span></label>
                 <select
                   id="tipoActividad"
                   formControlName="tipoActividad"
@@ -209,7 +212,7 @@
                   [attr.aria-invalid]="errorDe('tipoActividad') ? 'true' : null"
                   [attr.aria-describedby]="errorDe('tipoActividad') ? 'tipoActividad-error' : null"
                 >
-                  <option value="">Elige un tipo</option>
+                  <option value="">{{ 'prestador.form.eligeTipo' | t }}</option>
                   @for (opcion of tiposActividad; track opcion) {
                     <option [value]="opcion">{{ etiquetaActividad[opcion] }}</option>
                   }
@@ -220,7 +223,7 @@
               </div>
 
               <div class="campo">
-                <label for="nivelEsfuerzo">Esfuerzo físico <span class="requerido" aria-hidden="true">*</span></label>
+                <label for="nivelEsfuerzo">{{ 'turista.ficha.esfuerzo' | t }} <span class="requerido" aria-hidden="true">*</span></label>
                 <select
                   id="nivelEsfuerzo"
                   formControlName="nivelEsfuerzo"
@@ -228,7 +231,7 @@
                   [attr.aria-invalid]="errorDe('nivelEsfuerzo') ? 'true' : null"
                   [attr.aria-describedby]="errorDe('nivelEsfuerzo') ? 'nivelEsfuerzo-error' : null"
                 >
-                  <option value="">Elige un nivel</option>
+                  <option value="">{{ 'prestador.form.eligeNivel' | t }}</option>
                   @for (opcion of niveles; track opcion) {
                     <option [value]="opcion">{{ etiquetaNivel[opcion] }}</option>
                   }
@@ -241,7 +244,7 @@
 
             <div class="campo-doble">
               <div class="campo">
-                <label for="horariosSalida">Horarios de salida <span class="requerido" aria-hidden="true">*</span></label>
+                <label for="horariosSalida">{{ 'turista.ficha.horarios' | t }} <span class="requerido" aria-hidden="true">*</span></label>
                 <input
                   id="horariosSalida"
                   type="text"
@@ -253,7 +256,7 @@
                     errorDe('horariosSalida') ? 'horariosSalida-error horariosSalida-ayuda' : 'horariosSalida-ayuda'
                   "
                 />
-                <p class="campo__ayuda" id="horariosSalida-ayuda">Horas en formato de 24 horas, separadas por comas: 07:30, 14:00.</p>
+                <p class="campo__ayuda" id="horariosSalida-ayuda">{{ 'prestador.form.ayudaHoras' | t }}</p>
                 @if (errorDe('horariosSalida'); as mensaje) {
                   <p class="campo__error" id="horariosSalida-error">{{ mensaje }}</p>
                 }
@@ -261,7 +264,7 @@
 
               <div class="campo">
                 <label for="duracionMinutos">
-                  Duración en minutos
+                  {{ 'prestador.form.duracion' | t }}
                   @if (exigeRecorrido) {
                     <span class="requerido" aria-hidden="true">*</span>
                   }
@@ -285,7 +288,7 @@
 
             <div class="campo">
               <label for="puntoEncuentro">
-                Punto de encuentro
+                {{ 'turista.ficha.puntoEncuentro' | t }}
                 @if (exigeRecorrido) {
                   <span class="requerido" aria-hidden="true">*</span>
                 }
@@ -307,7 +310,7 @@
             <div class="campo-doble">
               <div class="campo">
                 <label for="modalidad">
-                  Modalidad del recorrido
+                  {{ 'prestador.form.modalidad' | t }}
                   @if (exigeRecorrido) {
                     <span class="requerido" aria-hidden="true">*</span>
                   }
@@ -319,7 +322,7 @@
                   [attr.aria-invalid]="errorDe('modalidad') ? 'true' : null"
                   [attr.aria-describedby]="errorDe('modalidad') ? 'modalidad-error' : null"
                 >
-                  <option value="">Sin definir</option>
+                  <option value="">{{ 'prestador.form.sinDefinir' | t }}</option>
                   @for (opcion of modalidades; track opcion) {
                     <option [value]="opcion">{{ etiquetaModalidad[opcion] }}</option>
                   }
@@ -331,7 +334,7 @@
 
               <div class="campo">
                 <label for="idiomasAtencion">
-                  Idiomas de atención
+                  {{ 'prestador.form.idiomas' | t }}
                   @if (exigeRecorrido) {
                     <span class="requerido" aria-hidden="true">*</span>
                   }
@@ -348,7 +351,7 @@
                     errorDe('idiomasAtencion') ? 'idiomasAtencion-error idiomasAtencion-ayuda' : 'idiomasAtencion-ayuda'
                   "
                 />
-                <p class="campo__ayuda" id="idiomasAtencion-ayuda">Códigos de dos letras separados por comas: es, en.</p>
+                <p class="campo__ayuda" id="idiomasAtencion-ayuda">{{ 'prestador.form.ayudaIdiomas' | t }}</p>
                 @if (errorDe('idiomasAtencion'); as mensaje) {
                   <p class="campo__error" id="idiomasAtencion-error">{{ mensaje }}</p>
                 }
@@ -359,7 +362,7 @@
 
         @if (tipo() === 'PAQUETE') {
           <section class="tarjeta seccion" aria-labelledby="paquete-titulo">
-            <h2 id="paquete-titulo">Datos del paquete</h2>
+            <h2 id="paquete-titulo">{{ 'prestador.form.paquete' | t }}</h2>
 
             <fieldset
               class="grupo"
@@ -368,10 +371,9 @@
               [attr.aria-invalid]="errorDe('actividadIds') ? 'true' : null"
               [attr.aria-describedby]="errorDe('actividadIds') ? 'actividadIds-error actividadIds-ayuda' : 'actividadIds-ayuda'"
             >
-              <legend>Actividades incluidas <span class="requerido" aria-hidden="true">*</span></legend>
+              <legend>{{ 'turista.ficha.actividadesIncluidas' | t }} <span class="requerido" aria-hidden="true">*</span></legend>
               <p class="campo__ayuda" id="actividadIds-ayuda">
-                Elige {{ minimoActividades }} o más de tus actividades. El esfuerzo físico y la accesibilidad del paquete
-                salen de ellas.
+                {{ 'prestador.form.ayudaActividades' | t: { minimo: minimoActividades } }}
               </p>
               @for (actividad of actividades(); track actividad.id) {
                 <label class="opcion">
@@ -383,13 +385,13 @@
                   <span>
                     {{ actividad.nombre }}
                     @if (actividad.sinAprobar) {
-                      <span class="texto-suave">(aún sin aprobar)</span>
+                      <span class="texto-suave">{{ 'prestador.form.sinAprobar' | t }}</span>
                     }
                   </span>
                 </label>
               } @empty {
                 <p class="alerta alerta--aviso">
-                  No tienes actividades para incluir. Publica primero al menos {{ minimoActividades }} actividades.
+                  {{ 'prestador.form.sinActividades' | t: { minimo: minimoActividades } }}
                 </p>
               }
               @if (errorDe('actividadIds'); as mensaje) {
@@ -399,7 +401,7 @@
 
             <div class="campo-doble">
               <div class="campo">
-                <label for="horariosSalida">Horarios de salida <span class="requerido" aria-hidden="true">*</span></label>
+                <label for="horariosSalida">{{ 'turista.ficha.horarios' | t }} <span class="requerido" aria-hidden="true">*</span></label>
                 <input
                   id="horariosSalida"
                   type="text"
@@ -411,14 +413,14 @@
                     errorDe('horariosSalida') ? 'horariosSalida-error horariosSalida-ayuda' : 'horariosSalida-ayuda'
                   "
                 />
-                <p class="campo__ayuda" id="horariosSalida-ayuda">Horas en formato de 24 horas, separadas por comas: 07:30, 14:00.</p>
+                <p class="campo__ayuda" id="horariosSalida-ayuda">{{ 'prestador.form.ayudaHoras' | t }}</p>
                 @if (errorDe('horariosSalida'); as mensaje) {
                   <p class="campo__error" id="horariosSalida-error">{{ mensaje }}</p>
                 }
               </div>
 
               <div class="campo">
-                <label for="duracionMinutos">Duración en minutos <span class="requerido" aria-hidden="true">*</span></label>
+                <label for="duracionMinutos">{{ 'prestador.form.duracion' | t }} <span class="requerido" aria-hidden="true">*</span></label>
                 <input
                   id="duracionMinutos"
                   type="number"
@@ -440,9 +442,9 @@
 
         @if (tipo() === 'ALOJAMIENTO') {
           <section class="tarjeta seccion" aria-labelledby="alojamiento-titulo">
-            <h2 id="alojamiento-titulo">Datos del alojamiento</h2>
+            <h2 id="alojamiento-titulo">{{ 'prestador.form.alojamiento' | t }}</h2>
             <div class="campo">
-              <label for="tipoUnidad">Tipo de unidad</label>
+              <label for="tipoUnidad">{{ 'turista.ficha.tipoUnidad' | t }}</label>
               <input
                 id="tipoUnidad"
                 type="text"
@@ -451,7 +453,7 @@
                 aria-describedby="tipoUnidad-ayuda"
                 [attr.aria-invalid]="errorDe('tipoUnidad') ? 'true' : null"
               />
-              <p class="campo__ayuda" id="tipoUnidad-ayuda">Por ejemplo: cabaña, habitación doble, hamaca.</p>
+              <p class="campo__ayuda" id="tipoUnidad-ayuda">{{ 'prestador.form.ayudaUnidad' | t }}</p>
               @if (errorDe('tipoUnidad'); as mensaje) {
                 <p class="campo__error">{{ mensaje }}</p>
               }
@@ -460,36 +462,48 @@
         }
 
         <section class="tarjeta seccion" aria-labelledby="ubicacion-titulo">
-          <h2 id="ubicacion-titulo">Ubicación <span class="opcional">(opcional)</span></h2>
-          <p class="campo__ayuda" id="mapa-ayuda">
-            Haz clic en el mapa para poner el pin donde está la oferta. Para moverlo, haz clic en otro punto.
-          </p>
+          <h2 id="ubicacion-titulo">
+            {{ 'turista.ficha.ubicacion' | t }} <span class="opcional">{{ 'prestador.form.opcional' | t }}</span>
+          </h2>
+          <p class="campo__ayuda" id="mapa-ayuda">{{ 'prestador.form.ayudaMapa' | t }}</p>
           <app-mapa
             [ubicacion]="ubicacion()"
             [editable]="true"
-            descripcion="Mapa para elegir la ubicación de la oferta"
+            [descripcion]="'prestador.form.mapa' | t"
             (ubicacionElegida)="ponerUbicacion($event)"
           />
 
           <div class="campo-doble">
             <div class="campo">
-              <label for="latitud">Latitud</label>
-              <input id="latitud" type="text" readonly [value]="ubicacion()?.latitud ?? ''" placeholder="Sin ubicación" />
+              <label for="latitud">{{ 'prestador.form.latitud' | t }}</label>
+              <input
+                id="latitud"
+                type="text"
+                readonly
+                [value]="ubicacion()?.latitud ?? ''"
+                [placeholder]="'prestador.form.sinUbicacion' | t"
+              />
             </div>
             <div class="campo">
-              <label for="longitud">Longitud</label>
-              <input id="longitud" type="text" readonly [value]="ubicacion()?.longitud ?? ''" placeholder="Sin ubicación" />
+              <label for="longitud">{{ 'prestador.form.longitud' | t }}</label>
+              <input
+                id="longitud"
+                type="text"
+                readonly
+                [value]="ubicacion()?.longitud ?? ''"
+                [placeholder]="'prestador.form.sinUbicacion' | t"
+              />
             </div>
           </div>
 
           <div>
             <button type="button" class="boton boton--secundario" [disabled]="!ubicacion()" (click)="quitarUbicacion()">
-              Quitar ubicación
+              {{ 'prestador.form.quitarUbicacion' | t }}
             </button>
           </div>
 
           <div class="campo">
-            <label for="comoLlegar">Cómo llegar</label>
+            <label for="comoLlegar">{{ 'prestador.form.comoLlegar' | t }}</label>
             <textarea
               id="comoLlegar"
               class="corto"
@@ -505,19 +519,19 @@
         @if (errorGeneral(); as mensaje) {
           <p class="alerta alerta--error" role="alert">
             <app-icono nombre="alerta" />
-            <span>{{ mensaje }}</span>
+            <span>{{ mensaje() }}</span>
           </p>
         }
 
         <div class="acciones">
           <p class="alerta alerta--info">
             <app-icono nombre="info" />
-            <span>Un administrador revisa la oferta antes de que se vea en el catálogo.</span>
+            <span>{{ 'prestador.form.revision' | t }}</span>
           </p>
           <button type="submit" class="boton" [disabled]="guardando()">
-            {{ guardando() ? 'Enviando…' : 'Enviar a moderación' }}
+            {{ (guardando() ? 'prestador.form.enviando' : 'prestador.form.enviar') | t }}
           </button>
-          <a class="boton boton--secundario" routerLink="/prestador/ofertas">Cancelar</a>
+          <a class="boton boton--secundario" routerLink="/prestador/ofertas">{{ 'comun.cancelar' | t }}</a>
         </div>
       </form>
     }
