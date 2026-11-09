@@ -4,19 +4,24 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.dominio.excepcion.
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.CambioComisionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionResponse;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.EventoPagoFallidoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PagoTardioResponse;
 import co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad.Identidad;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.ComisionConfigurada;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.ComisionInvalidaException;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.api.EventoPagoFallido;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.PagosAdministracionApi;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Lo que el administrador gestiona de los pagos (RF-50, RF-82, RF-83, DN-23), con el rol ADMINISTRADOR (DN-05): la
@@ -58,6 +63,23 @@ public class PagosAdminController {
                 .map(pago -> new PagoTardioResponse(pago.id(), pago.solicitudId(), pago.referencia(),
                         pago.transaccionId(), pago.monto(), pago.motivo(), pago.registradoEn(), pago.avisado()))
                 .toList();
+    }
+
+    /** Los eventos de la pasarela que fallaron cinco veces al procesarse (DN-21, DN-44). */
+    @GetMapping("/pagos/eventos-fallidos")
+    public List<EventoPagoFallidoResponse> eventosFallidos() {
+        return pagos.eventosFallidos().stream().map(PagosAdminController::aRespuesta).toList();
+    }
+
+    /** Lo devuelve a la cola, con los fallos en cero: se procesa en los siguientes 5 s (DN-44). */
+    @PostMapping("/pagos/eventos-fallidos/{eventoId}/reintento")
+    public EventoPagoFallidoResponse reintentarEvento(@PathVariable UUID eventoId) {
+        return aRespuesta(pagos.reintentarEvento(eventoId));
+    }
+
+    private static EventoPagoFallidoResponse aRespuesta(EventoPagoFallido evento) {
+        return new EventoPagoFallidoResponse(evento.id(), evento.referencia(), evento.transaccionId(),
+                evento.estado(), evento.monto(), evento.intentos(), evento.ultimoError(), evento.recibidoEn());
     }
 
     private static ComisionResponse aRespuesta(List<ComisionConfigurada> historial) {

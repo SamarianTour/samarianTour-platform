@@ -21,4 +21,13 @@ public interface BandejaSalidaRepositoryPort {
     void guardar(AvisoSaliente aviso);
 
     Optional<AvisoSaliente> buscar(String idAviso);
+
+    /** Los rechazados, del más reciente al más antiguo (DN-44). */
+    List<AvisoSaliente> rechazados();
+
+    /** El aviso bloqueado hasta el final de la transacción: dos administradores no lo reenvían a la vez. */
+    Optional<AvisoSaliente> buscarParaCambiar(String idAviso);
+
+    /** Borra los enviados antes de {@code limite}; los pendientes y los rechazados nunca (DN-44). */
+    int borrarEnviadosAntesDe(Instant limite);
 }

@@ -348,7 +348,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Aviso del núcleo, de moderación o de habilitación RNT (RF-77, RF-79)
+         * Aviso del núcleo, de moderación, de habilitación RNT o de supresión del prestador (RF-13, RF-77, RF-79)
          * @description Es idempotente (DC-04): cada aviso trae un `idAviso` y un aviso repetido no se vuelve a aplicar.
          *     Los tres resultados responden 200, para que el núcleo no reintente el aviso.
          *     Si otra escritura se cruza y los reintentos del servidor no alcanzan, responde 409 sin marcar el aviso como
@@ -885,7 +885,7 @@ export interface components {
             unidadPrecio: string;
             portada?: components["schemas"]["Foto"];
         };
-        Aviso: components["schemas"]["AvisoModeracion"] | components["schemas"]["AvisoHabilitacion"];
+        Aviso: components["schemas"]["AvisoModeracion"] | components["schemas"]["AvisoHabilitacion"] | components["schemas"]["AvisoSupresionPrestador"];
         /** @description Decisión del Administrador sobre una versión de una oferta (RF-79). */
         AvisoModeracion: {
             idAviso: string;
@@ -918,6 +918,21 @@ export interface components {
              * @description Versión del prestador en el núcleo; un aviso con una versión igual o anterior se ignora (DC-02).
              */
             version: number;
+        };
+        /**
+         * @description El prestador suprimió sus datos en el núcleo (RF-13, DN-45, DC-52): se retiran definitivamente todas sus
+         *     ofertas y se borran su perfil público y todas las fotos que subió. Siempre responde APLICADO; repetirlo con
+         *     otro identificador no cambia nada.
+         */
+        AvisoSupresionPrestador: {
+            idAviso: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "SUPRESION_PRESTADOR";
+            /** Format: uuid */
+            prestadorId: string;
         };
         AvisoResultado: {
             /**
@@ -2415,6 +2430,7 @@ export const ofertaResumenUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequire
 export const avisoModeracionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracion"]["tipo"]> = ["MODERACION"];
 export const avisoModeracionDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoModeracion"]["decision"]> = ["APROBAR", "RECHAZAR"];
 export const avisoHabilitacionTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoHabilitacion"]["tipo"]> = ["HABILITACION"];
+export const avisoSupresionPrestadorTipoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoSupresionPrestador"]["tipo"]> = ["SUPRESION_PRESTADOR"];
 export const avisoResultadoResultadoValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AvisoResultado"]["resultado"]> = ["APLICADO", "IGNORADO", "DUPLICADO"];
 export const ofertaVisibleUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OfertaVisible"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];
 export const contenidoVersionUnidadPrecioValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ContenidoVersion"]["unidadPrecio"]> = ["por persona", "por noche y unidad", "promedio por persona"];

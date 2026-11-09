@@ -43,6 +43,21 @@ public class BandejaSalidaJpaAdapter implements BandejaSalidaRepositoryPort {
         return repositorio.findById(idAviso).map(BandejaSalidaJpaAdapter::aDominio);
     }
 
+    @Override
+    public List<AvisoSaliente> rechazados() {
+        return repositorio.rechazados().stream().map(BandejaSalidaJpaAdapter::aDominio).toList();
+    }
+
+    @Override
+    public Optional<AvisoSaliente> buscarParaCambiar(String idAviso) {
+        return repositorio.buscarParaCambiar(idAviso).map(BandejaSalidaJpaAdapter::aDominio);
+    }
+
+    @Override
+    public int borrarEnviadosAntesDe(Instant limite) {
+        return repositorio.borrarEnviadosAntesDe(limite);
+    }
+
     private static AvisoSaliente aDominio(AvisoSalienteEntity fila) {
         return AvisoSaliente.reconstituir(fila.idAviso(), Destino.valueOf(fila.destino()), fila.cuerpo(),
                 fila.creadoEn(), EstadoAviso.valueOf(fila.estado()), fila.proximoIntento(), fila.intentos(),

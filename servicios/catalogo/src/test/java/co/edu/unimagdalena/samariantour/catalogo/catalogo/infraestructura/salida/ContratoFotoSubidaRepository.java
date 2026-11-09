@@ -81,6 +81,18 @@ public interface ContratoFotoSubidaRepository {
                 .extracting(FotoSubida::foto).containsExactly(usadaDespues.foto());
     }
 
+    @Test
+    @DisplayName("entrega todas las fotos que subió el prestador, para sus ofertas o su perfil (DC-52)")
+    default void delPrestador() {
+        FotoSubida deOferta = subida(DestinoFoto.OFERTAS, SUBIDA);
+        FotoSubida delPerfil = subida(DestinoFoto.PERFIL, SUBIDA);
+        FotoSubida deOtro = new FotoSubida(Foto.nueva(), UUID.randomUUID(), DestinoFoto.OFERTAS, SUBIDA);
+        List.of(deOferta, delPerfil, deOtro).forEach(registro()::registrar);
+
+        assertThat(registro().delPrestador(PRESTADOR)).containsExactlyInAnyOrder(deOferta, delPerfil);
+        assertThat(registro().delPrestador(UUID.randomUUID())).isEmpty();
+    }
+
     private static FotoSubida subida(DestinoFoto destino, Instant ultimoUso) {
         return new FotoSubida(Foto.nueva(), PRESTADOR, destino, ultimoUso);
     }

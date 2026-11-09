@@ -29,10 +29,12 @@ public final class Dispersion {
     private Instant proximoIntento;
     private Instant ejecutadaEn;
     private Instant avisoEnviadoEn;
+    private int reactivaciones;
 
     private Dispersion(UUID id, UUID solicitudId, UUID prestadorId, Liquidacion liquidacion, Instant creadaEn,
                        EstadoDispersion estado, int intentos, String ultimaCausa, String cuentaDestino,
-                       String idPasarela, Instant proximoIntento, Instant ejecutadaEn, Instant avisoEnviadoEn) {
+                       String idPasarela, Instant proximoIntento, Instant ejecutadaEn, Instant avisoEnviadoEn,
+                       int reactivaciones) {
         this.id = Objects.requireNonNull(id, "id");
         this.solicitudId = Objects.requireNonNull(solicitudId, "solicitudId");
         this.prestadorId = Objects.requireNonNull(prestadorId, "prestadorId");
@@ -46,21 +48,22 @@ public final class Dispersion {
         this.proximoIntento = micros(proximoIntento);
         this.ejecutadaEn = micros(ejecutadaEn);
         this.avisoEnviadoEn = micros(avisoEnviadoEn);
+        this.reactivaciones = reactivaciones;
     }
 
     /** Pendiente para ejecutarse de inmediato, con la liquidación del pago confirmado (RF-53). */
     public static Dispersion pendiente(UUID id, UUID solicitudId, UUID prestadorId, Liquidacion liquidacion,
                                        Instant ahora) {
         return new Dispersion(id, solicitudId, prestadorId, liquidacion, ahora, EstadoDispersion.PENDIENTE, 0, null,
-                null, null, ahora, null, null);
+                null, null, ahora, null, null, 0);
     }
 
     public static Dispersion reconstituir(UUID id, UUID solicitudId, UUID prestadorId, Liquidacion liquidacion,
                                           Instant creadaEn, EstadoDispersion estado, int intentos, String ultimaCausa,
                                           String cuentaDestino, String idPasarela, Instant proximoIntento,
-                                          Instant ejecutadaEn, Instant avisoEnviadoEn) {
+                                          Instant ejecutadaEn, Instant avisoEnviadoEn, int reactivaciones) {
         return new Dispersion(id, solicitudId, prestadorId, liquidacion, creadaEn, estado, intentos, ultimaCausa,
-                cuentaDestino, idPasarela, proximoIntento, ejecutadaEn, avisoEnviadoEn);
+                cuentaDestino, idPasarela, proximoIntento, ejecutadaEn, avisoEnviadoEn, reactivaciones);
     }
 
     /** La pasarela confirmó la transferencia a la cuenta (ya enmascarada). */
@@ -99,6 +102,24 @@ public final class Dispersion {
     /** Ya se avisó al prestador que la dispersión falló (RF-54). */
     public void registrarAviso(Instant ahora) {
         this.avisoEnviadoEn = micros(ahora);
+    }
+
+    /**
+     * El prestador cambió su cuenta de cobro después de que la dispersión falló (RF-54, DN-44): vuelve a quedar
+     * pendiente para ejecutarse de inmediato con la cuenta nueva, con los intentos en cero. La causa del último fallo
+     * se conserva como referencia y {@link #reactivaciones()} cuenta cuántas veces pasó.
+     *
+     * @throws IllegalStateException si no está fallida
+     */
+    public void reactivar(Instant ahora) {
+        if (estado != EstadoDispersion.FALLIDA) {
+            throw new IllegalStateException("La dispersión " + id + " no está fallida: " + estado);
+        }
+        estado = EstadoDispersion.PENDIENTE;
+        intentos = 0;
+        proximoIntento = micros(ahora);
+        avisoEnviadoEn = null;
+        reactivaciones++;
     }
 
     private void exigirPendiente() {
@@ -172,6 +193,11 @@ public final class Dispersion {
 
     public Instant ejecutadaEn() {
         return ejecutadaEn;
+    }
+
+    /** Cuántas veces volvió a quedar pendiente porque el prestador cambió su cuenta (DN-44). */
+    public int reactivaciones() {
+        return reactivaciones;
     }
 
     public Instant avisoEnviadoEn() {

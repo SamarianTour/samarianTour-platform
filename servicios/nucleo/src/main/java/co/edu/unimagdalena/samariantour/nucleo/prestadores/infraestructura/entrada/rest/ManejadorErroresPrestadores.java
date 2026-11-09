@@ -2,10 +2,12 @@ package co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entr
 
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.CodigoIncorrectoException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.CodigoNoVigenteException;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.ContrasenaRechazadaException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.CuentaCobroNoRegistradaException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.CuentaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.ExcepcionDominio;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.PrestadorConCompromisosException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.PrestadorNoRegistradoException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.PrestadorYaRegistradoException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.RntYaRegistradoException;
@@ -30,6 +32,12 @@ public class ManejadorErroresPrestadores {
         if (excepcion instanceof CodigoIncorrectoException incorrecto) {
             problema.setProperty("intentosRestantes", incorrecto.intentosRestantes());
         }
+        if (excepcion instanceof ContrasenaRechazadaException rechazada && rechazada.bloqueadaHasta() != null) {
+            problema.setProperty("bloqueadaHasta", rechazada.bloqueadaHasta());
+        }
+        if (excepcion instanceof PrestadorConCompromisosException conCompromisos) {
+            problema.setProperty("compromisos", conCompromisos.compromisos());
+        }
         return problema;
     }
 
@@ -45,6 +53,12 @@ public class ManejadorErroresPrestadores {
             case PrestadorYaRegistradoException e -> HttpStatus.CONFLICT;
             case RntYaRegistradoException e -> HttpStatus.CONFLICT;
             case TipoNoCoincideConRntException e -> HttpStatus.CONFLICT;
+            case PrestadorConCompromisosException e -> HttpStatus.CONFLICT;
+            case ContrasenaRechazadaException e -> switch (e.codigo()) {
+                case "CUENTA_BLOQUEADA" -> HttpStatus.LOCKED;
+                case "CUENTA_NO_ENCONTRADA" -> HttpStatus.NOT_FOUND;
+                default -> HttpStatus.UNAUTHORIZED;
+            };
             default -> HttpStatus.BAD_REQUEST;
         };
     }

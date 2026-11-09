@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.EventoPasarela;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,4 +41,13 @@ public interface EventoPasarelaRepositoryPort {
 
     /** Anota que se intentó avisarlo y no se pudo, para que espere su turno detrás de los demás. */
     void marcarAvisoIntentado(UUID id, Instant ahora);
+
+    /** Los fallidos, del recibido más reciente al más antiguo (DN-44). */
+    List<EventoPasarela> fallidos();
+
+    /** El evento en cualquier estado, bloqueado hasta el final de la transacción. */
+    Optional<EventoPasarela> porIdParaCambiar(UUID id);
+
+    /** Guarda que volvió a la cola ({@link EventoPasarela#reintentado}) y borra su aviso de fallido. */
+    void reintentar(EventoPasarela evento);
 }

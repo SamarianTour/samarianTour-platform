@@ -1,6 +1,7 @@
 package co.edu.unimagdalena.samariantour.nucleo;
 
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.AsignacionOperadorRequest;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.AvisoBandejaResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.CambioComisionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.ComisionResponse;
@@ -9,6 +10,7 @@ import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.en
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionModeracionResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOfertaRequest;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.DecisionOpinionRequest;
+import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.EventoPagoFallidoResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PagoTardioResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.PrestadorAdminResponse;
 import co.edu.unimagdalena.samariantour.nucleo.administracion.infraestructura.entrada.rest.dto.SincronizacionRntResponse;
@@ -73,9 +75,9 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.lang.reflect.RecordComponent;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
@@ -165,6 +167,8 @@ class ContratoNucleoIT extends IntegracionPostgresBase {
                 arguments("Comision", ComisionResponse.class),
                 arguments("CambioComision", CambioComisionResponse.class),
                 arguments("PagoTardio", PagoTardioResponse.class),
+                arguments("EventoPagoFallido", EventoPagoFallidoResponse.class),
+                arguments("AvisoBandeja", AvisoBandejaResponse.class),
                 arguments("SincronizacionRnt", SincronizacionRntResponse.class),
                 arguments("PrestadorAdmin", PrestadorAdminResponse.class),
                 arguments("AsignacionOperadorRequest", AsignacionOperadorRequest.class),

@@ -13,6 +13,7 @@ import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.ConsultarEstadoRntUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.RegistrarCuentaCobroUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.RegistrarPrestadorUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.SuprimirPrestadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.entrada.comando.RegistrarPrestadorCommand;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.CambioRntRequest;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.CodigoWhatsappRequest;
@@ -21,6 +22,7 @@ import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entra
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.DatosTipoRequest;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.PrestadorResponse;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.RegistroPrestadorRequest;
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.SupresionPrestadorRequest;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.infraestructura.entrada.rest.dto.WhatsappPrestadorRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -47,15 +49,27 @@ public class PrestadorController {
     private final ConsultarEstadoRntUseCase consultar;
     private final ConfigurarWhatsAppPrestadorUseCase whatsapp;
     private final RegistrarCuentaCobroUseCase cuentaCobro;
+    private final SuprimirPrestadorUseCase supresion;
 
     public PrestadorController(RegistrarPrestadorUseCase registrar, ActualizarTipoYEmpleadosUseCase tipo,
                                ConsultarEstadoRntUseCase consultar, ConfigurarWhatsAppPrestadorUseCase whatsapp,
-                               RegistrarCuentaCobroUseCase cuentaCobro) {
+                               RegistrarCuentaCobroUseCase cuentaCobro, SuprimirPrestadorUseCase supresion) {
         this.registrar = registrar;
         this.tipo = tipo;
         this.consultar = consultar;
         this.whatsapp = whatsapp;
         this.cuentaCobro = cuentaCobro;
+        this.supresion = supresion;
+    }
+
+    /**
+     * Suprime sus datos de inmediato (RF-13, DN-45), confirmado con la contraseña. Con solicitudes pagadas por prestar,
+     * pagos en curso o dispersiones por recibir responde 409 y no suprime nada.
+     */
+    @PostMapping("/prestador/supresion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void suprimir(@RequestBody SupresionPrestadorRequest peticion, HttpServletRequest http) {
+        supresion.suprimir(prestador(http), peticion.contrasena());
     }
 
     @PostMapping("/prestador/registro")

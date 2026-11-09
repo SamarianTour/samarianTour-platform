@@ -89,4 +89,15 @@ public interface ContratoPerfilRepository {
         assertThat(perfiles().fotosEnUso(List.of(delPerfil, sinUso))).containsExactly(delPerfil);
         assertThat(perfiles().fotosEnUso(List.of(sinUso))).isEmpty();
     }
+
+    @Test
+    @DisplayName("borrar el perfil del prestador deja libre su lugar; sin perfil, no hace nada (DC-52)")
+    default void eliminar() {
+        perfiles().eliminar(GUIA);
+        perfiles().eliminar(UUID.randomUUID());
+
+        assertThat(perfiles().buscarPorPrestador(GUIA)).isEmpty();
+        perfiles().guardar(new PerfilPublico(GUIA, null, "Perfil nuevo", List.of(), null, null, List.of()));
+        assertThat(perfiles().buscarPorPrestador(GUIA)).isPresent();
+    }
 }

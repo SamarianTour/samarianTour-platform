@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import static co.edu.unimagdalena.samariantour.catalogo.catalogo.infraestructura.salida.persistencia.document.FotoSubidaDocument.ULTIMO_USO;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -41,6 +42,15 @@ public class FotoSubidaMongoAdapter implements FotoSubidaRepositoryPort {
     @Override
     public List<FotoSubida> buscar(Collection<Foto> fotos) {
         return mongo.find(query(where("_id").in(ids(fotos))), FotoSubidaDocument.class).stream()
+                .map(FotoSubidaMongoMapper::aDominio)
+                .toList();
+    }
+
+    /** Usa el índice {@code fotos_por_prestador}. */
+    @Override
+    public List<FotoSubida> delPrestador(UUID prestadorId) {
+        return mongo.find(query(where(FotoSubidaDocument.PRESTADOR_ID).is(prestadorId)), FotoSubidaDocument.class)
+                .stream()
                 .map(FotoSubidaMongoMapper::aDominio)
                 .toList();
     }

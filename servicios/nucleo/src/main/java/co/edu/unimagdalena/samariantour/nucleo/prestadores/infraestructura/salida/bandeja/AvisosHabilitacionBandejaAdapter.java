@@ -34,4 +34,15 @@ public class AvisosHabilitacionBandejaAdapter implements EventoSalidaPort {
         aviso.put("version", version);
         bandeja.encolar(idAviso, DestinoAviso.OFERTAS, aviso);
     }
+
+    @Override
+    public void avisarSupresion(UUID prestadorId) {
+        // Estable: un prestador se suprime una sola vez.
+        String idAviso = "supresion-prestador-" + prestadorId;
+        Map<String, Object> aviso = new LinkedHashMap<>();
+        aviso.put("idAviso", idAviso);
+        aviso.put("tipo", "SUPRESION_PRESTADOR");
+        aviso.put("prestadorId", prestadorId.toString());
+        bandeja.encolar(idAviso, DestinoAviso.OFERTAS, aviso);
+    }
 }

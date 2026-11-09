@@ -17,4 +17,15 @@ public interface CuentasApiInterna {
 
     /** Si la cuenta existe, es de un prestador y está activa; la usa el registro del prestador (RF-62). */
     boolean esPrestadorActivo(UUID usuarioId);
+
+    /**
+     * Confirma con la contraseña que el prestador pide suprimir sus datos (RF-13, DN-45). En su propia transacción:
+     * un fallo queda contado para el bloqueo de RF-05 aunque la supresión no siga.
+     *
+     * @throws ContrasenaRechazadaException si no es correcta, la cuenta está bloqueada o no es de un prestador activo
+     */
+    void verificarContrasenaPrestador(UUID prestadorId, String contrasena);
+
+    /** Anonimiza la cuenta del prestador y cierra sus sesiones, en la transacción de quien la llama (DN-45). */
+    void suprimirCuentaPrestador(UUID prestadorId);
 }

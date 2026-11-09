@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,4 +80,24 @@ interface EventoPasarelaJpaRepository extends JpaRepository<EventoPasarelaEntity
     @Modifying
     @Query(value = "UPDATE eventos_pasarela SET aviso_intentado_en = :ahora WHERE id = :id", nativeQuery = true)
     int marcarAvisoIntentado(@Param("id") UUID id, @Param("ahora") Instant ahora);
+
+    /** Los fallidos, del recibido más reciente al más antiguo (DN-44). */
+    @Query(value = "SELECT * FROM eventos_pasarela WHERE procesamiento = 'FALLIDO' ORDER BY recibido_en DESC",
+            nativeQuery = true)
+    List<EventoPasarelaEntity> fallidos();
+
+    /** El evento en cualquier estado, bloqueado hasta el final de la transacción. */
+    @Query(value = "SELECT * FROM eventos_pasarela WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<EventoPasarelaEntity> porIdParaCambiar(@Param("id") UUID id);
+
+    /** Lo devuelve a la cola, sin el aviso de fallido, para que se avise otra vez si vuelve a fallar (DN-44). */
+    @Modifying
+    @Query(value = """
+            UPDATE eventos_pasarela
+            SET procesamiento = :procesamiento, intentos_procesamiento = :intentos,
+                siguiente_intento_en = :siguiente, aviso_enviado_en = NULL, aviso_intentado_en = NULL
+            WHERE id = :id
+            """, nativeQuery = true)
+    int reintentar(@Param("id") UUID id, @Param("procesamiento") String procesamiento,
+                   @Param("intentos") int intentos, @Param("siguiente") Instant siguiente);
 }

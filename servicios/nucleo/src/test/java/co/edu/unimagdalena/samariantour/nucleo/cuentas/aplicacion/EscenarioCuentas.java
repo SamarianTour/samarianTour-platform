@@ -217,6 +217,9 @@ class EscenarioCuentas {
     final SolicitarSupresionService supresion = new SolicitarSupresionService(repositorio, repositorioSesiones,
             supresionesAvisadas::add, HASHER, reloj);
 
+    final SuprimirCuentaPrestadorService supresionPrestador = new SuprimirCuentaPrestadorService(repositorio,
+            repositorioSesiones, HASHER, reloj);
+
     final CrearCuentaInternaService crearInterna = new CrearCuentaInternaService(repositorio, repositorioCodigos,
             HASHER, correo, new Random(13), reloj);
 

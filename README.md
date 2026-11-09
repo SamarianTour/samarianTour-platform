@@ -148,7 +148,7 @@ Para cobrar en el **sandbox de Wompi** (QAS-06, sin recompilar):
    ```
 
    Sin alguna de las tres llaves, el núcleo no arranca con `wompi`.
-3. **Publica el webhook con un túnel:** Wompi envía los eventos a una URL pública y el piloto está en `localhost`. Con cloudflared:
+3. **Publica el webhook con un túnel:** Wompi envía los eventos a una URL pública y el piloto está en `localhost`. En el servidor de AWS no hace falta ("Despliegue en AWS", paso 6). Con cloudflared:
 
    ```bash
    cloudflared tunnel --url http://localhost:8080
@@ -215,6 +215,122 @@ docker compose -f infra/docker-compose.yml logs recomendacion | grep "alertas"
 ```
 
  Si la capa cambia de dirección, va en `IDEAM_ALERTAS_URL` (ver `infra/.env.example`).
+
+## Despliegue en AWS
+
+El piloto completo en una sola instancia EC2, con HTTPS y el dominio del equipo (DN-46). Es el mismo Docker Compose de arriba más `infra/docker-compose.aws.yml`, que solo cambia lo que el servidor necesita:
+
+- Nginx atiende el 443 con un certificado de Let's Encrypt. El 80 solo sirve el desafío del certificado y redirige a HTTPS, y el navegador recuerda por un año que el dominio va con HTTPS (HSTS). Las rutas son las mismas que en local (`infra/nginx/rutas.conf`): `internal`, `actuator` y las rutas con `;` siguen bloqueadas.
+- El contenedor `certbot` renueva el certificado solo, y Nginx lo toma sin reiniciarse.
+- Mailpit no tiene puerto público: se ve con un túnel SSH.
+- Los enlaces de los correos, de los WhatsApp simulados y de la pasarela apuntan a `https://<dominio>`.
+
+**La instancia:** `t3.medium` (2 vCPU, 4 GB) en `us-east-1`, con Ubuntu Server 24.04 LTS, 30 GB de disco `gp3` y 2 GB de swap. Los límites de memoria de los servicios Java suman unos 2,4 GB, y MongoDB, PostgreSQL y MinIO ocupan el resto; la swap cubre los picos y la primera construcción de las imágenes.
+
+**Costo aproximado** (precios públicos de `us-east-1`; confírmalos en la calculadora de AWS antes de crear nada):
+
+- la instancia, unos 0,042 USD por hora encendida: 10 USD al mes con 8 horas al día, o 30 USD si queda encendida todo el mes;
+- el disco, unos 2,40 USD al mes, encendida o no;
+- la IP elástica, unos 3,60 USD al mes: AWS cobra toda IPv4 pública, también mientras la instancia está detenida.
+
+Con los 100 USD de créditos alcanza para el semestre si la instancia **solo se enciende para trabajar o para las demos**.
+
+### 1. Preparar la cuenta (una vez)
+
+1. **Alertas de gasto:** en Billing > Budgets, un presupuesto de costo mensual de 100 USD con alertas al 25, 50 y 75 %. En las opciones avanzadas, desmarca **Créditos**: si los créditos se descuentan, el costo se ve en cero y las alertas nunca llegan.
+2. **Par de llaves:** en EC2 > Key pairs, crea uno (`.pem`) y guárdalo fuera del repositorio. Sin él no se entra al servidor.
+3. **Grupo de seguridad** `samarian-piloto`:
+   - 80 y 443 desde cualquier lugar (`0.0.0.0/0` y `::/0`): HTTP solo redirige y sirve el desafío del certificado;
+   - 22 solo desde la IP de cada integrante ("My IP"). Si la IP cambia, se actualiza la regla. Nada más: PostgreSQL, MongoDB, MinIO y Mailpit no se publican.
+4. **La instancia:** Launch instance con Ubuntu Server 24.04 LTS (x86_64), `t3.medium`, el par de llaves, el grupo de seguridad y 30 GB `gp3`.
+5. **IP elástica:** en EC2 > Elastic IPs, Allocate y Associate con la instancia. Así la IP no cambia al detenerla y encenderla.
+6. **El dominio:** en el proveedor donde se compró, un registro **A** con el dominio (o un subdominio, como `demo.`) apuntando a la IP elástica. Antes de seguir, `nslookup <dominio>` tiene que responder esa IP; sin eso Let's Encrypt no emite el certificado.
+
+### 2. Preparar el servidor (una vez)
+
+```bash
+ssh -i samarian.pem ubuntu@<ip-elastica>
+git clone https://github.com/SamarianTour/samarianTour-platform.git samarian
+cd samarian
+bash infra/aws/preparar-servidor.sh
+exit      # y vuelve a entrar, para usar docker sin sudo
+```
+
+El script instala Docker con Compose desde el repositorio de Docker, crea la swap y limita los logs de los contenedores. Se puede correr otra vez sin problema.
+
+### 3. Claves y primer certificado (una vez)
+
+```bash
+cd samarian
+bash infra/generar-claves.sh
+echo 'DOMINIO=<dominio>' >> infra/.env
+echo 'CORREO_CERTIFICADO=<correo-del-equipo>' >> infra/.env      # opcional
+PRUEBA=1 bash infra/aws/primer-certificado.sh                      # ensayo con el entorno de prueba de Let's Encrypt
+```
+
+Si el ensayo termina bien, el navegador muestra el sitio con un aviso de certificado no confiable: es el de prueba. Para el real, borra el volumen del certificado y corre el script sin `PRUEBA`:
+
+```bash
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.aws.yml down
+docker volume rm samarian-tour_certbot-certs
+bash infra/aws/primer-certificado.sh
+```
+
+El script deja un certificado provisional para que Nginx pueda arrancar, levanta todo (la primera construcción toma varios minutos), pide el de Let's Encrypt y recarga Nginx. Si la construcción se queda sin memoria, construye una imagen a la vez y vuelve a correr el script: `for s in catalogo nucleo recomendacion nginx; do docker compose -f infra/docker-compose.yml -f infra/docker-compose.aws.yml build $s; done`. Si Let's Encrypt lo rechaza, casi siempre es porque el dominio todavía no apunta a la IP o el 80 está cerrado en el grupo de seguridad. El ensayo existe porque Let's Encrypt limita cuántas veces se puede pedir el real por semana.
+
+**Guarda una copia de `infra/.env` fuera del servidor**, en un lugar privado del equipo, nunca en el repositorio:
+
+```bash
+scp -i samarian.pem ubuntu@<ip-elastica>:samarian/infra/.env ./env-aws
+```
+
+Tiene la clave que cifra los nombres y los WhatsApp (`NUCLEO_CIFRADO_CLAVE`, DN-28): si se pierde, esos datos de la base ya no se pueden leer.
+
+**Cambia la contraseña del administrador.** El repositorio es público, este README publica las contraseñas de las cuentas de la demo y del administrador inicial, y el sitio queda en internet. El administrador pide el enlace de restablecimiento, que llega a Mailpit (paso 5), y pone una contraseña nueva con el token del enlace:
+
+```bash
+NUCLEO=https://<dominio>/api/nucleo
+curl -s -X POST "$NUCLEO/cuentas/contrasena/restablecimiento" -H "Content-Type: application/json" \
+  -d '{"correo":"admin@samariantour.co"}'
+# En Mailpit llega el enlace .../restablecer-contrasena?token=<token>, que vence a los 30 minutos
+curl -s -X POST "$NUCLEO/cuentas/contrasena" -H "Content-Type: application/json" \
+  -d '{"token":"<token>","contrasena":"<contraseña nueva>"}'
+```
+
+Las cuentas de la demo (`Demo1234`) se dejan así para mostrar el recorrido; por eso la instancia se apaga cuando no se usa.
+
+### 4. El día a día
+
+```bash
+cd samarian
+DC="docker compose -f infra/docker-compose.yml -f infra/docker-compose.aws.yml"
+
+# Traer lo último de la rama del servidor y reconstruir solo lo que cambió
+git pull && $DC up -d --build
+
+# Ver el estado y los logs
+$DC ps
+$DC logs -f nucleo
+
+# Respaldo de las dos bases, las fotos y una copia de infra/.env, en ~/respaldos/<fecha>
+bash infra/aws/respaldo.sh
+```
+
+- **Apagar y encender:** en la consola de EC2, Instance state > **Stop** (nunca Terminate, que borra el disco). Al encenderla, Docker arranca solo y levanta los contenedores con sus datos; la IP elástica y el dominio siguen iguales. Nginx tarda uno o dos minutos, lo que tardan el catálogo y el núcleo en pasar su healthcheck.
+- **El certificado** se renueva solo mientras la instancia esté encendida: certbot lo intenta al arrancar y cada 12 h. Si la instancia pasa apagada más de lo que le queda al certificado, se renueva en el primer arranque, y Nginx lo toma en las siguientes 6 h, o enseguida con `$DC exec nginx nginx -s reload`.
+- **Los respaldos** quedan en el mismo disco; para llevarlos al equipo propio: `scp -r -i samarian.pem ubuntu@<ip-elastica>:respaldos/<fecha> .`. Contienen `infra/.env`: trátalos como la clave misma.
+
+### 5. Mailpit por túnel SSH
+
+```bash
+ssh -i samarian.pem -N -L 8025:localhost:8025 ubuntu@<ip-elastica>
+```
+
+Mientras el túnel esté abierto, Mailpit se ve en `http://localhost:8025` del equipo propio. En el servidor, Mailpit solo escucha en su propia interfaz local, así que desde internet no se llega.
+
+### 6. Wompi sandbox
+
+Con HTTPS ya no hace falta el túnel de la sección de pagos: en el panel de Wompi, en modo de pruebas, la URL de eventos es `https://<dominio>/api/nucleo/pagos/eventos`, y no cambia. Las llaves van en `infra/.env` del servidor, como en local.
 
 ## Prueba de carga de la búsqueda (QAS-07)
 
@@ -949,6 +1065,14 @@ docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucle
 #  FALLIDA   | 4 | ******0404 | La entidad rechazó la cuenta ******0404 (simulado)      (en algo más de un minuto)
 docker compose -f infra/docker-compose.yml logs nucleo | grep DISPERSION_FALLIDA
 # [WhatsApp simulado] para=******0404 tipo=DISPERSION_FALLIDA solicitud=...
+
+# El restaurante corrige su cuenta de cobro: la dispersión fallida vuelve a pendiente y sale a la cuenta nueva (DN-44)
+RESTAURANTE=(-H "$(como restaurante@demo.samariantour.co)")
+curl -s -X PUT "$NUCLEO/prestador/cuenta-cobro" "${RESTAURANTE[@]}" -H "Content-Type: application/json" \
+  -d '{"tipo":"NEQUI","numero":"3001110405","titular":"Fogon del Caribe"}'
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "SELECT estado, intentos, reactivaciones, cuenta_destino FROM dispersiones WHERE reactivaciones > 0"
+#  EXITOSA | 1 | 1 | ******0405      (en unos 15 s)
 ```
 
 **Comisión.** Solo el administrador la ve y la cambia (RF-82). El cambio aplica a los pagos que se confirmen después, nunca a los anteriores (RF-83):
@@ -969,6 +1093,8 @@ Otros casos que se pueden mostrar:
 - **Solicitud que no se puede pagar:** una Pendiente o una Atendida responde 409 `SOLICITUD_NO_COBRABLE`, y la de otro turista, 404.
 - **Pago abandonado:** un intento sin resultado a los 30 min queda Abandonado y no cuenta como rechazo: el turista puede abrir otro. Si la ventana vence mientras está en curso, se abandona al terminar la gracia de 30 min, y un aprobado dentro de ella paga la solicitud (DN-20).
 - **Pago por otro monto:** un aprobado por un monto distinto al del intento no paga la solicitud, pero aparece en `GET $NUCLEO/admin/pagos-tardios` con `"motivo":"MONTO_DISTINTO"` y llega el aviso al administrador (DN-22).
+- **Un evento que no se pudo procesar:** tras 5 fallos queda en `GET $NUCLEO/admin/pagos/eventos-fallidos`, y `POST $NUCLEO/admin/pagos/eventos-fallidos/<id>/reintento` lo vuelve a la cola (DN-44).
+- **Un aviso que el catálogo rechazó:** `GET $NUCLEO/admin/bandeja/rechazados` los lista y `POST $NUCLEO/admin/bandeja/<idAviso>/reenvio` lo vuelve a enviar (DN-44).
 
 ### 14. Cuentas
 
@@ -1108,6 +1234,22 @@ Otros casos que se pueden mostrar:
 - **Moderación sin RNT:** aprobar una oferta de la agencia `50000000-...-005`, que tiene el RNT inactivo, responde 409 `PRESTADOR_NO_HABILITADO`; rechazarla sí se puede (DN-35).
 - **El RNT real:** con `RNT_FUENTE=soda` en `infra/.env`, el núcleo consulta el conjunto del RNT en datos.gov.co. Los números de la demo no existen ahí: quedan NO_ENCONTRADO o INACTIVO en la siguiente sincronización. Si la API no responde en 3 s, el prestador conserva su último estado (QAS-03).
 - **Un número que no está en la tabla simulada:** `DELETE $NUCLEO/admin/rnt-simulado/999999` responde 404.
+
+**Supresión de los datos del prestador** (RF-13, DN-45). La guía nueva de arriba no tiene compromisos, así que puede suprimir sus datos:
+
+```bash
+curl -s -X POST "$NUCLEO/prestador/supresion" "${GUIA[@]}" -H "Content-Type: application/json" -d '{"contrasena":"otra"}'
+# 401 CONTRASENA_INCORRECTA (cuenta para el bloqueo de RF-05)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$NUCLEO/prestador/supresion" "${GUIA[@]}" \
+  -H "Content-Type: application/json" -d '{"contrasena":"Guia2026x"}'
+# 204: la cuenta queda anonimizada y, a los 15 s, el catálogo retiró sus ofertas y borró su perfil y sus fotos (DC-52)
+docker compose -f infra/docker-compose.yml exec postgres psql -U nucleo -d nucleo_db -c \
+  "SELECT numero_rnt, whatsapp_cifrado, suprimido_en IS NOT NULL AS suprimido FROM prestadores WHERE id = '$ID'"
+#  910006 |  | t       (el RNT se conserva como soporte contable, pero queda libre para otra cuenta)
+# La agencia, después del paso 13, tiene una solicitud pagada cuyo servicio no ha llegado: todavía no puede
+curl -s -X POST "$NUCLEO/prestador/supresion" "${AGENCIA[@]}" -H "Content-Type: application/json" -d '{"contrasena":"Demo1234"}'
+# 409 PRESTADOR_CON_COMPROMISOS {"compromisos":["1 solicitudes pagadas cuyo servicio no ha terminado", ...]}
+```
 
 ### 16. Rutas que no se exponen
 

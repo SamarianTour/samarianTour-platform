@@ -2,11 +2,15 @@ package co.edu.unimagdalena.samariantour.nucleo.pagos.infraestructura.entrada.mo
 
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.ComisionConfigurada;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.ComisionInvalidaException;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.api.EventoNoReintentableException;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.api.EventoPagoFallido;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.PagoTardioRegistrado;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.api.PagosAdministracionApi;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.DatoInvalidoException;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.ConfiguracionComision;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.EventoPasarela;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.ActualizarComisionUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.AdministrarEventosFallidosUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.ConsultarPagosTardiosUseCase;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +27,13 @@ public class PagosAdministracionApiAdapter implements PagosAdministracionApi {
 
     private final ActualizarComisionUseCase comision;
     private final ConsultarPagosTardiosUseCase tardios;
+    private final AdministrarEventosFallidosUseCase eventos;
 
-    public PagosAdministracionApiAdapter(ActualizarComisionUseCase comision, ConsultarPagosTardiosUseCase tardios) {
+    public PagosAdministracionApiAdapter(ActualizarComisionUseCase comision, ConsultarPagosTardiosUseCase tardios,
+                                         AdministrarEventosFallidosUseCase eventos) {
         this.comision = comision;
         this.tardios = tardios;
+        this.eventos = eventos;
     }
 
     @Override
@@ -50,6 +57,26 @@ public class PagosAdministracionApiAdapter implements PagosAdministracionApi {
                         pago.transaccionId(), pago.montoCentavos() / 100, pago.motivo().name(), pago.registradoEn(),
                         pago.avisoEnviadoEn() != null))
                 .toList();
+    }
+
+    @Override
+    public List<EventoPagoFallido> eventosFallidos() {
+        return eventos.fallidos().stream().map(PagosAdministracionApiAdapter::aApi).toList();
+    }
+
+    @Override
+    public EventoPagoFallido reintentarEvento(UUID eventoId) {
+        try {
+            return aApi(eventos.reintentar(eventoId));
+        } catch (co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.EventoNoReintentableException e) {
+            throw new EventoNoReintentableException(e.codigo(), e.getMessage());
+        }
+    }
+
+    private static EventoPagoFallido aApi(EventoPasarela evento) {
+        return new EventoPagoFallido(evento.id(), evento.referencia(), evento.transaccionId(), evento.estado().name(),
+                evento.montoCentavos() / 100, evento.intentosProcesamiento(), evento.ultimoError(),
+                evento.recibidoEn());
     }
 
     private static ComisionConfigurada aApi(ConfiguracionComision configuracion) {

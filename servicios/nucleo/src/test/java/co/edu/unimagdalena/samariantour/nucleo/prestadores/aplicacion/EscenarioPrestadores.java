@@ -1,12 +1,13 @@
 package co.edu.unimagdalena.samariantour.nucleo.prestadores.aplicacion;
 
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.ContrasenaRechazadaException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.excepcion.RntYaRegistradoException;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.ConsultaRnt;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.CuentaCobro;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.modelo.Prestador;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.AuditoriaPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentaCobroRepositoryPort;
-
+import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.CuentasPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.EventoSalidaPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.NotificacionPrestadorPort;
 import co.edu.unimagdalena.samariantour.nucleo.prestadores.dominio.puerto.salida.PrestadorRepositoryPort;
@@ -36,7 +37,12 @@ class EscenarioPrestadores {
     final Map<UUID, Prestador> prestadores = new LinkedHashMap<>();
     /** Lo que responde el RNT por número; un número que no está aquí no se encuentra. */
     final Map<String, ConsultaRnt> rnt = new HashMap<>();
+    static final String CONTRASENA = "Minca2026";
+
     final Set<UUID> cuentasDePrestador = new HashSet<>();
+    final List<UUID> cuentasSuprimidas = new ArrayList<>();
+    /** Lo que cada prestador todavía debe, según solicitudes y pagos; sin entrada, nada. */
+    final Map<UUID, List<String>> compromisos = new HashMap<>();
     /** Los avisos al catálogo: prestador, habilitado y versión. */
     final List<String> avisos = new ArrayList<>();
     /** Los códigos enviados por WhatsApp: número y código. */
@@ -63,7 +69,7 @@ class EscenarioPrestadores {
 
         @Override
         public Optional<Prestador> porId(UUID id) {
-            return Optional.ofNullable(prestadores.get(id));
+            return Optional.ofNullable(prestadores.get(id)).filter(prestador -> prestador.suprimidoEn() == null);
         }
 
         @Override
@@ -78,7 +84,7 @@ class EscenarioPrestadores {
 
         @Override
         public List<Prestador> todos(boolean soloSinOperador) {
-            return prestadores.values().stream()
+            return prestadores.values().stream().filter(prestador -> prestador.suprimidoEn() == null)
                     .filter(prestador -> !soloSinOperador || prestador.operadorId() == null)
                     .sorted(Comparator.comparing(Prestador::fechaRegistro))
                     .toList();
@@ -86,13 +92,15 @@ class EscenarioPrestadores {
 
         @Override
         public long asignadosA(UUID operadorId) {
-            return prestadores.values().stream().filter(prestador -> operadorId.equals(prestador.operadorId()))
-                    .count();
+            return prestadores.values().stream().filter(prestador -> prestador.suprimidoEn() == null)
+                    .filter(prestador -> operadorId.equals(prestador.operadorId())).count();
         }
 
+        /** Como el índice único parcial de V17: el RNT de un prestador suprimido queda libre (DN-45). */
         private void verificarRntUnico(Prestador prestador) {
-            if (prestadores.values().stream().anyMatch(otro -> !otro.id().equals(prestador.id())
-                    && otro.numeroRnt().equals(prestador.numeroRnt()))) {
+            if (prestador.suprimidoEn() == null && prestadores.values().stream()
+                    .filter(otro -> otro.suprimidoEn() == null && !otro.id().equals(prestador.id()))
+                    .anyMatch(otro -> otro.numeroRnt().equals(prestador.numeroRnt()))) {
                 throw new RntYaRegistradoException(prestador.numeroRnt());
             }
         }
@@ -119,11 +127,44 @@ class EscenarioPrestadores {
 
     final RntVerificationPort fuenteRnt = numero -> rnt.getOrDefault(numero, new ConsultaRnt.NoEncontrado());
 
-    final EventoSalidaPort eventos =
-            (prestadorId, activo, version) -> avisos.add(prestadorId + " " + activo + " v" + version);
+    final EventoSalidaPort eventos = new EventoSalidaPort() {
+        @Override
+        public void avisarHabilitacion(UUID prestadorId, boolean activo, long version) {
+            avisos.add(prestadorId + " " + activo + " v" + version);
+        }
+
+        @Override
+        public void avisarSupresion(UUID prestadorId) {
+            avisos.add(prestadorId + " suprimido");
+        }
+    };
+
+    /** La cuenta de cada prestador se confirma con {@link #CONTRASENA}; al suprimirse, deja de estar activa. */
+    final CuentasPort cuentas = new CuentasPort() {
+        @Override
+        public boolean esPrestadorActivo(UUID usuarioId) {
+            return cuentasDePrestador.contains(usuarioId);
+        }
+
+        @Override
+        public void verificarContrasena(UUID prestadorId, String contrasena) {
+            if (!cuentasDePrestador.contains(prestadorId)) {
+                throw new ContrasenaRechazadaException("CUENTA_NO_ENCONTRADA", "No existe la cuenta.", null);
+            }
+            if (!CONTRASENA.equals(contrasena)) {
+                throw new ContrasenaRechazadaException("CONTRASENA_INCORRECTA", "La contraseña no es correcta.", null);
+            }
+        }
+
+        @Override
+        public void suprimirCuenta(UUID prestadorId) {
+            cuentasDePrestador.remove(prestadorId);
+            cuentasSuprimidas.add(prestadorId);
+        }
+    };
 
     final RegistrarPrestadorService registrar = new RegistrarPrestadorService(repositorio, fuenteRnt,
-            cuentasDePrestador::contains, eventos, transaccion, Clock.fixed(AHORA, ZoneOffset.UTC));
+            cuentas, eventos, transaccion, Clock.fixed(AHORA, ZoneOffset.UTC));
 
     final GestionarPrestadorService gestionar = new GestionarPrestadorService(repositorio);
 
@@ -146,6 +187,10 @@ class EscenarioPrestadores {
                     throw new UnsupportedOperationException();
                 }
             });
+
+    final SuprimirPrestadorService suprimir = new SuprimirPrestadorService(repositorio, cuentas,
+            prestadorId -> compromisos.getOrDefault(prestadorId, List.of()), eventos, registroAuditoria, transaccion,
+            Clock.fixed(AHORA, ZoneOffset.UTC));
 
     UUID cuenta() {
         UUID id = UUID.randomUUID();

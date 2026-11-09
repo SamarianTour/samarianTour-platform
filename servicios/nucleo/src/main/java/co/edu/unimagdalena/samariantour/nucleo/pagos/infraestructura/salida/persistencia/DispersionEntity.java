@@ -65,6 +65,8 @@ public class DispersionEntity {
     @Column(name = "aviso_enviado_en")
     private Instant avisoEnviadoEn;
 
+    private int reactivaciones;
+
     protected DispersionEntity() {
     }
 
@@ -83,7 +85,7 @@ public class DispersionEntity {
 
     /** Lo que cambia al ejecutarla; la liquidación no cambia nunca (RF-83). */
     void cambiarEstado(String estado, int intentos, String ultimaCausa, String cuentaDestino, String idPasarela,
-                       Instant proximoIntento, Instant ejecutadaEn, Instant avisoEnviadoEn) {
+                       Instant proximoIntento, Instant ejecutadaEn, Instant avisoEnviadoEn, int reactivaciones) {
         this.estado = estado;
         this.intentos = intentos;
         this.ultimaCausa = ultimaCausa;
@@ -92,6 +94,7 @@ public class DispersionEntity {
         this.proximoIntento = proximoIntento;
         this.ejecutadaEn = ejecutadaEn;
         this.avisoEnviadoEn = avisoEnviadoEn;
+        this.reactivaciones = reactivaciones;
     }
 
     UUID id() {
@@ -160,5 +163,9 @@ public class DispersionEntity {
 
     Instant avisoEnviadoEn() {
         return avisoEnviadoEn;
+    }
+
+    int reactivaciones() {
+        return reactivaciones;
     }
 }

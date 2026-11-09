@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.Event
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,6 +61,22 @@ public class EventoPasarelaJpaAdapter implements EventoPasarelaRepositoryPort {
     @Override
     public void marcarAvisoIntentado(UUID id, Instant ahora) {
         eventos.marcarAvisoIntentado(id, ahora);
+    }
+
+    @Override
+    public List<EventoPasarela> fallidos() {
+        return eventos.fallidos().stream().map(EventoPasarelaJpaAdapter::aDominio).toList();
+    }
+
+    @Override
+    public Optional<EventoPasarela> porIdParaCambiar(UUID id) {
+        return eventos.porIdParaCambiar(id).map(EventoPasarelaJpaAdapter::aDominio);
+    }
+
+    @Override
+    public void reintentar(EventoPasarela evento) {
+        eventos.reintentar(evento.id(), evento.procesamiento().name(), evento.intentosProcesamiento(),
+                evento.siguienteIntentoEn());
     }
 
     private static EventoPasarela aDominio(EventoPasarelaEntity fila) {

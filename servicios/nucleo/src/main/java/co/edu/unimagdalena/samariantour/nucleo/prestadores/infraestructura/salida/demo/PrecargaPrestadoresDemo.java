@@ -119,7 +119,7 @@ public class PrecargaPrestadoresDemo implements ApplicationRunner {
     private static Prestador prestador(UUID id, PrestadorDemo demo, Instant ahora) {
         Prestador prestador = new Prestador(id, demo.numeroRnt(), demo.datos(), demo.razonSocial(), "SANTA MARTA",
                 demo.categoria(), demo.personaNatural(), demo.activo() ? EstadoRnt.ACTIVO : EstadoRnt.INACTIVO, true,
-                ahora, null, false, null, demo.operadorId(), demo.activo(), demo.activo() ? 1 : 2, ahora, null);
+                ahora, null, false, null, demo.operadorId(), demo.activo(), demo.activo() ? 1 : 2, ahora, null, null);
         prestador.cambiarWhatsapp(demo.whatsapp());
         prestador.verificarWhatsapp();
         return prestador;

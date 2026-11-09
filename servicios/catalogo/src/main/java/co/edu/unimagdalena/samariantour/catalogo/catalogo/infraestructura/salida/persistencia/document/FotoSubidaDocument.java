@@ -21,5 +21,6 @@ public record FotoSubidaDocument(
         Instant ultimoUso) {
 
     public static final String COLECCION = "fotos";
+    public static final String PRESTADOR_ID = "prestadorId";
     public static final String ULTIMO_USO = "ultimoUso";
 }

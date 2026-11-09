@@ -54,6 +54,11 @@ public class PerfilMemoriaAdapter implements PerfilRepositoryPort {
     }
 
     @Override
+    public void eliminar(UUID prestadorId) {
+        perfiles.remove(prestadorId);
+    }
+
+    @Override
     public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
         return perfiles.values().stream()
                 .flatMap(perfil -> perfil.fotos().stream())

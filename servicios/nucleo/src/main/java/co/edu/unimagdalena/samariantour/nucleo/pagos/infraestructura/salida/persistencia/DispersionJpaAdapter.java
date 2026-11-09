@@ -7,6 +7,7 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida.Dispe
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,6 +51,16 @@ public class DispersionJpaAdapter implements DispersionRepositoryPort {
     }
 
     @Override
+    public List<Dispersion> fallidasDelPrestador(UUID prestadorId) {
+        return dispersiones.fallidasDelPrestador(prestadorId).stream().map(DispersionJpaAdapter::aDominio).toList();
+    }
+
+    @Override
+    public long porRecibir(UUID prestadorId) {
+        return dispersiones.porRecibir(prestadorId);
+    }
+
+    @Override
     public Optional<Dispersion> pendientePorId(UUID id) {
         return dispersiones.pendientePorId(id).map(DispersionJpaAdapter::aDominio);
     }
@@ -67,7 +78,7 @@ public class DispersionJpaAdapter implements DispersionRepositoryPort {
     private static void copiarEstado(Dispersion dispersion, DispersionEntity fila) {
         fila.cambiarEstado(dispersion.estado().name(), dispersion.intentos(), dispersion.ultimaCausa(),
                 dispersion.cuentaDestino(), dispersion.idPasarela(), dispersion.proximoIntento(),
-                dispersion.ejecutadaEn(), dispersion.avisoEnviadoEn());
+                dispersion.ejecutadaEn(), dispersion.avisoEnviadoEn(), dispersion.reactivaciones());
     }
 
     private static Dispersion aDominio(DispersionEntity fila) {
@@ -76,6 +87,6 @@ public class DispersionJpaAdapter implements DispersionRepositoryPort {
                         fila.costoTransaccional(), fila.montoNeto()),
                 fila.creadaEn(), EstadoDispersion.valueOf(fila.estado()), fila.intentos(), fila.ultimaCausa(),
                 fila.cuentaDestino(), fila.idPasarela(), fila.proximoIntento(), fila.ejecutadaEn(),
-                fila.avisoEnviadoEn());
+                fila.avisoEnviadoEn(), fila.reactivaciones());
     }
 }

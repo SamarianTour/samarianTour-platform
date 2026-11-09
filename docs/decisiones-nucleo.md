@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), los indicadores del gestor (DN-41) y el registro de exposición con las alertas de sesgo (DN-42, DN-43); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), los indicadores del gestor (DN-41) y el registro de exposición con las alertas de sesgo (DN-42, DN-43), la limpieza y el reenvío de la bandeja con los eventos y las dispersiones fallidos (DN-44) la supresión del prestador (DN-45) y el despliegue en AWS con HTTPS (DN-46); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -52,6 +52,9 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-41 | Indicadores del gestor: tablero, embudo y categorías, con la categoría copiada en la solicitud y los conteos de 1 o 2 ocultos | ✅ RF-85 a RF-89, RET-03, diagrama de paquetes · 🆕 [SUPUESTO] periodo y menos de 3 |
 | DN-42 | Registro de exposición de la recomendación por `/internal/exposiciones`, con su token de servicio | ✅ RET-02, DN-38, diagrama de paquetes · 🆕 [SUPUESTO] 90 días |
 | DN-43 | Índice de exposición diario y alertas de sesgo en el panel del administrador | ✅ RET-02, diagrama de paquetes · 🆕 [SUPUESTO] solo recomendaciones; una revisión por día con la base, no ShedLock |
+| DN-44 | Limpieza y reenvío de la bandeja; reintento de los eventos de pago fallidos; las dispersiones fallidas vuelven a pendiente al cambiar la cuenta de cobro | ✅ RF-54, RF-74, DN-06, DN-20, DN-24 · 🆕 [SUPUESTO] 30 días |
+| DN-45 | Supresión de los datos del prestador: se niega con compromisos, conserva el soporte contable y libera el RNT | ✅ RF-13, Ley 1581, DN-31 · 🆕 equipo |
+| DN-46 | El piloto en una instancia EC2 con HTTPS de Let's Encrypt, encendida solo para trabajar y para las demos | ✅ diagrama de despliegue, DN-07, DN-37 · 🆕 equipo |
 
 ## Persistencia
 
@@ -95,7 +98,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
   - `NginxRutasInternasIT` levanta Nginx con `infra/nginx/nginx.conf` y un eco detrás, y comprueba que ninguna de esas rutas llega al servicio; con la configuración anterior fallan 7 de sus casos.
 - **Pendiente:**
   - **Autenticación entre servicios:** resuelta en DN-38.
-  - **TLS.** El token viaja en `Authorization` y el diseño pone HTTPS en Nginx (puerto 443); el `docker-compose` del piloto sirve HTTP en el 8080.
+  - **TLS:** resuelto en DN-46 para el servidor de AWS. En el equipo de cada uno el piloto sigue en HTTP, en `localhost:8080`.
   - **El frontend actual** enviaba los headers desde el selector "Usuario demo", así que sus páginas del prestador y las opiniones del turista responden 401 hasta el frontend nuevo, que inicia sesión.
 - **Limitación aceptada, no pendiente:** cerrar la sesión no invalida el token de acceso ya emitido, que vence solo en 15 minutos como máximo (DN-29). Revocarlo al instante obligaría al catálogo y a la recomendación a consultar al núcleo en cada petición, contra la validación local del diseño, y el catálogo dejaría de atender si el núcleo cae.
 
@@ -127,7 +130,22 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
   - 409: fallido, se reintenta. Es un conflicto de concurrencia que el catálogo no resolvió con sus reintentos, y el mismo catálogo pide reenviarlo (ADR-05).
   - 5xx, tiempo agotado o sin conexión: fallido, se reintenta.
 - **Reintentos** (decisión del equipo): sin límite, con espera creciente (`EsperaCreciente`): 5 s tras el primer fallo y el doble tras cada uno, hasta 5 minutos. Si el catálogo pasa un rato caído, ningún aviso se pierde.
-- **Pendiente:** las filas enviadas y rechazadas se conservan como registro; no hay todavía una limpieza ni una forma de reenviar un rechazado, más allá de cambiar su estado a mano.
+- **Las enviadas y las rechazadas:** la limpieza y el reenvío están en DN-44.
+
+**DN-44. Limpieza y reenvío de la bandeja; eventos y dispersiones fallidos** (cierra los pendientes de DN-06, DN-20 y DN-24; RF-54, RF-74).
+- **Limpieza de la bandeja:** una tarea diaria, a las 4:30 de Colombia (`nucleo.bandeja.limpieza.cron`), borra los avisos ENVIADOS de hace más de 30 días [SUPUESTO]. Los RECHAZADOS se conservan hasta que el administrador los revise. Si corren las dos réplicas, el segundo borrado no encuentra nada.
+- **Reenvío de un rechazado**, con el rol ADMINISTRADOR:
+  - `GET /admin/bandeja/rechazados` los lista, del más reciente al más antiguo, con su destino, tipo, intentos y último error;
+  - `POST /admin/bandeja/{idAviso}/reenvio` lo devuelve a PENDIENTE con los intentos en cero, y la tarea lo envía en los siguientes 15 s. Sirve cuando se corrigió lo que hacía que el catálogo lo rechazara;
+  - uno que no está rechazado responde 409 `AVISO_NO_RECHAZADO`, y uno que no existe, 404 `AVISO_NO_ENCONTRADO`;
+  - la administración los expone (`BandejaAdminController`) por `bandeja.api.BandejaAdministracionApi`.
+- **Eventos de pago fallidos** (DN-20):
+  - `GET /admin/pagos/eventos-fallidos` da los FALLIDOS con la referencia, la transacción, el estado, el monto en pesos, los intentos y el último error;
+  - `POST /admin/pagos/eventos-fallidos/{eventoId}/reintento` lo devuelve a PENDIENTE con los intentos en cero y el aviso por enviar. El último error se conserva hasta que se procese. Uno que no está fallido responde 409 `EVENTO_NO_FALLIDO`, y uno que no existe, 404 `EVENTO_NO_ENCONTRADO`.
+- **Dispersiones fallidas** (DN-24, RF-54): cuando el prestador cambia su cuenta de cobro por otra distinta (`PUT /prestador/cuenta-cobro`, DN-34), sus dispersiones FALLIDAS vuelven a PENDIENTE en la misma transacción, con los intentos en cero, y se envían a la cuenta nueva en los siguientes 15 s. Si el cambio se deshace, ninguna queda reactivada.
+  - `dispersiones.reactivaciones` (V16) cuenta cuántas veces volvió a pendiente, y el log lo registra; el cambio de cuenta ya queda en la auditoría.
+  - Prestadores avisa por `prestadores.api.ObservadorCuentaCobro`, que implementa pagos (`DispersionesCuentaCobroAdapter`): así prestadores no depende de pagos, como con `FuenteTipoPrestador` (DN-37).
+- **Pruebas:** `AdministrarBandejaServiceTest` y los del dominio, y `PendientesAdminIT`, que recorre el reenvío, el reintento y la reactivación con la cuenta de la agencia de la demo.
 
 ## Administración
 
@@ -354,7 +372,7 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
   - al quinto fallo [SUPUESTO] queda FALLIDO (`procesamiento`, V13), sale de la cola y se avisa al administrador por WhatsApp (`EVENTO_FALLIDO`), con la referencia, la transacción, el estado y el monto, para que lo revise a mano;
   - el fallo se registra solo si el evento sigue pendiente, leído con `FOR UPDATE`: si otra réplica lo procesó mientras tanto, no se toca. Con dos réplicas, un evento que falla puede sumar dos intentos en la misma vuelta, uno por cada una;
   - si falla antes de tomar un evento (por ejemplo, sin base de datos), no hay qué aplazar: la tarea registra el error y lo intenta en la siguiente corrida.
-- **Pendiente:** no hay una ruta para ver o reintentar los fallidos. El administrador los revisa en la base y, para reintentar uno, lo devuelve a PENDIENTE.
+- **Ver y reintentar los fallidos:** `GET /admin/pagos/eventos-fallidos` y su reintento (DN-44).
 - **Lo que hace cada estado:**
   - APPROVED lleva la solicitud a Pagada (RF-50) y deja su dispersión pendiente (DN-24);
   - DECLINED, VOIDED y ERROR la llevan a Pago fallido, o a Vencida al tercer intento (RF-58);
@@ -398,7 +416,7 @@ El mecanismo está **duplicado, no extraído**: pagos tiene su tabla `claves_ide
   - al cuarto fallo queda FALLIDA, y se avisa al prestador por WhatsApp (`DISPERSION_FALLIDA`) para que actualice su cuenta (RF-54);
   - un error inesperado (fix) se registra como un fallo más, en una transacción aparte. Antes las diez de un lote iban en una sola transacción, y un error con una deshacía todas y volvían a tomarse de primeras.
 - **Riesgo:** si la dispersión salió y lo que falla es guardar el resultado, se vuelve a intentar. Con la simulada no importa; cuando se active Pagos a terceros, hay que mandar el id de la dispersión como `idempotency-key`, que Wompi admite, para que no salga dos veces.
-- **Pendiente:** "reintentarla al actualizarse la cuenta" espera a que RF-74 exista en el módulo de prestadores.
+- **Reintentarla al actualizarse la cuenta:** vuelve a pendiente cuando el prestador cambia su cuenta de cobro (DN-44).
 - **La cuenta** solo la ve la dispersión (RF-75). En las respuestas, la base y los logs sale enmascarada (`******1234`), y `CuentaCobro.toString` también la enmascara.
 - **Wompi delega la dispersión a la simulada.** Wompi tiene una API documentada de dispersión ("Pagos a terceros", `api.sandbox.payouts.wompi.co`) con sandbox, pero:
   - exige activarla en la cuenta del comercio, con la validación biométrica del representante legal y de 2 a 5 días hábiles de revisión;
@@ -510,7 +528,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
 - **`GET /cuenta` y `PUT /cuenta`**, para cualquier rol (por eso `/cuenta/**` admite los cinco, DN-05):
   - se cambian el nombre y, el turista, el WhatsApp; uno distinto queda sin verificar y recibe un código nuevo;
   - el correo no se cambia por ahora, porque habría que verificar el nuevo.
-- **`POST /turista/supresion` `{contrasena}`:** solo el turista en este PR; el prestador queda para el módulo de prestadores, porque sus ofertas viven en el catálogo.
+- **`POST /turista/supresion` `{contrasena}`:** la del turista. La del prestador la orquesta el módulo de prestadores, porque sus ofertas viven en el catálogo (DN-45).
   - Se confirma con la contraseña; el fallo cuenta para el bloqueo de RF-05, así que esta ruta no sirve para adivinarla.
   - Es **inmediata**, en una sola transacción:
     - el nombre pasa a "Titular suprimido";
@@ -607,6 +625,28 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - así no depende de quién le quitó la habilitación (la sincronización o un cambio de número) y, si una réplica cae a mitad, la siguiente vuelta termina. V11 agrega el índice de las abiertas por prestador.
 - **Para la demo**, con el RNT simulado: `DELETE /admin/rnt-simulado/{numero}` lo da de baja y `PUT` lo restituye, y los dos sincronizan enseguida. No son parte del contrato, como la pasarela simulada. Las bajas quedan en `rnt_simulado_bajas` (V12), así las dos réplicas las ven; con el RNT real esa tabla queda vacía.
 
+**DN-45. Supresión de los datos del prestador** (RF-13, Ley 1581; cierra lo que DN-31 dejó para el módulo de prestadores).
+- **La ruta:** `POST /prestador/supresion` `{contrasena}`, con el rol PRESTADOR, responde 204. Puede hacerlo también quien no registró su RNT: solo tiene la cuenta y, quizá, el perfil en el catálogo.
+- **Primero la contraseña**, en su propia transacción, como la del turista (DN-31): el fallo cuenta para el bloqueo de RF-05 aunque la supresión no siga. 401 `CONTRASENA_INCORRECTA` y 423 `CUENTA_BLOQUEADA`.
+- **Después los compromisos:** si tiene alguno, responde 409 `PRESTADOR_CON_COMPROMISOS` con la lista en `compromisos`, y no cambia nada. Primero los cumple:
+  - solicitudes PAGADAS cuyo servicio no ha terminado: la fecha de salida del alojamiento, o la de inicio de lo demás, es hoy o después, en hora de Colombia;
+  - solicitudes abiertas con un intento de pago en curso, que todavía puede aprobarse;
+  - dispersiones PENDIENTES o FALLIDAS: dinero que todavía le llega y que, sin su WhatsApp, ya no se le podría avisar ni corregir.
+  - Los cuentan solicitudes y pagos, y los entregan por `prestadores.api.CompromisosPrestador` (`CompromisosSolicitudesAdapter`, `CompromisosPagosAdapter`), sin que prestadores dependa de ellos, como en DN-44.
+- **Luego todo en una sola transacción:**
+  - el prestador pierde el WhatsApp y su código, queda con `suprimido_en` y sin habilitación: el catálogo recibe el aviso HABILITACION con la versión nueva;
+  - queda la auditoría `PRESTADOR_SUPRIMIDO`;
+  - el catálogo recibe el aviso `SUPRESION_PRESTADOR`, que retira definitivamente sus ofertas y borra su perfil y todas sus fotos (DC-52);
+  - la cuenta se anonimiza como la del turista, con su constancia en `solicitudes_supresion`, y pierde sus sesiones.
+- **Lo que se conserva**, como soporte contable de los pagos: el RNT, la razón social, el municipio y la categoría, las cuentas de cobro (cifradas, DN-34), las dispersiones y la auditoría. Las solicitudes conservan el UUID del prestador.
+  - El prestador suprimido no aparece en las consultas, los listados de la administración, el conteo del operador ni la sincronización con el RNT.
+  - **El RNT queda libre:** V17 cambia la restricción única por un índice único parcial, solo de los no suprimidos, así el mismo establecimiento puede registrarse con otra cuenta.
+- **Sus solicitudes abiertas sin pagar** las cierra la tarea de DN-36 en el minuto siguiente, porque ya no está habilitado. El motivo que ve el turista es el de esa tarea: "El prestador ya no tiene el Registro Nacional de Turismo activo".
+- **Límites conocidos:**
+  - un pago que el turista empiece entre la revisión de los compromisos y el final de la transacción no se ve. Si se aprueba, la solicitud queda PAGADA y su dispersión sale a la cuenta de cobro que se conservó; el administrador lo ve en los pagos;
+  - el token de acceso que ya tenía sigue valiendo hasta 15 minutos (DN-29). Sin habilitación no publica nada visible, pero el catálogo todavía le aceptaría un perfil nuevo en ese rato.
+- **Pruebas:** `PrestadorTest`, `SuprimirPrestadorServiceTest` y `SuprimirCuentaPrestadorServiceTest`, y `PrestadoresIT`, que recorre la contraseña equivocada, el 409 con una dispersión y una solicitud pagada, la supresión, los avisos en la bandeja y el RNT registrado de nuevo con otra cuenta.
+
 ## Indicadores
 
 **DN-41. Indicadores del gestor del destino: tablero, embudo y categorías** (RF-85 a RF-89, RET-03; diagrama de paquetes, módulo de indicadores). Es el módulo `indicadores`, con `IndicadoresService` y los tres casos de uso del diagrama: `ConsultarTablero`, `ConsultarEmbudo` y `ConsultarDistribucionCategoria`. El registro de exposición y el índice de sesgo (RET-02) están en DN-42 y DN-43.
@@ -648,8 +688,39 @@ Con esto quedan hechos los dos pendientes de DN-17.
 **DN-07. Estructura del servicio y despliegue en el piloto.**
 - **Paquetes:** `co.edu.unimagdalena.samariantour.nucleo`, con un paquete por módulo (`cuentas`, `solicitudes`, `pagos`, `prestadores`, `administracion`, `indicadores` y `bandeja`) y `compartido`, cada módulo hexagonal como en el catálogo. Cada `package-info.java` dice qué requisitos le tocan. Las 9 primeras reglas de `ArquitecturaTest` son las del catálogo, con JPA, Hibernate y PostgreSQL en lugar de MongoDB; la 10 y la 11 cuidan el `api` de cada módulo (DN-17), y la 12, que pagos use las solicitudes solo por su `api` y no dependa de la administración (DN-18).
 - **API:** prefijo `/api/nucleo` y errores en RFC 7807. El contrato es `contratos/nucleo.openapi.yaml`; `ContratoNucleoIT` falla si una ruta está en un lado y no en el otro, o si un esquema de respuesta no tiene los mismos campos que su DTO. Un cuerpo que no es JSON válido o un parámetro con el tipo equivocado responde 400 `DATO_INVALIDO` en cualquier módulo (`ManejadorPeticionIlegible`).
-- **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados), Mailpit (DN-30) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. El núcleo exige `NUCLEO_CIFRADO_CLAVE` y `NUCLEO_JWT_CLAVE_PRIVADA` en `infra/.env`, y el catálogo y la recomendación, `NUCLEO_JWT_CLAVE_PUBLICA` (`bash infra/generar-claves.sh`); sin ellas Compose no arranca. Nginx enruta `/api/nucleo/`, bloquea `internal` y `actuator` de los tres servicios y rechaza las rutas con `;` (DN-37). El CI construye también la imagen del núcleo.
+- **Docker Compose:** PostgreSQL 17 (`postgres-data`, sin puertos publicados), Mailpit (DN-30) y el núcleo con 2 réplicas de 512 MB, healthcheck y el perfil `demo`. El núcleo exige `NUCLEO_CIFRADO_CLAVE` y `NUCLEO_JWT_CLAVE_PRIVADA` en `infra/.env`, y el catálogo y la recomendación, `NUCLEO_JWT_CLAVE_PUBLICA` (`bash infra/generar-claves.sh`); sin ellas Compose no arranca. Nginx enruta `/api/nucleo/`, bloquea `internal` y `actuator` de los tres servicios y rechaza las rutas con `;` (DN-37); esas rutas están en `infra/nginx/rutas.conf`, las mismas en local y en AWS (DN-46). El CI construye también la imagen del núcleo.
 - **Métricas:** como el catálogo (DC-48), `/actuator/prometheus` con los umbrales de latencia de cada ruta, solo desde la red de Docker.
+
+**DN-46. El piloto en AWS, con HTTPS** (diagrama de despliegue: "Nginx con HTTPS en el 443"; cierra el pendiente de TLS de DN-37). El equipo tiene 100 USD de créditos de AWS y un dominio propio.
+- **Una instancia EC2** (decisión del equipo): `t3.medium` (2 vCPU, 4 GB) en `us-east-1`, Ubuntu 24.04, 30 GB `gp3` y 2 GB de swap, con el mismo Docker Compose del piloto. No se usan servicios administrados (RDS, DocumentDB, S3, un balanceador): costarían más que los créditos y el diseño ya pone todo detrás de un Nginx en un servidor.
+  - **Encendida solo para trabajar y para las demos:** así los créditos alcanzan para el semestre. Las alertas de AWS Budgets avisan al 25, 50 y 75 % de 100 USD, contando el gasto antes de los créditos.
+  - **IP elástica y un registro A** del dominio: la dirección no cambia al detener y encender la instancia.
+- **`infra/docker-compose.aws.yml`** se suma al de siempre y solo cambia lo del servidor:
+  - Nginx publica el 80 y el 443 con `infra/nginx/nginx-aws.conf`;
+  - el contenedor `certbot` renueva el certificado;
+  - Mailpit escucha solo en `127.0.0.1`, y se ve con un túnel SSH;
+  - los enlaces que arma el núcleo (el restablecimiento de la contraseña, la confirmación en el WhatsApp, la vuelta del pago y la página de la pasarela simulada) usan `https://${DOMINIO}`, que se define en `infra/.env`. Sin `DOMINIO`, Compose no arranca.
+- **Las rutas de Nginx están en un solo archivo,** `infra/nginx/rutas.conf`, que incluyen la configuración local y la de AWS. Así el servidor bloquea lo mismo que se prueba en local: `internal`, `actuator` y las rutas con `;` (DN-37). `NginxRutasInternasIT` las prueba con la configuración local, y `NginxAwsIT`, con la de AWS y un certificado autofirmado.
+- **HTTPS** (`nginx-aws.conf`):
+  - el certificado es de Let's Encrypt, con el desafío HTTP-01. El 80 solo sirve ese desafío y redirige lo demás a HTTPS con un 301;
+  - TLS 1.2 y 1.3, HTTP/2 y HSTS de un año, sin `includeSubDomains` ni `preload`, porque otros subdominios del dominio podrían no tener certificado;
+  - el certificado se guarda siempre con el nombre `samarian` (`--cert-name`), así la configuración de Nginx no depende del dominio y no hace falta generarla.
+- **El certificado:**
+  - el primero lo pide `infra/aws/primer-certificado.sh`. Nginx no arranca sin certificado y Let's Encrypt no lo emite sin Nginx en el 80, así que el script deja uno provisional, levanta todo, lo cambia por el real y recarga Nginx. Con `PRUEBA=1` usa el entorno de prueba de Let's Encrypt, que no tiene su límite semanal;
+  - `certbot` intenta renovarlo al arrancar y cada 12 h, y solo lo cambia cuando le falta poco para vencer. Nginx recarga la configuración cada 6 h para tomarlo, sin cortar las conexiones;
+  - el correo de la cuenta de Let's Encrypt es opcional: desde 2025 Let's Encrypt ya no envía avisos de vencimiento.
+- **Acceso:**
+  - el grupo de seguridad abre el 80 y el 443 a todos y el 22 solo a la IP de cada integrante;
+  - PostgreSQL, MongoDB, MinIO y Mailpit no se publican, como en local.
+- **Scripts** (`infra/aws/`):
+  - `preparar-servidor.sh` instala Docker con Compose del repositorio de Docker, porque el de Ubuntu no entiende `!override`. También crea la swap y limita los logs de los contenedores a 30 MB cada uno;
+  - `respaldo.sh` guarda en `~/respaldos/<fecha>` la base del núcleo (`pg_dump`), la del catálogo (`mongodump`), las fotos de MinIO y una copia de `infra/.env`.
+- **`infra/.env` se guarda también fuera del servidor:** tiene `NUCLEO_CIFRADO_CLAVE`, y sin ella los nombres y los WhatsApp de la base no se pueden leer (DN-28).
+- **Límites conocidos:**
+  - **el perfil demo sigue activo:** las cuentas de la demo y el administrador inicial tienen contraseñas publicadas en el README de un repositorio público. Antes de la primera demo se cambia la del administrador con el restablecimiento, y la instancia se apaga cuando no se usa;
+  - **un solo servidor:** las dos réplicas del catálogo y del núcleo cubren la caída de un contenedor, no la de la instancia. Para el piloto se acepta, como en el diagrama de despliegue;
+  - **las imágenes se construyen en el servidor:** la primera vez tarda varios minutos. Con un registro de imágenes se evitaría, pero es otro servicio que pagar y mantener.
+- **La guía paso a paso** está en el README, "Despliegue en AWS".
 
 ## Cambios pendientes en los documentos de diseño
 
@@ -703,7 +774,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
    - `SolicitudDisponibilidad` agrega `cerrarPorRntInactivo` (DN-36).
 18. **Diagrama entidad-relación:** agregar `prestadores`, `cuentas_cobro` y `auditoria_prestadores` (V10), el índice de V11 y `rnt_simulado_bajas` (V12).
 19. **Diagrama de paquetes, `libs/seguridad-jwt` y `compartido/seguridad`:** la librería tiene `DecodificadorToken`, `ReclamosToken`, `SeguridadJwt`, `RespuestasSeguridad`, `AutenticacionToken` y `ClavesRsa`, y su test-jar, `TokensDePrueba`; cada `compartido/seguridad` tiene `Identidad` y `SeguridadConfig` (DN-37). El módulo de cuentas agrega `TipoPrestadorPort` y `cuentas.api.FuenteTipoPrestador`, que implementa prestadores (`FuenteTipoPrestadorAdapter`).
-20. **Documento de diseño y diagrama de despliegue:** el TLS de Nginx sigue pendiente (DN-37); la validación del token es local en los tres servicios, como dice la interacción 5.
+20. **Documento de diseño y diagrama de despliegue:** el TLS de Nginx está en el servidor de AWS (DN-46); la validación del token es local en los tres servicios, como dice la interacción 5.
 21. **Diagrama de paquetes, `libs/seguridad-jwt` y las interacciones entre servicios:** la librería agrega `EmisorTokenServicio`, `DecodificadorTokenServicio` y `ServiciosInternos`; las flechas 1, 2 y 3 llevan el token de servicio del que llama, y el catálogo tiene una cadena de seguridad para `/internal/**` (DN-38).
 22. **Diagrama entidad-relación y diccionario de clases, pagos (V13):** `eventos_pasarela` agrega `procesamiento` (PENDIENTE, PROCESADO o FALLIDO), `intentos_procesamiento`, `ultimo_error`, `siguiente_intento_en`, `aviso_enviado_en` y `aviso_intentado_en`; `intentos_pago`, `abandonar_en`; `pagos_tardios`, `motivo` y `aviso_intentado_en`, y `dispersiones`, `aviso_intentado_en`. `TipoAvisoPago` agrega `MONTO_DISTINTO` y `EVENTO_FALLIDO` (DN-20 a DN-22, DN-24).
 23. **Diagrama de paquetes, módulo de indicadores:** `IndicadoresController` tiene las tres rutas de `/gestor/indicadores`; `SolicitudesPort` usa `solicitudes.api.SolicitudesIndicadoresApi`, que da solo conteos (`ContarSolicitudesUseCase`), y `ReglaAnonimizacion` oculta los de 1 o 2 (DN-41). El modelo agrega `Periodo` y `DistribucionCategoria`.
@@ -711,3 +782,7 @@ Con esto quedan hechos los dos pendientes de DN-17.
 25. **Diagrama de paquetes, módulo de indicadores (exposición):** `ExposicionController` es `POST /internal/exposiciones`; el `RevisionSesgoScheduler` es `RevisionSesgoProgramada` y no usa ShedLock sino la fila del día en `revisiones_sesgo`; el `AvisoPlataformaPort` es `AlertaSesgoRepositoryPort`, con `GET /admin/alertas-sesgo`, y no `NotificacionJpaAdapter`; se agregan `ConsultarAlertasSesgoUseCase` y `TransaccionPort`. El `OfertaElegibleConsultaPort` usa `GET /internal/ofertas/por-prestador` del catálogo (DN-42, DN-43, DC-51).
 26. **Diagrama entidad-relación (V15):** agregar `exposiciones`, `alertas_sesgo` y `revisiones_sesgo` (DN-42, DN-43). El módulo de indicadores ya no es "sin tablas propias": las del tablero siguen saliendo de las solicitudes, pero la exposición y el sesgo tienen las suyas.
 27. **Diagrama de paquetes, `compartido/seguridad` del núcleo:** una cadena para `/internal/**` con el token de servicio de la recomendación (DN-38, DN-42).
+28. **Diagrama de paquetes, bandeja y pagos:** la bandeja agrega `AdministrarBandejaUseCase`, `LimpiarBandejaUseCase`, la tarea de limpieza y `bandeja.api.BandejaAdministracionApi`; pagos agrega `AdministrarEventosFallidosUseCase`, `ReactivarDispersionesUseCase` y `DispersionesCuentaCobroAdapter`, que implementa `prestadores.api.ObservadorCuentaCobro`; la administración agrega `BandejaAdminController` (DN-44).
+29. **Diagrama entidad-relación (V16, V17):** `dispersiones` agrega `reactivaciones` (DN-44), y `prestadores`, `suprimido_en`, con el RNT único solo entre los no suprimidos (DN-45).
+30. **Diagrama de paquetes, supresión del prestador:** prestadores agrega `SuprimirPrestadorUseCase`, `CompromisosPort` sobre `prestadores.api.CompromisosPrestador` (lo implementan solicitudes y pagos) y, en `CuentasPort` y `EventoSalidaPort`, la contraseña, la cuenta y el aviso `SUPRESION_PRESTADOR`; cuentas agrega `SuprimirCuentaPrestadorUseCase` y lo expone en `CuentasApiInterna`. El diccionario de clases agrega `Prestador.suprimir` en los dos módulos (DN-45).
+31. **Diagrama de despliegue:** el piloto en una instancia EC2 (`t3.medium`) con IP elástica y el dominio del equipo; Nginx en el 80 (solo el desafío de Let's Encrypt y la redirección) y el 443, el contenedor `certbot` y Mailpit sin puerto público (DN-46).

@@ -15,12 +15,14 @@ interface PrestadorJpaRepository extends JpaRepository<PrestadorEntity, UUID> {
 
     List<PrestadorEntity> findByOperadorIdIsNullOrderByFechaRegistroAsc();
 
-    long countByOperadorId(UUID operadorId);
+    /** Los prestadores vigentes que atiende el operador; los que suprimieron sus datos no cuentan (DN-45). */
+    long countByOperadorIdAndSuprimidoEnIsNull(UUID operadorId);
 
     /** Los que la sincronización de {@code inicio} no ha tomado; los que tiene otra réplica se saltan (DN-36). */
     @Query(value = """
             SELECT id FROM prestadores
-            WHERE sincronizacion_tomada_en IS NULL OR sincronizacion_tomada_en < :inicio
+            WHERE suprimido_en IS NULL
+              AND (sincronizacion_tomada_en IS NULL OR sincronizacion_tomada_en < :inicio)
             ORDER BY id
             LIMIT :limite
             FOR UPDATE SKIP LOCKED""", nativeQuery = true)

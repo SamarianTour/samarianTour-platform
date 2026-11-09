@@ -78,6 +78,11 @@ public class PerfilMongoAdapter implements PerfilRepositoryPort {
     }
 
     @Override
+    public void eliminar(UUID prestadorId) {
+        mongo.remove(query(where(PRESTADOR_ID).is(prestadorId)), PerfilDocument.class);
+    }
+
+    @Override
     public Set<Foto> fotosEnUso(Collection<Foto> fotos) {
         List<String> ids = fotos.stream().map(Foto::id).toList();
         Set<String> enUso = new HashSet<>(mongo.findDistinct(query(where(PerfilDocument.FOTOS).in(ids)),

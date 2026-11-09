@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Los fallos al procesar un evento de la pasarela (DN-21). */
 class EventoPasarelaTest {
@@ -58,5 +59,26 @@ class EventoPasarelaTest {
         EventoPasarela evento = recibido().conFallo("x".repeat(800), AHORA);
 
         assertThat(evento.ultimoError()).hasSize(EventoPasarela.LARGO_ERROR);
+    }
+
+    @Test
+    @DisplayName("fallido, el administrador lo devuelve a la cola sin fallos ni aviso; uno pendiente no (DN-44)")
+    void reintentado() {
+        EventoPasarela evento = recibido();
+        for (int i = 0; i < 5; i++) {
+            evento = evento.conFallo("IllegalStateException: falló", AHORA);
+        }
+        EventoPasarela avisado = evento.avisado(AHORA);
+        Instant despues = AHORA.plusSeconds(3600);
+
+        EventoPasarela reintentado = avisado.reintentado(despues);
+
+        assertThat(reintentado.procesamiento()).isEqualTo(EstadoProcesamiento.PENDIENTE);
+        assertThat(reintentado.intentosProcesamiento()).isZero();
+        assertThat(reintentado.siguienteIntentoEn()).isEqualTo(despues);
+        assertThat(reintentado.avisoEnviadoEn()).isNull();
+        assertThat(reintentado.ultimoError()).isEqualTo("IllegalStateException: falló");
+        assertThatThrownBy(() -> recibido().reintentado(despues))
+                .isInstanceOf(IllegalStateException.class);
     }
 }

@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.nucleo.compartido.concurrencia.EjecutorC
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.AtenderSolicitudService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.CerrarSolicitudesSinRntService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ConsultarColaOperadorService;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ConsultarCompromisosService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ConsultarSolicitudesTuristaService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.ContarSolicitudesService;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.EjecucionIdempotente;
@@ -15,6 +16,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.aplicacion.VencerSoli
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.AtenderSolicitudUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.CerrarSolicitudesSinRntUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarColaOperadorUseCase;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarCompromisosUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarSolicitudesTuristaUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ContarSolicitudesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.EnviarNotificacionesUseCase;
@@ -24,6 +26,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.VencerSolicitudesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.AvisoPlataformaPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.CatalogoConsultaPort;
+import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.CompromisosSolicitudesPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.ContactoPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.ConteosSolicitudesPort;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.salida.IdempotenciaPort;
@@ -117,5 +120,10 @@ public class SolicitudesConfig {
     @Bean
     ContarSolicitudesUseCase contarSolicitudes(ConteosSolicitudesPort conteos) {
         return new ContarSolicitudesService(conteos);
+    }
+
+    @Bean
+    ConsultarCompromisosUseCase consultarCompromisos(CompromisosSolicitudesPort compromisos, Clock reloj) {
+        return new ConsultarCompromisosService(compromisos, reloj);
     }
 }

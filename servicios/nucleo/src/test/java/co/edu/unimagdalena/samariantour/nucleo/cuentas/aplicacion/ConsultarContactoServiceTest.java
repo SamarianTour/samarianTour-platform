@@ -15,7 +15,8 @@ class ConsultarContactoServiceTest {
 
     private final EscenarioCuentas escenario = new EscenarioCuentas();
     private final CuentasApiInternaAdapter api =
-            new CuentasApiInternaAdapter(new ConsultarContactoService(escenario.repositorio));
+            new CuentasApiInternaAdapter(new ConsultarContactoService(escenario.repositorio),
+                    escenario.supresionPrestador);
 
     @Test
     @DisplayName("solo con el WhatsApp verificado y la cuenta activa; suprimida, ya no hay contacto")

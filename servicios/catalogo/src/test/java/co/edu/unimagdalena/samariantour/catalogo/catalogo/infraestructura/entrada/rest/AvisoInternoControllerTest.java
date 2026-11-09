@@ -4,6 +4,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoHabilitacion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoNucleoCommand;
+import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.AvisoSupresionPrestador;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.DecisionModeracion;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.ResultadoAviso;
 import co.edu.unimagdalena.samariantour.seguridadjwt.ServiciosInternos;
@@ -71,6 +72,20 @@ class AvisoInternoControllerTest {
                 .andExpect(jsonPath("$.resultado").value("IGNORADO"));
 
         assertThat(avisoRecibido()).isEqualTo(new AvisoHabilitacion("aviso-2", PRESTADOR, false, 3));
+    }
+
+    @Test
+    @DisplayName("la supresión del prestador llega con su identificador (DC-52)")
+    void supresion() throws Exception {
+        when(aplicarAviso.aplicar(any())).thenReturn(ResultadoAviso.APLICADO);
+
+        enviar("""
+                {"idAviso": "supresion-prestador-1", "tipo": "SUPRESION_PRESTADOR", "prestadorId": "%s"}
+                """.formatted(PRESTADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultado").value("APLICADO"));
+
+        assertThat(avisoRecibido()).isEqualTo(new AvisoSupresionPrestador("supresion-prestador-1", PRESTADOR));
     }
 
     @Test

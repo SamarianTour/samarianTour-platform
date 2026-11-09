@@ -3,6 +3,7 @@ package co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.salida;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.Dispersion;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +27,12 @@ public interface DispersionRepositoryPort {
      * registrar un error inesperado sin pisar a la réplica que la haya ejecutado mientras tanto.
      */
     Optional<Dispersion> pendientePorId(UUID id);
+
+    /** Las fallidas del prestador, bloqueadas hasta el final de la transacción: para reactivarlas (DN-44). */
+    List<Dispersion> fallidasDelPrestador(UUID prestadorId);
+
+    /** Las pendientes y fallidas del prestador: dinero que todavía no le llega (DN-45). */
+    long porRecibir(UUID prestadorId);
 
     /**
      * Una fallida que todavía no se avisó al prestador ni se intentó avisar desde {@code inicio}, la de intento más

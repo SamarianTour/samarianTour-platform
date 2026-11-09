@@ -1,0 +1,45 @@
+# El piloto en el servidor de AWS (DN-46): se suma a docker-compose.yml y solo cambia lo que el servidor necesita.
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.aws.yml up -d --build
+# Pide DOMINIO en infra/.env. La guía completa está en el README, "Despliegue en AWS".
+
+services:
+  # HTTPS en el 443 y HTTP en el 80 solo para el certificado y la redirección. Cada 6 h recarga la configuración,
+  # para tomar el certificado que certbot haya renovado sin cortar las conexiones.
+  nginx:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes: !override
+      - ./nginx/nginx-aws.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/rutas.conf:/etc/nginx/rutas.conf:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+    command: ["/bin/sh", "-c", "while :; do sleep 6h & wait $$!; nginx -s reload; done & exec nginx -g 'daemon off;'"]
+
+  # Renueva el certificado de Let's Encrypt: lo intenta al arrancar y cada 12 h, y solo lo cambia cuando le falta
+  # poco para vencer. El primero lo pide infra/aws/primer-certificado.sh.
+  certbot:
+    image: certbot/certbot:v5.8.0
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $$!; done"]
+    restart: unless-stopped
+
+  # Mailpit sin puerto público: solo en la interfaz local del servidor, y se ve con un túnel SSH
+  # (ssh -L 8025:localhost:8025 ...) en http://localhost:8025.
+  mailpit:
+    ports: !override
+      - "127.0.0.1:8025:8025"
+
+  # Los enlaces que el núcleo pone en los correos, en los WhatsApp y en la pasarela simulada apuntan al dominio.
+  nucleo:
+    environment:
+      NUCLEO_CUENTAS_ENLACERESTABLECIMIENTO: "https://${DOMINIO:?Falta DOMINIO}/restablecer-contrasena?token={token}"
+      NUCLEO_SOLICITUDES_ENLACECONFIRMACION: "https://${DOMINIO}/turista/solicitudes/{id}"
+      NUCLEO_PAGOS_URLREDIRECCION: "https://${DOMINIO}/turista/solicitudes/{id}"
+      NUCLEO_PAGOS_SIMULADA_URLPAGINA: "https://${DOMINIO}/api/nucleo"
+
+volumes:
+  certbot-www:
+  certbot-certs:

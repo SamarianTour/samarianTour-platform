@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.nucleo.bandeja.infraestructura.config;
 
+import co.edu.unimagdalena.samariantour.nucleo.bandeja.aplicacion.AdministrarBandejaService;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.aplicacion.EncolarAvisoService;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.aplicacion.PublicarAvisosService;
 import co.edu.unimagdalena.samariantour.nucleo.bandeja.dominio.puerto.entrada.EncolarAvisoUseCase;
@@ -18,6 +19,12 @@ public class BandejaConfig {
     @Bean
     EncolarAvisoUseCase encolarAviso(BandejaSalidaRepositoryPort bandeja, Clock reloj) {
         return new EncolarAvisoService(bandeja, reloj);
+    }
+
+    /** Un solo servicio para los dos casos de uso del administrador y de la limpieza (DN-44). */
+    @Bean
+    AdministrarBandejaService administrarBandeja(BandejaSalidaRepositoryPort bandeja, Clock reloj) {
+        return new AdministrarBandejaService(bandeja, reloj);
     }
 
     @Bean

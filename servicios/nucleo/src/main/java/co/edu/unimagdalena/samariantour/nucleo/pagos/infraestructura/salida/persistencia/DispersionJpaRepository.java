@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,4 +41,16 @@ interface DispersionJpaRepository extends JpaRepository<DispersionEntity, UUID> 
     @Modifying
     @Query(value = "UPDATE dispersiones SET aviso_intentado_en = :ahora WHERE id = :id", nativeQuery = true)
     int marcarAvisoIntentado(@Param("id") UUID id, @Param("ahora") Instant ahora);
+
+    /** Las fallidas del prestador, bloqueadas hasta el final de la transacción (DN-44). */
+    @Query(value = """
+            SELECT * FROM dispersiones WHERE prestador_id = :prestadorId AND estado = 'FALLIDA'
+            ORDER BY creada_en FOR UPDATE
+            """, nativeQuery = true)
+    List<DispersionEntity> fallidasDelPrestador(@Param("prestadorId") UUID prestadorId);
+
+    @Query(value = """
+            SELECT count(*) FROM dispersiones WHERE prestador_id = :prestadorId AND estado IN ('PENDIENTE', 'FALLIDA')
+            """, nativeQuery = true)
+    long porRecibir(@Param("prestadorId") UUID prestadorId);
 }

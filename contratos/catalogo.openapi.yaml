@@ -641,7 +641,7 @@ paths:
       operationId: recibirAviso
       security:
         - tokenServicio: []
-      summary: Aviso del núcleo, de moderación o de habilitación RNT (RF-77, RF-79)
+      summary: Aviso del núcleo, de moderación, de habilitación RNT o de supresión del prestador (RF-13, RF-77, RF-79)
       description: |
         Es idempotente (DC-04): cada aviso trae un `idAviso` y un aviso repetido no se vuelve a aplicar.
         Los tres resultados responden 200, para que el núcleo no reintente el aviso.
@@ -679,6 +679,12 @@ paths:
                   prestadorId: 10000000-0000-0000-0000-000000000001
                   rntActivo: false
                   version: 2
+              suprimir:
+                summary: El prestador suprimió sus datos (DC-52)
+                value:
+                  idAviso: supresion-prestador-10000000-0000-0000-0000-000000000001
+                  tipo: SUPRESION_PRESTADOR
+                  prestadorId: 10000000-0000-0000-0000-000000000001
       responses:
         '200':
           description: Aviso recibido.
@@ -1857,11 +1863,13 @@ components:
       oneOf:
         - $ref: '#/components/schemas/AvisoModeracion'
         - $ref: '#/components/schemas/AvisoHabilitacion'
+        - $ref: '#/components/schemas/AvisoSupresionPrestador'
       discriminator:
         propertyName: tipo
         mapping:
           MODERACION: '#/components/schemas/AvisoModeracion'
           HABILITACION: '#/components/schemas/AvisoHabilitacion'
+          SUPRESION_PRESTADOR: '#/components/schemas/AvisoSupresionPrestador'
 
     AvisoModeracion:
       type: object
@@ -1906,6 +1914,23 @@ components:
           format: int64
           minimum: 1
           description: Versión del prestador en el núcleo; un aviso con una versión igual o anterior se ignora (DC-02).
+
+    AvisoSupresionPrestador:
+      type: object
+      description: |
+        El prestador suprimió sus datos en el núcleo (RF-13, DN-45, DC-52): se retiran definitivamente todas sus
+        ofertas y se borran su perfil público y todas las fotos que subió. Siempre responde APLICADO; repetirlo con
+        otro identificador no cambia nada.
+      required: [idAviso, tipo, prestadorId]
+      properties:
+        idAviso:
+          type: string
+        tipo:
+          type: string
+          enum: [SUPRESION_PRESTADOR]
+        prestadorId:
+          type: string
+          format: uuid
 
     AvisoResultado:
       type: object
