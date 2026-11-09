@@ -1,0 +1,36 @@
+@if (cuenta(); as actual) {
+  <div class="menu" (focusout)="alPerderElFoco($event)">
+    <button
+      #boton
+      type="button"
+      class="menu__boton"
+      aria-haspopup="true"
+      aria-controls="menu-usuario-panel"
+      [attr.aria-expanded]="abierto()"
+      (click)="alternar()"
+    >
+      <span class="menu__avatar" aria-hidden="true">{{ inicial() }}</span>
+      <span class="menu__nombre">{{ actual.nombre }}</span>
+      <span class="solo-lectores">, menú de la cuenta</span>
+      <app-icono class="menu__flecha" nombre="chevron" />
+    </button>
+
+    @if (abierto()) {
+      <div class="menu__panel" id="menu-usuario-panel">
+        <div class="menu__datos">
+          <p class="menu__titulo">{{ actual.nombre }}</p>
+          <p class="menu__rol">{{ etiquetaRol[actual.rol] }}</p>
+          <p class="menu__correo">{{ actual.correo }}</p>
+        </div>
+        <ul class="menu__lista">
+          <li>
+            <a routerLink="/mis-datos" (click)="cerrar()">Mis datos</a>
+          </li>
+          <li>
+            <button type="button" (click)="cerrarSesion()">Cerrar sesión</button>
+          </li>
+        </ul>
+      </div>
+    }
+  </div>
+}
