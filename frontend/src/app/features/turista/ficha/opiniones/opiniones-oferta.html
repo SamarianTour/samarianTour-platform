@@ -1,5 +1,5 @@
 <section class="tarjeta opiniones" aria-labelledby="opiniones-titulo">
-  <h2 id="opiniones-titulo">Opiniones</h2>
+  <h2 id="opiniones-titulo">{{ 'turista.opiniones.titulo' | t }}</h2>
 
   @if (errorDeLectura(); as mensaje) {
     <p class="alerta alerta--error" role="alert">
@@ -15,8 +15,7 @@
         <div>
           <app-estrellas [valor]="promedio" />
           <p class="texto-suave">
-            {{ lectura.resumen.totalOpiniones }}
-            {{ lectura.resumen.totalOpiniones === 1 ? 'opinión' : 'opiniones' }} de turistas que la pagaron
+            {{ 'turista.opiniones.resumen' | t: { n: lectura.resumen.totalOpiniones } }}
           </p>
         </div>
       </div>
@@ -25,7 +24,7 @@
         @for (opinion of lectura.contenido; track opinion.id) {
           <li class="opinion">
             <div class="opinion__cabecera">
-              <p class="opinion__autor">Turista</p>
+              <p class="opinion__autor">{{ 'etiquetas.rol.TURISTA' | t }}</p>
               <app-estrellas [valor]="opinion.calificacion" />
               <p class="opinion__fecha texto-suave">{{ opinion.fecha | fecha }}</p>
             </div>
@@ -35,7 +34,7 @@
       </ul>
       <app-paginacion [pagina]="lectura.pagina" [totalPaginas]="lectura.totalPaginas" (cambiar)="irAPagina($event)" />
     } @else {
-      <p class="texto-suave">Todavía no hay opiniones publicadas de esta oferta.</p>
+      <p class="texto-suave">{{ 'turista.opiniones.vacio' | t }}</p>
     }
   }
 
@@ -43,10 +42,8 @@
 
   @if (turista(); as actual) {
     <form class="dejar-opinion" [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
-      <h3 class="dejar-opinion__titulo">Dejar una opinión como {{ actual.nombre }}</h3>
-      <p class="campo__ayuda">
-        Solo puedes opinar sobre ofertas que hayas pagado. Un administrador revisa cada opinión antes de publicarla.
-      </p>
+      <h3 class="dejar-opinion__titulo">{{ 'turista.opiniones.dejar' | t: { nombre: actual.nombre } }}</h3>
+      <p class="campo__ayuda">{{ 'turista.opiniones.ayudaDejar' | t }}</p>
 
       <fieldset
         class="grupo calificacion"
@@ -55,20 +52,20 @@
         [attr.aria-invalid]="errorDe('calificacion') ? 'true' : null"
         [attr.aria-describedby]="errorDe('calificacion') ? 'calificacion-error' : 'calificacion-texto'"
       >
-        <legend>Calificación <span class="requerido" aria-hidden="true">*</span></legend>
+        <legend>{{ 'turista.opiniones.calificacion' | t }} <span class="requerido" aria-hidden="true">*</span></legend>
         <div class="calificacion__estrellas">
           @for (valor of calificaciones; track valor) {
             <label class="calificacion__opcion" [class.calificacion__opcion--llena]="valor <= (calificacionElegida() ?? 0)">
               <input type="radio" name="calificacion" formControlName="calificacion" [value]="valor" />
               <app-icono nombre="estrella" />
-              <span class="solo-lectores">{{ valor }} {{ valor === 1 ? 'estrella' : 'estrellas' }}</span>
+              <span class="solo-lectores">{{ 'turista.opiniones.estrellas' | t: { n: valor } }}</span>
             </label>
           }
           <span class="calificacion__texto" id="calificacion-texto" aria-live="polite">
             @if (calificacionElegida(); as elegida) {
-              {{ elegida }} de 5 estrellas ({{ textoCalificacion[elegida] }})
+              {{ 'turista.opiniones.elegida' | t: { n: elegida, texto: textoCalificacion[elegida] } }}
             } @else {
-              Sin calificar
+              {{ 'turista.opiniones.sinCalificar' | t }}
             }
           </span>
         </div>
@@ -78,7 +75,7 @@
       </fieldset>
 
       <div class="campo">
-        <label for="comentario">Tu comentario <span class="requerido" aria-hidden="true">*</span></label>
+        <label for="comentario">{{ 'turista.opiniones.comentario' | t }} <span class="requerido" aria-hidden="true">*</span></label>
         <textarea
           id="comentario"
           formControlName="comentario"
@@ -88,8 +85,7 @@
           [attr.aria-describedby]="errorDe('comentario') ? 'comentario-error comentario-ayuda' : 'comentario-ayuda'"
         ></textarea>
         <p class="campo__ayuda" id="comentario-ayuda">
-          De 10 a 1000 caracteres ({{ largoComentario() }}). Cuenta tu experiencia; no incluyas teléfonos, correos ni
-          enlaces.
+          {{ 'turista.opiniones.ayudaComentario' | t: { largo: largoComentario() } }}
         </p>
         @if (errorDe('comentario'); as mensaje) {
           <p class="campo__error" id="comentario-error">{{ mensaje }}</p>
@@ -99,37 +95,38 @@
       @if (errorDeEnvio(); as mensaje) {
         <p class="alerta alerta--error" role="alert">
           <app-icono nombre="alerta" />
-          <span>{{ mensaje }}</span>
+          <span>{{ mensaje() }}</span>
         </p>
       }
       @if (enviada()) {
         <p class="alerta alerta--exito" role="status">
           <app-icono nombre="hoja" />
           <span>
-            Tu opinión quedó en moderación. La verás publicada cuando el administrador la apruebe; mientras tanto puedes
-            seguirla en <a routerLink="/mis-opiniones">Mis opiniones</a>.
+            {{ 'turista.opiniones.enviadaAntes' | t }}
+            <a routerLink="/mis-opiniones">{{ 'turista.misOpiniones.titulo' | t }}</a
+            >.
           </span>
         </p>
       }
 
       <div>
         <button type="submit" class="boton" [disabled]="enviando()">
-          {{ enviando() ? 'Enviando…' : 'Enviar opinión' }}
+          {{ (enviando() ? 'turista.opiniones.enviando' : 'turista.opiniones.enviar') | t }}
         </button>
       </div>
     </form>
   } @else if (autenticada()) {
     <p class="alerta alerta--info">
       <app-icono nombre="info" />
-      <span>Solo los turistas pueden dejar una opinión, y únicamente sobre ofertas que hayan pagado.</span>
+      <span>{{ 'turista.opiniones.soloTuristas' | t }}</span>
     </p>
   } @else {
     <p class="alerta alerta--info">
       <app-icono nombre="info" />
       <span>
-        Para dejar una opinión,
-        <a routerLink="/iniciar-sesion" [queryParams]="{ volver: router.url }">inicia sesión</a> como turista. Solo puedes
-        opinar sobre ofertas que hayas pagado.
+        {{ 'turista.opiniones.sinSesionAntes' | t }}
+        <a routerLink="/iniciar-sesion" [queryParams]="{ volver: router.url }">{{ 'turista.opiniones.iniciaSesion' | t }}</a>
+        {{ 'turista.opiniones.sinSesionDespues' | t }}
       </span>
     </p>
   }

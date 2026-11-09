@@ -6,6 +6,7 @@ import { EstadoOpinion, PaginaMisOpiniones } from '../../../core/api/modelos';
 import { OpinionesService } from '../../../core/api/opiniones.service';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { ESTADO_OPINION } from '../../../shared/etiquetas';
 import { Estrellas } from '../../../shared/estrellas/estrellas';
@@ -30,7 +31,7 @@ type Resultado = { pagina: PaginaMisOpiniones } | { error: ErrorApi };
  */
 @Component({
   selector: 'app-mis-opiniones',
-  imports: [RouterLink, FechaPipe, Estrellas, Icono, Paginacion],
+  imports: [RouterLink, FechaPipe, Estrellas, Icono, Paginacion, TPipe],
   templateUrl: './mis-opiniones.html',
   styleUrl: './mis-opiniones.css',
 })

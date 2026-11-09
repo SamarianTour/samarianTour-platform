@@ -2,6 +2,7 @@ import { formatCurrency } from '@angular/common';
 import { Pipe, PipeTransform } from '@angular/core';
 import { LOCALE, idiomaActual } from '../core/idioma/idioma';
 import '../core/idioma/locales';
+import { unidadDePrecio } from './etiquetas';
 
 /**
  * Precio de referencia en pesos colombianos, sin decimales y seguido de su unidad (DC-22): "$ 150.000 por persona" en
@@ -17,6 +18,6 @@ export class PrecioPipe implements PipeTransform {
     // En inglés el símbolo es la sigla COP (un "$" se confundiría con dólares) y lleva un espacio fijo antes del número.
     const simbolo = idioma === 'es' ? '$' : 'COP ';
     const precio = formatCurrency(valor, LOCALE[idioma], simbolo, 'COP', '1.0-0');
-    return unidad ? `${precio} ${unidad}` : precio;
+    return unidad ? `${precio} ${unidadDePrecio(unidad)}` : precio;
   }
 }

@@ -4,7 +4,10 @@ import { RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { CatalogoService } from '../../../core/api/catalogo.service';
 import { FichaOferta } from '../../../core/api/modelos';
+import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { traducir } from '../../../core/idioma/traducir';
 import { DuracionPipe } from '../../../shared/duracion.pipe';
 import { MODALIDAD, NIVEL_ESFUERZO, TIPO_ACTIVIDAD, TIPO_OFERTA } from '../../../shared/etiquetas';
 import { GaleriaFotos } from '../../../shared/galeria-fotos/galeria-fotos';
@@ -12,12 +15,13 @@ import { ICONO_DE_TIPO, Icono } from '../../../shared/icono/icono';
 import { Mapa } from '../../../shared/mapa/mapa';
 import { OpinionesDeLaOferta } from './opiniones/opiniones-oferta';
 import { PrecioPipe } from '../../../shared/precio.pipe';
+import { UnidadPipe } from '../../../shared/unidad.pipe';
 
 type Estado =
   | { tipo: 'cargando' }
   | { tipo: 'lista'; ficha: FichaOferta }
   | { tipo: 'no-disponible' }
-  | { tipo: 'error'; mensaje: string };
+  | { tipo: 'error'; error: ErrorApi };
 
 /**
  * Ficha pública de una oferta, con su zona, el perfil del prestador, el mapa (RF-20, RF-24, RF-25) y sus opiniones
@@ -25,7 +29,17 @@ type Estado =
  */
 @Component({
   selector: 'app-ficha',
-  imports: [RouterLink, PrecioPipe, DuracionPipe, Mapa, Icono, GaleriaFotos, OpinionesDeLaOferta],
+  imports: [
+    RouterLink,
+    PrecioPipe,
+    UnidadPipe,
+    DuracionPipe,
+    Mapa,
+    Icono,
+    GaleriaFotos,
+    OpinionesDeLaOferta,
+    TPipe,
+  ],
   templateUrl: './ficha.html',
   styleUrl: './ficha.css',
 })
@@ -56,7 +70,8 @@ export class Ficha {
 
   protected readonly mensajeDeError = computed(() => {
     const estado = this.estado();
-    return estado.tipo === 'error' ? estado.mensaje : '';
+    // Se guarda el error y no su texto: así el mensaje cambia de idioma con la interfaz.
+    return estado.tipo === 'error' ? estado.error.mensaje : '';
   });
 
   /** Enlace de Google Maps con la ruta hasta la oferta; solo existe si la oferta tiene ubicación. */
@@ -77,7 +92,7 @@ export class Ficha {
             catchError((fallo: unknown) => {
               const error = aErrorApi(fallo);
               return of<Estado>(
-                error.noEncontrado ? { tipo: 'no-disponible' } : { tipo: 'error', mensaje: error.mensaje },
+                error.noEncontrado ? { tipo: 'no-disponible' } : { tipo: 'error', error },
               );
             }),
           ),
@@ -85,6 +100,19 @@ export class Ficha {
         takeUntilDestroyed(),
       )
       .subscribe((estado) => this.estado.set(estado));
+  }
+
+  /**
+   * Los idiomas en que atiende la oferta. [SUPUESTO] La API entrega códigos ("es", "en"): se muestran con su nombre en el
+   * idioma de la interfaz; un código que no se conoce se deja tal cual.
+   */
+  protected nombresDeIdiomas(codigos: readonly string[] | undefined): string {
+    return (codigos ?? [])
+      .map((codigo) => {
+        const clave = codigo === 'es' ? 'turista.idioma.es' : codigo === 'en' ? 'turista.idioma.en' : null;
+        return clave ? traducir(clave) : codigo;
+      })
+      .join(', ');
   }
 
   /** El dominio de un enlace, para mostrarlo sin la URL completa. */

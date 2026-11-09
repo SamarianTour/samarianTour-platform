@@ -6,6 +6,7 @@ import { ERRORES } from './errores.i18n';
 import { ETIQUETAS } from './etiquetas.i18n';
 import { CUENTAS } from './cuentas.i18n';
 import type { Idioma } from './idioma';
+import { TURISTA } from './turista.i18n';
 
 /**
  * Las áreas con textos. Al traducir un área nueva se agrega su diccionario aquí, en `ClaveTexto` y en `TEXTOS`.
@@ -18,6 +19,7 @@ export const AREAS: readonly Diccionario<string>[] = [
   ERRORES,
   ETIQUETAS,
   CUENTAS,
+  TURISTA,
 ];
 
 /** Toda clave de texto válida: el pipe `t` y `traducir` solo aceptan estas. */
@@ -27,9 +29,26 @@ export type ClaveTexto =
   | keyof typeof COMPARTIDO.es
   | keyof typeof ERRORES.es
   | keyof typeof ETIQUETAS.es
-  | keyof typeof CUENTAS.es;
+  | keyof typeof CUENTAS.es
+  | keyof typeof TURISTA.es;
 
 export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>>> = {
-  es: { ...COMUN.es, ...APP.es, ...COMPARTIDO.es, ...ERRORES.es, ...ETIQUETAS.es, ...CUENTAS.es },
-  en: { ...COMUN.en, ...APP.en, ...COMPARTIDO.en, ...ERRORES.en, ...ETIQUETAS.en, ...CUENTAS.en },
+  es: {
+    ...COMUN.es,
+    ...APP.es,
+    ...COMPARTIDO.es,
+    ...ERRORES.es,
+    ...ETIQUETAS.es,
+    ...CUENTAS.es,
+    ...TURISTA.es,
+  },
+  en: {
+    ...COMUN.en,
+    ...APP.en,
+    ...COMPARTIDO.en,
+    ...ERRORES.en,
+    ...ETIQUETAS.en,
+    ...CUENTAS.en,
+    ...TURISTA.en,
+  },
 };

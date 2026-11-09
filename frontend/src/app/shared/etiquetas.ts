@@ -8,7 +8,10 @@ import {
   TipoPrestador,
 } from '../core/api/modelos';
 import { Rol } from '../core/api/modelos-nucleo';
+import { ETIQUETAS } from '../core/idioma/etiquetas.i18n';
 import { tablaDeTextos } from '../core/idioma/tabla-de-textos';
+import type { ClaveTexto } from '../core/idioma/textos';
+import { traducir } from '../core/idioma/traducir';
 
 /**
  * Textos que ve el usuario para los valores del contrato, en el idioma vigente (los diccionarios están en
@@ -82,6 +85,26 @@ export const UNIDAD_PRECIO = tablaDeTextos<TipoOferta>({
   ALOJAMIENTO: 'etiquetas.unidadPrecio.ALOJAMIENTO',
   RESTAURANTE: 'etiquetas.unidadPrecio.RESTAURANTE',
 });
+
+/** Las unidades que la API entrega en español, en minúscula, y la clave de su texto. */
+const UNIDADES_CONOCIDAS = new Map<string, ClaveTexto>(
+  Object.entries(ETIQUETAS.es)
+    .filter(([clave]) => clave.startsWith('etiquetas.unidadPrecio.'))
+    .map(([clave, texto]) => [String(texto).toLowerCase(), clave as ClaveTexto]),
+);
+
+/**
+ * La unidad del precio como llega de la API ("por persona") en el idioma vigente ("per person"). [SUPUESTO] La API la
+ * entrega siempre en español (`unidadPrecio`, DC-22): si es una de las cuatro conocidas se traduce; si es otra, se
+ * deja tal cual.
+ */
+export function unidadDePrecio(unidad: string | null | undefined): string {
+  if (!unidad) {
+    return '';
+  }
+  const clave = UNIDADES_CONOCIDAS.get(unidad.trim().toLowerCase());
+  return clave ? traducir(clave) : unidad;
+}
 
 /** Qué tipos de oferta puede publicar cada tipo de prestador (DC-10). La API lo vuelve a verificar. */
 export const TIPOS_QUE_PUBLICA: Record<TipoPrestador, readonly TipoOferta[]> = {

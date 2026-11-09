@@ -8,10 +8,13 @@ import { CatalogoService } from '../../../core/api/catalogo.service';
 import { NivelEsfuerzo, PaginaOfertas, TipoActividad, TipoOferta, Zona } from '../../../core/api/modelos';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
+import { TPipe } from '../../../core/idioma/t.pipe';
+import { traducir } from '../../../core/idioma/traducir';
 import { NIVEL_ESFUERZO, TIPO_ACTIVIDAD, TIPO_OFERTA } from '../../../shared/etiquetas';
 import { ICONO_DE_TIPO, Icono } from '../../../shared/icono/icono';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { PrecioPipe } from '../../../shared/precio.pipe';
+import { UnidadPipe } from '../../../shared/unidad.pipe';
 import {
   FiltrosCatalogo,
   SIN_FILTROS,
@@ -26,7 +29,7 @@ type Resultado = { pagina: PaginaOfertas } | { error: ErrorApi };
 /** Catálogo del turista: búsqueda de ofertas visibles con filtros y paginación (RF-14 a RF-17). */
 @Component({
   selector: 'app-catalogo',
-  imports: [ReactiveFormsModule, RouterLink, PrecioPipe, Paginacion, Icono],
+  imports: [ReactiveFormsModule, RouterLink, PrecioPipe, UnidadPipe, Paginacion, Icono, TPipe],
   templateUrl: './catalogo.html',
   styleUrl: './catalogo.css',
 })
@@ -122,7 +125,7 @@ export class Catalogo {
     }
     const { precioMin, precioMax } = this.filtros();
     if (precioMin !== null && precioMax !== null && precioMin > precioMax) {
-      return 'El precio mínimo no puede ser mayor que el máximo.';
+      return traducir('turista.catalogo.precioInvertido');
     }
     return error.mensaje;
   }

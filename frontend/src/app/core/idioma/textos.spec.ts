@@ -172,8 +172,9 @@ describe('diccionarios de la interfaz', () => {
 
   it('el inglés usa los términos del glosario', () => {
     const faltas = entradas.flatMap(({ clave, es, en }) => {
-      const textoEs = variantes(es).join(' ');
-      const textoEn = variantes(en).join(' ');
+      // El nombre de un parámetro ({zona}) no es texto: no cuenta para el glosario.
+      const textoEs = variantes(es).join(' ').replace(/\{\w+\}/g, '');
+      const textoEn = variantes(en).join(' ').replace(/\{\w+\}/g, '');
       return GLOSARIO.filter(
         (regla) =>
           regla.es.test(textoEs) &&
