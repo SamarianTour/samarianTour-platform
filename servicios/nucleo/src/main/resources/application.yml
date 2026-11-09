@@ -92,6 +92,10 @@ nucleo:
     publicacion:
       # Cada 15 s envía al catálogo los avisos pendientes (DN-06). Con "-" no corre.
       cron: "*/15 * * * * *"
+    limpieza:
+      # Cada día a las 4:30 de Colombia borra los avisos enviados hace más de 30 días [SUPUESTO] (DN-44). Con "-" no
+      # corre.
+      cron: "0 30 4 * * *"
   solicitudes:
     vencimiento:
       # Cada minuto aplica los vencimientos de 24 h y de la ventana de pago [SUPUESTO] (DN-14). Con "-" no corre.

@@ -68,4 +68,20 @@ class AvisoSalienteTest {
         assertThat(aviso.proximoIntento()).isEqualTo(AHORA.plusSeconds(5).plus(Duration.ofSeconds(10)));
         assertThat(aviso.ultimoError()).hasSize(AvisoSaliente.LONGITUD_MAXIMA_ERROR);
     }
+
+    @Test
+    @DisplayName("rechazado, el administrador lo reenvía: queda pendiente para ya y sin intentos; otro no (DN-44)")
+    void reenviar() {
+        AvisoSaliente aviso = AvisoSaliente.nuevo("a-1", Destino.OFERTAS, CUERPO, AHORA);
+        aviso.registrar(new ResultadoEnvio.Rechazado("400 ZONA_NO_ENCONTRADA"), AHORA);
+        Instant despues = AHORA.plusSeconds(600);
+
+        aviso.reenviar(despues);
+
+        assertThat(aviso.estado()).isEqualTo(EstadoAviso.PENDIENTE);
+        assertThat(aviso.intentos()).isZero();
+        assertThat(aviso.proximoIntento()).isEqualTo(despues);
+        assertThat(aviso.ultimoError()).isEqualTo("400 ZONA_NO_ENCONTRADA");
+        assertThatThrownBy(() -> aviso.reenviar(despues)).isInstanceOf(IllegalStateException.class);
+    }
 }

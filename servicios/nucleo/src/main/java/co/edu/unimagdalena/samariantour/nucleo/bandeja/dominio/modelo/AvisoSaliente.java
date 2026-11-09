@@ -86,6 +86,21 @@ public final class AvisoSaliente {
         }
     }
 
+    /**
+     * El administrador lo vuelve a enviar tras corregir lo que el catálogo rechazó (DN-44): queda pendiente, con los
+     * intentos en cero y su último error como referencia.
+     *
+     * @throws IllegalStateException si no está rechazado
+     */
+    public void reenviar(Instant ahora) {
+        if (estado != EstadoAviso.RECHAZADO) {
+            throw new IllegalStateException("El aviso " + idAviso + " no está rechazado: " + estado);
+        }
+        estado = EstadoAviso.PENDIENTE;
+        intentos = 0;
+        proximoIntento = ahora;
+    }
+
     private static String recortar(String motivo) {
         return motivo == null || motivo.length() <= LONGITUD_MAXIMA_ERROR
                 ? motivo : motivo.substring(0, LONGITUD_MAXIMA_ERROR);

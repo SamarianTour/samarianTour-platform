@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 interface AvisoSalienteJpaRepository extends JpaRepository<AvisoSalienteEntity, String> {
 
@@ -32,4 +33,18 @@ interface AvisoSalienteJpaRepository extends JpaRepository<AvisoSalienteEntity, 
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
     List<AvisoSalienteEntity> tomarPendientes(@Param("ahora") Instant ahora, @Param("limite") int limite);
+
+    /** Los rechazados, del más reciente al más antiguo (DN-44). */
+    @Query(value = "SELECT * FROM bandeja_salida WHERE estado = 'RECHAZADO' ORDER BY creado_en DESC",
+            nativeQuery = true)
+    List<AvisoSalienteEntity> rechazados();
+
+    /** El aviso bloqueado hasta el final de la transacción. */
+    @Query(value = "SELECT * FROM bandeja_salida WHERE id_aviso = :idAviso FOR UPDATE", nativeQuery = true)
+    Optional<AvisoSalienteEntity> buscarParaCambiar(@Param("idAviso") String idAviso);
+
+    @Modifying
+    @Query(value = "DELETE FROM bandeja_salida WHERE estado = 'ENVIADO' AND enviado_en < :limite",
+            nativeQuery = true)
+    int borrarEnviadosAntesDe(@Param("limite") Instant limite);
 }

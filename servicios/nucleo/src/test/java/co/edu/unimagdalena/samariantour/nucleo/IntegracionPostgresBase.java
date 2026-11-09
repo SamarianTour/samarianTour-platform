@@ -34,6 +34,7 @@ public abstract class IntegracionPostgresBase {
         registro.add("nucleo.solicitudes.vencimiento.cron", () -> "-");
         registro.add("nucleo.solicitudes.notificaciones.cron", () -> "-");
         registro.add("nucleo.administracion.sincronizacion-rnt.cron", () -> "-");
+        registro.add("nucleo.bandeja.limpieza.cron", () -> "-");
         registro.add("nucleo.indicadores.revision-sesgo.cron", () -> "-");
     }
 }

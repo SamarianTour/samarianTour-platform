@@ -39,4 +39,23 @@ class BandejaEnMemoria implements BandejaSalidaRepositoryPort {
     public Optional<AvisoSaliente> buscar(String idAviso) {
         return Optional.ofNullable(avisos.get(idAviso));
     }
+
+    @Override
+    public List<AvisoSaliente> rechazados() {
+        return avisos.values().stream().filter(aviso -> aviso.estado() == EstadoAviso.RECHAZADO)
+                .sorted(Comparator.comparing(AvisoSaliente::creadoEn).reversed())
+                .toList();
+    }
+
+    @Override
+    public Optional<AvisoSaliente> buscarParaCambiar(String idAviso) {
+        return buscar(idAviso);
+    }
+
+    @Override
+    public int borrarEnviadosAntesDe(Instant limite) {
+        int antes = avisos.size();
+        avisos.values().removeIf(aviso -> aviso.estado() == EstadoAviso.ENVIADO && aviso.enviadoEn().isBefore(limite));
+        return antes - avisos.size();
+    }
 }
