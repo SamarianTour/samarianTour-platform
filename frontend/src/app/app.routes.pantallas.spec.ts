@@ -16,6 +16,7 @@ import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
 import { PanelAdmin } from './features/admin/panel/panel-admin';
 import { PanelGestor } from './features/gestor/panel/panel-gestor';
+import { ChatRecomendaciones } from './features/recomendacion/chat/chat-recomendaciones';
 import { Proximamente } from './shared/proximamente/proximamente';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
@@ -74,7 +75,7 @@ describe('pantallas que crea cada ruta', () => {
     it.each([
       ['/ofertas/abc', Ficha],
       ['/iniciar-sesion', IniciarSesion],
-      ['/recomendaciones', Proximamente],
+      ['/recomendaciones', ChatRecomendaciones],
       ['/alertas', Proximamente],
       ['/registro', Registro],
       ['/registro?tipo=prestador', Registro],
@@ -84,6 +85,14 @@ describe('pantallas que crea cada ruta', () => {
     ] as const)('%s crea su pantalla', async (url, pantalla) => {
       expect(await ir(url, pantalla)).toBeInstanceOf(pantalla);
     });
+  });
+
+  // P08.1: pública; al crearse lee las zonas del catálogo para el filtro, y no pide recomendaciones hasta que el turista pregunta.
+  it('"/recomendaciones" crea el asistente, pide las zonas una vez y no pide recomendaciones', async () => {
+    expect(await ir('/recomendaciones', ChatRecomendaciones)).toBeInstanceOf(ChatRecomendaciones);
+
+    expect(http.match((p) => p.url === '/api/catalogo/zonas')).toHaveLength(1);
+    expect(http.match((p) => p.url === '/api/recomendacion/recomendaciones')).toHaveLength(0);
   });
 
   describe('con la sesión de un turista', () => {

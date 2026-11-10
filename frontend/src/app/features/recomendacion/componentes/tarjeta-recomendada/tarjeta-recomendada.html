@@ -1,0 +1,32 @@
+@let r = recomendacion();
+<article class="tarjeta-rec">
+  <p class="tarjeta-rec__encabezado">
+    <span class="etiqueta etiqueta--neutra">{{ 'recomendacion.tarjeta.posicion' | t: { n: r.posicion } }}</span>
+    <span class="tarjeta-rec__tipo">
+      <app-icono [nombre]="iconoDeTipo[r.oferta.tipo]" />
+      {{ etiquetaTipo[r.oferta.tipo] }}
+    </span>
+  </p>
+
+  <h3 class="tarjeta-rec__nombre">
+    <a [routerLink]="['/ofertas', r.oferta.id]">{{ r.oferta.nombre }}</a>
+  </h3>
+
+  @if (r.oferta.zonaNombre) {
+    <p class="tarjeta-rec__zona">{{ r.oferta.zonaNombre }}</p>
+  }
+
+  <p class="tarjeta-rec__precio">
+    <strong>{{ r.oferta.precioReferencia | precio }}</strong>&ngsp;<span>{{ r.oferta.unidadPrecio | unidad }}</span>
+  </p>
+
+  <p class="tarjeta-rec__explicacion">{{ r.explicacion }}</p>
+
+  @if (r.criterios.length > 0) {
+    <ul class="tarjeta-rec__criterios" [attr.aria-label]="'recomendacion.tarjeta.criterios' | t">
+      @for (criterio of r.criterios; track criterio) {
+        <li class="etiqueta etiqueta--exito">{{ claveDeCriterio[criterio] | t }}</li>
+      }
+    </ul>
+  }
+</article>

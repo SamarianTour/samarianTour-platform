@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.filtros {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 0 1rem;
+}
+
+.filtros[open] {
+  padding-bottom: 1rem;
+}
+
+.filtros summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  color: var(--enlace);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filtros p {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+}
+
+.grupo {
+  min-width: 0;
+  margin: 0 0 0.75rem;
+  border: 0;
+  padding: 0;
+}
+
+.grupo legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.opciones--rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+}

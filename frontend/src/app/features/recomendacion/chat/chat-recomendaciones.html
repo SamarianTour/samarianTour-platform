@@ -1,0 +1,133 @@
+<section class="pagina chat-pagina">
+  <div class="chat">
+    <header class="chat__cabecera">
+      <span class="chat__avatar" aria-hidden="true"><app-icono nombre="chispas" /></span>
+      <div class="chat__titulos">
+        <h1>{{ 'recomendacion.chat.titulo' | t }}</h1>
+        <p class="texto-suave">{{ 'recomendacion.chat.subtitulo' | t }}</p>
+      </div>
+      <a class="chat__alertas" routerLink="/alertas">
+        <app-icono nombre="alerta" />
+        {{ 'recomendacion.alertas.enlace' | t }}
+      </a>
+    </header>
+
+    <!-- La conversación: un registro que los lectores de pantalla anuncian cuando llega algo nuevo -->
+    <div class="chat__registro" role="log" aria-live="polite" [attr.aria-label]="'recomendacion.chat.conversacion' | t">
+      @for (mensaje of mensajes(); track mensaje.id) {
+        <div class="mensaje" [class.mensaje--turista]="mensaje.autor === 'turista'">
+          <span class="mensaje__avatar" aria-hidden="true">
+            <app-icono [nombre]="mensaje.autor === 'turista' ? 'perfil' : 'chispas'" />
+          </span>
+          <div class="mensaje__burbuja">
+            <span class="solo-lectores"
+              >{{ (mensaje.autor === 'turista' ? 'recomendacion.mensaje.tu' : 'recomendacion.mensaje.asistente') | t }}:
+            </span>
+
+            @if (mensaje.autor === 'turista') {
+              @if (mensaje.consulta.texto) {
+                <p class="mensaje__texto">{{ mensaje.consulta.texto }}</p>
+              }
+              @let aplicados = filtrosEnTexto(mensaje.consulta);
+              @if (aplicados.length > 0) {
+                <ul class="mensaje__filtros" [attr.aria-label]="'recomendacion.filtro.titulo' | t">
+                  @for (filtro of aplicados; track $index) {
+                    <li class="etiqueta etiqueta--neutra">{{ filtro }}</li>
+                  }
+                </ul>
+              }
+            } @else {
+              @let contenido = mensaje.contenido;
+              @if (contenido.tipo === 'bienvenida') {
+                <p class="mensaje__texto">{{ 'recomendacion.chat.bienvenida' | t }}</p>
+              } @else if (contenido.tipo === 'buscando') {
+                <p class="mensaje__texto mensaje__buscando" role="status">
+                  <span class="puntos" aria-hidden="true"><i></i><i></i><i></i></span>
+                  {{ 'recomendacion.buscando' | t }}
+                </p>
+                <p class="mensaje__ayuda">{{ 'recomendacion.buscandoAyuda' | t }}</p>
+              } @else if (contenido.tipo === 'resultado') {
+                @let respuesta = contenido.resultado;
+                @if (vistaDeRespuesta(respuesta) === 'ninguna') {
+                  <p class="mensaje__texto">{{ 'recomendacion.respuesta.ninguna' | t }}</p>
+                  <p>
+                    <a class="boton boton--secundario" routerLink="/">{{ 'recomendacion.respuesta.catalogo' | t }}</a>
+                  </p>
+                } @else {
+                  <p class="mensaje__texto">{{ 'recomendacion.respuesta.intro' | t }}</p>
+                  @if (vistaDeRespuesta(respuesta) === 'pocas') {
+                    <p class="alerta alerta--aviso">
+                      <app-icono nombre="alerta" />
+                      <span>{{ 'recomendacion.respuesta.pocas' | t }}</span>
+                    </p>
+                  }
+                  <p class="mensaje__ayuda">{{ claveDeMotor(respuesta.motor) | t }}</p>
+                  <ol class="recomendaciones">
+                    @for (recomendacion of respuesta.recomendaciones; track recomendacion.oferta.id) {
+                      <li><app-tarjeta-recomendada [recomendacion]="recomendacion" /></li>
+                    }
+                  </ol>
+                }
+              } @else if (contenido.tipo === 'no-disponible') {
+                <p class="mensaje__texto">{{ claveDeNoDisponible(contenido.motivo) | t }}</p>
+                <p class="mensaje__texto">{{ 'recomendacion.noDisponible.ayuda' | t }}</p>
+                <p class="mensaje__acciones">
+                  <button type="button" class="boton" [disabled]="buscando()" (click)="reintentar(mensaje.id, contenido.consulta)">
+                    {{ 'recomendacion.noDisponible.reintentar' | t }}
+                  </button>
+                  <a class="boton boton--secundario" routerLink="/">{{ 'recomendacion.respuesta.catalogo' | t }}</a>
+                </p>
+              } @else {
+                <p class="mensaje__texto">{{ contenido.error.mensaje }}</p>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="chat__ideas" role="group" [attr.aria-label]="'recomendacion.chat.ideas' | t">
+      @for (idea of ideas; track idea.id) {
+        <button type="button" class="idea" [disabled]="buscando()" (click)="usarIdea(idea.clave)">
+          {{ idea.clave | t }}
+        </button>
+      }
+    </div>
+
+    <!-- Los filtros del contrato: plegados, para que escribir lo que se busca siga siendo lo primero -->
+    <app-filtros-consulta class="chat__filtros" [filtros]="filtros()" [zonas]="zonas()" (filtrosChange)="cambiarFiltros($event)" />
+
+    <form class="chat__formulario" (submit)="$event.preventDefault(); enviar()" novalidate>
+      <div class="chat__campo">
+        <label class="solo-lectores" for="chat-texto">{{ 'recomendacion.form.etiqueta' | t }}</label>
+        <input
+          id="chat-texto"
+          type="text"
+          autocomplete="off"
+          [attr.maxlength]="maximoTexto"
+          [formControl]="texto"
+          [placeholder]="'recomendacion.form.ejemplo' | t"
+          [attr.aria-invalid]="mensajeDeError() ? 'true' : null"
+          [attr.aria-describedby]="mensajeDeError() ? 'chat-error chat-avisos' : 'chat-avisos'"
+        />
+        <button type="submit" class="chat__enviar" [disabled]="buscando()" [attr.aria-label]="'recomendacion.form.enviar' | t">
+          <app-icono nombre="enviar" />
+        </button>
+      </div>
+      @if (mensajeDeError(); as mensaje) {
+        <p class="campo__error" id="chat-error" role="alert">{{ mensaje }}</p>
+      }
+    </form>
+
+    <div class="chat__avisos" id="chat-avisos">
+      <p>
+        <app-icono nombre="info" />
+        <span>{{ 'recomendacion.aviso.sugerencias' | t }}</span>
+      </p>
+      <p>
+        <app-icono nombre="escudo" />
+        <span>{{ 'recomendacion.aviso.privacidad' | t }}</span>
+      </p>
+    </div>
+  </div>
+</section>

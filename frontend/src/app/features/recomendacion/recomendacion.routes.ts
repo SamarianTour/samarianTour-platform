@@ -12,8 +12,7 @@ export const RUTAS_RECOMENDACIONES: Routes = [
     path: '',
     pathMatch: 'full',
     title: 'app.titulo.recomendaciones',
-    data: { codigo: 'P08.1', nombre: 'app.titulo.recomendaciones' },
-    loadComponent: proximamente,
+    loadComponent: () => import('./chat/chat-recomendaciones').then((modulo) => modulo.ChatRecomendaciones),
   },
 ];
 
