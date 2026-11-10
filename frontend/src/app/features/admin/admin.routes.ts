@@ -1,9 +1,5 @@
 import { Routes } from '@angular/router';
 
-/** Las pantallas del panel que llegan en los siguientes commits ocupan su lugar con esta, ya con su ruta y su título. */
-const proximamente = () =>
-  import('../../shared/proximamente/proximamente').then((modulo) => modulo.Proximamente);
-
 /**
  * Rutas del administrador, todas dentro de su panel. Las protege la ruta `/admin` (solo la sesión de un administrador). El
  * inicio es la lista de prestadores (P05.1).
@@ -41,8 +37,7 @@ export const RUTAS_ADMIN: Routes = [
       {
         path: 'zonas',
         title: 'app.titulo.zonasAdmin',
-        data: { codigo: 'P05.5', nombre: 'app.titulo.zonasAdmin' },
-        loadComponent: proximamente,
+        loadComponent: () => import('./zonas/zonas-admin').then((modulo) => modulo.ZonasAdmin),
       },
       {
         path: 'alertas-sesgo',

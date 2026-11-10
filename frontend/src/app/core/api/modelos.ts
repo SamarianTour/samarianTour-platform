@@ -50,3 +50,8 @@ export type PaginaOfertasPendientes = Esquemas['PaginaOfertasPendientes'];
 /** Una opinión que espera la decisión del administrador; no lleva al turista (RF-80). */
 export type OpinionPendiente = Esquemas['OpinionPendiente'];
 export type PaginaOpinionesPendientes = Esquemas['PaginaOpinionesPendientes'];
+
+/** Lo que escribe el administrador al registrar o editar una zona (HU-ADM-06): nombre, descripción y ubicación son obligatorios. */
+export type ZonaRequest = Esquemas['ZonaRequest'];
+/** Editar reemplaza todos los datos de la zona y exige `activa`: en false la inactiva, en true la reactiva (DC-49). */
+export type ZonaEdicion = ZonaRequest & { activa: boolean };

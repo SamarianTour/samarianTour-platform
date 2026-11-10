@@ -158,15 +158,14 @@ describe('pantallas que crea cada ruta', () => {
       await ir(url, Proximamente);
     });
 
-    // El administrador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
-    it.each([
-      '/admin/zonas',
-    ])('el administrador abre su panel en %s y dentro se crea una pantalla', async (url) => {
+    // P05.5: las zonas se leen y se escriben directo en el catálogo.
+    it('el administrador abre las zonas y estas piden la lista del catálogo', async () => {
       conSesion('ADMINISTRADOR');
 
-      await ir(url, PanelAdmin);
+      await ir('/admin/zonas', PanelAdmin);
 
-      expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-zonas-admin')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/catalogo/admin/zonas')).toHaveLength(1);
     });
 
     // P05.1: el inicio del panel es la lista de prestadores; pide los prestadores y las cuentas para ponerle nombre al operador.
