@@ -1,6 +1,6 @@
 # Frontend de Samarian Tour
 
-Aplicación Angular contra la API real: el turista busca ofertas, ve su ficha con galería de fotos, mapa y opiniones, y opina sobre las que pagó; el prestador registra su RNT y su cuenta de cobro, arma su perfil público, publica con sus fotos, ve sus ofertas, las edita y las retira. Cada persona tiene su cuenta: se registra, inicia sesión, recupera su contraseña, consulta y corrige sus datos y puede eliminar su cuenta.
+Aplicación Angular contra la API real: el turista busca ofertas, ve su ficha con galería de fotos, mapa y opiniones, y opina sobre las que pagó; el prestador registra su RNT y su cuenta de cobro, arma su perfil público, publica con sus fotos, ve sus ofertas, las edita y las retira; el gestor del destino consulta indicadores agregados de la demanda, del embudo de conversión y de la distribución por tipo de prestador. Cada persona tiene su cuenta: se registra, inicia sesión, recupera su contraseña, consulta y corrige sus datos y puede eliminar su cuenta.
 
 Angular 22 con componentes standalone, signals, formularios reactivos y carga diferida por funcionalidad. El mapa usa Leaflet con OpenStreetMap, sin API key.
 
@@ -44,7 +44,7 @@ Los archivos generados están versionados para que la imagen de Docker se constr
 ```
 src/app
 ├── core/                    lo que existe una sola vez en la aplicación
-│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes, del operador, de pagos y del administrador (núcleo y catálogo)
+│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes, del operador, de pagos y del administrador (núcleo y catálogo) y de los indicadores
 │   ├── tiempo/              reloj que se renueva solo, para los plazos
 │   ├── navegacion/          salir de la aplicación hacia otra dirección (la pasarela de pago)
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
@@ -56,6 +56,7 @@ src/app
     ├── prestador/           panel con menú lateral: inicio (dashboard), mis ofertas, detalle y formulario de publicar o editar, RNT y tipo, perfil público, WhatsApp de contacto y cuenta de cobro
     ├── operador/            panel con menú lateral, cola, historial, atender una solicitud y avisos
     ├── admin/               panel con menú lateral: prestadores y RNT, moderación, cuentas internas, comisión y pagos tardíos, zonas, alertas de sesgo y pendientes técnicos
+    ├── gestor/              panel con menú lateral y el panel de indicadores: Demanda, Embudo de conversión y Distribución por tipo de prestador, con el filtro de periodo, gráficos de barras y sus tablas de datos
     └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
 ```
 
@@ -86,7 +87,9 @@ src/app
 | `/operador/historial?estado=` | Operador | Historial: la misma consulta de la cola con un estado, de la más reciente a la más antigua |
 | `/operador/solicitudes/:id` | Operador | P02.5 Atender: contactar al prestador por WhatsApp y registrar "hay cupo" (con precio total y condiciones) o "no hay cupo" |
 | `/operador/avisos` | Operador | Avisos de solicitudes nuevas, del más reciente al más antiguo |
-| `/gestor/**` | Gestor | Panel de indicadores (P09.1): por ahora "próximamente" |
+| `/gestor?desde=&hasta=` | Gestor | P09.1 Panel de indicadores, vista Demanda: solicitudes por zona y tipo de oferta |
+| `/gestor/embudo?desde=&hasta=` | Gestor | P09.1 Embudo de conversión: de las enviadas, cuántas se atienden, se confirman y se pagan, en total y por tipo de oferta |
+| `/gestor/distribucion?desde=&hasta=` | Gestor | P09.1 Distribución por tipo de prestador: solicitudes y pagos por categoría de prestador |
 | `/admin` | Administrador | P05.1 Prestadores y RNT: verificar o sincronizar el RNT, asignar operador |
 | `/admin/moderacion` | Administrador | P05.2 Moderación de ofertas y de opiniones |
 | `/admin/cuentas` | Administrador | P05.3 Cuentas internas: crear operadores y gestores, desactivar y reactivar |
@@ -177,6 +180,48 @@ El prestador gestiona su registro y sus ofertas desde `/prestador`, dentro de un
 - **Perfil público.** El contrato solo tiene nombre comercial, descripción, horario, sitio web, redes y fotos. Persona responsable, logo y zonas donde opera, que traía el diseño, no existen. Las fotos del perfil no se pueden reordenar.
 - **Cuenta de cobro.** El detalle de un `DATO_INVALIDO` sobre `numero` no debería repetir el número recibido (el frontend ya no lo muestra, pero queda en la respuesta y puede acabar en un registro). `CuentaCobro.entidad` es obligatorio en la respuesta: para Nequi y Daviplata el frontend no lo muestra, pero conviene confirmar qué devuelve el núcleo. El historial de cuentas anteriores no se puede consultar.
 - **Canal de contacto.** No hay teléfono fijo, correo, horario ni mensaje automático del prestador, que el diseño de referencia mostraba.
+
+## Panel del gestor
+
+El gestor del destino consulta indicadores agregados del turismo en Santa Marta (RF-85 a RF-89, P09.1). Está en `features/gestor`, dentro del panel lateral compartido (`shared/panel-lateral`, el mismo del administrador) con una sola sección: "Panel de indicadores". El servicio es `core/api/indicadores.service.ts`: tres `GET` de solo lectura —`/api/nucleo/gestor/indicadores/tablero`, `/embudo` y `/categorias`— que aceptan los mismos dos filtros opcionales, `desde` y `hasta`; el contrato no ofrece otros, así que no hay filtro por zona ni por tipo. La lógica de cálculo y de formato (`periodo.ts`, `formato.ts`, `demanda.ts`, `embudo.ts`, `distribucion.ts`) está en funciones puras con pruebas propias.
+
+- **Periodo** (el encabezado, común a las tres vistas). Atajos —últimos 7, 30 y 90 días, este mes y mes anterior— o dos fechas a mano. Los días se cuentan en **hora de Colombia**, como hace el núcleo, no en la del navegador. Se valida antes de enviar: las dos fechas, inicio no posterior al final, final no posterior a hoy y como máximo 366 días. El periodo viaja en la dirección (`?desde=AAAA-MM-DD&hasta=AAAA-MM-DD`), así se puede compartir y se conserva al cambiar de vista; sin él se consultan los últimos 30 días, igual que el núcleo. Una dirección con un periodo inválido o a medias no rompe la pantalla: usa el de por defecto.
+- **Demanda** (`/gestor`). Cifras (total de solicitudes, zonas y tipos de oferta con solicitudes) y barras por zona y tipo de oferta, de mayor a menor. El tablero trae solo el `zonaId`; el nombre y las marcas "Área protegida" y "Alta afluencia" salen de la lista pública de zonas.
+- **Embudo de conversión** (`/gestor/embudo`). Las cuatro etapas (enviadas, atendidas, confirmadas, pagadas) con su cantidad, su porcentaje sobre las enviadas y qué parte de la etapa anterior llegó a ella, y el mismo embudo separado por tipo de oferta.
+- **Distribución por tipo de prestador** (`/gestor/distribucion`). Cómo se reparte la demanda entre prestadores grandes, medianos, pequeños y guías independientes, según la categoría que tenía el prestador al recibir la solicitud, y cuántas de esas solicitudes se pagaron (porcentaje de pago).
+
+### Por qué aparece «menos de 3» (RET-03)
+
+Los indicadores son **datos agregados**. Para proteger la privacidad (RET-03, DN-41), cuando una cifra es de 1 o 2 solicitudes el núcleo **no la entrega** —ni su conteo ni su porcentaje—: así nadie puede identificar a un turista o a un prestador con una consulta de un periodo corto o de un tipo poco frecuente. La pantalla lo explica con una nota bajo las pestañas y lo trata así:
+
+- Un conteo omitido se escribe **«menos de 3»** (*fewer than 3*), la barra va **rayada** y su porcentaje dice **«sin dato»**. Un cero es un cero y se muestra como tal: no es lo mismo que «menos de 3».
+- **Nunca se estima ni se suma.** Los totales son los que entrega el núcleo, no la suma de las filas (las de 1 o 2 no traen su conteo y la suma saldría de menos). Las conversiones calculadas aquí —de una etapa a la siguiente y el porcentaje de pago— solo se calculan cuando las dos cantidades se conocen y la anterior no es cero; si alguna falta, queda «sin dato».
+- Un total omitido (1 o 2 solicitudes en el periodo) no se confunde con un periodo sin solicitudes: en el primer caso se dibujan los gráficos con sus barras rayadas; en el segundo, un mensaje.
+
+### Gráficos accesibles
+
+Los gráficos son barras horizontales hechas con HTML y CSS (`componentes/grafico-barras`), **sin librerías**: bastan para lo que se muestra, una librería de gráficos suma peso al paquete inicial (ver "Tamaño de la aplicación"), y los gráficos de `canvas` son poco accesibles. Están pensados para WCAG 2.1 AA:
+
+- Cada gráfico es **una sola imagen para los lectores de pantalla** (`role="img"`) con un resumen que lee los datos, y trae su **tabla de datos** en un desplegable "Ver los datos en una tabla" (`componentes/tabla-datos`), visible para todos, con título, encabezados de columna y de fila.
+- El **valor de cada barra está escrito** junto a ella: el largo y el color no son lo único que informa. Una barra de conteo omitido se distingue además por su trama rayada.
+- El color de las barras es `#0b7373`, el mismo mínimo que se usa para texto blanco; las animaciones solo corren si la persona no pidió menos movimiento. En celular las cifras pasan a una columna y las tablas se desplazan sin romper la página.
+
+### Decisiones de diseño
+
+- **Las vistas son rutas**, no pestañas `role="tab"`: cada una es una página con su dirección y su propia consulta. Son enlaces con `aria-current` y conservan el periodo.
+- **Los nombres de las vistas** siguen el documento de diseño (Entregable 2, Tabla 3): Demanda, Embudo de conversión y Distribución por tipo de prestador. La dirección `/gestor` es la de Demanda.
+- **Las categorías van de las más grandes a las más pequeñas** (gran empresa, mediana, micro o pequeña, guía independiente) y "sin categoría" al final, no en el orden del núcleo. Sus nombres son los del panel del prestador.
+- **Dos gráficos de barras en la distribución, no una barra apilada.** Una barra apilada necesita una leyenda de colores y el color no debe ser lo único que informa.
+- **Sin "Exportar".** El diseño de referencia traía el botón, pero el contrato no tiene ninguna ruta de exportación.
+- **Lo que el diseño de referencia traía y no se construyó** porque el contrato no lo tiene: las variaciones frente al periodo anterior (+5 %), las solicitudes por mes, las visitas por zona y la distribución de tipos de oferta del catálogo.
+
+### Para el equipo de backend
+
+- **Nombre de la zona.** El tablero trae solo `zonaId`. El frontend busca el nombre en `GET /zonas`, que solo devuelve las zonas **activas**: una zona inactiva con solicitudes en el periodo se muestra como "Zona sin nombre (id)". Conviene que `DemandaZona` traiga también el nombre de la zona, o que el gestor pueda leer las zonas inactivas.
+- **Series y comparaciones.** No hay solicitudes por mes ni variación frente al periodo anterior, que el diseño de referencia mostraba. Si se quieren, haría falta un endpoint nuevo (o un parámetro de agrupación).
+- **Visitas.** No hay datos de visitas a las ofertas ni a las zonas.
+- **Exportación.** No hay ruta para descargar los indicadores.
+- **Fecha final en el futuro.** El contrato no dice qué pasa; el frontend no la deja enviar.
 
 ## Pagos
 
@@ -306,6 +351,10 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Zonas incompletas.** Si una zona del catálogo no tiene descripción o ubicación, no se puede inactivar ni reactivar desde la lista (el reemplazo completo exigiría inventar datos): la tarjeta pide completarla editándola.
 - **Estado de las cuentas internas y de las colas de moderación.** Se muestran tal como las entrega la API; los cambios de moderación se ven cuando el catálogo aplica la decisión.
 - **Plazo con minutos.** Los plazos se escriben con las dos unidades mayores ("20 h 0 min"), como en las solicitudes del turista.
+- **Periodo de los indicadores.** El contrato no dice si la fecha final puede ser futura; el frontend no deja enviarla. Una dirección con solo una de las dos fechas, o con un periodo inválido, usa los últimos 30 días.
+- **Nombre de las zonas del tablero.** Se toma de la lista pública de zonas (solo activas); sin él se muestra el `zonaId`.
+- **Conversiones calculadas.** El paso de una etapa del embudo a la siguiente y el porcentaje de pago por categoría no los entrega el núcleo: se calculan en el frontend, solo con cantidades conocidas, y con un decimal.
+- **Orden de las categorías.** De la más grande a la más pequeña, no el del núcleo.
 
 ## Docker
 
