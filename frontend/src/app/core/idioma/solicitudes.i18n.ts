@@ -81,7 +81,6 @@ export const SOLICITUDES = diccionario(
       'Te enviamos un código cuando te registraste. Es el único canal por el que te avisamos de tus solicitudes.',
     'solicitudes.form.whatsappEnlace': 'Verificar mi WhatsApp',
     'solicitudes.form.verMisSolicitudes': 'Ver mis solicitudes',
-    'solicitudes.form.sinPrecio': 'Completa el formulario para ver el precio',
 
     // Resumen de la oferta en el formulario
     'solicitudes.resumen.precio': 'Precio',
@@ -132,7 +131,6 @@ export const SOLICITUDES = diccionario(
     'solicitudes.lista.personas': { uno: '{n} persona', otros: '{n} personas' },
     'solicitudes.lista.unidades': { uno: '{n} unidad', otros: '{n} unidades' },
     'solicitudes.lista.salida': 'salida {fecha}',
-    'solicitudes.lista.verDetalle': 'Ver detalle',
     'solicitudes.lista.verCondiciones': 'Ver condiciones',
     'solicitudes.lista.volverASolicitar': 'Volver a solicitar',
     'solicitudes.lista.opinar': 'Dejar opinión',
@@ -246,7 +244,6 @@ export const SOLICITUDES = diccionario(
       'We sent you a code when you signed up. It is the only channel through which we notify you about your requests.',
     'solicitudes.form.whatsappEnlace': 'Verify my WhatsApp',
     'solicitudes.form.verMisSolicitudes': 'View my requests',
-    'solicitudes.form.sinPrecio': 'Complete the form to see the price',
 
     'solicitudes.resumen.precio': 'Price',
     'solicitudes.resumen.personas': 'People',
@@ -293,7 +290,6 @@ export const SOLICITUDES = diccionario(
     'solicitudes.lista.personas': { uno: '{n} person', otros: '{n} people' },
     'solicitudes.lista.unidades': { uno: '{n} unit', otros: '{n} units' },
     'solicitudes.lista.salida': 'check-out {fecha}',
-    'solicitudes.lista.verDetalle': 'View details',
     'solicitudes.lista.verCondiciones': 'View terms',
     'solicitudes.lista.volverASolicitar': 'Request again',
     'solicitudes.lista.opinar': 'Leave a review',

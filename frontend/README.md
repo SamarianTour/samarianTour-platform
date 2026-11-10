@@ -44,13 +44,14 @@ Los archivos generados están versionados para que la imagen de Docker se constr
 ```
 src/app
 ├── core/                    lo que existe una sola vez en la aplicación
-│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones y de cuentas
+│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas y de solicitudes
+│   ├── tiempo/              reloj que se renueva solo, para los plazos
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
 │   ├── sesion/              sesión con token, interceptor, guards por rol, rutas y enlaces por rol
 │   └── avisos/              mensajes breves de confirmación
-├── shared/                  piezas reutilizables: mapa, galería de fotos, menú de la cuenta, marco de las pantallas de acceso, "próximamente", iconos, estrellas, paginación, diálogo de confirmación, pipes y textos
+├── shared/                  piezas reutilizables: mapa, galería de fotos, menú de la cuenta, marco de las pantallas de acceso, "próximamente", iconos, estrellas, paginación, diálogo de confirmación, pasos de la solicitud, pipes y textos
 └── features/
-    ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id) y mis opiniones (/mis-opiniones)
+    ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
     ├── prestador/           panel, mis ofertas, detalle y formulario de publicar o editar
     └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
 ```
@@ -66,7 +67,9 @@ src/app
 | `/mis-datos` | Con sesión | P06.4 Mis datos y derechos, verificar el WhatsApp y eliminar la cuenta |
 | `/sin-permiso` | Con sesión | "No tienes permiso" cuando se abre la sección de otro rol |
 | `/mis-opiniones` | Turista | Opiniones del turista, con su estado y el motivo si fue rechazada |
-| `/turista/**` | Turista | Mis solicitudes (P02.2): por ahora "próximamente". El núcleo enlaza a `/turista/solicitudes/:id` |
+| `/turista/solicitar/:ofertaId` | Turista | P02.1 Formulario de solicitud de disponibilidad (el botón de la ficha lleva aquí) |
+| `/turista/solicitudes` | Turista | P02.2 Mis solicitudes: los 9 estados, filtros Todas / Activas / Finalizadas y plazos |
+| `/turista/solicitudes/:id` | Turista | P02.2 Detalle: estado, historial, plazo y condiciones; P02.3 confirmar o declinar si está atendida. El núcleo enlaza aquí desde el pago y el WhatsApp |
 | `/prestador/ofertas` | Prestador | Mis ofertas, con su estado y las acciones |
 | `/prestador/ofertas/nueva` | Prestador | Publicar una oferta, con sus fotos |
 | `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente |
@@ -74,6 +77,19 @@ src/app
 | `/operador/**` | Operador | Cola de solicitudes (P02.4): por ahora "próximamente" |
 | `/gestor/**` | Gestor | Panel de indicadores (P09.1): por ahora "próximamente" |
 | `/admin/**` | Administrador | Administración (P05.1): por ahora "próximamente" |
+
+## Solicitudes de disponibilidad
+
+El turista pide disponibilidad sobre una oferta (RF-30 a RF-34), el operador la atiende y el turista confirma o declina las condiciones (RF-43). Lo que cubre esta parte del flujo, en `features/turista/solicitudes`:
+
+- **Formulario** (`/turista/solicitar/:ofertaId`). Pide solo lo que el contrato necesita y cambia con el tipo de oferta: actividad y paquete, la hora de salida (una de las de la oferta); alojamiento, la fecha de salida y las unidades; restaurante, la hora de la reserva. El nombre y el contacto salen de la cuenta. Con una sola hora de salida y las personas en 1 solo hay que elegir la fecha (QAS-08). Sin sesión, el botón de la ficha lleva a iniciar sesión y vuelve; sin el WhatsApp verificado no se envía.
+- **Mis solicitudes y detalle.** Cada uno de los 9 estados tiene su etiqueta, color y explicación (`estado-solicitud.ts`). Los plazos se cuentan en vivo (`plazo.ts`, `core/tiempo/reloj.ts`). Se vuelve a consultar el estado real al regresar a la pestaña, al reconectarse y cuando un plazo termina (`core/api/reconsulta.ts`, RF-33).
+- **Confirmar o declinar** (`responder-condiciones`). Solo en una solicitud atendida y dentro del plazo. Declinar pide confirmación. Si el núcleo dice que algo cambió (plazo vencido, estado distinto), se explica y se consulta de nuevo.
+- **Idempotencia.** Enviar y responder llevan una `Idempotency-Key` (ADR-04). `ClaveDeIdempotencia` repite la clave mientras el cuerpo no cambie, y la renueva si el usuario corrige algo, para no recibir un 422.
+- **Fechas.** La primera fecha posible es dos días calendario después de hoy **en la hora de Colombia**, no la del navegador.
+- **El pago** no está en esta rama: una solicitud confirmada o con el pago fallido solo ofrece ver la oferta hasta que llegue la rama de pagos.
+
+La lógica (estados, plazos, validaciones y armado de la petición) está en funciones puras con pruebas propias.
 
 ## Diseño
 
@@ -155,6 +171,11 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Contraseña.** De 8 a 72 caracteres con al menos una letra y un número (DN-28); el núcleo las vuelve a aplicar. El WhatsApp se acepta con espacios o guiones y se envía en formato internacional.
 - **Texto de la política.** Llega en Markdown y se muestra tal cual, respetando los saltos de línea, sin interpretarlo.
 - **Unidad del precio y códigos de idioma.** La API entrega `unidadPrecio` en español y `idiomasAtencion` como códigos (`es`, `en`). El frontend traduce las cuatro unidades conocidas y los dos códigos, y deja tal cual lo demás.
+- **Precio de referencia en el formulario.** La oferta trae un precio con su unidad (DC-22). El total de lo pedido es informativo: precio por personas en actividad, paquete y restaurante, y precio por noches y unidades en alojamiento. El resumen lo llama "Precio de referencia" y dice que el operador confirma el precio final.
+- **Total a pagar.** Se toma `condiciones.precioBase` como lo que se cobra, tal como dice el contrato (RF-46); no se calcula ningún desglose.
+- **Filtros de mis solicitudes.** El contrato no filtra por estado: Activas y Finalizadas se filtran en el navegador, solo sobre la página cargada.
+- **Nombre de la zona.** La solicitud trae solo `zonaId`; el nombre se busca en el catálogo.
+- **Referencia de la solicitud.** Se muestran las primeras 8 letras de su identificador para citarla.
 - **Cuentas internas.** Operador, gestor y administrador no tienen ruta de supresión: su cuenta la gestiona un administrador.
 
 ## Docker
