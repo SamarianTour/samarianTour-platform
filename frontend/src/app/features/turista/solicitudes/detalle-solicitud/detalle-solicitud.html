@@ -156,6 +156,28 @@
               (reconsultar)="reconsultar()"
             />
           }
+
+          @if (confirmando()) {
+            <app-confirmando-pago (consultar)="reconsultar()" />
+          }
+
+          @if (s.estado === 'CONFIRMADA' || s.estado === 'PAGO_FALLIDO') {
+            <app-pagar-solicitud
+              [solicitud]="s"
+              [intentos]="intentos()"
+              [plazo]="plazo()"
+              [enCurso]="confirmando()"
+              (reconsultar)="reconsultar()"
+            />
+          }
+
+          @if (s.estado === 'PAGADA') {
+            <app-pago-confirmado [solicitud]="s" [intentos]="intentos()" [enfocar]="estabaConfirmando()" />
+          }
+
+          @if (hayIntentosResueltos()) {
+            <app-intentos-pago [intentos]="intentos()" />
+          }
         </div>
 
         <aside class="detalle__lateral">

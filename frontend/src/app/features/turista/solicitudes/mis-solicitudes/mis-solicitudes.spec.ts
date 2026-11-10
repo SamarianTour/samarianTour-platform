@@ -272,19 +272,19 @@ describe('MisSolicitudes (P02.2)', () => {
       expect(accion(0)).toEqual(['Ver oferta', '/ofertas/b00000000000000000000001']);
     });
 
-    it('no hay botón de pagar: lo agrega la rama de pagos', () => {
-      crear([solicitud(1, 'CONFIRMADA'), solicitud(2, 'PAGO_FALLIDO')]);
+    it('una solicitud por pagar ofrece "Pagar", que lleva a su detalle', () => {
+      crear([solicitud(1, 'CONFIRMADA')]);
 
-      // Ningún botón ni enlace lleva a pagar (los estados sí dicen "Por pagar" o "Pago fallido").
-      const controles = Array.from(raiz().querySelectorAll('a, button')).map(
-        (e) => e.textContent?.toLowerCase() ?? '',
-      );
-      expect(controles.some((texto) => texto.includes('pagar') || texto.includes('pago'))).toBe(
-        false,
-      );
-      expect(raiz().querySelector('a[href*="pago"]')).toBeNull();
-      expect(accion(0)[0]).toBe('Ver oferta');
-      expect(accion(1)[0]).toBe('Ver oferta');
+      expect(accion(0)).toEqual(['Pagar', '/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a21']);
+    });
+
+    it('con el pago fallido ofrece "Reintentar pago", que lleva a su detalle', () => {
+      crear([solicitud(1, 'PAGO_FALLIDO')]);
+
+      expect(accion(0)).toEqual([
+        'Reintentar pago',
+        '/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a21',
+      ]);
     });
   });
 

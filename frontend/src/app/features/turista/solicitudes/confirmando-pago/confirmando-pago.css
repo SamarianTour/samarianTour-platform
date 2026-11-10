@@ -1,0 +1,31 @@
+.confirmando {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  border-color: var(--info-borde);
+  background: var(--info-fondo);
+}
+
+.confirmando__icono {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--info-texto);
+}
+
+.confirmando h2 {
+  margin: 0 0 0.375rem;
+  font-size: 1.125rem;
+}
+
+.confirmando p {
+  margin: 0 0 0.375rem;
+}
+
+.confirmando p:last-child {
+  margin-bottom: 0;
+}

@@ -14,7 +14,8 @@ import { RouterLink } from '@angular/router';
 import { Subject, catchError, map, merge, of, switchMap, tap } from 'rxjs';
 import { CatalogoService } from '../../../../core/api/catalogo.service';
 import { Zona } from '../../../../core/api/modelos';
-import { SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { IntentoPago, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { PagosService } from '../../../../core/api/pagos.service';
 import { reconsultas$ } from '../../../../core/api/reconsulta';
 import { SolicitudesService } from '../../../../core/api/solicitudes.service';
 import { ErrorApi } from '../../../../core/errores/error-api';
@@ -26,6 +27,11 @@ import { FechaPipe } from '../../../../shared/fecha.pipe';
 import { ICONO_DE_TIPO, Icono } from '../../../../shared/icono/icono';
 import { PasosSolicitud } from '../../../../shared/pasos-solicitud/pasos-solicitud';
 import { PrecioPipe } from '../../../../shared/precio.pipe';
+import { ConfirmandoPago } from '../confirmando-pago/confirmando-pago';
+import { IntentosPago } from '../intentos-pago/intentos-pago';
+import { PagarSolicitud } from '../pagar-solicitud/pagar-solicitud';
+import { PagoConfirmado } from '../pago-confirmado/pago-confirmado';
+import { estaConfirmandoPago, mostrarIntentos } from '../pagos';
 import { ResponderCondiciones } from '../responder-condiciones/responder-condiciones';
 import {
   AccionSolicitud,
@@ -56,7 +62,19 @@ type Estado =
  */
 @Component({
   selector: 'app-detalle-solicitud',
-  imports: [RouterLink, Icono, TPipe, FechaPipe, PrecioPipe, PasosSolicitud, ResponderCondiciones],
+  imports: [
+    RouterLink,
+    Icono,
+    TPipe,
+    FechaPipe,
+    PrecioPipe,
+    PasosSolicitud,
+    ResponderCondiciones,
+    PagarSolicitud,
+    ConfirmandoPago,
+    PagoConfirmado,
+    IntentosPago,
+  ],
   templateUrl: './detalle-solicitud.html',
   styleUrl: './detalle-solicitud.css',
 })
@@ -66,9 +84,12 @@ export class DetalleSolicitud {
 
   private readonly servicio = inject(SolicitudesService);
   private readonly catalogo = inject(CatalogoService);
+  private readonly pagos = inject(PagosService);
   private readonly injector = inject(Injector);
   private readonly anfitrion = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly recarga = new Subject<void>();
+  /** Pide de nuevo los intentos de pago; se dispara cada vez que llega la solicitud, porque un intento puede cambiar sin que ella cambie. */
+  private readonly refrescarIntentos = new Subject<void>();
   /** Las veces que el plazo ya terminó y se volvió a consultar, por versión de la solicitud: una sola consulta cada vez. */
   private readonly reconsultadas = new Set<string>();
   private readonly ahora = ahoraConReloj();
@@ -84,6 +105,19 @@ export class DetalleSolicitud {
   /** Una reconsulta falló pero se conserva lo que ya se veía. */
   protected readonly errorDeActualizacion = signal<ErrorApi | null>(null);
   private readonly zonas = signal<readonly Zona[]>([]);
+  /** Los intentos de pago, mientras importan (ver `mostrarIntentos`); si no hay o no se pudieron leer, los últimos que se leyeron. */
+  protected readonly intentos = signal<readonly IntentoPago[]>([]);
+  /** Hay un pago esperando que el servidor lo confirme (RF-50, RF-51): se muestra "Confirmando tu pago" y se reconsulta. */
+  protected readonly confirmando = computed(() => {
+    const solicitud = this.solicitud();
+    return solicitud ? estaConfirmandoPago(solicitud.estado, this.intentos()) : false;
+  });
+  /** Hay intentos con resultado que contar (rechazado, con error, abandonado, aprobado): se muestra la lista (P04.2). */
+  protected readonly hayIntentosResueltos = computed(() =>
+    this.intentos().some((intento) => intento.estado !== 'EN_CURSO'),
+  );
+  /** El turista estuvo esperando la confirmación en esta pantalla: al confirmarse, el foco va al aviso. */
+  protected readonly estabaConfirmando = signal(false);
 
   protected readonly solicitud = computed(() => {
     const estado = this.estado();
@@ -125,6 +159,7 @@ export class DetalleSolicitud {
   protected alResponder(solicitud: SolicitudTurista): void {
     this.errorDeActualizacion.set(null);
     this.estado.set({ tipo: 'lista', solicitud });
+    this.refrescarIntentos.next();
     afterNextRender(
       () => this.anfitrion.nativeElement.querySelector<HTMLElement>('#titulo-solicitud')?.focus(),
       { injector: this.injector },
@@ -175,11 +210,37 @@ export class DetalleSolicitud {
         }
         this.errorDeActualizacion.set(null);
         this.estado.set(estado);
+        if (estado.tipo === 'lista') {
+          this.refrescarIntentos.next();
+        }
       });
 
     reconsultas$()
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.recarga.next());
+
+    // Los intentos de pago solo importan en tres estados (ver `mostrarIntentos`). Si no se pueden leer, se conservan los últimos.
+    this.refrescarIntentos
+      .pipe(
+        switchMap(() => {
+          const solicitud = this.solicitud();
+          if (!solicitud || !mostrarIntentos(solicitud.estado)) {
+            return of<readonly IntentoPago[]>([]);
+          }
+          return this.pagos
+            .intentos(solicitud.id)
+            .pipe(catchError(() => of<readonly IntentoPago[]>(this.intentos())));
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((intentos) => this.intentos.set(intentos));
+
+    // Una vez que el turista espera la confirmación, se recuerda para anunciar el cambio cuando llegue.
+    effect(() => {
+      if (this.confirmando()) {
+        this.estabaConfirmando.set(true);
+      }
+    });
 
     // Cuando el plazo termina, el núcleo cierra la solicitud: se consulta una vez para ver su estado real.
     effect(() => {

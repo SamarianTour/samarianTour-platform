@@ -1,0 +1,33 @@
+<section class="tarjeta confirmado" role="status" aria-labelledby="confirmado-titulo">
+  <span class="confirmado__icono" aria-hidden="true"><app-icono nombre="escudo" /></span>
+  <h2 id="confirmado-titulo" tabindex="-1">{{ 'pagos.confirmado.titulo' | t }}</h2>
+  <p>{{ 'pagos.confirmado.texto' | t }}</p>
+
+  <dl class="confirmado__datos">
+    @if (total() !== null) {
+      <div>
+        <dt>{{ 'pagos.confirmado.pagado' | t }}</dt>
+        <dd class="confirmado__total">{{ total() | precio }}</dd>
+      </div>
+    }
+    @if (aprobado(); as intento) {
+      @if (intento.transaccionId) {
+        <div>
+          <dt>{{ 'pagos.confirmado.referencia' | t }}</dt>
+          <dd class="confirmado__referencia">{{ intento.transaccionId }}</dd>
+        </div>
+      }
+      @if (intento.resueltoEn) {
+        <div>
+          <dt>{{ 'pagos.confirmado.fecha' | t }}</dt>
+          <dd>{{ intento.resueltoEn | fecha: 'conHora' }}</dd>
+        </div>
+      }
+    }
+  </dl>
+
+  <div class="confirmado__acciones">
+    <a class="boton boton--secundario" routerLink="/turista/solicitudes">{{ 'solicitudes.form.verMisSolicitudes' | t }}</a>
+    <a class="boton" routerLink="/">{{ 'pagos.confirmado.seguir' | t }}</a>
+  </div>
+</section>

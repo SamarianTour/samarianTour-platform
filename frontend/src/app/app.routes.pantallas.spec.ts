@@ -104,6 +104,30 @@ describe('pantallas que crea cada ruta', () => {
       expect(await ir(url, pantalla)).toBeInstanceOf(pantalla);
     });
 
+    // P04.1: el núcleo y la pasarela enlazan a esta dirección; con la solicitud confirmada, el detalle crea el bloque de pago.
+    it('el detalle de una solicitud confirmada crea el bloque de pago y pide sus intentos', async () => {
+      const id = '6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20';
+      await ir(`/turista/solicitudes/${id}`, DetalleSolicitud);
+
+      http.expectOne('/api/catalogo/zonas').flush([]);
+      http.expectOne(`/api/nucleo/turista/solicitudes/${id}`).flush({
+        id,
+        oferta: { id: 'b1', tipo: 'ACTIVIDAD', nombre: 'Caminata', zonaId: 'z1' },
+        fechaInicio: '2026-10-28',
+        personas: 2,
+        estado: 'CONFIRMADA',
+        condiciones: { precioBase: 300000, politicaCancelacion: 'x' },
+        creadaEn: '2026-10-26T14:00:00Z',
+        actualizadaEn: '2026-10-26T14:30:00Z',
+        historial: [],
+      });
+      harness.detectChanges();
+      http.expectOne(`/api/nucleo/turista/solicitudes/${id}/pagos`).flush([]);
+      harness.detectChanges();
+
+      expect(harness.routeNativeElement?.querySelector('app-pagar-solicitud')).not.toBeNull();
+    });
+
     it('la sección de otro rol crea "no tienes permiso"', async () => {
       await ir('/prestador/ofertas', SinPermiso);
     });

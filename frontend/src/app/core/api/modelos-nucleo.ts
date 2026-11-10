@@ -44,3 +44,11 @@ export type AtencionRequest = Esquemas['AtencionRequest'];
 /** Un aviso del operador en la plataforma (RF-34): cada solicitud nueva de su cola deja uno. */
 export type AvisoOperador = Esquemas['Aviso'];
 export type PaginaAvisos = Esquemas['PaginaAvisos'];
+
+/** El intento de pago en curso y cómo abrirlo en la pasarela (RF-46 a RF-49). */
+export type SesionCobro = Esquemas['SesionCobro'];
+/** Cómo abrir el pago: la dirección del checkout. El backend nunca ve datos de tarjeta ni de cuenta (RF-47). */
+export type CheckoutPago = Esquemas['Checkout'];
+/** Un intento de pago de una solicitud, con su estado y el id de la transacción en la pasarela (RF-52). */
+export type IntentoPago = Esquemas['IntentoPago'];
+export type EstadoIntento = Esquemas['EstadoIntento'];

@@ -2,11 +2,12 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { EstadoSolicitud, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { EstadoSolicitud, IntentoPago, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
 import { erroresInterceptor } from '../../../../core/errores/errores.interceptor';
 import { establecerIdioma } from '../../../../core/idioma/idioma';
 import { CLAVE_SESION, aSesionGuardada } from '../../../../core/sesion/almacen-sesion';
 import { respuestaDeSesion } from '../../../../core/sesion/testing';
+import { mostrarIntentos } from '../pagos';
 import { DetalleSolicitud } from './detalle-solicitud';
 
 const ID = '6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20';
@@ -63,9 +64,13 @@ describe('DetalleSolicitud (P02.2)', () => {
   const raiz = () => fixture.nativeElement as HTMLElement;
   const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
   const consulta = () => http.expectOne(URL);
+  const bloqueDePago = () => raiz().querySelector('app-pagar-solicitud');
 
-  /** Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. */
-  function crear(contenido: SolicitudTurista, id = ID): void {
+  /**
+   * Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. Una solicitud por pagar, con el pago
+   * fallido o pagada también pide sus intentos de pago, que se responden con `intentos` (ninguno por defecto).
+   */
+  function crear(contenido: SolicitudTurista, id = ID, intentos: IntentoPago[] = []): void {
     localStorage.setItem(
       CLAVE_SESION,
       JSON.stringify(aSesionGuardada(respuestaDeSesion({ rol: 'TURISTA' }))),
@@ -76,6 +81,10 @@ describe('DetalleSolicitud (P02.2)', () => {
     http.expectOne('/api/catalogo/zonas').flush(ZONAS);
     http.expectOne(`/api/nucleo/turista/solicitudes/${id}`).flush(contenido);
     fixture.detectChanges();
+    if (mostrarIntentos(contenido.estado)) {
+      http.expectOne(`/api/nucleo/turista/solicitudes/${id}/pagos`).flush(intentos);
+      fixture.detectChanges();
+    }
   }
 
   beforeEach(() => {
@@ -343,16 +352,12 @@ describe('DetalleSolicitud (P02.2)', () => {
       expect(lateral().textContent).toContain('Ver oferta');
     });
 
-    it('no hay botón de pagar: lo agrega la rama de pagos', () => {
+    it('una solicitud por pagar ofrece pagar, no solo ver la oferta', () => {
       crear(
         solicitud('CONFIRMADA', { condiciones: { precioBase: 300000, politicaCancelacion: 'x' } }),
       );
 
-      const controles = Array.from(raiz().querySelectorAll('a, button')).map(
-        (e) => e.textContent?.toLowerCase() ?? '',
-      );
-      expect(controles.some((c) => c.includes('pagar') || c.includes('pago'))).toBe(false);
-      expect(raiz().querySelector('a[href*="pago"]')).toBeNull();
+      expect(bloqueDePago()).not.toBeNull();
     });
   });
 
@@ -480,6 +485,9 @@ describe('DetalleSolicitud (P02.2)', () => {
       http
         .expectOne('/api/nucleo/turista/solicitudes/otra')
         .flush(solicitud('PAGADA', { id: 'otra' }));
+      fixture.detectChanges();
+      // Pagada: se piden también sus intentos de pago, para mostrar la referencia de la transacción.
+      http.expectOne('/api/nucleo/turista/solicitudes/otra/pagos').flush([]);
     });
   });
 
@@ -536,6 +544,9 @@ describe('DetalleSolicitud (P02.2)', () => {
         actualizadaEn: '2026-10-26T15:05:00',
       });
       fixture.detectChanges();
+      // Ya por pagar, el detalle pide los intentos de pago.
+      http.expectOne(`${URL}/pagos`).flush([]);
+      fixture.detectChanges();
 
       expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Por pagar');
       expect(bloque()).toBeNull();
@@ -575,6 +586,8 @@ describe('DetalleSolicitud (P02.2)', () => {
       fixture.detectChanges();
       consulta().flush(solicitud('VENCIDA', { venceEn: undefined }));
       fixture.detectChanges();
+      // Vencida: se piden sus intentos de pago, por si el vencimiento fue por rechazos (RF-58).
+      http.expectOne(`${URL}/pagos`).flush([]);
 
       expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Vencida');
       expect(bloque()).toBeNull();
@@ -615,6 +628,364 @@ describe('DetalleSolicitud (P02.2)', () => {
       expect(texto()).toContain('Available, confirm · Operator');
       expect(texto()).toContain('You have 3 h 0 min left to confirm or decline.');
       expect(texto()).toContain('View offer');
+    });
+  });
+
+  describe('pagar la solicitud (P04.1)', () => {
+    const CONFIRMADA = solicitud('CONFIRMADA', {
+      venceEn: en(3 * HORA),
+      condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+    });
+    const rechazo = (numero: number): IntentoPago => ({
+      id: `i${numero}`,
+      numero,
+      estado: 'RECHAZADO',
+      referencia: `ST-${numero}`,
+      montoCentavos: 30000000,
+      creadoEn: en(-HORA),
+    });
+
+    it('una solicitud confirmada muestra el bloque de pago con el total y pide sus intentos', () => {
+      crear(CONFIRMADA);
+
+      expect(bloqueDePago()).not.toBeNull();
+      expect(bloqueDePago()!.textContent!.replace(/[  ]/g, ' ')).toContain('Pagar $ 300.000');
+    });
+
+    it.each(['PENDIENTE', 'ATENDIDA', 'DECLINADA'] as const)(
+      '%s no muestra el bloque de pago ni pide intentos',
+      (estado) => {
+        crear(solicitud(estado));
+
+        expect(bloqueDePago()).toBeNull();
+        http.expectNone(`${URL}/pagos`);
+      },
+    );
+
+    it('con intentos usados dice cuántos quedan', () => {
+      crear(CONFIRMADA, ID, [rechazo(1)]);
+
+      expect(bloqueDePago()!.textContent).toContain('Te quedan 2 intentos de pago');
+    });
+
+    it('si falla la consulta de intentos el bloque sigue ofreciendo pagar', () => {
+      localStorage.setItem(
+        CLAVE_SESION,
+        JSON.stringify(aSesionGuardada(respuestaDeSesion({ rol: 'TURISTA' }))),
+      );
+      fixture = TestBed.createComponent(DetalleSolicitud);
+      fixture.componentRef.setInput('id', ID);
+      fixture.detectChanges();
+      http.expectOne('/api/catalogo/zonas').flush(ZONAS);
+      http.expectOne(URL).flush(CONFIRMADA);
+      fixture.detectChanges();
+      http.expectOne(`${URL}/pagos`).error(new ProgressEvent('error'));
+      fixture.detectChanges();
+
+      expect(bloqueDePago()).not.toBeNull();
+      expect(bloqueDePago()!.textContent).toContain('Te quedan 3 intentos de pago');
+    });
+
+    it('confirmar las condiciones lleva al pago: pide los intentos y muestra el bloque', () => {
+      crear(ATENDIDA);
+
+      Array.from(raiz().querySelectorAll<HTMLButtonElement>('button.boton'))
+        .find((b) => b.textContent?.includes('Confirmar condiciones'))!
+        .click();
+      fixture.detectChanges();
+      http.expectOne(`${URL}/respuesta`).flush({ ...ATENDIDA, estado: 'CONFIRMADA', actualizadaEn: en(0) });
+      fixture.detectChanges();
+      http.expectOne(`${URL}/pagos`).flush([]);
+      fixture.detectChanges();
+
+      expect(bloqueDePago()).not.toBeNull();
+    });
+  });
+
+  describe('esperar la confirmación del pago (RF-50, RF-51)', () => {
+    const CONFIRMADA = solicitud('CONFIRMADA', {
+      venceEn: en(3 * HORA),
+      condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+    });
+    const intentoPago = (
+      numero: number,
+      estado: IntentoPago['estado'],
+      extra: Partial<IntentoPago> = {},
+    ): IntentoPago => ({
+      id: `i${numero}`,
+      numero,
+      estado,
+      referencia: `ST-${numero}`,
+      montoCentavos: 30000000,
+      creadoEn: en(-HORA),
+      ...extra,
+    });
+    const pagos = () => http.expectOne(`${URL}/pagos`);
+    const confirmando = () => raiz().querySelector('app-confirmando-pago');
+    const pagoConfirmado = () => raiz().querySelector('app-pago-confirmado');
+
+    /** El tiempo corre de verdad solo aquí: la espera usa temporizadores, que las demás pruebas no necesitan. */
+    beforeEach(() => {
+      vi.useRealTimers();
+      vi.useFakeTimers({
+        now: AHORA,
+        toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
+      });
+    });
+
+    /** Pasan los segundos indicados y el servidor responde la solicitud y sus intentos. */
+    function reconsultar(
+      segundos: number,
+      solicitudNueva: SolicitudTurista,
+      intentos: IntentoPago[],
+    ): void {
+      vi.advanceTimersByTime(segundos * 1000);
+      consulta().flush(solicitudNueva);
+      fixture.detectChanges();
+      pagos().flush(intentos);
+      fixture.detectChanges();
+    }
+
+    it('al volver de la pasarela con un intento en curso dice "Confirmando tu pago", no que se pagó', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      expect(confirmando()).not.toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+      expect(texto()).toContain('Confirmando tu pago');
+      // Mientras tanto se puede continuar el mismo pago, no empezar otro.
+      expect(texto()).toContain('Continúa tu pago');
+    });
+
+    it('una solicitud por pagar sin un intento en curso no espera nada ni reconsulta', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'ABANDONADO')]);
+
+      expect(confirmando()).toBeNull();
+      vi.advanceTimersByTime(60_000);
+      http.expectNone(URL);
+    });
+
+    it('reconsulta a los 3 segundos y, cuando el servidor dice pagada, confirma el pago con la referencia', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+      http.expectNone(URL);
+
+      reconsultar(3, solicitud('PAGADA', { condiciones: CONFIRMADA.condiciones, actualizadaEn: en(0) }), [
+        intentoPago(1, 'APROBADO', { transaccionId: '1234-1610641025-49201', resueltoEn: en(0) }),
+      ]);
+
+      expect(confirmando()).toBeNull();
+      expect(pagoConfirmado()).not.toBeNull();
+      expect(texto()).toContain('Pago confirmado');
+      expect(texto()).toContain('1234-1610641025-49201');
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Pagada');
+      // El turista esperaba: el foco va al aviso para que el cambio se anuncie.
+      expect(document.activeElement?.id).toBe('confirmado-titulo');
+    });
+
+    it('el estado lo decide el servidor: si sigue en curso, sigue esperando y vuelve a preguntar', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      reconsultar(3, CONFIRMADA, [intentoPago(1, 'EN_CURSO')]);
+      expect(confirmando()).not.toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+
+      reconsultar(3, CONFIRMADA, [intentoPago(1, 'EN_CURSO')]);
+      expect(confirmando()).not.toBeNull();
+    });
+
+    it('si la pasarela rechaza, deja de esperar y no dice que se pagó', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      reconsultar(3, solicitud('PAGO_FALLIDO', { condiciones: CONFIRMADA.condiciones, venceEn: en(2 * HORA) }), [
+        intentoPago(1, 'RECHAZADO'),
+      ]);
+
+      expect(confirmando()).toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Pago fallido');
+      vi.advanceTimersByTime(60_000);
+      http.expectNone(URL);
+    });
+
+    it('si el intento se abandona deja de esperar y vuelve a ofrecer pagar', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      reconsultar(3, CONFIRMADA, [intentoPago(1, 'ABANDONADO')]);
+
+      expect(confirmando()).toBeNull();
+      expect(texto()).toContain('Paga para asegurar tu cupo');
+      expect(texto()).toContain('Te quedan 3 intentos de pago');
+    });
+
+    it('una vez pagada deja de reconsultar', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+      reconsultar(3, solicitud('PAGADA', { condiciones: CONFIRMADA.condiciones }), [
+        intentoPago(1, 'APROBADO', { transaccionId: 'T-1' }),
+      ]);
+
+      vi.advanceTimersByTime(120_000);
+
+      http.expectNone(URL);
+    });
+
+    it('si falla la consulta de los intentos conserva la espera en vez de dar el pago por hecho', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      vi.advanceTimersByTime(3_000);
+      consulta().flush(CONFIRMADA);
+      fixture.detectChanges();
+      pagos().error(new ProgressEvent('error'));
+      fixture.detectChanges();
+
+      expect(confirmando()).not.toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+    });
+
+    it('con la pestaña oculta no reconsulta', () => {
+      const visibilidad = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      vi.advanceTimersByTime(30_000);
+
+      http.expectNone(URL);
+      visibilidad.mockRestore();
+    });
+
+    it('una solicitud ya pagada al abrirla muestra el pago confirmado sin quitarle el foco', () => {
+      crear(solicitud('PAGADA', { condiciones: CONFIRMADA.condiciones }), ID, [
+        intentoPago(1, 'APROBADO', { transaccionId: 'T-9' }),
+      ]);
+
+      expect(pagoConfirmado()).not.toBeNull();
+      expect(texto()).toContain('T-9');
+      expect(confirmando()).toBeNull();
+      expect(document.activeElement?.id).not.toBe('confirmado-titulo');
+    });
+
+    it('está en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      expect(texto()).toContain('Confirming your payment');
+      expect(texto()).toContain('Continue your payment');
+    });
+  });
+
+  describe('intentos de pago y reintento (P04.2)', () => {
+    const intentoPago = (
+      numero: number,
+      estado: IntentoPago['estado'],
+      extra: Partial<IntentoPago> = {},
+    ): IntentoPago => ({
+      id: `i${numero}`,
+      numero,
+      estado,
+      referencia: `ST-${numero}`,
+      montoCentavos: 30000000,
+      creadoEn: en(-HORA),
+      ...extra,
+    });
+    const FALLIDA = solicitud('PAGO_FALLIDO', {
+      venceEn: en(2 * HORA),
+      condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+    });
+    const lista = () => raiz().querySelector('app-intentos-pago');
+    const bloqueDePago = () => raiz().querySelector('app-pagar-solicitud');
+    const aside = () => raiz().querySelector('aside')!;
+
+    it('con el pago fallido muestra los intentos con su motivo y ofrece reintentar', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO')]);
+
+      expect(lista()).not.toBeNull();
+      expect(lista()!.textContent).toContain('Intento 1');
+      expect(lista()!.textContent).toContain('Rechazado');
+      expect(lista()!.textContent).toContain('No se te cobró nada');
+      expect(bloqueDePago()!.textContent).toContain('Reintentar pago');
+      expect(bloqueDePago()!.textContent).toContain('Te quedan 2 intentos de pago');
+    });
+
+    it('el estado de la solicitud sigue siendo "Pago fallido" y no se afirma que se pagó', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO')]);
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Pago fallido');
+      expect(raiz().querySelector('app-pago-confirmado')).toBeNull();
+    });
+
+    it('tras el error de la pasarela explica que puede reintentar', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'ERROR')]);
+
+      expect(lista()!.textContent).toContain(
+        'Hubo un error al procesar el pago. Puedes intentarlo de nuevo.',
+      );
+    });
+
+    it('con el último intento avisa que si se rechaza la solicitud vencerá', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO'), intentoPago(2, 'ERROR')]);
+
+      expect(bloqueDePago()!.textContent).toContain('Te queda 1 intento de pago');
+      expect(bloqueDePago()!.textContent).toContain('si el pago se rechaza, la solicitud vencerá');
+    });
+
+    it('sin intentos que reintentar explica por qué y ofrece pedir disponibilidad de nuevo', () => {
+      crear(FALLIDA, ID, [
+        intentoPago(1, 'RECHAZADO'),
+        intentoPago(2, 'RECHAZADO'),
+        intentoPago(3, 'RECHAZADO'),
+      ]);
+
+      expect(bloqueDePago()!.textContent).toContain('Ya no puedes reintentar el pago');
+      expect(bloqueDePago()!.querySelector('button')).toBeNull();
+      expect(bloqueDePago()!.querySelector('a.boton')?.getAttribute('href')).toBe(
+        '/turista/solicitar/b00000000000000000000001',
+      );
+    });
+
+    it('al tercer rechazo la solicitud vence: la lista de intentos explica por qué y se ofrece volver a solicitar', () => {
+      crear(solicitud('VENCIDA'), ID, [
+        intentoPago(1, 'RECHAZADO'),
+        intentoPago(2, 'RECHAZADO'),
+        intentoPago(3, 'RECHAZADO'),
+      ]);
+
+      expect(lista()).not.toBeNull();
+      expect(lista()!.querySelectorAll('li.intento')).toHaveLength(3);
+      expect(bloqueDePago()).toBeNull();
+      expect(aside().textContent).toContain('Volver a solicitar');
+    });
+
+    it('una solicitud vencida sin intentos no muestra la lista', () => {
+      crear(solicitud('VENCIDA'), ID, []);
+
+      expect(lista()).toBeNull();
+    });
+
+    it('una solicitud pagada muestra el pago confirmado y también los intentos anteriores', () => {
+      crear(solicitud('PAGADA', { condiciones: FALLIDA.condiciones }), ID, [
+        intentoPago(1, 'RECHAZADO'),
+        intentoPago(2, 'APROBADO', { transaccionId: 'T-2' }),
+      ]);
+
+      expect(raiz().querySelector('app-pago-confirmado')).not.toBeNull();
+      expect(lista()!.querySelectorAll('li.intento')).toHaveLength(2);
+    });
+
+    it('un único intento en curso no repite la lista: ya lo cuenta "Confirmando tu pago"', () => {
+      crear(
+        solicitud('CONFIRMADA', { condiciones: FALLIDA.condiciones, venceEn: en(2 * HORA) }),
+        ID,
+        [intentoPago(1, 'EN_CURSO')],
+      );
+
+      expect(lista()).toBeNull();
+      expect(raiz().querySelector('app-confirmando-pago')).not.toBeNull();
+    });
+
+    it('está en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO')]);
+
+      expect(lista()!.textContent).toContain('Payment attempts');
+      expect(bloqueDePago()!.textContent).toContain('Retry payment');
+      expect(bloqueDePago()!.textContent).toContain('You have 2 payment attempts left');
     });
   });
 });

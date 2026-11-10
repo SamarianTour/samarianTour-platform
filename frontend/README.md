@@ -44,8 +44,9 @@ Los archivos generados están versionados para que la imagen de Docker se constr
 ```
 src/app
 ├── core/                    lo que existe una sola vez en la aplicación
-│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes y del operador
+│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes, del operador y de pagos
 │   ├── tiempo/              reloj que se renueva solo, para los plazos
+│   ├── navegacion/          salir de la aplicación hacia otra dirección (la pasarela de pago)
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
 │   ├── sesion/              sesión con token, interceptor, guards por rol, rutas y enlaces por rol
 │   └── avisos/              mensajes breves de confirmación
@@ -70,7 +71,7 @@ src/app
 | `/mis-opiniones` | Turista | Opiniones del turista, con su estado y el motivo si fue rechazada |
 | `/turista/solicitar/:ofertaId` | Turista | P02.1 Formulario de solicitud de disponibilidad (el botón de la ficha lleva aquí) |
 | `/turista/solicitudes` | Turista | P02.2 Mis solicitudes: los 9 estados, filtros Todas / Activas / Finalizadas y plazos |
-| `/turista/solicitudes/:id` | Turista | P02.2 Detalle: estado, historial, plazo y condiciones; P02.3 confirmar o declinar si está atendida. El núcleo enlaza aquí desde el pago y el WhatsApp |
+| `/turista/solicitudes/:id` | Turista | P02.2 Detalle: estado, historial, plazo y condiciones; P02.3 confirmar o declinar si está atendida; P04.1 pagar, "Confirmando tu pago" y P04.2 intentos y reintento. El núcleo y la pasarela enlazan aquí (regreso del pago, aviso de WhatsApp) |
 | `/prestador/ofertas` | Prestador | Mis ofertas, con su estado y las acciones |
 | `/prestador/ofertas/nueva` | Prestador | Publicar una oferta, con sus fotos |
 | `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente |
@@ -91,7 +92,7 @@ El turista pide disponibilidad sobre una oferta (RF-30 a RF-34), el operador la 
 - **Confirmar o declinar** (`responder-condiciones`). Solo en una solicitud atendida y dentro del plazo. Declinar pide confirmación. Si el núcleo dice que algo cambió (plazo vencido, estado distinto), se explica y se consulta de nuevo.
 - **Idempotencia.** Enviar y responder llevan una `Idempotency-Key` (ADR-04). `ClaveDeIdempotencia` repite la clave mientras el cuerpo no cambie, y la renueva si el usuario corrige algo, para no recibir un 422.
 - **Fechas.** La primera fecha posible es dos días calendario después de hoy **en la hora de Colombia**, no la del navegador.
-- **El pago** no está en esta rama: una solicitud confirmada o con el pago fallido solo ofrece ver la oferta hasta que llegue la rama de pagos.
+- **El pago** de una solicitud confirmada o con el pago fallido está en la sección "Pagos".
 
 La lógica (estados, plazos, validaciones y armado de la petición) está en funciones puras con pruebas propias.
 
@@ -120,6 +121,31 @@ El operador de disponibilidad verifica el cupo con el prestador y registra el re
 
 - **Claves de `datos` en los avisos.** El contrato describe `datos` como un mapa de texto sin fijar sus claves. El frontend usa las del ejemplo de `NUEVA_SOLICITUD` (`nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva`, `personas`) y omite lo que falte. Conviene fijarlas en el contrato.
 - **Historial sin "todos" (opcional).** Hoy no hay una consulta que devuelva todas las solicitudes tramitadas de una vez; el frontend las ofrece estado por estado. Si el equipo quiere una vista "todos", haría falta un valor o un parámetro nuevo en `GET /operador/solicitudes`.
+
+## Pagos
+
+El turista paga una solicitud confirmada (RF-46 a RF-52) en la pasarela externa, que puede ser la **simulada** del núcleo (con los botones "Aprobar" y "Rechazar") o el sandbox de **Wompi**; ver "Pasarela de pagos" en el README principal. La pantalla es el detalle de la solicitud (`/turista/solicitudes/:id`): el núcleo y la pasarela devuelven al turista exactamente ahí. El código está en `features/turista/solicitudes` (`pagar-solicitud`, `confirmando-pago`, `pago-confirmado`, `intentos-pago` y la lógica pura de `pagos.ts`) y en `core/api/pagos.service.ts`.
+
+### Decisiones de diseño
+
+- **En la plataforma no se piden datos de tarjeta ni de PSE: el cobro ocurre solo en la pasarela.** El diseño de referencia (`pago.html`) traía un formulario de tarjeta y un selector de método de pago; no se construyó. La pantalla de pago es un resumen, el aviso de que se paga en una pasarela externa y el botón "Pagar", que pide la sesión de cobro (`POST /turista/solicitudes/{id}/pago`, sin cuerpo: no viaja ningún dato de pago, RF-47) y manda al turista a `checkout.url`. El método (tarjeta, PSE, Nequi) se elige allí. Una prueba comprueba que el bloque de pago no tiene ningún campo.
+- **El estado del pago lo decide solo el servidor** (RF-50, RF-51). Volver de la pasarela no prueba nada: la solicitud pasa a `PAGADA` únicamente cuando el núcleo recibe el evento firmado de la pasarela. Por eso, mientras hay un intento en curso la pantalla dice "Confirmando tu pago" y nunca "pagado".
+- **La pasarela se abre en la misma pestaña.** Su `urlRedireccion` devuelve al turista a la solicitud, así que no hace falta otra ventana ni se pierde el contexto. Si el navegador no la abre, queda un enlace para continuar.
+- **El total no tiene cargos adicionales para el turista** (RF-49). Es `condiciones.precioBase`; la pantalla aclara que la comisión de la plataforma se descuenta al prestador.
+- **La dirección del checkout se revisa antes de abrirla** (`urlDeCheckoutSegura`): debe ser absoluta, `http` o `https` y sin usuario ni contraseña. Un `javascript:` o `data:` no se abre. La pasarela simulada usa `http://localhost`, por eso `http` es válido.
+
+### Cómo funciona
+
+- **Pagar** (P04.1). El bloque aparece con la solicitud en "Por pagar": oferta, fecha, personas y total, cuántos intentos quedan y, antes del último, que si se rechaza la solicitud vencerá. Un doble clic envía una sola petición. Abrir el pago lleva una `Idempotency-Key` y, si ya hay un intento en curso, el núcleo devuelve ese mismo, así que repetir la llamada no cobra dos veces. Si el núcleo dice que ya no se puede pagar (`SOLICITUD_NO_COBRABLE`, `INTENTOS_AGOTADOS`, `PLAZO_VENCIDO`), se avisa y se vuelve a consultar la solicitud.
+- **Confirmando tu pago** (RF-50, RF-51). Con un intento `EN_CURSO` se muestra ese aviso y la pantalla reconsulta la solicitud y sus intentos cada 3 segundos durante los primeros 2 minutos y cada 15 después (`esperaDeReconsulta`), hasta que cambien. No consulta con la pestaña oculta y retoma al volver. Mientras tanto se ofrece "Continuar el pago", que reabre el mismo intento. Al quedar `PAGADA` se muestra "Pago confirmado" con el total y la referencia de la transacción (RF-52), y el foco va al aviso para que los lectores de pantalla lo anuncien.
+- **Intentos y reintento** (P04.2, RF-58). Se permiten tres intentos con resultado de la pasarela: cuentan `RECHAZADO` y `ERROR`, no `ABANDONADO` (sin resultado a los 30 minutos) ni `EN_CURSO`. La lista muestra cada intento con su estado, su monto, sus fechas y la referencia de la transacción. Con el pago fallido se ofrece "Reintentar pago" mientras queden intentos y plazo; si no, se explica y se ofrece pedir disponibilidad de nuevo. Al tercer rechazo la solicitud queda vencida y el detalle conserva la lista, para que se vea por qué.
+- **Mis solicitudes** ofrece "Pagar" a una solicitud por pagar y "Reintentar pago" a una con el pago fallido; los dos llevan al detalle.
+
+La lógica (intentos que quedan, si se puede pagar, motivos, validación del checkout y calendario de reconsulta) está en funciones puras con pruebas propias.
+
+### Para el equipo de backend
+
+- **Motivo del rechazo (opcional).** `IntentoPago` trae solo el estado del intento, no el motivo que dio la pasarela (fondos insuficientes, tarjeta rechazada, etc.). El frontend muestra una explicación fija por estado. Si el equipo quiere mostrar el motivo real, haría falta un campo nuevo en `IntentoPago`.
 
 ## Diseño
 
@@ -210,6 +236,9 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Orden de la cola.** La API entrega la cola de la más antigua a la más reciente y el frontend la reordena por urgencia solo dentro de la página cargada, así que una urgente de la página 2 no sube a la página 1. En la práctica el orden coincide, porque el plazo del operador es siempre de 24 horas desde que se crea la solicitud.
 - **Datos de un aviso.** Los avisos del operador leen las claves `nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva` y `personas` de `datos`; el contrato no las fija.
 - **Cálculo de referencia al atender.** El precio del catálogo por lo pedido (personas, o noches por unidades en alojamiento) se muestra al operador como orientación; el precio total que se envía lo escribe él.
+- **Motivo de un intento de pago.** El contrato no entrega el texto de la pasarela, solo el estado del intento (`RECHAZADO`, `ERROR`, `ABANDONADO`…); el motivo que se muestra es una explicación fija de cada estado.
+- **Web Checkout, no widget.** El núcleo entrega también `llavePublica` y `firmaIntegridad` para el widget de Wompi; el frontend no los usa y abre siempre `checkout.url`, que sirve igual para la pasarela simulada y para Wompi.
+- **Intentos del pago.** Se piden con la solicitud confirmada, con el pago fallido, pagada o vencida (para mostrar la referencia de la transacción o por qué venció) y en ningún otro estado. Si no se pueden leer, se conservan los últimos que se leyeron.
 - **Plazo con minutos.** Los plazos se escriben con las dos unidades mayores ("20 h 0 min"), como en las solicitudes del turista.
 
 ## Docker
