@@ -144,9 +144,21 @@ describe('pantallas que crea cada ruta', () => {
       expect(http.match((p) => p.url === '/api/nucleo/operador/solicitudes').length).toBeGreaterThan(0);
     });
 
+    // Historial: la misma consulta de la cola con el parámetro estado.
+    it('el operador abre el historial en /operador/historial y este pide el estado de la dirección', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador/historial?estado=PAGADA', PanelOperador);
+
+      expect(
+        harness.routeNativeElement?.querySelector('.contenido > app-historial-operador'),
+      ).not.toBeNull();
+      const peticiones = http.match((p) => p.url === '/api/nucleo/operador/solicitudes');
+      expect(peticiones.map((p) => p.request.params.get('estado'))).toEqual(['PAGADA']);
+    });
+
     // El operador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
     it.each([
-      '/operador/historial',
       '/operador/avisos',
       '/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20',
     ])('el operador abre su panel en %s y dentro se crea una pantalla', async (url) => {

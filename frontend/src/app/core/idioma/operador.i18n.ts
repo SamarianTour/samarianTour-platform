@@ -42,6 +42,16 @@ export const OPERADOR = diccionario(
     'operador.cola.vacioTitulo': 'Todo al día',
     'operador.cola.vacioAyuda':
       'No hay solicitudes pendientes. Las nuevas aparecerán aquí y en tus avisos.',
+
+    // Historial
+    'operador.historial.titulo': 'Historial de solicitudes',
+    'operador.historial.intro':
+      'Las solicitudes que ya tramitaste, de la más reciente a la más antigua. Elige un estado para verlas.',
+    'operador.historial.filtrar': 'Filtrar por estado',
+    'operador.historial.total': { uno: '{n} solicitud', otros: '{n} solicitudes' },
+    'operador.historial.cargando': 'Cargando el historial…',
+    'operador.historial.vacioTitulo': 'Sin solicitudes en este estado',
+    'operador.historial.vacioAyuda': 'Aquí aparecerán las solicitudes que lleguen a este estado.',
   },
   {
     'operador.panel.control': 'Operator panel',
@@ -77,5 +87,14 @@ export const OPERADOR = diccionario(
     'operador.cola.vacioTitulo': 'All caught up',
     'operador.cola.vacioAyuda':
       'There are no pending requests. New ones will show up here and in your notices.',
+
+    'operador.historial.titulo': 'Request history',
+    'operador.historial.intro':
+      'The requests you have already handled, from most recent to oldest. Pick a status to see them.',
+    'operador.historial.filtrar': 'Filter by status',
+    'operador.historial.total': { uno: '{n} request', otros: '{n} requests' },
+    'operador.historial.cargando': 'Loading the history…',
+    'operador.historial.vacioTitulo': 'No requests with this status',
+    'operador.historial.vacioAyuda': 'Requests that reach this status will appear here.',
   },
 );

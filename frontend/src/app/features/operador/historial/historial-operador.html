@@ -1,0 +1,48 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'operador.panel.control' | t }}</p>
+    <h1>{{ 'operador.historial.titulo' | t }}</h1>
+    <p class="texto-suave">{{ 'operador.historial.intro' | t }}</p>
+  </header>
+
+  <nav class="filtros" [attr.aria-label]="'operador.historial.filtrar' | t">
+    @for (opcion of estados; track opcion) {
+      <a
+        [routerLink]="['/operador/historial']"
+        [queryParams]="{ estado: opcion }"
+        [attr.aria-current]="estado() === opcion ? 'page' : null"
+        >{{ etiquetaEstado[opcion] }}</a
+      >
+    }
+  </nav>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (pagina(); as resultado) {
+      <p class="total texto-suave">{{ 'operador.historial.total' | t: { n: resultado.totalElementos } }}</p>
+
+      @if (resultado.contenido.length > 0) {
+        <app-tabla-solicitudes-operador [solicitudes]="resultado.contenido" modo="historial" />
+      } @else {
+        <div class="tarjeta vacio">
+          <h2>{{ 'operador.historial.vacioTitulo' | t }}</h2>
+          <p class="texto-suave">{{ 'operador.historial.vacioAyuda' | t }}</p>
+        </div>
+      }
+
+      <app-paginacion
+        [pagina]="resultado.pagina"
+        [totalPaginas]="resultado.totalPaginas"
+        (cambiar)="irAPagina($event)"
+      />
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'operador.historial.cargando' | t }}</p>
+    }
+  </div>
+</section>

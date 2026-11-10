@@ -23,8 +23,8 @@ export const RUTAS_OPERADOR: Routes = [
       {
         path: 'historial',
         title: 'app.titulo.historialOperador',
-        data: { codigo: 'P02.4', nombre: 'app.titulo.historialOperador' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./historial/historial-operador').then((modulo) => modulo.HistorialOperador),
       },
       {
         path: 'solicitudes/:id',

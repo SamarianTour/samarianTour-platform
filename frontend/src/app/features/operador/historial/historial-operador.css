@@ -1,0 +1,36 @@
+/* Los estados son enlaces (cada uno tiene su dirección); el activo se marca con color, relleno y aria-current. */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.filtros a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--borde-control);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.filtros a:hover {
+  border-color: var(--enlace);
+}
+
+.filtros a[aria-current='page'] {
+  border-color: var(--enlace);
+  background: var(--acento-suave);
+  color: var(--enlace-fuerte);
+  font-weight: 700;
+}
+
+.total {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
