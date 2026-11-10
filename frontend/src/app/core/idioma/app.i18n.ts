@@ -38,7 +38,10 @@ export const APP = diccionario(
     'app.titulo.historialOperador': 'Historial de solicitudes',
     'app.titulo.avisosOperador': 'Avisos',
     'app.titulo.atenderSolicitud': 'Atender solicitud',
-    'app.titulo.indicadores': 'Indicadores',
+    'app.titulo.indicadores': 'Panel de indicadores',
+    'app.titulo.demanda': 'Demanda',
+    'app.titulo.embudo': 'Embudo de conversión',
+    'app.titulo.distribucionPrestador': 'Distribución por tipo de prestador',
     'app.titulo.administracion': 'Administración',
     'app.titulo.prestadoresRnt': 'Prestadores y RNT',
     'app.titulo.moderacion': 'Moderación',
@@ -69,9 +72,6 @@ export const APP = diccionario(
     'app.proximamente.operador.nombre': 'Cola de solicitudes',
     'app.proximamente.operador.descripcion':
       'Aquí atenderás la cola de solicitudes de disponibilidad de los prestadores que tienes asignados.',
-    'app.proximamente.gestor.nombre': 'Panel de indicadores',
-    'app.proximamente.gestor.descripcion':
-      'Aquí verás la demanda por zona, el embudo de solicitudes y la distribución por categorías del destino.',
   },
   {
     'app.saltar': 'Skip to content',
@@ -102,7 +102,10 @@ export const APP = diccionario(
     'app.titulo.historialOperador': 'Request history',
     'app.titulo.avisosOperador': 'Notices',
     'app.titulo.atenderSolicitud': 'Handle request',
-    'app.titulo.indicadores': 'Indicators',
+    'app.titulo.indicadores': 'Indicators dashboard',
+    'app.titulo.demanda': 'Demand',
+    'app.titulo.embudo': 'Conversion funnel',
+    'app.titulo.distribucionPrestador': 'Distribution by provider type',
     'app.titulo.administracion': 'Administration',
     'app.titulo.prestadoresRnt': 'Providers and RNT',
     'app.titulo.moderacion': 'Moderation',
@@ -132,8 +135,5 @@ export const APP = diccionario(
     'app.proximamente.operador.nombre': 'Request queue',
     'app.proximamente.operador.descripcion':
       'Here you will handle the queue of availability requests from the providers assigned to you.',
-    'app.proximamente.gestor.nombre': 'Indicators dashboard',
-    'app.proximamente.gestor.descripcion':
-      "Here you'll see demand by area, the request funnel and the breakdown by category for the destination.",
   },
 );

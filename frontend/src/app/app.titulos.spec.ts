@@ -3,6 +3,7 @@ import { routes } from './app.routes';
 import { TEXTOS } from './core/idioma/textos';
 import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
 import { RUTAS_ADMIN } from './features/admin/admin.routes';
+import { RUTAS_GESTOR } from './features/gestor/gestor.routes';
 import { RUTAS_OPERADOR } from './features/operador/operador.routes';
 import { RUTAS_PRESTADOR } from './features/prestador/prestador.routes';
 import { RUTAS_TURISTA } from './features/turista/turista.routes';
@@ -25,6 +26,7 @@ const TODAS = [
   ...recorrer(RUTAS_PRESTADOR, 'prestador'),
   ...recorrer(RUTAS_OPERADOR, 'operador'),
   ...recorrer(RUTAS_ADMIN, 'admin'),
+  ...recorrer(RUTAS_GESTOR, 'gestor'),
 ];
 
 describe('títulos y textos de las rutas', () => {

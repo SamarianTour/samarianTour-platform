@@ -15,6 +15,7 @@ import { Registro } from './features/cuentas/registro/registro';
 import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena/restablecer-contrasena';
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
 import { PanelAdmin } from './features/admin/panel/panel-admin';
+import { PanelGestor } from './features/gestor/panel/panel-gestor';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
@@ -23,7 +24,6 @@ import { MisSolicitudes } from './features/turista/solicitudes/mis-solicitudes/m
 import { FormularioSolicitud } from './features/turista/solicitudes/formulario-solicitud/formulario-solicitud';
 import { Ficha } from './features/turista/ficha/ficha';
 import { MisOpiniones } from './features/turista/mis-opiniones/mis-opiniones';
-import { Proximamente } from './shared/proximamente/proximamente';
 
 /**
  * Qué pantalla se CREA de verdad en cada ruta. `app.routes.spec.ts` solo comprueba a qué dirección termina la
@@ -211,13 +211,28 @@ describe('pantallas que crea cada ruta', () => {
       },
     );
 
+    // P09.1: el gestor entra a su panel; el panel de indicadores y la vista de cada dirección se crean dentro.
     it.each([
-      ['GESTOR_DESTINO', '/gestor'],
-    ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {
-      conSesion(rol);
+      ['/gestor', 'Demanda'],
+      ['/gestor/embudo', 'Embudo de conversión'],
+      ['/gestor/distribucion', 'Distribución por tipo de prestador'],
+    ])('el gestor abre su panel en %s y dentro se crean el panel de indicadores y la vista', async (url) => {
+      conSesion('GESTOR_DESTINO');
 
-      await ir(url, Proximamente);
+      await ir(url, PanelGestor);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-proximamente')).not.toBeNull();
     });
+
+    it.each(['/gestor', '/gestor/embudo', '/gestor/distribucion'])(
+      'un turista que abre %s ve "no tienes permiso"',
+      async (url) => {
+        conSesion('TURISTA');
+
+        await ir(url, SinPermiso);
+      },
+    );
 
     // P05.5: las zonas se leen y se escriben directo en el catálogo.
     it('el administrador abre las zonas y estas piden la lista del catálogo', async () => {

@@ -2,10 +2,6 @@ import { Routes } from '@angular/router';
 import { rolGuard } from './core/sesion/guards';
 import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
 
-/** Las secciones que llegan en ramas posteriores ocupan su lugar con esta pantalla, ya protegida por rol. */
-const proximamente = () =>
-  import('./shared/proximamente/proximamente').then((modulo) => modulo.Proximamente);
-
 /**
  * El `title` de cada ruta es una clave de texto (`app.titulo.*`), no el texto: `EstrategiaDeTitulo` lo traduce y lo
  * mantiene al cambiar de idioma. Lo mismo vale para el `nombre` y la `descripcion` de las pantallas "próximamente".
@@ -65,18 +61,7 @@ export const routes: Routes = [
   {
     path: 'gestor',
     canActivate: [rolGuard('GESTOR_DESTINO')],
-    children: [
-      {
-        path: '**',
-        title: 'app.titulo.indicadores',
-        data: {
-          codigo: 'P09.1',
-          nombre: 'app.proximamente.gestor.nombre',
-          descripcion: 'app.proximamente.gestor.descripcion',
-        },
-        loadComponent: proximamente,
-      },
-    ],
+    loadChildren: () => import('./features/gestor/gestor.routes').then((modulo) => modulo.RUTAS_GESTOR),
   },
   {
     path: 'admin',

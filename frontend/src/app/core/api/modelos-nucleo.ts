@@ -60,6 +60,15 @@ export type PrestadorPropio = Esquemas['Prestador'];
 export type RegistroPrestadorRequest = Esquemas['RegistroPrestadorRequest'];
 export type DatosTipoRequest = Esquemas['DatosTipoRequest'];
 export type CategoriaPrestador = Esquemas['Prestador']['categoria'];
+/** Indicadores del gestor del destino (RF-85 a RF-89): solo datos agregados, sin conteos de 1 o 2 (RET-03). */
+export type Tablero = Esquemas['Tablero'];
+export type DemandaZona = Esquemas['DemandaZona'];
+export type Embudo = Esquemas['Embudo'];
+export type EtapaEmbudo = Esquemas['EtapaEmbudo'];
+export type EmbudoTipo = Esquemas['EmbudoTipo'];
+export type DistribucionCategoria = Esquemas['DistribucionCategoria'];
+export type ParticipacionCategoria = Esquemas['ParticipacionCategoria'];
+
 /** La cuenta donde el prestador recibe la dispersión, con el número enmascarado (RF-74, RF-75). */
 export type CuentaCobro = Esquemas['CuentaCobro'];
 export type CuentaCobroRequest = Esquemas['CuentaCobroRequest'];
