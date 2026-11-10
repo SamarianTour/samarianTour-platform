@@ -18,6 +18,8 @@ const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
   'solicitudes.plazo.minutos',
   // "Ref." es la misma abreviatura en los dos idiomas.
   'solicitudes.lista.ref',
+  // "No" se escribe igual en español y en inglés.
+  'admin.moderacion.no',
 ]);
 
 /**

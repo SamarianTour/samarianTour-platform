@@ -64,3 +64,11 @@ export type EstadoRnt = Esquemas['PrestadorAdmin']['estadoRnt'];
 export type SincronizacionRnt = Esquemas['SincronizacionRnt'];
 /** Una cuenta de administrador, operador de disponibilidad o gestor del destino (RF-81). */
 export type CuentaInterna = Esquemas['CuentaInterna'];
+
+/** Aprobar o rechazar lo que está en moderación (RF-79, RF-80). */
+export type DecisionModerar = Esquemas['Decision'];
+/** La decisión sobre una versión de oferta: lleva el número de la versión que el administrador revisó. */
+export type DecisionOfertaRequest = Esquemas['DecisionOfertaRequest'];
+export type DecisionOpinionRequest = Esquemas['DecisionOpinionRequest'];
+/** La decisión guardada por el núcleo; el catálogo la aplica en los siguientes segundos por la bandeja de salida. */
+export type DecisionModeracion = Esquemas['DecisionModeracion'];

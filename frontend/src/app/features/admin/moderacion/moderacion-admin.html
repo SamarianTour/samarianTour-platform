@@ -1,0 +1,279 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'admin.panel.control' | t }}</p>
+    <h1>{{ 'app.titulo.moderacion' | t }}</h1>
+    <p class="texto-suave">{{ 'admin.moderacion.intro' | t }}</p>
+  </header>
+
+  <div class="barra">
+    <nav class="filtros" [attr.aria-label]="'admin.moderacion.cola' | t">
+      <a routerLink="/admin/moderacion" [attr.aria-current]="tipo() === 'ofertas' ? 'page' : null">{{
+        'admin.moderacion.cola.ofertas' | t
+      }}</a>
+      <a
+        routerLink="/admin/moderacion"
+        [queryParams]="{ tipo: 'opiniones' }"
+        [attr.aria-current]="tipo() === 'opiniones' ? 'page' : null"
+        >{{ 'admin.moderacion.cola.opiniones' | t }}</a
+      >
+    </nav>
+    <button type="button" class="boton boton--secundario" (click)="actualizar()">
+      {{ 'admin.moderacion.actualizar' | t }}
+    </button>
+  </div>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (cola(); as actual) {
+      <p class="total texto-suave">
+        {{ (actual.tipo === 'ofertas' ? 'admin.moderacion.totalOfertas' : 'admin.moderacion.totalOpiniones') | t: { n: actual.pagina.totalElementos } }}
+      </p>
+
+      @if (actual.tipo === 'ofertas') {
+        @if (ofertas().length > 0) {
+          <ul class="elementos">
+            @for (item of ofertas(); track item.llave) {
+              @let oferta = item.oferta;
+              <li class="tarjeta elemento">
+                <header class="elemento__cabecera">
+                  <span class="elemento__icono portada" aria-hidden="true">
+                    <app-icono [nombre]="iconoDeTipo[oferta.tipo]" />
+                  </span>
+                  <div>
+                    <p class="rotulo">{{ etiquetaTipo[oferta.tipo] }}</p>
+                    <h2>{{ oferta.pendiente.nombre }}</h2>
+                    <p class="texto-suave elemento__datos">
+                      <span>{{ 'admin.moderacion.oferta.version' | t: { numero: oferta.numeroVersion } }}</span>
+                      <span>{{ (item.esEdicion ? 'admin.moderacion.oferta.edicion' : 'admin.moderacion.oferta.nueva') | t }}</span>
+                      <span>{{ 'admin.moderacion.oferta.enviada' | t: { fecha: (oferta.enviadaEn | fecha: 'conHora') } }}</span>
+                      <span>{{ 'admin.sesgo.prestadorSinNombre' | t: { codigo: codigo(oferta.prestadorId) } }}</span>
+                    </p>
+                  </div>
+                </header>
+
+                @if (item.esEdicion) {
+                  <p class="texto-suave leyenda">{{ 'admin.moderacion.oferta.leyenda' | t }}</p>
+                }
+
+                <dl class="lineas">
+                  @for (fila of item.filas; track fila.campo) {
+                    <div [class.linea--ancha]="fila.ancho" [class.linea--cambio]="fila.cambiado">
+                      <dt>
+                        {{ fila.clave | t }}
+                        @if (fila.cambiado) {
+                          <span class="etiqueta etiqueta--aviso">{{ 'admin.moderacion.cambio' | t }}</span>
+                        }
+                      </dt>
+                      <dd>{{ fila.valor }}</dd>
+                    </div>
+                  }
+                </dl>
+
+                @if (oferta.pendiente.fotos.length > 0) {
+                  <div class="fotos" [class.linea--cambio]="item.fotosCambiaron">
+                    <p class="texto-suave">
+                      {{ 'admin.moderacion.fotos' | t: { n: oferta.pendiente.fotos.length } }}
+                      @if (item.fotosCambiaron) {
+                        <span class="etiqueta etiqueta--aviso">{{ 'admin.moderacion.cambio' | t }}</span>
+                      }
+                    </p>
+                    <ul class="miniaturas">
+                      @for (foto of oferta.pendiente.fotos; track foto.id; let i = $index) {
+                        <li>
+                          <img
+                            [src]="foto.urlMiniatura"
+                            [alt]="'admin.moderacion.fotoAlt' | t: { n: i + 1, total: oferta.pendiente.fotos.length }"
+                            loading="lazy"
+                          />
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+
+                @if (!item.puedeAprobar) {
+                  <p class="alerta alerta--aviso" role="note">
+                    <app-icono nombre="alerta" />
+                    <span>{{ 'admin.moderacion.oferta.sinRnt' | t }}</span>
+                  </p>
+                }
+
+                @if (item.decision; as decision) {
+                  <p class="enviada" role="status">
+                    <app-icono nombre="escudo" />
+                    <span>
+                      <strong>{{ claveDeEnviada(decision) | t }}</strong>
+                      {{ 'admin.moderacion.enviada.texto' | t }}
+                    </span>
+                  </p>
+                } @else {
+                  @if (item.error; as mensaje) {
+                    <p class="alerta alerta--error" role="alert">
+                      <app-icono nombre="alerta" />
+                      <span>{{ mensaje() }}</span>
+                    </p>
+                  }
+                  @if (item.abierto) {
+                    <div class="campo">
+                      <label [for]="'motivo-' + item.llave">{{ 'admin.moderacion.motivo' | t }}</label>
+                      <textarea
+                        [id]="'motivo-' + item.llave"
+                        [value]="item.motivo"
+                        (input)="escribirMotivo(item.llave, $event)"
+                        aria-required="true"
+                        [attr.aria-invalid]="item.errorDeMotivo ? 'true' : null"
+                        [attr.aria-describedby]="'motivo-ayuda-' + item.llave"
+                      ></textarea>
+                      <p class="campo__ayuda" [id]="'motivo-ayuda-' + item.llave">
+                        {{ 'admin.moderacion.motivoAyudaOferta' | t: { largo: item.largoMotivo, maximo: motivoMaximo } }}
+                      </p>
+                      @if (item.errorDeMotivo; as problema) {
+                        <p class="campo__error">{{ claveDeError(problema) | t: { maximo: motivoMaximo } }}</p>
+                      }
+                    </div>
+                    <div class="acciones">
+                      <button type="button" class="boton boton--peligro" [disabled]="item.enviando" (click)="rechazarOferta(oferta)">
+                        {{ (item.enviando ? 'admin.moderacion.enviando' : 'admin.moderacion.confirmarRechazo') | t }}
+                      </button>
+                      <button type="button" class="boton boton--secundario" [disabled]="item.enviando" (click)="cancelarRechazo()">
+                        {{ 'comun.cancelar' | t }}
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="acciones">
+                      <button
+                        type="button"
+                        class="boton"
+                        [disabled]="!item.puedeAprobar || enviando() !== null"
+                        (click)="aprobarOferta(oferta)"
+                      >
+                        {{ (item.enviando ? 'admin.moderacion.enviando' : 'admin.moderacion.aprobar') | t }}
+                      </button>
+                      <button
+                        type="button"
+                        class="boton boton--secundario"
+                        [disabled]="enviando() !== null"
+                        (click)="abrirRechazo(item.llave)"
+                      >
+                        {{ 'admin.moderacion.rechazar' | t }}
+                      </button>
+                    </div>
+                  }
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="tarjeta vacio">
+            <h2>{{ 'admin.moderacion.vacioOfertasTitulo' | t }}</h2>
+            <p class="texto-suave">{{ 'admin.moderacion.vacioOfertasAyuda' | t }}</p>
+          </div>
+        }
+      } @else {
+        @if (opiniones().length > 0) {
+          <ul class="elementos">
+            @for (item of opiniones(); track item.llave) {
+              @let opinion = item.opinion;
+              <li class="tarjeta elemento">
+                <header class="elemento__cabecera">
+                  <div>
+                    <h2>
+                      {{
+                        opinion.nombreOferta
+                          ? ('admin.moderacion.opinion.sobre' | t: { oferta: opinion.nombreOferta })
+                          : ('admin.moderacion.opinion.sinNombre' | t: { codigo: codigo(opinion.ofertaId) })
+                      }}
+                    </h2>
+                    <p class="texto-suave elemento__datos">
+                      <span>{{ 'admin.moderacion.opinion.calificacion' | t: { n: opinion.calificacion } }}</span>
+                      <span>{{ 'admin.moderacion.opinion.enviada' | t: { fecha: (opinion.fecha | fecha: 'conHora') } }}</span>
+                    </p>
+                  </div>
+                </header>
+
+                <blockquote class="comentario">{{ opinion.comentario }}</blockquote>
+
+                @if (item.decision; as decision) {
+                  <p class="enviada" role="status">
+                    <app-icono nombre="escudo" />
+                    <span>
+                      <strong>{{ claveDeEnviada(decision) | t }}</strong>
+                      {{ 'admin.moderacion.enviada.texto' | t }}
+                    </span>
+                  </p>
+                } @else {
+                  @if (item.error; as mensaje) {
+                    <p class="alerta alerta--error" role="alert">
+                      <app-icono nombre="alerta" />
+                      <span>{{ mensaje() }}</span>
+                    </p>
+                  }
+                  @if (item.abierto) {
+                    <div class="campo">
+                      <label [for]="'motivo-' + item.llave">{{ 'admin.moderacion.motivo' | t }}</label>
+                      <textarea
+                        [id]="'motivo-' + item.llave"
+                        [value]="item.motivo"
+                        (input)="escribirMotivo(item.llave, $event)"
+                        aria-required="true"
+                        [attr.aria-invalid]="item.errorDeMotivo ? 'true' : null"
+                        [attr.aria-describedby]="'motivo-ayuda-' + item.llave"
+                      ></textarea>
+                      <p class="campo__ayuda" [id]="'motivo-ayuda-' + item.llave">
+                        {{ 'admin.moderacion.motivoAyudaOpinion' | t: { largo: item.largoMotivo, maximo: motivoMaximo } }}
+                      </p>
+                      @if (item.errorDeMotivo; as problema) {
+                        <p class="campo__error">{{ claveDeError(problema) | t: { maximo: motivoMaximo } }}</p>
+                      }
+                    </div>
+                    <div class="acciones">
+                      <button type="button" class="boton boton--peligro" [disabled]="item.enviando" (click)="rechazarOpinion(opinion)">
+                        {{ (item.enviando ? 'admin.moderacion.enviando' : 'admin.moderacion.confirmarRechazo') | t }}
+                      </button>
+                      <button type="button" class="boton boton--secundario" [disabled]="item.enviando" (click)="cancelarRechazo()">
+                        {{ 'comun.cancelar' | t }}
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="acciones">
+                      <button type="button" class="boton" [disabled]="enviando() !== null" (click)="aprobarOpinion(opinion)">
+                        {{ (item.enviando ? 'admin.moderacion.enviando' : 'admin.moderacion.aprobar') | t }}
+                      </button>
+                      <button
+                        type="button"
+                        class="boton boton--secundario"
+                        [disabled]="enviando() !== null"
+                        (click)="abrirRechazo(item.llave)"
+                      >
+                        {{ 'admin.moderacion.rechazar' | t }}
+                      </button>
+                    </div>
+                  }
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="tarjeta vacio">
+            <h2>{{ 'admin.moderacion.vacioOpinionesTitulo' | t }}</h2>
+            <p class="texto-suave">{{ 'admin.moderacion.vacioOpinionesAyuda' | t }}</p>
+          </div>
+        }
+      }
+
+      <app-paginacion
+        [pagina]="actual.pagina.pagina"
+        [totalPaginas]="actual.pagina.totalPaginas"
+        (cambiar)="irAPagina($event)"
+      />
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'admin.moderacion.cargando' | t }}</p>
+    }
+  </div>
+</section>

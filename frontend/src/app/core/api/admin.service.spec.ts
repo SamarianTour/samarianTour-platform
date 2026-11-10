@@ -104,4 +104,33 @@ describe('AdminService', () => {
       vi.useRealTimers();
     }
   });
+
+  it('decide una oferta con el número de la versión revisada y el motivo del rechazo', () => {
+    let decision: unknown;
+
+    servicio
+      .moderarOferta('b00000000000000000000017', { numeroVersion: 2, decision: 'RECHAZAR', motivo: 'Falta el punto de encuentro' })
+      .subscribe((d) => (decision = d));
+
+    const peticion = http.expectOne(`${BASE}/moderacion/ofertas/b00000000000000000000017/decision`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ numeroVersion: 2, decision: 'RECHAZAR', motivo: 'Falta el punto de encuentro' });
+    peticion.flush({ tipo: 'OFERTA', moderadoId: 'b00000000000000000000017', decision: 'RECHAZAR' });
+    expect(decision).toMatchObject({ tipo: 'OFERTA', decision: 'RECHAZAR' });
+  });
+
+  it('decide una opinión sin número de versión', () => {
+    servicio.moderarOpinion('op-9', { decision: 'APROBAR' }).subscribe();
+
+    const peticion = http.expectOne(`${BASE}/moderacion/opiniones/op-9/decision`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ decision: 'APROBAR' });
+    peticion.flush({ tipo: 'OPINION', moderadoId: 'op-9', decision: 'APROBAR' });
+  });
+
+  it('codifica el identificador de lo que se modera en la dirección', () => {
+    servicio.moderarOpinion('a/b', { decision: 'APROBAR' }).subscribe();
+
+    http.expectOne(`${BASE}/moderacion/opiniones/a%2Fb/decision`).flush({});
+  });
 });

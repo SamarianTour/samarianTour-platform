@@ -23,8 +23,8 @@ export const RUTAS_ADMIN: Routes = [
       {
         path: 'moderacion',
         title: 'app.titulo.moderacion',
-        data: { codigo: 'P05.2', nombre: 'app.titulo.moderacion' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./moderacion/moderacion-admin').then((modulo) => modulo.ModeracionAdmin),
       },
       {
         path: 'cuentas',

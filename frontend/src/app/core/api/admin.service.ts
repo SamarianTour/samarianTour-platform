@@ -2,7 +2,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_NUCLEO } from './api.config';
-import { AlertaSesgo, CuentaInterna, PrestadorAdmin, SincronizacionRnt } from './modelos-nucleo';
+import {
+  AlertaSesgo,
+  CuentaInterna,
+  DecisionModeracion,
+  DecisionOfertaRequest,
+  DecisionOpinionRequest,
+  PrestadorAdmin,
+  SincronizacionRnt,
+} from './modelos-nucleo';
 
 const BASE = `${API_NUCLEO}/admin`;
 
@@ -45,6 +53,26 @@ export class AdminService {
    */
   sincronizarRnt(): Observable<SincronizacionRnt> {
     return this.http.post<SincronizacionRnt>(`${BASE}/rnt/sincronizacion`, null);
+  }
+
+  /**
+   * Aprueba o rechaza la versión de una oferta que está en moderación (RF-79). El núcleo verifica con el catálogo que esa versión
+   * siga en moderación, guarda la decisión y la envía al catálogo por la bandeja de salida, que la aplica en los siguientes
+   * segundos. Repetir la misma decisión responde 200; tomar la contraria, 409 `MODERACION_YA_DECIDIDA`.
+   */
+  moderarOferta(ofertaId: string, decision: DecisionOfertaRequest): Observable<DecisionModeracion> {
+    return this.http.post<DecisionModeracion>(
+      `${BASE}/moderacion/ofertas/${encodeURIComponent(ofertaId)}/decision`,
+      decision,
+    );
+  }
+
+  /** Aprueba o rechaza una opinión en moderación (RF-80); como la oferta, pero una opinión no tiene versiones. */
+  moderarOpinion(opinionId: string, decision: DecisionOpinionRequest): Observable<DecisionModeracion> {
+    return this.http.post<DecisionModeracion>(
+      `${BASE}/moderacion/opiniones/${encodeURIComponent(opinionId)}/decision`,
+      decision,
+    );
   }
 
   /** Los prestadores que la recomendación muestra más de lo que les corresponde (RET-02): solo las alertas abiertas, de mayor a menor índice. */

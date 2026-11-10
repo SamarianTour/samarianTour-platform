@@ -41,3 +41,12 @@ export type CodigoError =
 
 /** Parámetros de GET /ofertas, tal como los define el contrato. */
 export type ConsultaOfertas = NonNullable<operations['buscarOfertas']['parameters']['query']>;
+
+/** El contenido de una versión de oferta como lo envió el prestador, para que el administrador la revise (RF-79). */
+export type ContenidoVersion = Esquemas['ContenidoVersion'];
+/** Una oferta que espera la decisión del administrador, con su versión pendiente y, si es una edición, la publicada. */
+export type OfertaPendiente = Esquemas['OfertaPendiente'];
+export type PaginaOfertasPendientes = Esquemas['PaginaOfertasPendientes'];
+/** Una opinión que espera la decisión del administrador; no lleva al turista (RF-80). */
+export type OpinionPendiente = Esquemas['OpinionPendiente'];
+export type PaginaOpinionesPendientes = Esquemas['PaginaOpinionesPendientes'];
