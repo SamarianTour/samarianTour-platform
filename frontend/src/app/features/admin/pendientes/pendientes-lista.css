@@ -1,0 +1,126 @@
+/* Estilo común de las dos listas de pendientes técnicos (avisos rechazados y eventos de pago fallidos). */
+.pendiente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.pendiente h2,
+.pendiente h3,
+.pendiente p {
+  margin: 0;
+}
+
+.pendiente h2 {
+  font-size: 1.25rem;
+}
+
+.total {
+  font-weight: 700;
+}
+
+.ayuda {
+  margin-top: 0.25rem !important;
+  font-size: 0.875rem;
+}
+
+.vacio-interno h3 {
+  font-size: 1rem;
+}
+
+.elementos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.elemento {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-md);
+  background: var(--superficie);
+}
+
+.elemento__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.elemento__cabecera h3 {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.monto {
+  font-family: var(--fuente-titulos);
+  font-weight: 700;
+}
+
+.datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.875rem;
+}
+
+.datos code,
+.respuesta code {
+  overflow-wrap: anywhere;
+}
+
+/* Lo que respondió el catálogo, o el último error: un resumen de una línea y, aparte, el mensaje completo. */
+.respuesta {
+  padding: 0.625rem 0.875rem;
+  border-left: 4px solid var(--peligro);
+  border-radius: 0 8px 8px 0;
+  background: var(--peligro-fondo);
+}
+
+.respuesta__titulo {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.respuesta__linea {
+  margin-top: 0.25rem !important;
+  font-size: 0.875rem;
+}
+
+.respuesta summary {
+  margin-top: 0.375rem;
+  cursor: pointer;
+  color: var(--enlace-fuerte);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.respuesta pre {
+  max-height: 14rem;
+  margin: 0.5rem 0 0;
+  padding: 0.625rem;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--superficie);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.acciones .boton {
+  min-height: 44px;
+}

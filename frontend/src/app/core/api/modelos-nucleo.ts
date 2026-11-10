@@ -82,3 +82,8 @@ export type Comision = Esquemas['Comision'];
 export type CambioComision = Esquemas['CambioComision'];
 /** Un pago que la pasarela aprobó pero no pagó la solicitud, para devolverlo a mano (RF-49, RF-50). */
 export type PagoTardio = Esquemas['PagoTardio'];
+
+/** Un aviso del núcleo al catálogo por la bandeja de salida; el catálogo lo rechazó si su estado es RECHAZADO (DN-06, DN-44). */
+export type AvisoBandeja = Esquemas['AvisoBandeja'];
+/** Un evento de la pasarela que falló cinco veces al procesarse y salió de la cola (DN-21, DN-44). */
+export type EventoPagoFallido = Esquemas['EventoPagoFallido'];

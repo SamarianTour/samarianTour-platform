@@ -4,12 +4,14 @@ import { Observable } from 'rxjs';
 import { API_NUCLEO } from './api.config';
 import {
   AlertaSesgo,
+  AvisoBandeja,
   Comision,
   CuentaInterna,
   CuentaInternaRequest,
   DecisionModeracion,
   DecisionOfertaRequest,
   DecisionOpinionRequest,
+  EventoPagoFallido,
   PagoTardio,
   PrestadorAdmin,
   SincronizacionRnt,
@@ -37,6 +39,41 @@ export class AdminService {
   /** Las cuentas de administradores, operadores y gestores, activas y desactivadas, de la más antigua a la más reciente (RF-81). */
   cuentasInternas(): Observable<CuentaInterna[]> {
     return this.http.get<CuentaInterna[]>(`${BASE}/cuentas-internas`);
+  }
+
+  /**
+   * Los avisos al catálogo que el catálogo rechazó, del más reciente al más antiguo, con lo que respondió (DN-06, DN-44). Un aviso que el
+   * catálogo responde con un 4xx queda RECHAZADO y no se reintenta solo, porque fallaría igual: hay que corregir la causa y reenviarlo.
+   */
+  avisosRechazados(): Observable<AvisoBandeja[]> {
+    return this.http.get<AvisoBandeja[]>(`${BASE}/bandeja/rechazados`);
+  }
+
+  /**
+   * Reenvía un aviso rechazado, después de corregir la causa (DN-44). Queda pendiente, con los intentos en cero, y la bandeja lo envía en
+   * los siguientes 15 segundos. 404 `AVISO_NO_ENCONTRADO` si no existe; 409 `AVISO_NO_RECHAZADO` si ya no está rechazado.
+   */
+  reenviarAviso(idAviso: string): Observable<AvisoBandeja> {
+    return this.http.post<AvisoBandeja>(`${BASE}/bandeja/${encodeURIComponent(idAviso)}/reenvio`, null);
+  }
+
+  /**
+   * Los eventos de la pasarela que fallaron cinco veces al procesarse, del recibido más reciente al más antiguo (DN-21, DN-44). Salen
+   * de la cola y se avisa al administrador por WhatsApp; nunca traen datos del turista.
+   */
+  eventosPagoFallidos(): Observable<EventoPagoFallido[]> {
+    return this.http.get<EventoPagoFallido[]>(`${BASE}/pagos/eventos-fallidos`);
+  }
+
+  /**
+   * Devuelve un evento fallido a la cola (DN-44): queda pendiente, con los fallos en cero, y la tarea de eventos lo procesa en los
+   * siguientes 5 segundos. Si vuelve a fallar cinco veces, se avisa otra vez. 404 `EVENTO_NO_ENCONTRADO`; 409 `EVENTO_NO_FALLIDO`.
+   */
+  reintentarEventoFallido(eventoId: string): Observable<EventoPagoFallido> {
+    return this.http.post<EventoPagoFallido>(
+      `${BASE}/pagos/eventos-fallidos/${encodeURIComponent(eventoId)}/reintento`,
+      null,
+    );
   }
 
   /** La comisión vigente (el porcentaje del precio base que se descuenta al prestador, RF-53) y su historial (RF-82). */

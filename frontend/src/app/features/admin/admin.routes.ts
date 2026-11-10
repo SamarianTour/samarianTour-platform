@@ -53,8 +53,8 @@ export const RUTAS_ADMIN: Routes = [
       {
         path: 'pendientes',
         title: 'app.titulo.pendientesTecnicos',
-        data: { nombre: 'app.titulo.pendientesTecnicos' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./pendientes/pendientes-tecnicos').then((modulo) => modulo.PendientesTecnicos),
       },
     ],
   },

@@ -202,4 +202,49 @@ describe('AdminService', () => {
     expect(peticion.request.method).toBe('GET');
     peticion.flush([]);
   });
+
+  it('pide los avisos rechazados por el catálogo', () => {
+    servicio.avisosRechazados().subscribe();
+
+    const peticion = http.expectOne(`${BASE}/bandeja/rechazados`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush([]);
+  });
+
+  it('reenvía un aviso con POST y sin cuerpo', () => {
+    let aviso: unknown;
+
+    servicio.reenviarAviso('aviso-0001').subscribe((a) => (aviso = a));
+
+    const peticion = http.expectOne(`${BASE}/bandeja/aviso-0001/reenvio`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toBeNull();
+    peticion.flush({ idAviso: 'aviso-0001', estado: 'PENDIENTE' });
+    expect(aviso).toEqual({ idAviso: 'aviso-0001', estado: 'PENDIENTE' });
+  });
+
+  it('pide los eventos de pago fallidos', () => {
+    servicio.eventosPagoFallidos().subscribe();
+
+    const peticion = http.expectOne(`${BASE}/pagos/eventos-fallidos`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush([]);
+  });
+
+  it('reintenta un evento fallido con POST y sin cuerpo', () => {
+    servicio.reintentarEventoFallido('8d1e4c2b-7a6f').subscribe();
+
+    const peticion = http.expectOne(`${BASE}/pagos/eventos-fallidos/8d1e4c2b-7a6f/reintento`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toBeNull();
+    peticion.flush({ id: '8d1e4c2b-7a6f', intentos: 0 });
+  });
+
+  it('codifica los identificadores del aviso y del evento en la dirección', () => {
+    servicio.reenviarAviso('a/b').subscribe();
+    http.expectOne(`${BASE}/bandeja/a%2Fb/reenvio`).flush({});
+
+    servicio.reintentarEventoFallido('c/d').subscribe();
+    http.expectOne(`${BASE}/pagos/eventos-fallidos/c%2Fd/reintento`).flush({});
+  });
 });
