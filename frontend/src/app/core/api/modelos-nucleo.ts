@@ -52,3 +52,8 @@ export type CheckoutPago = Esquemas['Checkout'];
 /** Un intento de pago de una solicitud, con su estado y el id de la transacción en la pasarela (RF-52). */
 export type IntentoPago = Esquemas['IntentoPago'];
 export type EstadoIntento = Esquemas['EstadoIntento'];
+
+/** Un prestador como lo ve el administrador para asignarle su operador (RF-81). */
+export type PrestadorAdmin = Esquemas['PrestadorAdmin'];
+/** Un prestador que la recomendación muestra más de lo que le corresponde (RET-02). */
+export type AlertaSesgo = Esquemas['AlertaSesgo'];

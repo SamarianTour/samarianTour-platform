@@ -1,0 +1,33 @@
+<aside class="lateral">
+  @if (cuenta(); as actual) {
+    <div class="identidad">
+      <span class="identidad__avatar" aria-hidden="true">{{ actual.nombre.trim().charAt(0).toUpperCase() }}</span>
+      <div class="identidad__datos">
+        <p class="rotulo">{{ rol() | t }}</p>
+        <p class="identidad__nombre">{{ actual.nombre }}</p>
+      </div>
+    </div>
+  }
+
+  <nav aria-labelledby="panel-titulo">
+    <p class="rotulo" id="panel-titulo">{{ titulo() | t }}</p>
+    <ul class="menu">
+      @for (enlace of enlaces(); track enlace.ruta) {
+        <li>
+          <a
+            [routerLink]="enlace.ruta"
+            [class.activo]="activo(enlace)"
+            [attr.aria-current]="activo(enlace) ? 'page' : null"
+          >
+            <app-icono [nombre]="enlace.icono" />
+            {{ enlace.clave | t }}
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+</aside>
+
+<div class="contenido">
+  <router-outlet />
+</div>

@@ -40,6 +40,13 @@ export const APP = diccionario(
     'app.titulo.atenderSolicitud': 'Atender solicitud',
     'app.titulo.indicadores': 'Indicadores',
     'app.titulo.administracion': 'Administración',
+    'app.titulo.prestadoresRnt': 'Prestadores y RNT',
+    'app.titulo.moderacion': 'Moderación',
+    'app.titulo.cuentasInternas': 'Cuentas internas',
+    'app.titulo.comisionPagos': 'Comisión y pagos',
+    'app.titulo.zonasAdmin': 'Zonas',
+    'app.titulo.alertasSesgo': 'Alertas de sesgo',
+    'app.titulo.pendientesTecnicos': 'Pendientes técnicos',
     'app.titulo.misOfertas': 'Mis ofertas',
     'app.titulo.publicarOferta': 'Publicar oferta',
     'app.titulo.detalleOferta': 'Detalle de la oferta',
@@ -60,9 +67,6 @@ export const APP = diccionario(
     'app.proximamente.gestor.nombre': 'Panel de indicadores',
     'app.proximamente.gestor.descripcion':
       'Aquí verás la demanda por zona, el embudo de solicitudes y la distribución por categorías del destino.',
-    'app.proximamente.admin.nombre': 'Administración',
-    'app.proximamente.admin.descripcion':
-      'Aquí revisarás los prestadores y su RNT, la moderación de ofertas y opiniones, las cuentas internas y las zonas.',
   },
   {
     'app.saltar': 'Skip to content',
@@ -95,6 +99,13 @@ export const APP = diccionario(
     'app.titulo.atenderSolicitud': 'Handle request',
     'app.titulo.indicadores': 'Indicators',
     'app.titulo.administracion': 'Administration',
+    'app.titulo.prestadoresRnt': 'Providers and RNT',
+    'app.titulo.moderacion': 'Moderation',
+    'app.titulo.cuentasInternas': 'Internal accounts',
+    'app.titulo.comisionPagos': 'Commission and payments',
+    'app.titulo.zonasAdmin': 'Areas',
+    'app.titulo.alertasSesgo': 'Bias alerts',
+    'app.titulo.pendientesTecnicos': 'Technical issues',
     'app.titulo.misOfertas': 'My offers',
     'app.titulo.publicarOferta': 'Publish offer',
     'app.titulo.detalleOferta': 'Offer details',
@@ -114,8 +125,5 @@ export const APP = diccionario(
     'app.proximamente.gestor.nombre': 'Indicators dashboard',
     'app.proximamente.gestor.descripcion':
       "Here you'll see demand by area, the request funnel and the breakdown by category for the destination.",
-    'app.proximamente.admin.nombre': 'Administration',
-    'app.proximamente.admin.descripcion':
-      'Here you will review providers and their RNT, moderate offers and reviews, and manage internal accounts and areas.',
   },
 );

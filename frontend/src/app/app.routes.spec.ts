@@ -52,7 +52,9 @@ describe('rutas de la aplicación', () => {
       '/operador/historial',
       '/operador/avisos',
       '/gestor',
+      '/admin',
       '/admin/zonas',
+      '/admin/alertas-sesgo',
       '/sin-permiso',
       '/mis-datos',
     ])('%s lleva a iniciar sesión y recuerda la página', async (url) => {
@@ -76,7 +78,13 @@ describe('rutas de la aplicación', () => {
       ['OPERADOR_DISPONIBILIDAD', '/operador/historial'],
       ['OPERADOR_DISPONIBILIDAD', '/operador/avisos'],
       ['GESTOR_DESTINO', '/gestor'],
+      ['ADMINISTRADOR', '/admin'],
       ['ADMINISTRADOR', '/admin/zonas'],
+      ['ADMINISTRADOR', '/admin/moderacion'],
+      ['ADMINISTRADOR', '/admin/cuentas'],
+      ['ADMINISTRADOR', '/admin/comision'],
+      ['ADMINISTRADOR', '/admin/alertas-sesgo'],
+      ['ADMINISTRADOR', '/admin/pendientes'],
     ] as const)('un %s entra a %s', async (rol, url) => {
       conSesion(rol);
 
@@ -86,6 +94,8 @@ describe('rutas de la aplicación', () => {
     it.each([
       ['TURISTA', '/prestador/ofertas'],
       ['TURISTA', '/admin'],
+      ['TURISTA', '/admin/alertas-sesgo'],
+      ['OPERADOR_DISPONIBILIDAD', '/admin/cuentas'],
       ['PRESTADOR', '/mis-opiniones'],
       ['PRESTADOR', '/turista/solicitudes/abc'],
       ['PRESTADOR', '/turista/solicitar/abc'],
