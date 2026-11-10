@@ -162,7 +162,17 @@ describe('pantallas que crea cada ruta', () => {
     });
 
     // Las secciones que llegan en los siguientes commits ya tienen su ruta dentro del panel.
-    it.each(['/prestador/rnt', '/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
+    // P03.1: el RNT se lee en el núcleo.
+    it('el prestador abre su RNT y este pide su registro', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/rnt', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-rnt-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
+    });
+
+    it.each(['/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
       'el prestador abre su panel en %s y dentro se crea una pantalla',
       async (url) => {
         conSesion('PRESTADOR');

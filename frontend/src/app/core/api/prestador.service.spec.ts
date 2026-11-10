@@ -61,6 +61,39 @@ describe('PrestadorService', () => {
     expect(fallo).toBeUndefined();
   });
 
+  it('registra el RNT y el tipo con POST', () => {
+    let recibido: PrestadorPropio | undefined;
+    const cuerpo = { numeroRnt: '910006', tipo: 'AGENCIA_OPERADORA', numeroEmpleados: 14 } as const;
+
+    servicio.registrar(cuerpo).subscribe((prestador) => (recibido = prestador));
+
+    const peticion = http.expectOne(`${BASE}/registro`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual(cuerpo);
+    peticion.flush(PRESTADOR);
+    expect(recibido).toEqual(PRESTADOR);
+  });
+
+  it('cambia el número de RNT con PUT y solo manda el número', () => {
+    servicio.cambiarRnt('123456').subscribe();
+
+    const peticion = http.expectOne(`${BASE}/rnt`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual({ numeroRnt: '123456' });
+    peticion.flush(PRESTADOR);
+  });
+
+  it('cambia el tipo con PUT', () => {
+    const cuerpo = { tipo: 'GUIA_INDEPENDIENTE', modalidades: ['KAYAK'], idiomas: ['es'] } as const;
+
+    servicio.cambiarTipo({ ...cuerpo, modalidades: ['KAYAK'], idiomas: ['es'] }).subscribe();
+
+    const peticion = http.expectOne(`${BASE}/tipo`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual(cuerpo);
+    peticion.flush(PRESTADOR);
+  });
+
   it('cualquier otro fallo sigue siendo un fallo', () => {
     let fallo: unknown;
 

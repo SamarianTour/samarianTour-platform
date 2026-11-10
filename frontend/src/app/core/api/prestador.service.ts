@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { aErrorApi } from '../errores/errores.interceptor';
 import { API_NUCLEO } from './api.config';
-import { PrestadorPropio } from './modelos-nucleo';
+import { DatosTipoRequest, PrestadorPropio, RegistroPrestadorRequest } from './modelos-nucleo';
 
 const BASE = `${API_NUCLEO}/prestador`;
 
@@ -26,5 +26,24 @@ export class PrestadorService {
         aErrorApi(fallo).codigo === 'PRESTADOR_NO_REGISTRADO' ? of(null) : throwError(() => fallo),
       ),
     );
+  }
+
+  /**
+   * Registra el RNT y el tipo (RF-62, RF-63, RF-68 a RF-70). El núcleo consulta el RNT en la fuente oficial, que puede tardar
+   * unos segundos (si no responde en 3 s queda `VERIFICACION_PENDIENTE`): por eso no se le pone ningún tiempo máximo.
+   * Después hay que renovar la sesión para que el token traiga el tipo.
+   */
+  registrar(cuerpo: RegistroPrestadorRequest): Observable<PrestadorPropio> {
+    return this.http.post<PrestadorPropio>(`${BASE}/registro`, cuerpo);
+  }
+
+  /** Cambia el número de RNT y lo vuelve a validar. */
+  cambiarRnt(numeroRnt: string): Observable<PrestadorPropio> {
+    return this.http.put<PrestadorPropio>(`${BASE}/rnt`, { numeroRnt });
+  }
+
+  /** Cambia el tipo y sus campos condicionales (RF-68, RF-69). Después hay que renovar la sesión. */
+  cambiarTipo(cuerpo: DatosTipoRequest): Observable<PrestadorPropio> {
+    return this.http.put<PrestadorPropio>(`${BASE}/tipo`, cuerpo);
   }
 }

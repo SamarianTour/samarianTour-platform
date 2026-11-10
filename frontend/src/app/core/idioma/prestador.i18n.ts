@@ -57,6 +57,60 @@ export const PRESTADOR = diccionario(
     'prestador.inicio.accesos.cuentaCobro':
       'La cuenta donde recibes lo que te corresponde por cada pago. La comisión se descuenta de lo que recibes; nunca se suma al turista.',
 
+    // RNT y tipo de prestador (P03.1)
+    'prestador.rnt.intro':
+      'Tu RNT (Registro Nacional de Turismo) muestra que eres un prestador formal. Sin un RNT activo no puedes publicar ofertas y las que tengas no se muestran en el catálogo.',
+    'prestador.rnt.cargando': 'Cargando tu RNT…',
+    'prestador.rnt.estado.titulo': 'Validación de tu RNT',
+    'prestador.rnt.activo': 'Tu RNT está activo y vigente. Puedes publicar ofertas.',
+    'prestador.rnt.municipio': 'Municipio',
+    'prestador.rnt.categoria': 'Categoría',
+    'prestador.rnt.categoria.GUIA_INDEPENDIENTE': 'Guía independiente',
+    'prestador.rnt.categoria.MICRO_PEQUENO': 'Micro o pequeña empresa',
+    'prestador.rnt.categoria.MEDIANO': 'Mediana empresa',
+    'prestador.rnt.categoria.GRANDE': 'Gran empresa',
+    'prestador.rnt.publicar': 'Publicar ofertas',
+    'prestador.rnt.publicarSi': 'Sí, puedes publicar',
+    'prestador.rnt.publicarNo': 'Todavía no',
+    'prestador.rnt.registrar.titulo': 'Registra tu RNT',
+    'prestador.rnt.registrar.texto':
+      'Escribe el número de tu certificado y elige tu tipo de prestador. Lo validamos contra el registro oficial; puede tardar unos segundos.',
+    'prestador.rnt.registrar.boton': 'Validar y registrar',
+    'prestador.rnt.cambiar.titulo': 'Cambiar el número de RNT',
+    'prestador.rnt.cambiar.texto':
+      'Lo validamos de nuevo contra el registro oficial. Si con el número nuevo cambia si puedes publicar, tus ofertas se mostrarán o se ocultarán en el catálogo.',
+    'prestador.rnt.cambiar.boton': 'Validar el número nuevo',
+    'prestador.rnt.numeroNuevo': 'Número de RNT nuevo',
+    'prestador.rnt.ayudaNumero': 'Solo el número, sin letras ni espacios (hasta 10 dígitos).',
+    'prestador.rnt.tipo.titulo': 'Tipo de prestador',
+    'prestador.rnt.tipo.texto':
+      'El tipo tiene que coincidir con la categoría de tu RNT. Al guardarlo actualizamos tu sesión para que se vea al instante.',
+    'prestador.rnt.tipo.boton': 'Guardar el tipo',
+    'prestador.rnt.elegirTipo': 'Elige tu tipo de prestador…',
+    'prestador.rnt.modalidades': 'Modalidades que ofreces',
+    'prestador.rnt.idiomas': 'Idiomas en los que atiendes',
+    'prestador.rnt.empleados': 'Número de empleados',
+    'prestador.rnt.validando': 'Validando…',
+    'prestador.rnt.puedeTardar': 'Estamos consultando el registro oficial. Esto puede tardar unos segundos.',
+    'prestador.rnt.tipoGuardado': 'Guardaste tu tipo de prestador.',
+    'prestador.rnt.sesionSinActualizar':
+      'Guardamos los cambios, pero no pudimos actualizar tu sesión. Cierra la sesión y vuelve a entrar para que se vea tu tipo de prestador.',
+    'prestador.rnt.resultado.ACTIVO': 'Validamos tu RNT: está activo. Ya puedes publicar ofertas.',
+    'prestador.rnt.resultado.VERIFICACION_PENDIENTE':
+      'Guardamos tu RNT, pero el registro oficial no respondió a tiempo. Lo revisaremos en la siguiente sincronización.',
+    'prestador.rnt.resultado.NO_ENCONTRADO':
+      'Guardamos tu RNT, pero no lo encontramos en el registro oficial. Revisa el número y cámbialo si hace falta.',
+    'prestador.rnt.resultado.INACTIVO':
+      'Guardamos tu RNT, pero el registro oficial lo muestra inactivo. Tus ofertas no se verán hasta que vuelva a estar activo.',
+    'prestador.rnt.error.numeroRequerido': 'Escribe tu número de RNT.',
+    'prestador.rnt.error.numeroInvalido': 'El número de RNT solo lleva dígitos (hasta 10).',
+    'prestador.rnt.error.tipoRequerido': 'Elige tu tipo de prestador.',
+    'prestador.rnt.error.empleadosRequerido': 'Escribe cuántos empleados tienes.',
+    'prestador.rnt.error.empleadosRango': 'Escribe un número entero de empleados, de 1 a 100000.',
+    'prestador.rnt.error.modalidadesRequerida': 'Elige al menos una modalidad.',
+    'prestador.rnt.error.idiomasRequerido': 'Escribe al menos un idioma.',
+    'prestador.rnt.error.idiomasInvalidos': 'Cada idioma lleva un código de dos letras, por ejemplo: es, en.',
+
     // Mis ofertas
     'prestador.ofertas.subtitulo':
       'Cada oferta nueva o editada pasa por moderación antes de verse en el catálogo.',
@@ -259,6 +313,60 @@ export const PRESTADOR = diccionario(
       'The number where you receive notices about requests. It is never shown to the public.',
     'prestador.inicio.accesos.cuentaCobro':
       "The account where you receive what you are owed for each payment. The commission is deducted from what you receive and is never added to the tourist's price.",
+
+    // RNT and provider type (P03.1)
+    'prestador.rnt.intro':
+      "Your RNT (National Tourism Registry) shows that you are a registered provider. Without an active RNT you can't publish offers, and the ones you have are not shown in the catalog.",
+    'prestador.rnt.cargando': 'Loading your RNT…',
+    'prestador.rnt.estado.titulo': 'RNT validation',
+    'prestador.rnt.activo': 'Your RNT is active and valid. You can publish offers.',
+    'prestador.rnt.municipio': 'Municipality',
+    'prestador.rnt.categoria': 'Category',
+    'prestador.rnt.categoria.GUIA_INDEPENDIENTE': 'Independent guide',
+    'prestador.rnt.categoria.MICRO_PEQUENO': 'Micro or small business',
+    'prestador.rnt.categoria.MEDIANO': 'Medium-sized business',
+    'prestador.rnt.categoria.GRANDE': 'Large business',
+    'prestador.rnt.publicar': 'Publish offers',
+    'prestador.rnt.publicarSi': 'Yes, you can publish',
+    'prestador.rnt.publicarNo': 'Not yet',
+    'prestador.rnt.registrar.titulo': 'Register your RNT',
+    'prestador.rnt.registrar.texto':
+      'Enter the number on your certificate and choose your provider type. We check it against the official registry; this can take a few seconds.',
+    'prestador.rnt.registrar.boton': 'Validate and register',
+    'prestador.rnt.cambiar.titulo': 'Change the RNT number',
+    'prestador.rnt.cambiar.texto':
+      'We validate it again against the official registry. If the new number changes whether you can publish, your offers will be shown or hidden in the catalog.',
+    'prestador.rnt.cambiar.boton': 'Validate the new number',
+    'prestador.rnt.numeroNuevo': 'New RNT number',
+    'prestador.rnt.ayudaNumero': 'Digits only, no letters or spaces (up to 10 digits).',
+    'prestador.rnt.tipo.titulo': 'Provider type',
+    'prestador.rnt.tipo.texto':
+      'The type has to match the category of your RNT. When you save it we update your session so it shows right away.',
+    'prestador.rnt.tipo.boton': 'Save the type',
+    'prestador.rnt.elegirTipo': 'Choose your provider type…',
+    'prestador.rnt.modalidades': 'Modalities you offer',
+    'prestador.rnt.idiomas': 'Languages you speak with guests',
+    'prestador.rnt.empleados': 'Number of employees',
+    'prestador.rnt.validando': 'Validating…',
+    'prestador.rnt.puedeTardar': 'We are checking the official registry. This can take a few seconds.',
+    'prestador.rnt.tipoGuardado': 'You saved your provider type.',
+    'prestador.rnt.sesionSinActualizar':
+      "We saved your changes, but we couldn't update your session. Log out and log back in to see your provider type.",
+    'prestador.rnt.resultado.ACTIVO': 'We validated your RNT: it is active. You can now publish offers.',
+    'prestador.rnt.resultado.VERIFICACION_PENDIENTE':
+      'We saved your RNT, but the official registry did not respond in time. We will check it at the next synchronization.',
+    'prestador.rnt.resultado.NO_ENCONTRADO':
+      'We saved your RNT, but we could not find it in the official registry. Check the number and change it if needed.',
+    'prestador.rnt.resultado.INACTIVO':
+      'We saved your RNT, but the official registry shows it as inactive. Your offers will not be shown until it is active again.',
+    'prestador.rnt.error.numeroRequerido': 'Enter your RNT number.',
+    'prestador.rnt.error.numeroInvalido': 'The RNT number has digits only (up to 10).',
+    'prestador.rnt.error.tipoRequerido': 'Choose your provider type.',
+    'prestador.rnt.error.empleadosRequerido': 'Enter how many employees you have.',
+    'prestador.rnt.error.empleadosRango': 'Enter a whole number of employees, from 1 to 100000.',
+    'prestador.rnt.error.modalidadesRequerida': 'Choose at least one modality.',
+    'prestador.rnt.error.idiomasRequerido': 'Enter at least one language.',
+    'prestador.rnt.error.idiomasInvalidos': 'Each language is a two-letter code, for example: es, en.',
 
     'prestador.ofertas.subtitulo':
       'Every new or edited offer goes through moderation before it appears in the catalog.',

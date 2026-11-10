@@ -42,8 +42,7 @@ export const RUTAS_PRESTADOR: Routes = [
       {
         path: 'rnt',
         title: 'app.titulo.rntPrestador',
-        data: { codigo: 'P03.1', nombre: 'app.titulo.rntPrestador' },
-        loadComponent: proximamente,
+        loadComponent: () => import('./rnt/rnt-prestador').then((modulo) => modulo.RntPrestador),
       },
       {
         path: 'perfil',
