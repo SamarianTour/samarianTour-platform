@@ -14,6 +14,7 @@ import { RecuperarContrasena } from './features/cuentas/recuperar-contrasena/rec
 import { Registro } from './features/cuentas/registro/registro';
 import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena/restablecer-contrasena';
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
+import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
 import { DetalleSolicitud } from './features/turista/solicitudes/detalle-solicitud/detalle-solicitud';
@@ -125,13 +126,26 @@ describe('pantallas que crea cada ruta', () => {
     });
 
     it.each([
-      ['OPERADOR_DISPONIBILIDAD', '/operador'],
       ['GESTOR_DESTINO', '/gestor'],
       ['ADMINISTRADOR', '/admin'],
     ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {
       conSesion(rol);
 
       await ir(url, Proximamente);
+    });
+
+    // El operador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
+    it.each([
+      '/operador',
+      '/operador/historial',
+      '/operador/avisos',
+      '/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20',
+    ])('el operador abre su panel en %s y dentro se crea una pantalla', async (url) => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir(url, PanelOperador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
     });
   });
 });

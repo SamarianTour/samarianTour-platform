@@ -2,6 +2,7 @@ import { Route } from '@angular/router';
 import { routes } from './app.routes';
 import { TEXTOS } from './core/idioma/textos';
 import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
+import { RUTAS_OPERADOR } from './features/operador/operador.routes';
 import { RUTAS_PRESTADOR } from './features/prestador/prestador.routes';
 import { RUTAS_TURISTA } from './features/turista/turista.routes';
 
@@ -21,6 +22,7 @@ const TODAS = [
   ...recorrer(RUTAS_CUENTAS),
   ...recorrer(RUTAS_TURISTA, '(turista)'),
   ...recorrer(RUTAS_PRESTADOR, 'prestador'),
+  ...recorrer(RUTAS_OPERADOR, 'operador'),
 ];
 
 describe('títulos y textos de las rutas', () => {

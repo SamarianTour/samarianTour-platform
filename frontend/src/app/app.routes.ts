@@ -59,18 +59,8 @@ export const routes: Routes = [
   {
     path: 'operador',
     canActivate: [rolGuard('OPERADOR_DISPONIBILIDAD')],
-    children: [
-      {
-        path: '**',
-        title: 'app.titulo.cola',
-        data: {
-          codigo: 'P02.4',
-          nombre: 'app.proximamente.operador.nombre',
-          descripcion: 'app.proximamente.operador.descripcion',
-        },
-        loadComponent: proximamente,
-      },
-    ],
+    loadChildren: () =>
+      import('./features/operador/operador.routes').then((modulo) => modulo.RUTAS_OPERADOR),
   },
   {
     path: 'gestor',
