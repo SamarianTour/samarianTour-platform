@@ -483,6 +483,115 @@ describe('DetalleSolicitud (P02.2)', () => {
     });
   });
 
+  describe('confirmar o declinar (P02.3)', () => {
+    const bloque = () => raiz().querySelector('app-responder-condiciones');
+    const boton = (n: number) =>
+      raiz().querySelectorAll<HTMLButtonElement>(
+        'app-responder-condiciones .decision__acciones button',
+      )[n];
+    const respuesta = () => http.expectOne(`${URL}/respuesta`);
+
+    beforeAll(() => {
+      // jsdom no trae el comportamiento del <dialog>: se imita lo mínimo que usa el componente.
+      HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+        this.setAttribute('open', '');
+      };
+      HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+        this.removeAttribute('open');
+        this.dispatchEvent(new Event('close'));
+      };
+    });
+
+    it('solo una solicitud atendida se puede responder', () => {
+      crear(ATENDIDA);
+      expect(bloque()).not.toBeNull();
+    });
+
+    it.each(['PENDIENTE', 'CONFIRMADA', 'DECLINADA', 'PAGO_FALLIDO', 'PAGADA', 'VENCIDA'] as const)(
+      '%s no muestra la decisión',
+      (estado) => {
+        crear(solicitud(estado));
+
+        expect(bloque()).toBeNull();
+      },
+    );
+
+    it('muestra lo que propuso el operador y el plazo junto a los botones', () => {
+      crear(ATENDIDA);
+
+      expect(texto()).toContain('Total a pagar$ 300.000');
+      expect(texto()).toContain('Incluye el ingreso al parque');
+      expect(raiz().querySelector('.plazo')?.textContent).toContain('Te quedan 3 h 0 min');
+      expect(boton(0).textContent).toContain('Confirmar condiciones');
+    });
+
+    it('confirmar deja la solicitud "Por pagar", sin el bloque de decisión y con el foco en el título', () => {
+      crear(ATENDIDA);
+
+      boton(0).click();
+      fixture.detectChanges();
+      respuesta().flush({
+        ...ATENDIDA,
+        estado: 'CONFIRMADA',
+        actualizadaEn: '2026-10-26T15:05:00',
+      });
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Por pagar');
+      expect(bloque()).toBeNull();
+      expect(texto()).toContain('Total a pagar$ 300.000');
+      expect(
+        Array.from(raiz().querySelectorAll('app-pasos-solicitud li.paso')).map((p) =>
+          p.getAttribute('aria-current'),
+        ),
+      ).toEqual([null, null, 'step', null]);
+      expect(document.activeElement?.id).toBe('titulo-solicitud');
+    });
+
+    it('declinar, tras confirmarlo en el diálogo, cierra la solicitud', () => {
+      crear(ATENDIDA);
+
+      boton(1).click();
+      fixture.detectChanges();
+      raiz().querySelector<HTMLButtonElement>('dialog .boton--peligro')!.click();
+      fixture.detectChanges();
+      respuesta().flush({ ...ATENDIDA, estado: 'DECLINADA', venceEn: undefined });
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Declinada');
+      expect(bloque()).toBeNull();
+      expect(raiz().querySelector('.plazo')).toBeNull();
+      expect(raiz().querySelector('app-pasos-solicitud')).toBeNull();
+    });
+
+    it('si el núcleo dice que el plazo venció, consulta el estado real y lo muestra', () => {
+      crear(ATENDIDA);
+
+      boton(0).click();
+      respuesta().flush(
+        { status: 409, codigo: 'PLAZO_VENCIDO' },
+        { status: 409, statusText: 'Conflict' },
+      );
+      fixture.detectChanges();
+      consulta().flush(solicitud('VENCIDA', { venceEn: undefined }));
+      fixture.detectChanges();
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Vencida');
+      expect(bloque()).toBeNull();
+    });
+
+    it('con el plazo vencido en pantalla, los botones están deshabilitados mientras se consulta', () => {
+      crear(ATENDIDA);
+
+      vi.advanceTimersByTime(3 * HORA + 60_000);
+      fixture.detectChanges();
+
+      expect(boton(0).disabled).toBe(true);
+      expect(boton(1).disabled).toBe(true);
+      consulta().flush(ATENDIDA);
+    });
+  });
+
   describe('inglés', () => {
     it('todo cambia al instante: estado, datos, condiciones, historial y plazo', () => {
       crear(ATENDIDA);

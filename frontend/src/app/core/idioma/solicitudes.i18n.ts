@@ -156,6 +156,22 @@ export const SOLICITUDES = diccionario(
     'solicitudes.detalle.historial': 'Historial',
     'solicitudes.detalle.motivo': 'Motivo: {motivo}',
     'solicitudes.detalle.errorActualizar': 'No pudimos actualizar el estado.',
+
+    // P02.3 Confirmar o declinar las condiciones
+    'solicitudes.decision.titulo': 'Tu decisión',
+    'solicitudes.decision.texto':
+      'Si confirmas, la solicitud queda confirmada y podrás pagar dentro del plazo. Si declinas, el cupo queda libre y no se cobra nada.',
+    'solicitudes.decision.hasta':
+      'Tienes hasta el {fecha} para decidir. Después, la solicitud vence.',
+    'solicitudes.decision.confirmar': 'Confirmar condiciones',
+    'solicitudes.decision.confirmando': 'Confirmando…',
+    'solicitudes.decision.declinar': 'Declinar',
+    'solicitudes.decision.declinando': 'Declinando…',
+    'solicitudes.decision.dialogoTitulo': '¿Declinar esta solicitud?',
+    'solicitudes.decision.dialogoMensaje':
+      'No se generará ningún cobro. El cupo quedará libre y podrás volver a solicitar la oferta más adelante.',
+    'solicitudes.decision.confirmada': 'Confirmaste las condiciones.',
+    'solicitudes.decision.declinada': 'Declinaste la solicitud. El cupo quedó libre.',
   },
   {
     'solicitudes.estado.PENDIENTE': 'Pending',
@@ -300,5 +316,20 @@ export const SOLICITUDES = diccionario(
     'solicitudes.detalle.historial': 'History',
     'solicitudes.detalle.motivo': 'Reason: {motivo}',
     'solicitudes.detalle.errorActualizar': "We couldn't update the status.",
+
+    'solicitudes.decision.titulo': 'Your decision',
+    'solicitudes.decision.texto':
+      'If you confirm, the request is confirmed and you will be able to pay within the deadline. If you decline, the spot is released and nothing is charged.',
+    'solicitudes.decision.hasta':
+      'You have until {fecha} to decide. After that, the request expires.',
+    'solicitudes.decision.confirmar': 'Confirm terms',
+    'solicitudes.decision.confirmando': 'Confirming…',
+    'solicitudes.decision.declinar': 'Decline',
+    'solicitudes.decision.declinando': 'Declining…',
+    'solicitudes.decision.dialogoTitulo': 'Decline this request?',
+    'solicitudes.decision.dialogoMensaje':
+      'Nothing will be charged. The spot will be released and you can request the offer again later.',
+    'solicitudes.decision.confirmada': 'You confirmed the terms.',
+    'solicitudes.decision.declinada': 'You declined the request. The spot was released.',
   },
 );

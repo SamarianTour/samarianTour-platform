@@ -43,7 +43,7 @@
         </span>
         <div class="detalle__titulo">
           <p class="rotulo">{{ etiquetaTipo[s.oferta.tipo] }}</p>
-          <h1>{{ s.oferta.nombre }}</h1>
+          <h1 id="titulo-solicitud" tabindex="-1">{{ s.oferta.nombre }}</h1>
         </div>
         <span class="etiqueta" [class]="claseDeEstado[s.estado]">{{ etiquetaEstado[s.estado] }}</span>
       </header>
@@ -146,6 +146,15 @@
                 }
               </dl>
             </section>
+          }
+
+          @if (s.estado === 'ATENDIDA') {
+            <app-responder-condiciones
+              [solicitud]="s"
+              [plazoVencido]="plazo().nivel === 'vencido'"
+              (respondida)="alResponder($event)"
+              (reconsultar)="reconsultar()"
+            />
           }
         </div>
 

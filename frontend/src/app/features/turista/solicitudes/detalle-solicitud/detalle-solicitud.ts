@@ -1,4 +1,14 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, map, merge, of, switchMap, tap } from 'rxjs';
@@ -16,6 +26,7 @@ import { FechaPipe } from '../../../../shared/fecha.pipe';
 import { ICONO_DE_TIPO, Icono } from '../../../../shared/icono/icono';
 import { PasosSolicitud } from '../../../../shared/pasos-solicitud/pasos-solicitud';
 import { PrecioPipe } from '../../../../shared/precio.pipe';
+import { ResponderCondiciones } from '../responder-condiciones/responder-condiciones';
 import {
   AccionSolicitud,
   CLASE_DE_ESTADO_SOLICITUD,
@@ -45,7 +56,7 @@ type Estado =
  */
 @Component({
   selector: 'app-detalle-solicitud',
-  imports: [RouterLink, Icono, TPipe, FechaPipe, PrecioPipe, PasosSolicitud],
+  imports: [RouterLink, Icono, TPipe, FechaPipe, PrecioPipe, PasosSolicitud, ResponderCondiciones],
   templateUrl: './detalle-solicitud.html',
   styleUrl: './detalle-solicitud.css',
 })
@@ -55,6 +66,8 @@ export class DetalleSolicitud {
 
   private readonly servicio = inject(SolicitudesService);
   private readonly catalogo = inject(CatalogoService);
+  private readonly injector = inject(Injector);
+  private readonly anfitrion = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly recarga = new Subject<void>();
   /** Las veces que el plazo ya terminó y se volvió a consultar, por versión de la solicitud: una sola consulta cada vez. */
   private readonly reconsultadas = new Set<string>();
@@ -107,6 +120,21 @@ export class DetalleSolicitud {
     return hora ? normalizarHora(hora) : null;
   });
   protected readonly codigo = computed(() => this.solicitud()?.id.slice(0, 8).toUpperCase() ?? '');
+
+  /** El turista confirmó o declinó: se muestra el estado nuevo y el foco va al título, para que se anuncie el cambio. */
+  protected alResponder(solicitud: SolicitudTurista): void {
+    this.errorDeActualizacion.set(null);
+    this.estado.set({ tipo: 'lista', solicitud });
+    afterNextRender(
+      () => this.anfitrion.nativeElement.querySelector<HTMLElement>('#titulo-solicitud')?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  /** El núcleo dijo que la solicitud cambió por su lado (el plazo venció, ya estaba cerrada): se consulta su estado real. */
+  protected reconsultar(): void {
+    this.recarga.next();
+  }
 
   constructor() {
     this.catalogo
