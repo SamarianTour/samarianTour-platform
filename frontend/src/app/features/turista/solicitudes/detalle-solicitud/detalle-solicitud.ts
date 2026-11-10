@@ -11,10 +11,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { Subject, catchError, map, merge, of, switchMap, tap } from 'rxjs';
+import { Subject, catchError, distinctUntilChanged, map, merge, of, switchMap, tap } from 'rxjs';
 import { CatalogoService } from '../../../../core/api/catalogo.service';
 import { Zona } from '../../../../core/api/modelos';
-import { SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { IntentoPago, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { PagosService } from '../../../../core/api/pagos.service';
 import { reconsultas$ } from '../../../../core/api/reconsulta';
 import { SolicitudesService } from '../../../../core/api/solicitudes.service';
 import { ErrorApi } from '../../../../core/errores/error-api';
@@ -26,6 +27,7 @@ import { FechaPipe } from '../../../../shared/fecha.pipe';
 import { ICONO_DE_TIPO, Icono } from '../../../../shared/icono/icono';
 import { PasosSolicitud } from '../../../../shared/pasos-solicitud/pasos-solicitud';
 import { PrecioPipe } from '../../../../shared/precio.pipe';
+import { PagarSolicitud } from '../pagar-solicitud/pagar-solicitud';
 import { ResponderCondiciones } from '../responder-condiciones/responder-condiciones';
 import {
   AccionSolicitud,
@@ -56,7 +58,16 @@ type Estado =
  */
 @Component({
   selector: 'app-detalle-solicitud',
-  imports: [RouterLink, Icono, TPipe, FechaPipe, PrecioPipe, PasosSolicitud, ResponderCondiciones],
+  imports: [
+    RouterLink,
+    Icono,
+    TPipe,
+    FechaPipe,
+    PrecioPipe,
+    PasosSolicitud,
+    ResponderCondiciones,
+    PagarSolicitud,
+  ],
   templateUrl: './detalle-solicitud.html',
   styleUrl: './detalle-solicitud.css',
 })
@@ -66,6 +77,7 @@ export class DetalleSolicitud {
 
   private readonly servicio = inject(SolicitudesService);
   private readonly catalogo = inject(CatalogoService);
+  private readonly pagos = inject(PagosService);
   private readonly injector = inject(Injector);
   private readonly anfitrion = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly recarga = new Subject<void>();
@@ -84,6 +96,8 @@ export class DetalleSolicitud {
   /** Una reconsulta falló pero se conserva lo que ya se veía. */
   protected readonly errorDeActualizacion = signal<ErrorApi | null>(null);
   private readonly zonas = signal<readonly Zona[]>([]);
+  /** Los intentos de pago, mientras la solicitud está por pagar o con el pago fallido; si no hay o no se pudieron leer, vacío. */
+  protected readonly intentos = signal<readonly IntentoPago[]>([]);
 
   protected readonly solicitud = computed(() => {
     const estado = this.estado();
@@ -180,6 +194,24 @@ export class DetalleSolicitud {
     reconsultas$()
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.recarga.next());
+
+    // Los intentos de pago solo importan mientras la solicitud se puede pagar. Se piden de nuevo cuando la solicitud cambia.
+    toObservable(this.solicitud)
+      .pipe(
+        map((solicitud) =>
+          solicitud && (solicitud.estado === 'CONFIRMADA' || solicitud.estado === 'PAGO_FALLIDO')
+            ? `${solicitud.id}:${solicitud.actualizadaEn}`
+            : null,
+        ),
+        distinctUntilChanged(),
+        switchMap((version) =>
+          version === null
+            ? of<IntentoPago[]>([])
+            : this.pagos.intentos(this.id()).pipe(catchError(() => of<IntentoPago[]>([]))),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((intentos) => this.intentos.set(intentos));
 
     // Cuando el plazo termina, el núcleo cierra la solicitud: se consulta una vez para ver su estado real.
     effect(() => {

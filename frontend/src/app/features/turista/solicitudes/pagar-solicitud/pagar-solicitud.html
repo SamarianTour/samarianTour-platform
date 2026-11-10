@@ -1,0 +1,62 @@
+<section class="tarjeta pago" aria-labelledby="pago-titulo">
+  <h2 id="pago-titulo">{{ 'pagos.pagar.titulo' | t }}</h2>
+
+  <dl class="pago__resumen">
+    <div>
+      <dt>{{ 'turista.misOpiniones.oferta' | t }}</dt>
+      <dd>{{ solicitud().oferta.nombre }}</dd>
+    </div>
+    <div>
+      <dt>{{ 'solicitudes.resumen.fecha' | t }}</dt>
+      <dd>{{ solicitud().fechaInicio | fecha: 'larga' }}@if (hora(); as horaDelServicio) {, {{ horaDelServicio }}}</dd>
+    </div>
+    <div>
+      <dt>{{ 'solicitudes.resumen.personas' | t }}</dt>
+      <dd>{{ solicitud().personas }}</dd>
+    </div>
+    <div class="pago__total">
+      <dt>{{ 'solicitudes.detalle.precioBase' | t }}</dt>
+      <dd>{{ total() | precio }}</dd>
+    </div>
+  </dl>
+  <p class="pago__nota texto-suave">{{ 'pagos.pagar.sinCargos' | t }}</p>
+
+  <p class="pago__externa">
+    <app-icono nombre="escudo" />
+    <span>{{ 'pagos.pagar.externa' | t }}</span>
+  </p>
+
+  <p class="pago__intentos">{{ aviso().texto }}</p>
+  @if (aviso().ultimo; as ultimo) {
+    <p class="alerta alerta--aviso" role="note">
+      <app-icono nombre="alerta" />
+      <span>{{ ultimo }}</span>
+    </p>
+  }
+
+  @if (plazoVencido()) {
+    <p class="alerta alerta--aviso" role="status">
+      <app-icono nombre="reloj" />
+      <span>{{ 'solicitudes.plazo.vencido' | t }}</span>
+    </p>
+  }
+
+  @if (error(); as mensaje) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ mensaje() }}</span>
+    </p>
+  }
+
+  <button type="button" class="boton boton--ancho" [disabled]="enviando() || !puede()" (click)="pagar()">
+    {{ (enviando() ? 'pagos.pagar.abriendo' : 'pagos.pagar.boton') | t: { total: (total() | precio) } }}
+  </button>
+
+  @if (urlAbierta(); as enlace) {
+    <p class="pago__manual" aria-live="polite">
+      <a [href]="enlace">{{ 'pagos.pagar.enlaceManual' | t }}</a>
+    </p>
+  }
+
+  <p class="pago__seguro texto-suave">{{ 'pagos.pagar.seguro' | t }}</p>
+</section>

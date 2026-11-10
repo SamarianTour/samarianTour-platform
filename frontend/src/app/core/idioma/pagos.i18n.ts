@@ -29,6 +29,20 @@ export const PAGOS = diccionario(
     'pagos.intentos.ninguno': 'No te quedan intentos de pago.',
     'pagos.intentos.ultimo':
       'Este es tu último intento: si el pago se rechaza, la solicitud vencerá.',
+
+    // P04.1 Pagar la solicitud
+    'pagos.pagar.titulo': 'Paga para asegurar tu cupo',
+    'pagos.pagar.sinCargos':
+      'Este total no tiene cargos adicionales para ti: la comisión de la plataforma se descuenta al prestador.',
+    'pagos.pagar.externa':
+      'Te llevamos a la pasarela de pago externa, donde eliges cómo pagar. Samarian Tour no pide ni guarda los datos de tu tarjeta.',
+    'pagos.pagar.boton': 'Pagar {total}',
+    'pagos.pagar.abriendo': 'Abriendo la pasarela…',
+    'pagos.pagar.seguro': 'Pago procesado por la pasarela externa, con conexión cifrada.',
+    'pagos.pagar.enlaceManual': 'Si la pasarela no se abre, continúa aquí.',
+    'pagos.pagar.sinUrl':
+      'No pudimos abrir la pasarela de pago. Inténtalo de nuevo en unos minutos.',
+    'pagos.lista.pagar': 'Pagar',
   },
   {
     'pagos.intento.estado.EN_CURSO': 'In progress',
@@ -52,5 +66,17 @@ export const PAGOS = diccionario(
     'pagos.intentos.ninguno': 'You have no payment attempts left.',
     'pagos.intentos.ultimo':
       'This is your last attempt: if the payment is rejected, the request will expire.',
+
+    'pagos.pagar.titulo': 'Pay to secure your spot',
+    'pagos.pagar.sinCargos':
+      'This total has no additional charges for you: the platform fee is deducted from the provider.',
+    'pagos.pagar.externa':
+      'We take you to the external payment gateway, where you choose how to pay. Samarian Tour does not ask for or store your card details.',
+    'pagos.pagar.boton': 'Pay {total}',
+    'pagos.pagar.abriendo': 'Opening the payment gateway…',
+    'pagos.pagar.seguro': 'Payment processed by the external gateway, over an encrypted connection.',
+    'pagos.pagar.enlaceManual': 'If the payment gateway does not open, continue here.',
+    'pagos.pagar.sinUrl': "We couldn't open the payment gateway. Try again in a few minutes.",
+    'pagos.lista.pagar': 'Pay',
   },
 );

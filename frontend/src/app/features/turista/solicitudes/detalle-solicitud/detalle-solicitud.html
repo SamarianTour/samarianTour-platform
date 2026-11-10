@@ -156,6 +156,15 @@
               (reconsultar)="reconsultar()"
             />
           }
+
+          @if (s.estado === 'CONFIRMADA') {
+            <app-pagar-solicitud
+              [solicitud]="s"
+              [intentos]="intentos()"
+              [plazo]="plazo()"
+              (reconsultar)="reconsultar()"
+            />
+          }
         </div>
 
         <aside class="detalle__lateral">

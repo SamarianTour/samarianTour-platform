@@ -59,6 +59,11 @@
                       'solicitudes.lista.verCondiciones' | t
                     }}</a>
                   }
+                  @case ('pagar') {
+                    <a class="boton" [routerLink]="['/turista/solicitudes', solicitud.id]">{{
+                      'pagos.lista.pagar' | t
+                    }}</a>
+                  }
                   @case ('volver-a-solicitar') {
                     <a class="boton boton--secundario" [routerLink]="['/turista/solicitar', solicitud.oferta.id]">{{
                       'solicitudes.lista.volverASolicitar' | t

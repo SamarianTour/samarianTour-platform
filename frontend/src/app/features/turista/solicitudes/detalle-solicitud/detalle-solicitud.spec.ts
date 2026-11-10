@@ -2,7 +2,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { EstadoSolicitud, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
+import { EstadoSolicitud, IntentoPago, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
 import { erroresInterceptor } from '../../../../core/errores/errores.interceptor';
 import { establecerIdioma } from '../../../../core/idioma/idioma';
 import { CLAVE_SESION, aSesionGuardada } from '../../../../core/sesion/almacen-sesion';
@@ -63,9 +63,13 @@ describe('DetalleSolicitud (P02.2)', () => {
   const raiz = () => fixture.nativeElement as HTMLElement;
   const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
   const consulta = () => http.expectOne(URL);
+  const bloqueDePago = () => raiz().querySelector('app-pagar-solicitud');
 
-  /** Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. */
-  function crear(contenido: SolicitudTurista, id = ID): void {
+  /**
+   * Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. Una solicitud por pagar también pide
+   * sus intentos de pago, que se responden con `intentos` (ninguno por defecto).
+   */
+  function crear(contenido: SolicitudTurista, id = ID, intentos: IntentoPago[] = []): void {
     localStorage.setItem(
       CLAVE_SESION,
       JSON.stringify(aSesionGuardada(respuestaDeSesion({ rol: 'TURISTA' }))),
@@ -76,6 +80,10 @@ describe('DetalleSolicitud (P02.2)', () => {
     http.expectOne('/api/catalogo/zonas').flush(ZONAS);
     http.expectOne(`/api/nucleo/turista/solicitudes/${id}`).flush(contenido);
     fixture.detectChanges();
+    if (contenido.estado === 'CONFIRMADA' || contenido.estado === 'PAGO_FALLIDO') {
+      http.expectOne(`/api/nucleo/turista/solicitudes/${id}/pagos`).flush(intentos);
+      fixture.detectChanges();
+    }
   }
 
   beforeEach(() => {
@@ -343,16 +351,12 @@ describe('DetalleSolicitud (P02.2)', () => {
       expect(lateral().textContent).toContain('Ver oferta');
     });
 
-    it('no hay botón de pagar: lo agrega la rama de pagos', () => {
+    it('una solicitud por pagar ofrece pagar, no solo ver la oferta', () => {
       crear(
         solicitud('CONFIRMADA', { condiciones: { precioBase: 300000, politicaCancelacion: 'x' } }),
       );
 
-      const controles = Array.from(raiz().querySelectorAll('a, button')).map(
-        (e) => e.textContent?.toLowerCase() ?? '',
-      );
-      expect(controles.some((c) => c.includes('pagar') || c.includes('pago'))).toBe(false);
-      expect(raiz().querySelector('a[href*="pago"]')).toBeNull();
+      expect(bloqueDePago()).not.toBeNull();
     });
   });
 
@@ -536,6 +540,9 @@ describe('DetalleSolicitud (P02.2)', () => {
         actualizadaEn: '2026-10-26T15:05:00',
       });
       fixture.detectChanges();
+      // Ya por pagar, el detalle pide los intentos de pago.
+      http.expectOne(`${URL}/pagos`).flush([]);
+      fixture.detectChanges();
 
       expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Por pagar');
       expect(bloque()).toBeNull();
@@ -615,6 +622,77 @@ describe('DetalleSolicitud (P02.2)', () => {
       expect(texto()).toContain('Available, confirm · Operator');
       expect(texto()).toContain('You have 3 h 0 min left to confirm or decline.');
       expect(texto()).toContain('View offer');
+    });
+  });
+
+  describe('pagar la solicitud (P04.1)', () => {
+    const CONFIRMADA = solicitud('CONFIRMADA', {
+      venceEn: en(3 * HORA),
+      condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+    });
+    const rechazo = (numero: number): IntentoPago => ({
+      id: `i${numero}`,
+      numero,
+      estado: 'RECHAZADO',
+      referencia: `ST-${numero}`,
+      montoCentavos: 30000000,
+      creadoEn: en(-HORA),
+    });
+
+    it('una solicitud confirmada muestra el bloque de pago con el total y pide sus intentos', () => {
+      crear(CONFIRMADA);
+
+      expect(bloqueDePago()).not.toBeNull();
+      expect(bloqueDePago()!.textContent!.replace(/[  ]/g, ' ')).toContain('Pagar $ 300.000');
+    });
+
+    it.each(['PENDIENTE', 'ATENDIDA', 'DECLINADA', 'PAGADA', 'VENCIDA'] as const)(
+      '%s no muestra el bloque de pago ni pide intentos',
+      (estado) => {
+        crear(solicitud(estado));
+
+        expect(bloqueDePago()).toBeNull();
+        http.expectNone(`${URL}/pagos`);
+      },
+    );
+
+    it('con intentos usados dice cuántos quedan', () => {
+      crear(CONFIRMADA, ID, [rechazo(1)]);
+
+      expect(bloqueDePago()!.textContent).toContain('Te quedan 2 intentos de pago');
+    });
+
+    it('si falla la consulta de intentos el bloque sigue ofreciendo pagar', () => {
+      localStorage.setItem(
+        CLAVE_SESION,
+        JSON.stringify(aSesionGuardada(respuestaDeSesion({ rol: 'TURISTA' }))),
+      );
+      fixture = TestBed.createComponent(DetalleSolicitud);
+      fixture.componentRef.setInput('id', ID);
+      fixture.detectChanges();
+      http.expectOne('/api/catalogo/zonas').flush(ZONAS);
+      http.expectOne(URL).flush(CONFIRMADA);
+      fixture.detectChanges();
+      http.expectOne(`${URL}/pagos`).error(new ProgressEvent('error'));
+      fixture.detectChanges();
+
+      expect(bloqueDePago()).not.toBeNull();
+      expect(bloqueDePago()!.textContent).toContain('Te quedan 3 intentos de pago');
+    });
+
+    it('confirmar las condiciones lleva al pago: pide los intentos y muestra el bloque', () => {
+      crear(ATENDIDA);
+
+      Array.from(raiz().querySelectorAll<HTMLButtonElement>('button.boton'))
+        .find((b) => b.textContent?.includes('Confirmar condiciones'))!
+        .click();
+      fixture.detectChanges();
+      http.expectOne(`${URL}/respuesta`).flush({ ...ATENDIDA, estado: 'CONFIRMADA', actualizadaEn: en(0) });
+      fixture.detectChanges();
+      http.expectOne(`${URL}/pagos`).flush([]);
+      fixture.detectChanges();
+
+      expect(bloqueDePago()).not.toBeNull();
     });
   });
 });
