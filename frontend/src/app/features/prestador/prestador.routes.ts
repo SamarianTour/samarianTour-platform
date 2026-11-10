@@ -53,8 +53,7 @@ export const RUTAS_PRESTADOR: Routes = [
       {
         path: 'whatsapp',
         title: 'app.titulo.whatsappPrestador',
-        data: { codigo: 'P03.4', nombre: 'app.titulo.whatsappPrestador' },
-        loadComponent: proximamente,
+        loadComponent: () => import('./whatsapp/whatsapp-prestador').then((modulo) => modulo.WhatsappPrestador),
       },
       {
         path: 'cuenta-cobro',

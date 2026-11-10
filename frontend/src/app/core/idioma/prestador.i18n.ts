@@ -111,6 +111,25 @@ export const PRESTADOR = diccionario(
     'prestador.rnt.error.idiomasRequerido': 'Escribe al menos un idioma.',
     'prestador.rnt.error.idiomasInvalidos': 'Cada idioma lleva un código de dos letras, por ejemplo: es, en.',
 
+    // WhatsApp de contacto del prestador (P03.4)
+    'prestador.whatsapp.intro':
+      'Es tu canal de contacto: por aquí te avisamos cuando una solicitud queda pagada. Nunca se muestra al público ni a los turistas.',
+    'prestador.whatsapp.cargando': 'Cargando tu WhatsApp…',
+    'prestador.whatsapp.sinRnt.titulo': 'Primero registra tu RNT',
+    'prestador.whatsapp.sinRnt.texto':
+      'El WhatsApp de contacto se guarda en tu registro de prestador, que se crea al registrar tu RNT.',
+    'prestador.whatsapp.numero.titulo': 'Tu número',
+    'prestador.whatsapp.verificado':
+      'Tu WhatsApp está verificado. Te avisaremos por aquí cuando una solicitud quede pagada.',
+    'prestador.whatsapp.sinConfigurar':
+      'Todavía no configuraste tu WhatsApp. Sin él no recibes el aviso de una solicitud pagada.',
+    'prestador.whatsapp.guardar': 'Guardar número',
+    'prestador.whatsapp.guardado': 'Guardaste tu WhatsApp.',
+    'prestador.whatsapp.guardadoSinVerificar':
+      'Guardaste tu WhatsApp. Te enviamos un código por WhatsApp para verificarlo.',
+    'prestador.whatsapp.avisoVerificar':
+      'Mientras no lo verifiques no recibirás el aviso de una solicitud pagada. El código vale 30 minutos.',
+
     // Mis ofertas
     'prestador.ofertas.subtitulo':
       'Cada oferta nueva o editada pasa por moderación antes de verse en el catálogo.',
@@ -367,6 +386,25 @@ export const PRESTADOR = diccionario(
     'prestador.rnt.error.modalidadesRequerida': 'Choose at least one modality.',
     'prestador.rnt.error.idiomasRequerido': 'Enter at least one language.',
     'prestador.rnt.error.idiomasInvalidos': 'Each language is a two-letter code, for example: es, en.',
+
+    // Provider contact WhatsApp (P03.4)
+    'prestador.whatsapp.intro':
+      'This is your contact channel: this is where we notify you when a request is paid. It is never shown to the public or to tourists.',
+    'prestador.whatsapp.cargando': 'Loading your WhatsApp…',
+    'prestador.whatsapp.sinRnt.titulo': 'Register your RNT first',
+    'prestador.whatsapp.sinRnt.texto':
+      'Your contact WhatsApp is saved in your provider registration, which is created when you register your RNT.',
+    'prestador.whatsapp.numero.titulo': 'Your number',
+    'prestador.whatsapp.verificado':
+      'Your WhatsApp is verified. We will notify you here when a request is paid.',
+    'prestador.whatsapp.sinConfigurar':
+      "You haven't set up your WhatsApp yet. Without it you won't get the notice of a paid request.",
+    'prestador.whatsapp.guardar': 'Save number',
+    'prestador.whatsapp.guardado': 'You saved your WhatsApp.',
+    'prestador.whatsapp.guardadoSinVerificar':
+      'You saved your WhatsApp. We sent you a code on WhatsApp to verify it.',
+    'prestador.whatsapp.avisoVerificar':
+      "Until you verify it you won't get the notice of a paid request. The code is valid for 30 minutes.",
 
     'prestador.ofertas.subtitulo':
       'Every new or edited offer goes through moderation before it appears in the catalog.',

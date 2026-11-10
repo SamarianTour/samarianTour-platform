@@ -172,7 +172,17 @@ describe('pantallas que crea cada ruta', () => {
       expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
     });
 
-    it.each(['/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
+    // P03.4: el WhatsApp de contacto se lee en el núcleo, con el registro.
+    it('el prestador abre su WhatsApp y este pide su registro', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/whatsapp', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-whatsapp-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
+    });
+
+    it.each(['/prestador/perfil', '/prestador/cuenta-cobro'])(
       'el prestador abre su panel en %s y dentro se crea una pantalla',
       async (url) => {
         conSesion('PRESTADOR');

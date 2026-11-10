@@ -46,4 +46,22 @@ export class PrestadorService {
   cambiarTipo(cuerpo: DatosTipoRequest): Observable<PrestadorPropio> {
     return this.http.put<PrestadorPropio>(`${BASE}/tipo`, cuerpo);
   }
+
+  /**
+   * Configura el WhatsApp de contacto, que nunca es público (RF-71). Un número nuevo queda sin verificar y el núcleo le envía un
+   * código de 6 dígitos que vale 30 minutos y admite 3 intentos.
+   */
+  configurarWhatsapp(whatsapp: string): Observable<PrestadorPropio> {
+    return this.http.put<PrestadorPropio>(`${BASE}/whatsapp`, { whatsapp });
+  }
+
+  /** Envía otro código; el anterior deja de servir. Con el número ya verificado no envía nada. */
+  enviarCodigoWhatsapp(): Observable<void> {
+    return this.http.post<void>(`${BASE}/whatsapp/codigo`, null);
+  }
+
+  /** Confirma el WhatsApp con el código y devuelve al prestador con el número verificado. */
+  verificarWhatsapp(codigo: string): Observable<PrestadorPropio> {
+    return this.http.post<PrestadorPropio>(`${BASE}/whatsapp/verificacion`, { codigo });
+  }
 }

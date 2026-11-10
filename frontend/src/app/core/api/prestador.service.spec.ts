@@ -94,6 +94,36 @@ describe('PrestadorService', () => {
     peticion.flush(PRESTADOR);
   });
 
+  it('configura el WhatsApp con PUT y solo manda el número', () => {
+    servicio.configurarWhatsapp('+573001110202').subscribe();
+
+    const peticion = http.expectOne(`${BASE}/whatsapp`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual({ whatsapp: '+573001110202' });
+    peticion.flush(PRESTADOR);
+  });
+
+  it('pide otro código de WhatsApp con POST y sin cuerpo', () => {
+    servicio.enviarCodigoWhatsapp().subscribe();
+
+    const peticion = http.expectOne(`${BASE}/whatsapp/codigo`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toBeNull();
+    peticion.flush(null, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('verifica el WhatsApp con el código y devuelve al prestador', () => {
+    let recibido: PrestadorPropio | undefined;
+
+    servicio.verificarWhatsapp('123456').subscribe((prestador) => (recibido = prestador));
+
+    const peticion = http.expectOne(`${BASE}/whatsapp/verificacion`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({ codigo: '123456' });
+    peticion.flush({ ...PRESTADOR, whatsappVerificado: true });
+    expect(recibido?.whatsappVerificado).toBe(true);
+  });
+
   it('cualquier otro fallo sigue siendo un fallo', () => {
     let fallo: unknown;
 

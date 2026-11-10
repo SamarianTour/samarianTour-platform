@@ -1,0 +1,103 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>{{ 'app.titulo.whatsappPrestador' | t }}</h1>
+    <p class="texto-suave">{{ 'prestador.whatsapp.intro' | t }}</p>
+  </header>
+
+  @if (prestador() === undefined) {
+    @if (errorCarga(); as fallo) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ fallo.mensaje }}</span>
+      </p>
+    } @else {
+      <p class="texto-suave" aria-live="polite">{{ 'prestador.whatsapp.cargando' | t }}</p>
+    }
+  } @else if (prestador() === null) {
+    <!-- Sin RNT registrado el núcleo todavía no tiene al prestador -->
+    <div class="alerta alerta--aviso">
+      <app-icono nombre="alerta" />
+      <div class="explicacion">
+        <p class="explicacion__titulo">{{ 'prestador.whatsapp.sinRnt.titulo' | t }}</p>
+        <p>{{ 'prestador.whatsapp.sinRnt.texto' | t }}</p>
+        <a class="explicacion__enlace" routerLink="/prestador/rnt">
+          {{ 'prestador.inicio.irARnt' | t }}
+          <app-icono nombre="flecha" />
+        </a>
+      </div>
+    </div>
+  } @else {
+    @let datos = prestador()!;
+    @let actual = situacion();
+
+    <section class="tarjeta formulario" aria-labelledby="whatsapp-titulo">
+      <div class="tarjeta__cabecera">
+        <h2 id="whatsapp-titulo">{{ 'prestador.whatsapp.numero.titulo' | t }}</h2>
+        @if (actual) {
+          <span class="etiqueta" [class]="claseSituacion[actual]">{{ claveSituacion[actual] | t }}</span>
+        }
+      </div>
+
+      @switch (actual) {
+        @case ('VERIFICADO') {
+          <p class="alerta alerta--exito">
+            <app-icono nombre="escudo" />
+            <span>{{ 'prestador.whatsapp.verificado' | t }}</span>
+          </p>
+        }
+        @case ('SIN_CONFIGURAR') {
+          <p class="alerta alerta--info">
+            <app-icono nombre="info" />
+            <span>{{ 'prestador.whatsapp.sinConfigurar' | t }}</span>
+          </p>
+        }
+      }
+
+      @if (errorGeneral(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje() }}</span>
+        </p>
+      }
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="campo">
+          <label for="whatsapp-numero">
+            {{ 'cuentas.campo.whatsapp' | t }} <span class="requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="whatsapp-numero"
+            type="tel"
+            inputmode="tel"
+            formControlName="whatsapp"
+            autocomplete="tel"
+            aria-required="true"
+            [attr.aria-invalid]="errorDelCampo() ? 'true' : null"
+            [attr.aria-describedby]="errorDelCampo() ? 'whatsapp-numero-error whatsapp-numero-ayuda' : 'whatsapp-numero-ayuda'"
+          />
+          <p class="campo__ayuda" id="whatsapp-numero-ayuda">{{ 'cuentas.misDatos.ayudaWhatsapp' | t }}</p>
+          @if (errorDelCampo(); as mensaje) {
+            <p class="campo__error" id="whatsapp-numero-error">{{ mensaje }}</p>
+          }
+        </div>
+        <div class="acciones">
+          <button type="submit" class="boton" [disabled]="guardando()">
+            {{ (guardando() ? 'cuentas.misDatos.guardando' : 'prestador.whatsapp.guardar') | t }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Con el número guardado y sin verificar, el código que le llegó -->
+    @if (actual === 'SIN_VERIFICAR') {
+      <app-verificar-whatsapp
+        class="verificacion"
+        [numero]="datos.whatsapp"
+        aviso="prestador.whatsapp.avisoVerificar"
+        [verificarCon]="verificarCon"
+        [reenviarCon]="reenviarCon"
+        (verificado)="alVerificar($event)"
+      />
+    }
+  }
+</section>
