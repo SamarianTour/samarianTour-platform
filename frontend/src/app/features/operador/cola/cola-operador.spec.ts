@@ -49,7 +49,7 @@ describe('ColaOperador (P02.4)', () => {
   let navegar: ReturnType<typeof vi.spyOn>;
 
   const raiz = () => fixture.nativeElement as HTMLElement;
-  const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
+  const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
   const filas = () => Array.from(raiz().querySelectorAll<HTMLElement>('tbody tr'));
   const lista = () => http.expectOne((p) => p.url === URL);
 

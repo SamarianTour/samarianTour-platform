@@ -29,8 +29,8 @@ export const RUTAS_OPERADOR: Routes = [
       {
         path: 'solicitudes/:id',
         title: 'app.titulo.atenderSolicitud',
-        data: { codigo: 'P02.5', nombre: 'app.titulo.atenderSolicitud' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./atender/atender-solicitud').then((modulo) => modulo.AtenderSolicitud),
       },
       {
         path: 'avisos',

@@ -157,14 +157,27 @@ describe('pantallas que crea cada ruta', () => {
       expect(peticiones.map((p) => p.request.params.get('estado'))).toEqual(['PAGADA']);
     });
 
-    // El operador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
-    it.each([
-      '/operador/avisos',
-      '/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20',
-    ])('el operador abre su panel en %s y dentro se crea una pantalla', async (url) => {
+    // P02.5: atender se crea con el id de la dirección y pide esa solicitud al núcleo.
+    it('el operador abre atender en /operador/solicitudes/:id y este pide esa solicitud', async () => {
       conSesion('OPERADOR_DISPONIBILIDAD');
 
-      await ir(url, PanelOperador);
+      await ir('/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20', PanelOperador);
+
+      expect(
+        harness.routeNativeElement?.querySelector('.contenido > app-atender-solicitud'),
+      ).not.toBeNull();
+      expect(
+        http.match(
+          (p) => p.url === '/api/nucleo/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20',
+        ),
+      ).toHaveLength(1);
+    });
+
+    // Avisos llega en el siguiente commit: por ahora su ruta ya existe, con su título y su protección.
+    it('el operador abre su panel en /operador/avisos y dentro se crea una pantalla', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador/avisos', PanelOperador);
 
       expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
     });

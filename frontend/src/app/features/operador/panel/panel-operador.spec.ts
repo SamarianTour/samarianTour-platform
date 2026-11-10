@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { CLAVE_SESION, aSesionGuardada } from '../../../core/sesion/almacen-sesion';
 import { respuestaDeSesion } from '../../../core/sesion/testing';
@@ -26,7 +26,8 @@ describe('PanelOperador', () => {
     );
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'operador', children: RUTAS_OPERADOR }]),
+        // Con `withComponentInputBinding`, como en la aplicación: atender recibe el `id` de la dirección.
+        provideRouter([{ path: 'operador', children: RUTAS_OPERADOR }], withComponentInputBinding()),
         provideHttpClient(),
         provideHttpClientTesting(),
       ],

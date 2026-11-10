@@ -47,7 +47,7 @@ describe('HistorialOperador', () => {
   let http: HttpTestingController;
 
   const raiz = () => harness.routeNativeElement as HTMLElement;
-  const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
+  const texto = () => (raiz().textContent ?? '').replace(/[  ]/g, ' ');
   const filas = () => Array.from(raiz().querySelectorAll<HTMLElement>('tbody tr'));
   const filtros = () => Array.from(raiz().querySelectorAll<HTMLAnchorElement>('.filtros a'));
   const consulta = () => http.expectOne((p) => p.url === URL);
