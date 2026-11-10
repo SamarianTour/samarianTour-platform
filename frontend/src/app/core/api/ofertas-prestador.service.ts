@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, expand, map, reduce } from 'rxjs';
+import { EMPTY, Observable, expand, reduce } from 'rxjs';
 import { API_CATALOGO } from './api.config';
-import { Foto, OfertaPrestador, OfertaRequest, PaginaOfertasPrestador } from './modelos';
+import { Foto, OfertaPrestador, OfertaPropia, OfertaRequest, PaginaOfertasPrestador } from './modelos';
 
 /** Tamaño máximo de página que acepta la API (DC-14). */
 const TAMANO_MAXIMO = 100;
@@ -32,11 +32,11 @@ export class OfertasPrestadorService {
   }
 
   /**
-   * [SUPUESTO] La API no tiene un GET de una sola oferta propia: se vuelve a pedir la lista y se busca por id.
-   * Devuelve undefined si la oferta no es del prestador.
+   * Una oferta propia con el contenido completo de su versión publicada y de la pendiente (DC-50), en cualquier estado: también la
+   * retirada y la que nunca se aprobó. Sirve para revisarla y para corregir una versión rechazada. La de otro prestador responde 403.
    */
-  buscarPropia(id: string): Observable<OfertaPrestador | undefined> {
-    return this.todas().pipe(map((ofertas) => ofertas.find((oferta) => oferta.id === id)));
+  consultar(id: string): Observable<OfertaPropia> {
+    return this.http.get<OfertaPropia>(`${this.url}/${encodeURIComponent(id)}`);
   }
 
   publicar(oferta: OfertaRequest): Observable<OfertaPrestador> {

@@ -1,6 +1,6 @@
 # Frontend de Samarian Tour
 
-Aplicación Angular contra la API real: el turista busca ofertas, ve su ficha con galería de fotos, mapa y opiniones, y opina sobre las que pagó; el prestador publica con sus fotos, ve sus ofertas, las edita y las retira. Cada persona tiene su cuenta: se registra, inicia sesión, recupera su contraseña, consulta y corrige sus datos y puede eliminar su cuenta.
+Aplicación Angular contra la API real: el turista busca ofertas, ve su ficha con galería de fotos, mapa y opiniones, y opina sobre las que pagó; el prestador registra su RNT y su cuenta de cobro, arma su perfil público, publica con sus fotos, ve sus ofertas, las edita y las retira. Cada persona tiene su cuenta: se registra, inicia sesión, recupera su contraseña, consulta y corrige sus datos y puede eliminar su cuenta.
 
 Angular 22 con componentes standalone, signals, formularios reactivos y carga diferida por funcionalidad. El mapa usa Leaflet con OpenStreetMap, sin API key.
 
@@ -53,7 +53,7 @@ src/app
 ├── shared/                  piezas reutilizables: mapa, galería de fotos, menú de la cuenta, marco de las pantallas de acceso, "próximamente", iconos, estrellas, paginación, diálogo de confirmación, pasos de la solicitud, pipes y textos
 └── features/
     ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
-    ├── prestador/           panel, mis ofertas, detalle y formulario de publicar o editar
+    ├── prestador/           panel con menú lateral: inicio (dashboard), mis ofertas, detalle y formulario de publicar o editar, RNT y tipo, perfil público, WhatsApp de contacto y cuenta de cobro
     ├── operador/            panel con menú lateral, cola, historial, atender una solicitud y avisos
     ├── admin/               panel con menú lateral: prestadores y RNT, moderación, cuentas internas, comisión y pagos tardíos, zonas, alertas de sesgo y pendientes técnicos
     └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
@@ -73,10 +73,15 @@ src/app
 | `/turista/solicitar/:ofertaId` | Turista | P02.1 Formulario de solicitud de disponibilidad (el botón de la ficha lleva aquí) |
 | `/turista/solicitudes` | Turista | P02.2 Mis solicitudes: los 9 estados, filtros Todas / Activas / Finalizadas y plazos |
 | `/turista/solicitudes/:id` | Turista | P02.2 Detalle: estado, historial, plazo y condiciones; P02.3 confirmar o declinar si está atendida; P04.1 pagar, "Confirmando tu pago" y P04.2 intentos y reintento. El núcleo y la pasarela enlazan aquí (regreso del pago, aviso de WhatsApp) |
+| `/prestador` | Prestador | P03.0 Inicio: estado del registro y del RNT, ofertas por estado y accesos a cada sección |
+| `/prestador/rnt` | Prestador | P03.1 RNT y tipo: registrar el RNT, ver la validación, cambiar el número y el tipo |
+| `/prestador/perfil` | Prestador | P03.2 Perfil público y hasta 6 fotos |
+| `/prestador/whatsapp` | Prestador | P03.4 WhatsApp de contacto: configurar el número y verificarlo con el código |
+| `/prestador/cuenta-cobro` | Prestador | P03.5 Cuenta de cobro: dónde recibe lo que le corresponde por cada pago |
 | `/prestador/ofertas` | Prestador | Mis ofertas, con su estado y las acciones |
 | `/prestador/ofertas/nueva` | Prestador | Publicar una oferta, con sus fotos |
-| `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente |
-| `/prestador/ofertas/:id/editar` | Prestador | Editar una oferta |
+| `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente, con su contenido completo (`GET /prestador/ofertas/{id}`, DC-50) |
+| `/prestador/ofertas/:id/editar` | Prestador | Editar una oferta, partiendo de su versión pendiente (en moderación o rechazada, con su motivo) si existe y si no de la publicada |
 | `/operador` | Operador | P02.4 Cola: las solicitudes pendientes, las urgentes (6 h o menos) primero y resaltadas, con paginación |
 | `/operador/historial?estado=` | Operador | Historial: la misma consulta de la cola con un estado, de la más reciente a la más antigua |
 | `/operador/solicitudes/:id` | Operador | P02.5 Atender: contactar al prestador por WhatsApp y registrar "hay cupo" (con precio total y condiciones) o "no hay cupo" |
@@ -147,6 +152,32 @@ El administrador gestiona la plataforma desde `/admin`, dentro de un panel con m
 - **Textos libres.** El `tipo` de un aviso y el estado que informa la pasarela en un evento fallido no son una lista cerrada en el contrato; el frontend los muestra tal como llegan. Conviene fijarlos.
 - **Motivo del rechazo de un intento de pago.** Ver "Pagos": `IntentoPago` no trae el motivo.
 
+## Panel del prestador
+
+El prestador gestiona su registro y sus ofertas desde `/prestador`, dentro de un panel con menú lateral (Inicio, Mis ofertas, Publicar oferta, Mi RNT, Perfil público, WhatsApp de contacto y Cuenta de cobro) que solo abre la sesión de un prestador. Está en `features/prestador`. El núcleo guarda su registro, su WhatsApp y su cuenta de cobro (`core/api/prestador.service.ts`, `/api/nucleo/prestador/**`); el catálogo, su perfil público, sus fotos y sus ofertas (`perfil-prestador.service.ts` y `ofertas-prestador.service.ts`, `/api/catalogo/prestador/**`). Cada pantalla tiene su lógica en funciones puras con pruebas propias (`inicio.ts`, `rnt.ts`, `whatsapp.ts`, `cuenta-cobro.ts`, `perfil.ts`, `estado-oferta.ts`).
+
+- **Inicio** (`/prestador`, P03.0). Muestra el estado del RNT, el número, la razón social, el tipo, la última sincronización y si el WhatsApp está verificado, cuántas ofertas hay en cada estado y accesos a las otras secciones. Si el RNT está inactivo, no se encuentra o no se ha registrado, lo explica con claridad —sus ofertas no se muestran en el catálogo— y enlaza a la sección RNT; con la verificación pendiente avisa con calma que no hay nada que corregir. El registro y las ofertas se piden por separado: si una consulta falla, la otra igual se ve.
+- **RNT y tipo** (`/prestador/rnt`, P03.1). Sin registro pide el número y el tipo (`POST /prestador/registro`); con registro muestra cómo quedó la validación y deja cambiar el número (`PUT /prestador/rnt`) y el tipo (`PUT /prestador/tipo`). Un guía independiente declara modalidades e idiomas y no empleados; los demás tipos, el número de empleados. La validación contra el registro oficial puede tardar unos segundos: el botón queda deshabilitado con "Validando…" y la petición no tiene tiempo máximo. **Tras registrar y tras cambiar el tipo se renueva la sesión**, porque el tipo viaja en el token; si la renovación falla, la pantalla lo explica. Cambiar solo el número no la renueva.
+- **Perfil público** (`/prestador/perfil`, P03.2). Nombre comercial, descripción (la única obligatoria), horario, sitio web y redes sociales (una dirección `http` o `https` por línea). Se publica de inmediato, sin moderación. Guardar reemplaza los datos, así que lo que se deja en blanco queda vacío; las fotos no viajan con él.
+- **WhatsApp de contacto** (`/prestador/whatsapp`, P03.4). Un número nuevo queda sin verificar y el núcleo envía un código de 6 dígitos; mientras no se verifique, el prestador no recibe el aviso de una solicitud pagada (RF-57). El número nunca es público.
+- **Cuenta de cobro** (`/prestador/cuenta-cobro`, P03.5). Cuenta de ahorros, corriente, Nequi o Daviplata. Las bancarias piden el banco; las billeteras, un celular de 10 dígitos que empieza por 3. Se registra una vez; si cambia, la anterior queda en el historial del núcleo. La comisión se descuenta de lo que recibe el prestador y nunca se suma al turista.
+- **Editar y detalle** (`/prestador/ofertas/:id` y `/editar`, DC-50). Usan `GET /prestador/ofertas/{id}`, que trae el contenido completo de la versión publicada y de la pendiente.
+
+### Decisiones de diseño
+
+- **Editar parte de la versión pendiente si existe.** Guardar crea una versión nueva que reemplaza a la pendiente y la publicada sigue visible hasta que se apruebe la nueva. Por eso el formulario parte de la pendiente —en moderación o rechazada— y si no, de la publicada. Una versión rechazada muestra su motivo arriba del formulario y el detalle ofrece "Corregir la versión rechazada". También se puede editar una oferta que nunca se aprobó; solo una retirada no se edita (el retiro es definitivo).
+- **El número de la cuenta de cobro solo se escribe.** El núcleo lo guarda cifrado (RNF-08) y devuelve solo los últimos 4 dígitos, que es lo único que se muestra. El campo lleva `autocomplete="off"`, no se corrige ni se guarda en el navegador (una prueba revisa `localStorage` y `sessionStorage`), se vacía al guardar y ningún mensaje lo repite: los errores de la API sobre un campo de la cuenta se reemplazan por un texto fijo, porque su detalle podría traer el valor. Para cambiar cualquier dato de la cuenta hay que volver a escribir el número.
+- **La verificación del WhatsApp es el mismo componente del turista.** `VerificarWhatsapp` acepta, de forma opcional, el número, el aviso y cómo verificar y pedir otro código; sin ellas se comporta como en Mis datos. En el prestador no toca la cuenta de la sesión.
+- **Las fotos del perfil usan el selector de las ofertas.** `SelectorFotos` recibe cómo subir y quitar, los textos ("del perfil"), si hay orden y si es obligatorio. En el perfil cada foto se sube y se quita en el servidor al instante, sin orden ni portada (la API no los tiene) y el perfil puede quedarse sin fotos. Hay que crear el perfil antes de subir fotos.
+- **Lo que el diseño de referencia traía y no se construyó** porque el contrato no lo tiene: las cifras de vistas, calificación y solicitudes recientes del dashboard; el certificado del RNT en PDF; la persona responsable, el logo y las zonas del perfil; el teléfono fijo, el correo, el horario y el mensaje automático del canal de contacto (el horario de atención va en el perfil); y el documento del titular de la cuenta de cobro.
+
+### Para el equipo de backend
+
+- **Dashboard.** No hay datos de actividad del prestador (vistas de sus ofertas, calificación promedio, solicitudes recientes). Si el equipo los quiere mostrar, haría falta un endpoint nuevo.
+- **Perfil público.** El contrato solo tiene nombre comercial, descripción, horario, sitio web, redes y fotos. Persona responsable, logo y zonas donde opera, que traía el diseño, no existen. Las fotos del perfil no se pueden reordenar.
+- **Cuenta de cobro.** El detalle de un `DATO_INVALIDO` sobre `numero` no debería repetir el número recibido (el frontend ya no lo muestra, pero queda en la respuesta y puede acabar en un registro). `CuentaCobro.entidad` es obligatorio en la respuesta: para Nequi y Daviplata el frontend no lo muestra, pero conviene confirmar qué devuelve el núcleo. El historial de cuentas anteriores no se puede consultar.
+- **Canal de contacto.** No hay teléfono fijo, correo, horario ni mensaje automático del prestador, que el diseño de referencia mostraba.
+
 ## Pagos
 
 El turista paga una solicitud confirmada (RF-46 a RF-52) en la pasarela externa, que puede ser la **simulada** del núcleo (con los botones "Aprobar" y "Rechazar") o el sandbox de **Wompi**; ver "Pasarela de pagos" en el README principal. La pantalla es el detalle de la solicitud (`/turista/solicitudes/:id`): el núcleo y la pasarela devuelven al turista exactamente ahí. El código está en `features/turista/solicitudes` (`pagar-solicitud`, `confirmando-pago`, `pago-confirmado`, `intentos-pago` y la lógica pura de `pagos.ts`) y en `core/api/pagos.service.ts`.
@@ -190,6 +221,7 @@ Una oferta lleva de 1 a 6 fotos y la primera es la portada (DC-47).
 - **Enviar.** Al publicar o editar solo viajan los `id` de las fotos, en orden. El formulario no envía mientras haya una subida en curso y marca el campo si no hay ninguna foto. Cambiar las fotos de una oferta es una edición y pasa por moderación.
 - **Reglas en el navegador.** JPG, PNG o WebP de hasta 5 MB y máximo 6 fotos (`fotos-oferta.ts`). Es solo una ayuda para avisar antes de enviar: la API vuelve a validar y reconoce el formato por el contenido. Si un archivo pasa de 6 MB, Nginx responde el mismo error `DATO_INVALIDO` con el campo `foto`.
 - **Mostrar.** Las tarjetas del catálogo usan la miniatura de `portada` (hasta 400 px) y, sin portada, el icono del tipo. La ficha usa `shared/galeria-fotos`: un mosaico de hasta 3 fotos y un visor a pantalla completa, con el elemento `<dialog>`, que se navega con botones o con las flechas del teclado.
+- **Perfil público.** El mismo selector se usa en el perfil del prestador (P03.2), con otras rutas (`POST /prestador/perfil/fotos` y `DELETE …/fotos/{id}`): cada foto se sube y se quita al instante, sin orden ni portada, y el perfil admite de 0 a 6 fotos.
 
 ## Sesión y cuentas
 
@@ -247,13 +279,14 @@ El interceptor de errores lee el `application/problem+json` y traduce su `codigo
 
 Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SUPUESTO]` en el código:
 
-- **Detalle de una oferta propia.** No hay un `GET` de una sola oferta del prestador: se pide la lista y se busca por `id`.
-- **Edición.** La API no devuelve el contenido completo de una oferta propia. El formulario se llena con la ficha pública (`GET /ofertas/{id}`), es decir, con la versión publicada. Por eso una oferta que solo tiene versión pendiente no ofrece "Editar", y tampoco se puede editar una oferta publicada que en ese momento no es visible en el catálogo.
-- **Fotos al editar.** Las fotos que el formulario muestra al editar salen de la ficha pública, igual que el resto de los datos. Una versión publicada sin fotos (anterior a DC-47) se abre sin fotos y el prestador debe agregar al menos una para guardar.
 - **Texto alternativo de las fotos.** La API no guarda una descripción de cada foto, así que el texto alternativo es genérico: la posición de la foto, el total y el nombre de la oferta. En las tarjetas del catálogo la imagen es decorativa.
 - **Unidad del precio en "Mis ofertas".** La lista de ofertas propias no trae `unidadPrecio`; se toma de la tabla por tipo de oferta de DC-22.
 - **Estado de la oferta.** Se calcula con `retirada`, `publicada` y `pendiente`. Si cumple más de una definición manda este orden: retirada, rechazada, publicada con cambios en revisión, en moderación, publicada.
-- **Tipo de prestador.** La cuenta no lo trae; se lee del token. Un prestador recién registrado no lo tiene hasta registrar su RNT (P03.1, otra rama), y mientras tanto el panel y el formulario le explican que no puede publicar.
+- **Tipo de prestador.** La cuenta no lo trae; se lee del token. Un prestador recién registrado no lo tiene hasta registrar su RNT en la sección RNT, y mientras tanto el panel y el formulario le explican que no puede publicar. Como el tipo viaja en el token, tras registrar el RNT o cambiar el tipo se renueva la sesión.
+- **Ofertas sin RNT activo.** El dashboard dice que con el RNT inactivo, no encontrado o sin registrar las ofertas no se muestran en el catálogo (RF-77); lo calcula con `estadoRnt`, no con `habilitado`.
+- **Idiomas del guía y redes del perfil.** Los idiomas del guía se escriben como códigos de dos letras separados por comas (`es, en`), igual que en las ofertas; las redes sociales del perfil, una dirección por línea.
+- **Bancos de la cuenta de cobro.** El contrato recibe la entidad como texto libre (hasta 100 caracteres). Se sugieren los bancos más usados y el prestador puede escribir otro.
+- **WhatsApp y cuenta de cobro sin RNT.** El contrato documenta `PRESTADOR_NO_REGISTRADO` en los endpoints de WhatsApp y al guardar la cuenta de cobro; al leerla, el frontend también lo trata así. En los tres casos las pantallas lo explican y enlazan a la sección RNT.
 - **Un solo nombre en el registro.** El núcleo guarda un único `nombre`: el turista escribe su nombre completo y el prestador, el nombre comercial de su negocio. El diseño separa nombres y apellidos.
 - **Contraseña.** De 8 a 72 caracteres con al menos una letra y un número (DN-28); el núcleo las vuelve a aplicar. El WhatsApp se acepta con espacios o guiones y se envía en formato internacional.
 - **Texto de la política.** Llega en Markdown y se muestra tal cual, respetando los saltos de línea, sin interpretarlo.

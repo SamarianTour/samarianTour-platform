@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Foto, OfertaPrestador, OfertaRequest, PaginaOfertasPrestador } from './modelos';
+import { Foto, OfertaPrestador, OfertaPropia, OfertaRequest, PaginaOfertasPrestador } from './modelos';
 import { OfertasPrestadorService } from './ofertas-prestador.service';
 
 const URL = '/api/catalogo/prestador/ofertas';
@@ -79,17 +79,22 @@ describe('OfertasPrestadorService', () => {
     expect(recibidas?.map((propia) => propia.id)).toEqual(['1', '2', '3']);
   });
 
-  it('busca una oferta propia por id en la lista', () => {
-    let encontrada: OfertaPrestador | undefined;
-    let ajena: OfertaPrestador | undefined = oferta('otra');
+  it('consulta una oferta propia por su id con GET, sin recorrer la lista', () => {
+    let recibida: OfertaPropia | undefined;
+    const propia: OfertaPropia = { id: 'b00000000000000000000001', tipo: 'ACTIVIDAD', retirada: false };
 
-    servicio.buscarPropia('2').subscribe((propia) => (encontrada = propia));
-    http.expectOne((candidata) => candidata.url === URL).flush(pagina([oferta('1'), oferta('2')], 0, 1));
-    servicio.buscarPropia('9').subscribe((propia) => (ajena = propia));
-    http.expectOne((candidata) => candidata.url === URL).flush(pagina([oferta('1'), oferta('2')], 0, 1));
+    servicio.consultar('b00000000000000000000001').subscribe((o) => (recibida = o));
 
-    expect(encontrada?.id).toBe('2');
-    expect(ajena).toBeUndefined();
+    const peticion = http.expectOne(`${URL}/b00000000000000000000001`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush(propia);
+    expect(recibida).toEqual(propia);
+  });
+
+  it('codifica el id de la oferta en la dirección', () => {
+    servicio.consultar('a/b').subscribe();
+
+    http.expectOne(`${URL}/a%2Fb`).flush({});
   });
 
   it('publica una oferta con POST', () => {

@@ -1,0 +1,153 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>{{ 'app.titulo.perfilPublico' | t }}</h1>
+    <p class="texto-suave">{{ 'prestador.perfil.intro' | t }}</p>
+  </header>
+
+  @if (perfil() === undefined) {
+    @if (errorCarga(); as fallo) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ fallo.mensaje }}</span>
+      </p>
+    } @else {
+      <p class="texto-suave" aria-live="polite">{{ 'prestador.perfil.cargando' | t }}</p>
+    }
+  } @else {
+    <section class="tarjeta formulario" aria-labelledby="perfil-datos-titulo">
+      <h2 id="perfil-datos-titulo">{{ 'prestador.perfil.datos.titulo' | t }}</h2>
+      @if (!perfil()) {
+        <p class="alerta alerta--info">
+          <app-icono nombre="info" />
+          <span>{{ 'prestador.perfil.sinPerfil' | t }}</span>
+        </p>
+      }
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        @if (errorGeneral(); as mensaje) {
+          <p class="alerta alerta--error" role="alert">
+            <app-icono nombre="alerta" />
+            <span>{{ mensaje() }}</span>
+          </p>
+        }
+
+        <div class="campo">
+          <label for="perfil-nombreComercial">
+            {{ 'prestador.perfil.nombreComercial' | t }}
+            <span class="texto-suave">{{ 'prestador.perfil.opcional' | t }}</span>
+          </label>
+          <input
+            id="perfil-nombreComercial"
+            type="text"
+            formControlName="nombreComercial"
+            autocomplete="organization"
+            [attr.aria-invalid]="errorDe('nombreComercial') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('nombreComercial') ? 'perfil-nombreComercial-error' : null"
+          />
+          @if (errorDe('nombreComercial'); as mensaje) {
+            <p class="campo__error" id="perfil-nombreComercial-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="perfil-descripcion">
+            {{ 'prestador.perfil.descripcion' | t }} <span class="requerido" aria-hidden="true">*</span>
+          </label>
+          <textarea
+            id="perfil-descripcion"
+            formControlName="descripcion"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('descripcion') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('descripcion') ? 'perfil-descripcion-error perfil-descripcion-ayuda' : 'perfil-descripcion-ayuda'"
+          ></textarea>
+          <p class="campo__ayuda" id="perfil-descripcion-ayuda">{{ 'prestador.perfil.ayudaDescripcion' | t }}</p>
+          @if (errorDe('descripcion'); as mensaje) {
+            <p class="campo__error" id="perfil-descripcion-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="perfil-horariosAtencion">
+            {{ 'prestador.perfil.horarios' | t }}
+            <span class="texto-suave">{{ 'prestador.perfil.opcional' | t }}</span>
+          </label>
+          <input
+            id="perfil-horariosAtencion"
+            type="text"
+            formControlName="horariosAtencion"
+            autocomplete="off"
+            aria-describedby="perfil-horarios-ayuda"
+            [attr.aria-invalid]="errorDe('horariosAtencion') ? 'true' : null"
+          />
+          <p class="campo__ayuda" id="perfil-horarios-ayuda">{{ 'prestador.perfil.ayudaHorarios' | t }}</p>
+          @if (errorDe('horariosAtencion'); as mensaje) {
+            <p class="campo__error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="perfil-sitioWeb">
+            {{ 'prestador.perfil.sitioWeb' | t }}
+            <span class="texto-suave">{{ 'prestador.perfil.opcional' | t }}</span>
+          </label>
+          <input
+            id="perfil-sitioWeb"
+            type="url"
+            inputmode="url"
+            formControlName="sitioWeb"
+            autocomplete="url"
+            autocapitalize="none"
+            [attr.aria-invalid]="errorDe('sitioWeb') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('sitioWeb') ? 'perfil-sitioWeb-error perfil-sitioWeb-ayuda' : 'perfil-sitioWeb-ayuda'"
+          />
+          <p class="campo__ayuda" id="perfil-sitioWeb-ayuda">{{ 'prestador.perfil.ayudaEnlace' | t }}</p>
+          @if (errorDe('sitioWeb'); as mensaje) {
+            <p class="campo__error" id="perfil-sitioWeb-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="perfil-redesSociales">
+            {{ 'prestador.perfil.redes' | t }}
+            <span class="texto-suave">{{ 'prestador.perfil.opcional' | t }}</span>
+          </label>
+          <textarea
+            id="perfil-redesSociales"
+            formControlName="redesSociales"
+            autocapitalize="none"
+            spellcheck="false"
+            [attr.aria-invalid]="errorDe('redesSociales') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('redesSociales') ? 'perfil-redesSociales-error perfil-redes-ayuda' : 'perfil-redes-ayuda'"
+          ></textarea>
+          <p class="campo__ayuda" id="perfil-redes-ayuda">{{ 'prestador.perfil.ayudaRedes' | t }}</p>
+          @if (errorDe('redesSociales'); as mensaje) {
+            <p class="campo__error" id="perfil-redesSociales-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="acciones">
+          <button type="submit" class="boton" [disabled]="guardando()">
+            {{ (guardando() ? 'cuentas.misDatos.guardando' : 'prestador.perfil.guardar') | t }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Las fotos: para subirlas el perfil tiene que existir -->
+    <section class="tarjeta" aria-labelledby="perfil-fotos-titulo">
+      <h2 id="perfil-fotos-titulo" [class.solo-lectores]="!!perfil()">{{ 'prestador.perfil.fotos.titulo' | t }}</h2>
+      @if (perfil()) {
+        <app-selector-fotos
+          [(fotos)]="fotos"
+          [textos]="textosFotos"
+          [ordenable]="false"
+          [obligatorio]="false"
+          [subirCon]="subirFoto"
+          [quitarCon]="quitarFoto"
+        />
+      } @else {
+        <p class="texto-suave">{{ 'prestador.perfil.fotos.primeroGuarda' | t }}</p>
+      }
+    </section>
+  }
+</section>

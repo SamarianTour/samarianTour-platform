@@ -1,0 +1,203 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>{{ 'app.titulo.cuentaCobro' | t }}</h1>
+    <p class="texto-suave">{{ 'prestador.cobro.intro' | t }}</p>
+  </header>
+
+  <p class="alerta alerta--info comision">
+    <app-icono nombre="escudo" />
+    <span>
+      <strong>{{ 'prestador.cobro.comision.titulo' | t }}.</strong>
+      {{ 'prestador.cobro.comision.texto' | t }}
+    </span>
+  </p>
+
+  @if (sinRnt()) {
+    <!-- Sin RNT registrado el núcleo todavía no tiene al prestador -->
+    <div class="alerta alerta--aviso">
+      <app-icono nombre="alerta" />
+      <div class="explicacion">
+        <p class="explicacion__titulo">{{ 'prestador.cobro.sinRnt.titulo' | t }}</p>
+        <p>{{ 'prestador.cobro.sinRnt.texto' | t }}</p>
+        <a class="explicacion__enlace" routerLink="/prestador/rnt">
+          {{ 'prestador.inicio.irARnt' | t }}
+          <app-icono nombre="flecha" />
+        </a>
+      </div>
+    </div>
+  } @else if (cuenta() === undefined) {
+    @if (errorCarga(); as fallo) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ fallo.mensaje }}</span>
+      </p>
+    } @else {
+      <p class="texto-suave" aria-live="polite">{{ 'prestador.cobro.cargando' | t }}</p>
+    }
+  } @else {
+    <!-- La cuenta vigente: el número solo se ve enmascarado, como lo devuelve la API -->
+    <section class="tarjeta" aria-labelledby="cobro-vigente-titulo">
+      <h2 id="cobro-vigente-titulo">{{ 'prestador.cobro.vigente.titulo' | t }}</h2>
+      @if (cuenta(); as vigente) {
+        <dl class="datos">
+          <div>
+            <dt>{{ 'prestador.cobro.vigente.tipo' | t }}</dt>
+            <dd>{{ etiquetaTipo[vigente.tipo] }}</dd>
+          </div>
+          @if (vigente.entidad && esBanco(vigente.tipo)) {
+            <div>
+              <dt>{{ 'prestador.cobro.vigente.entidad' | t }}</dt>
+              <dd>{{ vigente.entidad }}</dd>
+            </div>
+          }
+          <div>
+            <dt>{{ 'prestador.cobro.vigente.numero' | t }}</dt>
+            <dd>
+              <span class="enmascarado" aria-hidden="true">{{ vigente.numeroEnmascarado }}</span>
+              <span class="solo-lectores">{{ 'prestador.cobro.terminaEn' | t: { digitos: ultimos(vigente.numeroEnmascarado) } }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'prestador.cobro.vigente.titular' | t }}</dt>
+            <dd>{{ vigente.titular }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'prestador.cobro.vigente.desde' | t }}</dt>
+            <dd>{{ vigente.vigenteDesde | fecha: 'larga' }}</dd>
+          </div>
+        </dl>
+      } @else {
+        <p class="alerta alerta--aviso">
+          <app-icono nombre="alerta" />
+          <span>{{ 'prestador.cobro.sinCuenta' | t }}</span>
+        </p>
+      }
+    </section>
+
+    <section class="tarjeta formulario" aria-labelledby="cobro-form-titulo">
+      <h2 id="cobro-form-titulo">
+        {{ (cuenta() ? 'prestador.cobro.cambiar.titulo' : 'prestador.cobro.registrar.titulo') | t }}
+      </h2>
+      <p class="texto-suave">
+        {{ (cuenta() ? 'prestador.cobro.cambiar.texto' : 'prestador.cobro.registrar.texto') | t }}
+      </p>
+
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" autocomplete="off" novalidate>
+        @if (errorGeneral(); as mensaje) {
+          <p class="alerta alerta--error" role="alert">
+            <app-icono nombre="alerta" />
+            <span>{{ mensaje() }}</span>
+          </p>
+        }
+
+        <div class="campo">
+          <label for="cobro-tipo">
+            {{ 'prestador.cobro.form.tipo' | t }} <span class="requerido" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="cobro-tipo"
+            formControlName="tipo"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('tipo') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('tipo') ? 'cobro-tipo-error' : null"
+          >
+            <option value="">{{ 'prestador.cobro.form.elegirTipo' | t }}</option>
+            @for (tipo of tipos; track tipo) {
+              <option [value]="tipo">{{ etiquetaTipo[tipo] }}</option>
+            }
+          </select>
+          @if (errorDe('tipo'); as mensaje) {
+            <p class="campo__error" id="cobro-tipo-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        @if (banco()) {
+          <div class="campo">
+            <label for="cobro-entidad">
+              {{ 'prestador.cobro.form.entidad' | t }} <span class="requerido" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="cobro-entidad"
+              type="text"
+              list="cobro-bancos"
+              formControlName="entidad"
+              autocomplete="off"
+              maxlength="100"
+              aria-required="true"
+              [attr.aria-invalid]="errorDe('entidad') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('entidad') ? 'cobro-entidad-error cobro-entidad-ayuda' : 'cobro-entidad-ayuda'"
+            />
+            <datalist id="cobro-bancos">
+              @for (nombre of bancos; track nombre) {
+                <option [value]="nombre"></option>
+              }
+            </datalist>
+            <p class="campo__ayuda" id="cobro-entidad-ayuda">{{ 'prestador.cobro.form.ayudaEntidad' | t }}</p>
+            @if (errorDe('entidad'); as mensaje) {
+              <p class="campo__error" id="cobro-entidad-error">{{ mensaje }}</p>
+            }
+          </div>
+        }
+
+        @if (tipoElegido()) {
+          <div class="campo">
+            <label for="cobro-numero">
+              {{ (billetera() ? 'prestador.cobro.form.celular' : 'prestador.cobro.form.numeroCuenta') | t }}
+              <span class="requerido" aria-hidden="true">*</span>
+            </label>
+            <!-- Dato sensible: no se autocompleta, no se corrige ni se guarda en el navegador. -->
+            <input
+              id="cobro-numero"
+              type="text"
+              inputmode="numeric"
+              formControlName="numero"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              maxlength="30"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              aria-required="true"
+              [attr.aria-invalid]="errorDe('numero') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('numero') ? 'cobro-numero-error cobro-numero-ayuda' : 'cobro-numero-ayuda'"
+            />
+            <p class="campo__ayuda" id="cobro-numero-ayuda">
+              {{ (billetera() ? 'prestador.cobro.form.ayudaCelular' : 'prestador.cobro.form.ayudaNumeroCuenta') | t }}
+              {{ 'prestador.cobro.form.ayudaPrivado' | t }}
+            </p>
+            @if (errorDe('numero'); as mensaje) {
+              <p class="campo__error" id="cobro-numero-error">{{ mensaje }}</p>
+            }
+          </div>
+        }
+
+        <div class="campo">
+          <label for="cobro-titular">
+            {{ 'prestador.cobro.form.titular' | t }} <span class="requerido" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cobro-titular"
+            type="text"
+            formControlName="titular"
+            autocomplete="off"
+            maxlength="100"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('titular') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('titular') ? 'cobro-titular-error cobro-titular-ayuda' : 'cobro-titular-ayuda'"
+          />
+          <p class="campo__ayuda" id="cobro-titular-ayuda">{{ 'prestador.cobro.form.ayudaTitular' | t }}</p>
+          @if (errorDe('titular'); as mensaje) {
+            <p class="campo__error" id="cobro-titular-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="acciones">
+          <button type="submit" class="boton" [disabled]="guardando()">
+            {{ (guardando() ? 'cuentas.misDatos.guardando' : 'prestador.cobro.form.guardar') | t }}
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+</section>

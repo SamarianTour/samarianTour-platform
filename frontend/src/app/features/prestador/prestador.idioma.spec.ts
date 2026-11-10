@@ -2,7 +2,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { OfertaPrestador, TipoPrestador } from '../../core/api/modelos';
+import { OfertaPrestador, OfertaPropia, TipoPrestador } from '../../core/api/modelos';
 import { erroresInterceptor } from '../../core/errores/errores.interceptor';
 import { establecerIdioma } from '../../core/idioma/idioma';
 import { CLAVE_SESION, aSesionGuardada } from '../../core/sesion/almacen-sesion';
@@ -36,6 +36,43 @@ const RECHAZADA: OfertaPrestador = {
     precioReferencia: 80000,
     unidadPrecio: 'por persona',
     motivoRechazo: 'Faltan fotos',
+  },
+};
+
+/** La misma oferta con el contenido completo de sus versiones (DC-50), como la entrega `GET /prestador/ofertas/{id}`. */
+const RECHAZADA_PROPIA: OfertaPropia = {
+  id: RECHAZADA.id,
+  tipo: 'ACTIVIDAD',
+  retirada: false,
+  publicada: {
+    numero: 1,
+    estadoModeracion: 'APROBADA',
+    enviadaEn: '2026-10-20T10:00:00',
+    revisadaEn: '2026-10-21T10:00:00',
+    contenido: {
+      nombre: 'Caminata a Marinka',
+      descripcion: 'Sendero entre cafetales.',
+      precioReferencia: 70000,
+      unidadPrecio: 'por persona',
+      zonaId: 'z1',
+      capacidadMaxima: 10,
+      fotos: [],
+    },
+  },
+  pendiente: {
+    numero: 2,
+    estadoModeracion: 'RECHAZADA',
+    enviadaEn: '2026-11-01T10:00:00',
+    motivoRechazo: 'Faltan fotos',
+    contenido: {
+      nombre: 'Caminata a Marinka',
+      descripcion: 'Sendero entre cafetales.',
+      precioReferencia: 80000,
+      unidadPrecio: 'por persona',
+      zonaId: 'z1',
+      capacidadMaxima: 10,
+      fotos: [],
+    },
   },
 };
 
@@ -170,7 +207,7 @@ describe('prestador en español e inglés', () => {
       fixture = f;
       f.componentRef.setInput('id', RECHAZADA.id);
       f.detectChanges();
-      http.expectOne((p) => p.url === LISTA).flush(PAGINA([RECHAZADA]));
+      http.expectOne(`${LISTA}/${RECHAZADA.id}`).flush(RECHAZADA_PROPIA);
       f.detectChanges();
       expect(texto()).toContain('Versión publicada');
       expect(texto()).toContain('Aún no');
@@ -195,7 +232,12 @@ describe('prestador en español e inglés', () => {
       fixture = f;
       f.componentRef.setInput('id', 'ajena');
       f.detectChanges();
-      http.expectOne((p) => p.url === LISTA).flush(PAGINA([]));
+      http
+        .expectOne(`${LISTA}/ajena`)
+        .flush(
+          { status: 403, codigo: 'ACCESO_DENEGADO', title: 'x', detail: 'x' },
+          { status: 403, statusText: 'Forbidden', headers: { 'Content-Type': 'application/problem+json' } },
+        );
       f.detectChanges();
       expect(texto()).toContain('No encontramos esta oferta entre las tuyas');
 

@@ -1,0 +1,87 @@
+.comision {
+  max-width: 44rem;
+  margin-bottom: 1.5rem;
+}
+
+.tarjeta {
+  max-width: 44rem;
+  margin-bottom: 1.5rem;
+}
+
+.tarjeta h2 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.datos {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.datos > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.datos dt {
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.enmascarado {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.formulario h2,
+.formulario p {
+  margin: 0;
+}
+
+.formulario form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 32rem;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.explicacion p {
+  margin: 0;
+}
+
+.explicacion__titulo {
+  margin-bottom: 0.25rem !important;
+  font-weight: 700;
+}
+
+.explicacion__enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  margin-top: 0.25rem;
+  font-weight: 600;
+}

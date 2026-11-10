@@ -1,0 +1,145 @@
+<section class="pagina">
+  <header class="encabezado encabezado--con-accion">
+    <div>
+      <h1>{{ 'prestador.inicio.titulo' | t: { nombre: nombre() } }}</h1>
+      <p class="texto-suave">{{ 'prestador.inicio.subtitulo' | t }}</p>
+    </div>
+    <a class="boton" routerLink="/prestador/ofertas/nueva">
+      <app-icono nombre="mas" />
+      {{ 'app.titulo.publicarOferta' | t }}
+    </a>
+  </header>
+
+  @if (aviso(); as explicacion) {
+    <div
+      class="alerta aviso-rnt"
+      [class.alerta--aviso]="explicacion.tono === 'aviso'"
+      [class.alerta--info]="explicacion.tono === 'info'"
+    >
+      <app-icono [nombre]="explicacion.tono === 'aviso' ? 'alerta' : 'info'" />
+      <div>
+        <p class="aviso-rnt__titulo">{{ explicacion.titulo | t }}</p>
+        <p>{{ explicacion.texto | t }}</p>
+        <a class="aviso-rnt__enlace" routerLink="/prestador/rnt">
+          {{ 'prestador.inicio.irARnt' | t }}
+          <app-icono nombre="flecha" />
+        </a>
+      </div>
+    </div>
+  }
+
+  <div class="rejilla">
+    <!-- El registro y el RNT -->
+    <section class="tarjeta" aria-labelledby="inicio-registro">
+      <h2 id="inicio-registro">{{ 'prestador.inicio.registro.titulo' | t }}</h2>
+
+      @if (errorRegistro(); as fallo) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ fallo.mensaje }}</span>
+        </p>
+      } @else if (cargandoRegistro()) {
+        <p class="texto-suave">{{ 'prestador.inicio.cargando' | t }}</p>
+      } @else {
+        @let datos = prestador();
+        @let situacionActual = situacion();
+        @let whatsapp = situacionWhatsapp();
+        <dl class="datos">
+          <div>
+            <dt>{{ 'prestador.inicio.registro.estado' | t }}</dt>
+            <dd>
+              @if (situacionActual) {
+                <span class="etiqueta" [class]="claseRnt[situacionActual]">{{ claveRnt[situacionActual] | t }}</span>
+              }
+            </dd>
+          </div>
+          @if (datos) {
+            <div>
+              <dt>{{ 'prestador.inicio.registro.numero' | t }}</dt>
+              <dd>{{ datos.numeroRnt }}</dd>
+            </div>
+            @if (datos.razonSocial) {
+              <div>
+                <dt>{{ 'prestador.inicio.registro.razonSocial' | t }}</dt>
+                <dd>{{ datos.razonSocial }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ 'prestador.inicio.registro.tipo' | t }}</dt>
+              <dd>{{ etiquetaTipo[datos.tipo] }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'prestador.inicio.registro.sincronizado' | t }}</dt>
+              <dd>
+                @if (datos.ultimaSincronizacion) {
+                  {{ datos.ultimaSincronizacion | fecha: 'conHora' }}
+                } @else {
+                  {{ 'prestador.inicio.registro.nuncaSincronizado' | t }}
+                }
+              </dd>
+            </div>
+          }
+          <div>
+            <dt>{{ 'prestador.inicio.registro.whatsapp' | t }}</dt>
+            <dd>
+              @if (whatsapp) {
+                <span class="etiqueta" [class]="claseWhatsapp[whatsapp]">{{ claveWhatsapp[whatsapp] | t }}</span>
+              }
+            </dd>
+          </div>
+        </dl>
+      }
+    </section>
+
+    <!-- Las ofertas por estado -->
+    <section class="tarjeta" aria-labelledby="inicio-ofertas">
+      <div class="tarjeta__cabecera">
+        <h2 id="inicio-ofertas">{{ 'prestador.inicio.ofertas.titulo' | t }}</h2>
+        <a routerLink="/prestador/ofertas">{{ 'app.nav.misOfertas' | t }}</a>
+      </div>
+
+      @if (errorOfertas(); as fallo) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ fallo.mensaje }}</span>
+        </p>
+      } @else if (cargandoOfertas()) {
+        <p class="texto-suave">{{ 'prestador.inicio.cargando' | t }}</p>
+      } @else {
+        @let cuenta = conteo();
+        @let lista = listaOfertas();
+        @if (cuenta && lista && lista.length > 0) {
+          <p class="texto-suave total">{{ 'prestador.inicio.ofertas.total' | t: { n: lista.length } }}</p>
+          <ul class="cifras">
+            @for (estado of estados; track estado) {
+              <li class="cifra">
+                <span class="cifra__valor">{{ cuenta[estado] }}</span>
+                <span class="etiqueta" [class]="claseDeEstado[estado]">{{ etiquetaEstado[estado] }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="texto-suave">{{ 'prestador.ofertas.vacioTitulo' | t }}. {{ 'prestador.ofertas.vacioAyuda' | t }}</p>
+        }
+      }
+    </section>
+  </div>
+
+  <!-- Accesos a cada sección -->
+  <section class="accesos-seccion" aria-labelledby="inicio-accesos">
+    <h2 id="inicio-accesos">{{ 'prestador.inicio.accesos.titulo' | t }}</h2>
+    <ul class="accesos">
+      @for (acceso of accesos; track acceso.ruta) {
+        <li>
+          <a class="acceso" [routerLink]="acceso.ruta">
+            <span class="acceso__icono"><app-icono [nombre]="acceso.icono" /></span>
+            <span class="acceso__texto">
+              <strong>{{ acceso.titulo | t }}</strong>
+              <span class="texto-suave">{{ acceso.texto | t }}</span>
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
+</section>

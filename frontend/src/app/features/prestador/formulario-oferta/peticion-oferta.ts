@@ -1,6 +1,6 @@
 import {
+  ContenidoVersion,
   Coordenada,
-  FichaOferta,
   Foto,
   ModalidadRecorrido,
   NivelEsfuerzo,
@@ -97,39 +97,42 @@ export function aPeticion(valores: ValoresOferta, ubicacion: Coordenada | null, 
 }
 
 /**
- * Valores del formulario a partir de la ficha pública, para editar.
- * [SUPUESTO] La API no devuelve el contenido completo de una oferta propia: se usa su versión publicada.
+ * Valores del formulario a partir del contenido de una versión de la oferta propia (DC-50), para editarla. El contenido trae
+ * todos los campos que envió el prestador, también en una versión que aún no está publicada o que fue rechazada.
  * Las fotos salen completas (con su miniatura) para mostrarlas en el selector; a la API solo viajan sus ids.
  */
-export function valoresDeFicha(ficha: FichaOferta): {
+export function valoresDeContenido(
+  tipo: TipoOferta,
+  contenido: ContenidoVersion,
+): {
   valores: ValoresOferta;
   ubicacion: Coordenada | null;
   fotos: Foto[];
 } {
-  const horas = ficha.actividad?.horariosSalida ?? ficha.paquete?.horariosSalida ?? [];
   return {
     valores: {
-      tipo: ficha.tipo,
-      nombre: ficha.nombre,
-      descripcion: ficha.descripcion,
-      precioReferencia: ficha.precioReferencia,
-      horarios: ficha.horarios ?? '',
-      zonaId: ficha.zona?.id ?? '',
-      comoLlegar: ficha.comoLlegar ?? '',
-      capacidadMaxima: ficha.capacidadMaxima,
-      accesibleSillaRuedas: ficha.tipo !== 'PAQUETE' && ficha.accesibleSillaRuedas,
-      tipoActividad: ficha.actividad?.tipoActividad ?? '',
-      nivelEsfuerzo: ficha.actividad?.nivelEsfuerzo ?? '',
+      tipo,
+      nombre: contenido.nombre,
+      descripcion: contenido.descripcion,
+      precioReferencia: contenido.precioReferencia,
+      horarios: contenido.horarios ?? '',
+      zonaId: contenido.zonaId,
+      comoLlegar: contenido.comoLlegar ?? '',
+      capacidadMaxima: contenido.capacidadMaxima,
+      // La accesibilidad de un paquete se calcula con sus actividades: no se escribe.
+      accesibleSillaRuedas: tipo !== 'PAQUETE' && (contenido.accesibleSillaRuedas ?? false),
+      tipoActividad: contenido.tipoActividad ?? '',
+      nivelEsfuerzo: contenido.nivelEsfuerzo ?? '',
       // La API puede enviar la hora con segundos; el formulario usa HH:mm.
-      horariosSalida: horas.map((hora) => hora.slice(0, 5)).join(', '),
-      puntoEncuentro: ficha.actividad?.puntoEncuentro ?? '',
-      duracionMinutos: ficha.actividad?.duracionMinutos ?? ficha.paquete?.duracionMinutos ?? null,
-      modalidad: ficha.actividad?.modalidad ?? '',
-      idiomasAtencion: (ficha.actividad?.idiomasAtencion ?? []).join(', '),
-      actividadIds: ficha.paquete?.actividades.map((actividad) => actividad.id) ?? [],
-      tipoUnidad: ficha.alojamiento?.tipoUnidad ?? '',
+      horariosSalida: (contenido.horariosSalida ?? []).map((hora) => hora.slice(0, 5)).join(', '),
+      puntoEncuentro: contenido.puntoEncuentro ?? '',
+      duracionMinutos: contenido.duracionMinutos ?? null,
+      modalidad: contenido.modalidad ?? '',
+      idiomasAtencion: (contenido.idiomasAtencion ?? []).join(', '),
+      actividadIds: [...(contenido.actividadIds ?? [])],
+      tipoUnidad: contenido.tipoUnidad ?? '',
     },
-    ubicacion: ficha.ubicacion ?? null,
-    fotos: [...ficha.fotos],
+    ubicacion: contenido.ubicacion ?? null,
+    fotos: [...contenido.fotos],
   };
 }

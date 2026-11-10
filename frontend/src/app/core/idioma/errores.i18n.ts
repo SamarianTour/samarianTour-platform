@@ -183,7 +183,7 @@ export const ERRORES = diccionario(
     'errores.codigo.TIPO_NO_COINCIDE_CON_RNT':
       "The provider type doesn't match the category of your RNT.",
     'errores.codigo.WHATSAPP_NO_CONFIGURADO': "You haven't set up your WhatsApp yet.",
-    'errores.codigo.CUENTA_COBRO_NO_REGISTRADA': "You haven't registered your billing account yet.",
+    'errores.codigo.CUENTA_COBRO_NO_REGISTRADA': "You haven't registered your payout account yet.",
     'errores.codigo.PRESTADOR_CON_COMPROMISOS':
       'Before deleting your data, you must fulfill your pending commitments.',
 

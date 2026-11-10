@@ -1,0 +1,269 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>{{ 'app.titulo.rntPrestador' | t }}</h1>
+    <p class="texto-suave">{{ 'prestador.rnt.intro' | t }}</p>
+  </header>
+
+  @if (prestador() === undefined) {
+    @if (errorCarga(); as fallo) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ fallo.mensaje }}</span>
+      </p>
+    } @else {
+      <p class="texto-suave" aria-live="polite">{{ 'prestador.rnt.cargando' | t }}</p>
+    }
+  } @else {
+    @if (prestador(); as datos) {
+      <!-- Cómo quedó la validación -->
+      <section class="tarjeta" aria-labelledby="rnt-estado-titulo">
+        <div class="tarjeta__cabecera">
+          <h2 id="rnt-estado-titulo">{{ 'prestador.rnt.estado.titulo' | t }}</h2>
+          @if (situacion(); as actual) {
+            <span class="etiqueta" [class]="claseRnt[actual]">{{ claveRnt[actual] | t }}</span>
+          }
+        </div>
+
+        @if (aviso(); as explicacion) {
+          <div
+            class="alerta"
+            [class.alerta--aviso]="explicacion.tono === 'aviso'"
+            [class.alerta--info]="explicacion.tono === 'info'"
+          >
+            <app-icono [nombre]="explicacion.tono === 'aviso' ? 'alerta' : 'info'" />
+            <div class="explicacion">
+              <p class="explicacion__titulo">{{ explicacion.titulo | t }}</p>
+              <p>{{ explicacion.texto | t }}</p>
+            </div>
+          </div>
+        } @else {
+          <p class="alerta alerta--exito">
+            <app-icono nombre="escudo" />
+            <span>{{ 'prestador.rnt.activo' | t }}</span>
+          </p>
+        }
+
+        <dl class="datos">
+          <div>
+            <dt>{{ 'prestador.inicio.registro.numero' | t }}</dt>
+            <dd>{{ datos.numeroRnt }}</dd>
+          </div>
+          @if (datos.razonSocial) {
+            <div>
+              <dt>{{ 'prestador.inicio.registro.razonSocial' | t }}</dt>
+              <dd>{{ datos.razonSocial }}</dd>
+            </div>
+          }
+          @if (datos.municipio) {
+            <div>
+              <dt>{{ 'prestador.rnt.municipio' | t }}</dt>
+              <dd>{{ datos.municipio }}</dd>
+            </div>
+          }
+          <div>
+            <dt>{{ 'prestador.rnt.categoria' | t }}</dt>
+            <dd>{{ etiquetaCategoria[datos.categoria] }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'prestador.inicio.registro.tipo' | t }}</dt>
+            <dd>{{ etiquetaTipo[datos.tipo] }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'prestador.inicio.registro.sincronizado' | t }}</dt>
+            <dd>
+              @if (datos.ultimaSincronizacion) {
+                {{ datos.ultimaSincronizacion | fecha: 'conHora' }}
+              } @else {
+                {{ 'prestador.inicio.registro.nuncaSincronizado' | t }}
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'prestador.rnt.publicar' | t }}</dt>
+            <dd>{{ (datos.habilitado ? 'prestador.rnt.publicarSi' : 'prestador.rnt.publicarNo') | t }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Cambiar el número -->
+      <section class="tarjeta formulario" aria-labelledby="rnt-numero-titulo">
+        <h2 id="rnt-numero-titulo">{{ 'prestador.rnt.cambiar.titulo' | t }}</h2>
+        <p class="texto-suave">{{ 'prestador.rnt.cambiar.texto' | t }}</p>
+
+        <form [formGroup]="grupoNumero" (ngSubmit)="cambiarNumero()" novalidate>
+          <div class="campo">
+            <label for="rnt-numeroNuevo">{{ 'prestador.rnt.numeroNuevo' | t }}</label>
+            <input
+              id="rnt-numeroNuevo"
+              type="text"
+              inputmode="numeric"
+              formControlName="numeroRnt"
+              autocomplete="off"
+              [attr.aria-invalid]="errorDelNumero() ? 'true' : null"
+              [attr.aria-describedby]="errorDelNumero() ? 'rnt-numeroNuevo-error rnt-numero-ayuda' : 'rnt-numero-ayuda'"
+            />
+            <p class="campo__ayuda" id="rnt-numero-ayuda">{{ 'prestador.rnt.ayudaNumero' | t }}</p>
+            @if (errorDelNumero(); as mensaje) {
+              <p class="campo__error" id="rnt-numeroNuevo-error">{{ mensaje }}</p>
+            }
+          </div>
+          <div class="acciones">
+            <button type="submit" class="boton boton--secundario" [disabled]="enviandoNumero()">
+              {{ (enviandoNumero() ? 'prestador.rnt.validando' : 'prestador.rnt.cambiar.boton') | t }}
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <!-- Registrar el RNT y el tipo, o cambiar el tipo -->
+    <section class="tarjeta formulario" aria-labelledby="rnt-form-titulo">
+      <h2 id="rnt-form-titulo">
+        {{ (registrado() ? 'prestador.rnt.tipo.titulo' : 'prestador.rnt.registrar.titulo') | t }}
+      </h2>
+      <p class="texto-suave">
+        {{ (registrado() ? 'prestador.rnt.tipo.texto' : 'prestador.rnt.registrar.texto') | t }}
+      </p>
+
+      <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+        @if (errorGeneral(); as mensaje) {
+          <p class="alerta alerta--error" role="alert">
+            <app-icono nombre="alerta" />
+            <span>{{ mensaje() }}</span>
+          </p>
+        }
+        @if (sesionSinActualizar()) {
+          <p class="alerta alerta--aviso" role="status">
+            <app-icono nombre="alerta" />
+            <span>{{ 'prestador.rnt.sesionSinActualizar' | t }}</span>
+          </p>
+        }
+
+        @if (!registrado()) {
+          <div class="campo">
+            <label for="rnt-numeroRnt">
+              {{ 'prestador.inicio.registro.numero' | t }} <span class="requerido" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="rnt-numeroRnt"
+              type="text"
+              inputmode="numeric"
+              formControlName="numeroRnt"
+              autocomplete="off"
+              aria-required="true"
+              [attr.aria-invalid]="errorDe('numeroRnt') ? 'true' : null"
+              [attr.aria-describedby]="errorDe('numeroRnt') ? 'rnt-numeroRnt-error rnt-ayuda' : 'rnt-ayuda'"
+            />
+            <p class="campo__ayuda" id="rnt-ayuda">{{ 'prestador.rnt.ayudaNumero' | t }}</p>
+            @if (errorDe('numeroRnt'); as mensaje) {
+              <p class="campo__error" id="rnt-numeroRnt-error">{{ mensaje }}</p>
+            }
+          </div>
+        }
+
+        <div class="campo">
+          <label for="rnt-tipo">
+            {{ 'prestador.inicio.registro.tipo' | t }} <span class="requerido" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="rnt-tipo"
+            formControlName="tipo"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('tipo') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('tipo') ? 'rnt-tipo-error' : null"
+          >
+            <option value="">{{ 'prestador.rnt.elegirTipo' | t }}</option>
+            @for (tipo of tipos; track tipo) {
+              <option [value]="tipo">{{ etiquetaTipo[tipo] }}</option>
+            }
+          </select>
+          @if (errorDe('tipo'); as mensaje) {
+            <p class="campo__error" id="rnt-tipo-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        @if (tipoElegido()) {
+          @if (guia()) {
+            <fieldset class="campo grupo" id="rnt-modalidades" [attr.aria-describedby]="errorDe('modalidades') ? 'rnt-modalidades-error' : null">
+              <legend>
+                {{ 'prestador.rnt.modalidades' | t }} <span class="requerido" aria-hidden="true">*</span>
+              </legend>
+              <div class="opciones">
+                @for (modalidad of modalidades; track modalidad) {
+                  <label class="opcion">
+                    <input
+                      type="checkbox"
+                      [checked]="modalidadMarcada(modalidad)"
+                      (change)="alternarModalidad(modalidad, $any($event.target).checked)"
+                    />
+                    <span>{{ etiquetaModalidad[modalidad] }}</span>
+                  </label>
+                }
+              </div>
+              @if (errorDe('modalidades'); as mensaje) {
+                <p class="campo__error" id="rnt-modalidades-error">{{ mensaje }}</p>
+              }
+            </fieldset>
+
+            <div class="campo">
+              <label for="rnt-idiomas">
+                {{ 'prestador.rnt.idiomas' | t }} <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="rnt-idiomas"
+                type="text"
+                formControlName="idiomas"
+                autocomplete="off"
+                autocapitalize="none"
+                aria-required="true"
+                [attr.aria-invalid]="errorDe('idiomas') ? 'true' : null"
+                [attr.aria-describedby]="errorDe('idiomas') ? 'rnt-idiomas-error rnt-idiomas-ayuda' : 'rnt-idiomas-ayuda'"
+              />
+              <p class="campo__ayuda" id="rnt-idiomas-ayuda">{{ 'prestador.form.ayudaIdiomas' | t }}</p>
+              @if (errorDe('idiomas'); as mensaje) {
+                <p class="campo__error" id="rnt-idiomas-error">{{ mensaje }}</p>
+              }
+            </div>
+          } @else {
+            <div class="campo">
+              <label for="rnt-numeroEmpleados">
+                {{ 'prestador.rnt.empleados' | t }} <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="rnt-numeroEmpleados"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="100000"
+                step="1"
+                formControlName="numeroEmpleados"
+                aria-required="true"
+                [attr.aria-invalid]="errorDe('numeroEmpleados') ? 'true' : null"
+                [attr.aria-describedby]="errorDe('numeroEmpleados') ? 'rnt-numeroEmpleados-error' : null"
+              />
+              @if (errorDe('numeroEmpleados'); as mensaje) {
+                <p class="campo__error" id="rnt-numeroEmpleados-error">{{ mensaje }}</p>
+              }
+            </div>
+          }
+        }
+
+        @if (enviando() && !registrado()) {
+          <p class="texto-suave" role="status">{{ 'prestador.rnt.puedeTardar' | t }}</p>
+        }
+        <div class="acciones">
+          <button type="submit" class="boton" [disabled]="enviando()">
+            {{
+              (enviando()
+                ? 'prestador.rnt.validando'
+                : registrado()
+                  ? 'prestador.rnt.tipo.boton'
+                  : 'prestador.rnt.registrar.boton'
+              ) | t
+            }}
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+</section>

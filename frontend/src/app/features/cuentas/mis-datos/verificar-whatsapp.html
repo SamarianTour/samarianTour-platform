@@ -7,7 +7,7 @@
     } @else {
       {{ 'cuentas.verificar.enviadoSinNumero' | t }}
     }
-    {{ 'cuentas.verificar.aviso' | t }}
+    {{ aviso() | t }}
   </p>
 
   @if (error(); as mensaje) {

@@ -150,6 +150,67 @@ describe('pantallas que crea cada ruta', () => {
       await ir('/prestador/ofertas', PanelPrestador);
     });
 
+    // P03.0: el inicio del panel es el dashboard; pide su registro (núcleo) y sus ofertas (catálogo).
+    it('el prestador abre su inicio en /prestador y este pide su registro y sus ofertas', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-inicio-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/catalogo/prestador/ofertas')).toHaveLength(1);
+    });
+
+    // Las secciones que llegan en los siguientes commits ya tienen su ruta dentro del panel.
+    // P03.1: el RNT se lee en el núcleo.
+    it('el prestador abre su RNT y este pide su registro', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/rnt', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-rnt-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
+    });
+
+    // P03.4: el WhatsApp de contacto se lee en el núcleo, con el registro.
+    it('el prestador abre su WhatsApp y este pide su registro', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/whatsapp', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-whatsapp-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
+    });
+
+    // P03.5: la cuenta de cobro se lee en el núcleo.
+    it('el prestador abre su cuenta de cobro y esta pide la cuenta vigente', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/cuenta-cobro', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-cuenta-cobro-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/cuenta-cobro')).toHaveLength(1);
+    });
+
+    // P03.2: el perfil público se lee en el catálogo.
+    it('el prestador abre su perfil público y este pide el perfil al catálogo', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/perfil', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-perfil-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/catalogo/prestador/perfil')).toHaveLength(1);
+    });
+
+    it.each(['/prestador', '/prestador/rnt', '/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
+      'un turista que abre %s ve "no tienes permiso"',
+      async (url) => {
+        conSesion('TURISTA');
+
+        await ir(url, SinPermiso);
+      },
+    );
+
     it.each([
       ['GESTOR_DESTINO', '/gestor'],
     ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {

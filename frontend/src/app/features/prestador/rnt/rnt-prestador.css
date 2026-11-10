@@ -1,0 +1,95 @@
+.tarjeta {
+  margin-bottom: 1.5rem;
+  max-width: 44rem;
+}
+
+.tarjeta h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.tarjeta__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.explicacion p {
+  margin: 0;
+}
+
+.explicacion__titulo {
+  margin-bottom: 0.25rem !important;
+  font-weight: 700;
+}
+
+.datos {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.datos > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.datos dt {
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.formulario p {
+  margin: 0;
+}
+
+.formulario form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 32rem;
+}
+
+.grupo {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.grupo legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

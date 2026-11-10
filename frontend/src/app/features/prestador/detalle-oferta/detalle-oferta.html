@@ -29,7 +29,7 @@
       <header class="encabezado detalle__cabecera">
         <div>
           <p class="rotulo">{{ etiquetaTipo[propia.tipo] }}</p>
-          <h1>{{ (propia.pendiente ?? propia.publicada)?.nombre }}</h1>
+          <h1>{{ (propia.pendiente ?? propia.publicada)?.contenido?.nombre }}</h1>
         </div>
         <span class="etiqueta" [class]="claseDeEstado[calculado]">{{ etiquetaEstado[calculado] }}</span>
       </header>
@@ -66,11 +66,34 @@
                 }
                 <div>
                   <dt>{{ 'prestador.detalle.nombre' | t }}</dt>
-                  <dd>{{ version.nombre }}</dd>
+                  <dd>{{ version.contenido.nombre }}</dd>
                 </div>
                 <div>
                   <dt>{{ 'prestador.detalle.precio' | t }}</dt>
-                  <dd class="renglon__precio">{{ version.precioReferencia | precio: unidad[propia.tipo] }}</dd>
+                  <dd class="renglon__precio">{{ version.contenido.precioReferencia | precio: unidad[propia.tipo] }}</dd>
+                </div>
+                <div>
+                  <dt>{{ 'prestador.detalle.capacidad' | t }}</dt>
+                  <dd>{{ version.contenido.capacidadMaxima }}</dd>
+                </div>
+                <div class="renglon--texto">
+                  <dt>{{ 'prestador.detalle.descripcion' | t }}</dt>
+                  <dd>{{ version.contenido.descripcion }}</dd>
+                </div>
+                <div class="renglon--texto">
+                  <dt>{{ 'prestador.detalle.fotos' | t }}</dt>
+                  <dd>
+                    @if (version.contenido.fotos.length > 0) {
+                      {{ 'prestador.detalle.fotosN' | t: { n: version.contenido.fotos.length } }}
+                      <ul class="fotos" aria-hidden="true">
+                        @for (foto of version.contenido.fotos; track foto.id) {
+                          <li><img [src]="foto.urlMiniatura" alt="" loading="lazy" /></li>
+                        }
+                      </ul>
+                    } @else {
+                      {{ 'prestador.detalle.sinFotos' | t }}
+                    }
+                  </dd>
                 </div>
               </dl>
             } @else {
@@ -82,12 +105,9 @@
 
       <div class="acciones">
         @if (editable()) {
-          <a class="boton" [routerLink]="['/prestador/ofertas', propia.id, 'editar']">{{ 'app.titulo.editarOferta' | t }}</a>
-        } @else if (!propia.retirada) {
-          <p class="alerta alerta--info">
-            <app-icono nombre="info" />
-            <span>{{ 'prestador.ofertas.nota' | t }}</span>
-          </p>
+          <a class="boton" [routerLink]="['/prestador/ofertas', propia.id, 'editar']">{{
+            (calculado === 'RECHAZADA' ? 'prestador.detalle.corregir' : 'app.titulo.editarOferta') | t
+          }}</a>
         }
         @if (propia.publicada && !propia.retirada) {
           <a class="boton boton--secundario" [routerLink]="['/ofertas', propia.id]">{{ 'prestador.detalle.verEnCatalogo' | t }}</a>

@@ -21,8 +21,13 @@ export type FichaOferta = Esquemas['FichaOferta'];
 export type Foto = Esquemas['Foto'];
 export type Zona = Esquemas['Zona'];
 export type PerfilPublico = Esquemas['PerfilPublico'];
+/** Lo que el prestador escribe de su perfil público; las fotos se suben aparte. */
+export type PerfilRequest = Esquemas['PerfilRequest'];
 export type OfertaRequest = Esquemas['OfertaRequest'];
 export type OfertaPrestador = Esquemas['OfertaPrestador'];
+/** Una oferta propia con el contenido completo de sus versiones (DC-50): la publicada y la pendiente. */
+export type OfertaPropia = Esquemas['OfertaPropia'];
+export type VersionPropia = Esquemas['VersionPropia'];
 export type PaginaOfertasPrestador = Esquemas['PaginaOfertasPrestador'];
 export type VersionOferta = Esquemas['Version'];
 export type EstadoOpinion = Esquemas['EstadoOpinion'];

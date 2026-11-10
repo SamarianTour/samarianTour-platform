@@ -82,8 +82,13 @@ describe('sePuedeEditar', () => {
     );
   });
 
-  it('no permite editar una oferta que solo tiene versión pendiente', () => {
-    expect(sePuedeEditar(oferta({ pendiente: version(1, 'EN_MODERACION') }))).toBe(false);
+  it('permite editar una oferta que solo tiene versión pendiente: la primera en moderación o una rechazada', () => {
+    expect(sePuedeEditar(oferta({ pendiente: version(1, 'EN_MODERACION') }))).toBe(true);
+    expect(sePuedeEditar(oferta({ pendiente: version(1, 'RECHAZADA', 'Faltan fotos') }))).toBe(true);
+  });
+
+  it('no permite editar lo que no tiene ninguna versión', () => {
+    expect(sePuedeEditar(oferta({}))).toBe(false);
   });
 
   it('no permite editar una oferta retirada', () => {

@@ -6,7 +6,12 @@ export const RUTAS_PRESTADOR: Routes = [
     path: '',
     loadComponent: () => import('./panel/panel-prestador').then((modulo) => modulo.PanelPrestador),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'ofertas' },
+      {
+        path: '',
+        pathMatch: 'full',
+        title: 'app.titulo.inicioPrestador',
+        loadComponent: () => import('./inicio/inicio-prestador').then((modulo) => modulo.InicioPrestador),
+      },
       {
         path: 'ofertas',
         title: 'app.titulo.misOfertas',
@@ -28,6 +33,27 @@ export const RUTAS_PRESTADOR: Routes = [
         title: 'app.titulo.editarOferta',
         loadComponent: () =>
           import('./formulario-oferta/formulario-oferta').then((modulo) => modulo.FormularioOferta),
+      },
+      {
+        path: 'rnt',
+        title: 'app.titulo.rntPrestador',
+        loadComponent: () => import('./rnt/rnt-prestador').then((modulo) => modulo.RntPrestador),
+      },
+      {
+        path: 'perfil',
+        title: 'app.titulo.perfilPublico',
+        loadComponent: () => import('./perfil/perfil-prestador').then((modulo) => modulo.PerfilPrestador),
+      },
+      {
+        path: 'whatsapp',
+        title: 'app.titulo.whatsappPrestador',
+        loadComponent: () => import('./whatsapp/whatsapp-prestador').then((modulo) => modulo.WhatsappPrestador),
+      },
+      {
+        path: 'cuenta-cobro',
+        title: 'app.titulo.cuentaCobro',
+        loadComponent: () =>
+          import('./cuenta-cobro/cuenta-cobro-prestador').then((modulo) => modulo.CuentaCobroPrestador),
       },
     ],
   },
