@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { aErrorApi } from '../errores/errores.interceptor';
 import { API_NUCLEO } from './api.config';
-import { DatosTipoRequest, PrestadorPropio, RegistroPrestadorRequest } from './modelos-nucleo';
+import {
+  CuentaCobro,
+  CuentaCobroRequest,
+  DatosTipoRequest,
+  PrestadorPropio,
+  RegistroPrestadorRequest,
+} from './modelos-nucleo';
 
 const BASE = `${API_NUCLEO}/prestador`;
 
@@ -63,5 +69,25 @@ export class PrestadorService {
   /** Confirma el WhatsApp con el código y devuelve al prestador con el número verificado. */
   verificarWhatsapp(codigo: string): Observable<PrestadorPropio> {
     return this.http.post<PrestadorPropio>(`${BASE}/whatsapp/verificacion`, { codigo });
+  }
+
+  /**
+   * La cuenta de cobro vigente, con el número enmascarado: el núcleo nunca devuelve el número completo (RF-75). Devuelve `null`
+   * si todavía no registró una (`CUENTA_COBRO_NO_REGISTRADA`): no es un fallo, es el paso que le falta.
+   */
+  cuentaCobro(): Observable<CuentaCobro | null> {
+    return this.http.get<CuentaCobro>(`${BASE}/cuenta-cobro`).pipe(
+      catchError((fallo: unknown) =>
+        aErrorApi(fallo).codigo === 'CUENTA_COBRO_NO_REGISTRADA' ? of(null) : throwError(() => fallo),
+      ),
+    );
+  }
+
+  /**
+   * Registra la cuenta bancaria o la billetera donde recibe la dispersión (RF-74). Se registra una vez, no en cada pago. Si cambia,
+   * la anterior queda en el historial; registrar los mismos datos no cambia nada. El número completo solo viaja aquí.
+   */
+  registrarCuentaCobro(cuerpo: CuentaCobroRequest): Observable<CuentaCobro> {
+    return this.http.put<CuentaCobro>(`${BASE}/cuenta-cobro`, cuerpo);
   }
 }

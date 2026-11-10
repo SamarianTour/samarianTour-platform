@@ -20,6 +20,9 @@ const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
   'solicitudes.lista.ref',
   // "No" se escribe igual en español y en inglés.
   'admin.moderacion.no',
+  // Nequi y Daviplata son nombres propios.
+  'prestador.cobro.tipo.NEQUI',
+  'prestador.cobro.tipo.DAVIPLATA',
 ]);
 
 /**

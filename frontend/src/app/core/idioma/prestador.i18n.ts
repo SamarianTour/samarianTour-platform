@@ -130,6 +130,56 @@ export const PRESTADOR = diccionario(
     'prestador.whatsapp.avisoVerificar':
       'Mientras no lo verifiques no recibirás el aviso de una solicitud pagada. El código vale 30 minutos.',
 
+    // Cuenta de cobro (P03.5)
+    'prestador.cobro.intro':
+      'Aquí recibes lo que te corresponde por cada pago. La registras una sola vez, no en cada pago.',
+    'prestador.cobro.comision.titulo': 'Sobre la comisión',
+    'prestador.cobro.comision.texto':
+      'La comisión de la plataforma se descuenta de lo que recibes; nunca se le suma al turista.',
+    'prestador.cobro.cargando': 'Cargando tu cuenta de cobro…',
+    'prestador.cobro.sinRnt.titulo': 'Primero registra tu RNT',
+    'prestador.cobro.sinRnt.texto':
+      'La cuenta de cobro se guarda en tu registro de prestador, que se crea al registrar tu RNT.',
+    'prestador.cobro.vigente.titulo': 'Tu cuenta de cobro vigente',
+    'prestador.cobro.vigente.tipo': 'Tipo de cuenta',
+    'prestador.cobro.vigente.entidad': 'Banco',
+    'prestador.cobro.vigente.numero': 'Número',
+    'prestador.cobro.vigente.titular': 'Titular',
+    'prestador.cobro.vigente.desde': 'Vigente desde',
+    'prestador.cobro.terminaEn': 'Termina en {digitos}',
+    'prestador.cobro.sinCuenta':
+      'Todavía no registraste tu cuenta de cobro. Sin ella no podemos transferirte lo que te corresponde.',
+    'prestador.cobro.registrar.titulo': 'Registra tu cuenta de cobro',
+    'prestador.cobro.registrar.texto': 'Elige dónde quieres recibir tus pagos.',
+    'prestador.cobro.cambiar.titulo': 'Cambiar la cuenta de cobro',
+    'prestador.cobro.cambiar.texto':
+      'La cuenta anterior queda en el historial. Por seguridad el número completo no se vuelve a mostrar: escríbelo otra vez para guardar cualquier cambio.',
+    'prestador.cobro.tipo.AHORROS': 'Cuenta de ahorros',
+    'prestador.cobro.tipo.CORRIENTE': 'Cuenta corriente',
+    'prestador.cobro.tipo.NEQUI': 'Nequi',
+    'prestador.cobro.tipo.DAVIPLATA': 'Daviplata',
+    'prestador.cobro.form.tipo': 'Tipo de cuenta',
+    'prestador.cobro.form.elegirTipo': 'Elige el tipo…',
+    'prestador.cobro.form.entidad': 'Banco',
+    'prestador.cobro.form.ayudaEntidad': 'Elige uno de la lista o escríbelo.',
+    'prestador.cobro.form.numeroCuenta': 'Número de cuenta',
+    'prestador.cobro.form.celular': 'Número de celular',
+    'prestador.cobro.form.ayudaNumeroCuenta': 'De 6 a 20 dígitos, sin letras.',
+    'prestador.cobro.form.ayudaCelular': 'Tu celular de 10 dígitos, que empieza por 3.',
+    'prestador.cobro.form.ayudaPrivado': 'Lo guardamos cifrado y después solo mostramos los últimos 4 dígitos.',
+    'prestador.cobro.form.titular': 'Titular',
+    'prestador.cobro.form.ayudaTitular': 'El nombre como aparece en la cuenta.',
+    'prestador.cobro.form.guardar': 'Guardar cuenta',
+    'prestador.cobro.guardada': 'Guardaste tu cuenta de cobro.',
+    'prestador.cobro.error.tipoRequerido': 'Elige el tipo de cuenta.',
+    'prestador.cobro.error.entidadRequerida': 'Elige o escribe el banco.',
+    'prestador.cobro.error.entidadLarga': 'El banco puede tener hasta 100 caracteres.',
+    'prestador.cobro.error.numeroRequerido': 'Escribe el número.',
+    'prestador.cobro.error.numeroBancoInvalido': 'El número de cuenta tiene de 6 a 20 dígitos.',
+    'prestador.cobro.error.numeroCelularInvalido': 'El celular tiene 10 dígitos y empieza por 3.',
+    'prestador.cobro.error.titularRequerido': 'Escribe el nombre del titular.',
+    'prestador.cobro.error.titularLargo': 'El nombre puede tener hasta 100 caracteres.',
+
     // Mis ofertas
     'prestador.ofertas.subtitulo':
       'Cada oferta nueva o editada pasa por moderación antes de verse en el catálogo.',
@@ -405,6 +455,56 @@ export const PRESTADOR = diccionario(
       'You saved your WhatsApp. We sent you a code on WhatsApp to verify it.',
     'prestador.whatsapp.avisoVerificar':
       "Until you verify it you won't get the notice of a paid request. The code is valid for 30 minutes.",
+
+    // Payout account (P03.5)
+    'prestador.cobro.intro':
+      'This is where you receive what you are owed for each payment. You register it once, not for every payment.',
+    'prestador.cobro.comision.titulo': 'About the commission',
+    'prestador.cobro.comision.texto':
+      "The platform commission is deducted from what you receive; it is never added to the tourist's price.",
+    'prestador.cobro.cargando': 'Loading your payout account…',
+    'prestador.cobro.sinRnt.titulo': 'Register your RNT first',
+    'prestador.cobro.sinRnt.texto':
+      'Your payout account is saved in your provider registration, which is created when you register your RNT.',
+    'prestador.cobro.vigente.titulo': 'Your current payout account',
+    'prestador.cobro.vigente.tipo': 'Account type',
+    'prestador.cobro.vigente.entidad': 'Bank',
+    'prestador.cobro.vigente.numero': 'Number',
+    'prestador.cobro.vigente.titular': 'Account holder',
+    'prestador.cobro.vigente.desde': 'Current since',
+    'prestador.cobro.terminaEn': 'Ends in {digitos}',
+    'prestador.cobro.sinCuenta':
+      "You haven't registered your payout account yet. Without it we can't transfer what you are owed.",
+    'prestador.cobro.registrar.titulo': 'Register your payout account',
+    'prestador.cobro.registrar.texto': 'Choose where you want to receive your payments.',
+    'prestador.cobro.cambiar.titulo': 'Change the payout account',
+    'prestador.cobro.cambiar.texto':
+      'The previous account stays in the history. For security the full number is not shown again: type it again to save any change.',
+    'prestador.cobro.tipo.AHORROS': 'Savings account',
+    'prestador.cobro.tipo.CORRIENTE': 'Checking account',
+    'prestador.cobro.tipo.NEQUI': 'Nequi',
+    'prestador.cobro.tipo.DAVIPLATA': 'Daviplata',
+    'prestador.cobro.form.tipo': 'Account type',
+    'prestador.cobro.form.elegirTipo': 'Choose the type…',
+    'prestador.cobro.form.entidad': 'Bank',
+    'prestador.cobro.form.ayudaEntidad': 'Choose one from the list or type it.',
+    'prestador.cobro.form.numeroCuenta': 'Account number',
+    'prestador.cobro.form.celular': 'Mobile number',
+    'prestador.cobro.form.ayudaNumeroCuenta': 'From 6 to 20 digits, no letters.',
+    'prestador.cobro.form.ayudaCelular': 'Your 10-digit mobile number, starting with 3.',
+    'prestador.cobro.form.ayudaPrivado': 'We store it encrypted and afterwards only show the last 4 digits.',
+    'prestador.cobro.form.titular': 'Account holder',
+    'prestador.cobro.form.ayudaTitular': 'The name as it appears on the account.',
+    'prestador.cobro.form.guardar': 'Save account',
+    'prestador.cobro.guardada': 'You saved your payout account.',
+    'prestador.cobro.error.tipoRequerido': 'Choose the account type.',
+    'prestador.cobro.error.entidadRequerida': 'Choose or type the bank.',
+    'prestador.cobro.error.entidadLarga': 'The bank can have up to 100 characters.',
+    'prestador.cobro.error.numeroRequerido': 'Enter the number.',
+    'prestador.cobro.error.numeroBancoInvalido': 'The account number has 6 to 20 digits.',
+    'prestador.cobro.error.numeroCelularInvalido': 'The mobile number has 10 digits and starts with 3.',
+    'prestador.cobro.error.titularRequerido': "Enter the account holder's name.",
+    'prestador.cobro.error.titularLargo': 'The name can have up to 100 characters.',
 
     'prestador.ofertas.subtitulo':
       'Every new or edited offer goes through moderation before it appears in the catalog.',

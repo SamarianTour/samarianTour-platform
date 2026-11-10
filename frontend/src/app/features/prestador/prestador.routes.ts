@@ -58,8 +58,8 @@ export const RUTAS_PRESTADOR: Routes = [
       {
         path: 'cuenta-cobro',
         title: 'app.titulo.cuentaCobro',
-        data: { codigo: 'P03.5', nombre: 'app.titulo.cuentaCobro' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./cuenta-cobro/cuenta-cobro-prestador').then((modulo) => modulo.CuentaCobroPrestador),
       },
     ],
   },

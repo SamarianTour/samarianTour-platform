@@ -124,6 +124,57 @@ describe('PrestadorService', () => {
     expect(recibido?.whatsappVerificado).toBe(true);
   });
 
+  it('pide la cuenta de cobro vigente con GET', () => {
+    let recibida: unknown;
+    const cuenta = {
+      tipo: 'AHORROS',
+      entidad: 'Bancolombia',
+      numeroEnmascarado: '******0101',
+      titular: 'Mar y Selva',
+      vigenteDesde: '2026-10-29T15:00:00Z',
+    };
+
+    servicio.cuentaCobro().subscribe((c) => (recibida = c));
+
+    const peticion = http.expectOne(`${BASE}/cuenta-cobro`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush(cuenta);
+    expect(recibida).toEqual(cuenta);
+  });
+
+  it('si todavía no registró la cuenta de cobro devuelve null en vez de fallar', () => {
+    let recibida: unknown = 'sin respuesta';
+    let fallo: unknown;
+
+    servicio.cuentaCobro().subscribe({ next: (c) => (recibida = c), error: (e) => (fallo = e) });
+
+    const { body, init } = problema(404, 'CUENTA_COBRO_NO_REGISTRADA');
+    http.expectOne(`${BASE}/cuenta-cobro`).flush(body, init);
+    expect(recibida).toBeNull();
+    expect(fallo).toBeUndefined();
+  });
+
+  it('si no ha registrado el RNT la cuenta de cobro falla y la pantalla lo explica', () => {
+    let fallo: unknown;
+
+    servicio.cuentaCobro().subscribe({ error: (e) => (fallo = e) });
+
+    const { body, init } = problema(404, 'PRESTADOR_NO_REGISTRADO');
+    http.expectOne(`${BASE}/cuenta-cobro`).flush(body, init);
+    expect((fallo as ErrorApi).codigo).toBe('PRESTADOR_NO_REGISTRADO');
+  });
+
+  it('registra la cuenta de cobro con PUT', () => {
+    const cuerpo = { tipo: 'AHORROS', entidad: 'Bancolombia', numero: '40112233440101', titular: 'Mar y Selva' } as const;
+
+    servicio.registrarCuentaCobro(cuerpo).subscribe();
+
+    const peticion = http.expectOne(`${BASE}/cuenta-cobro`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual(cuerpo);
+    peticion.flush({ ...cuerpo, numero: undefined, numeroEnmascarado: '******0101', vigenteDesde: '2026-10-29T15:00:00Z' });
+  });
+
   it('cualquier otro fallo sigue siendo un fallo', () => {
     let fallo: unknown;
 

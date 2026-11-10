@@ -60,6 +60,10 @@ export type PrestadorPropio = Esquemas['Prestador'];
 export type RegistroPrestadorRequest = Esquemas['RegistroPrestadorRequest'];
 export type DatosTipoRequest = Esquemas['DatosTipoRequest'];
 export type CategoriaPrestador = Esquemas['Prestador']['categoria'];
+/** La cuenta donde el prestador recibe la dispersión, con el número enmascarado (RF-74, RF-75). */
+export type CuentaCobro = Esquemas['CuentaCobro'];
+export type CuentaCobroRequest = Esquemas['CuentaCobroRequest'];
+export type TipoCuentaCobro = CuentaCobroRequest['tipo'];
 /** Un prestador que la recomendación muestra más de lo que le corresponde (RET-02). */
 export type AlertaSesgo = Esquemas['AlertaSesgo'];
 

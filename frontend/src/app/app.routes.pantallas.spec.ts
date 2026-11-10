@@ -182,7 +182,17 @@ describe('pantallas que crea cada ruta', () => {
       expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
     });
 
-    it.each(['/prestador/perfil', '/prestador/cuenta-cobro'])(
+    // P03.5: la cuenta de cobro se lee en el núcleo.
+    it('el prestador abre su cuenta de cobro y esta pide la cuenta vigente', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador/cuenta-cobro', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-cuenta-cobro-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/cuenta-cobro')).toHaveLength(1);
+    });
+
+    it.each(['/prestador/perfil'])(
       'el prestador abre su panel en %s y dentro se crea una pantalla',
       async (url) => {
         conSesion('PRESTADOR');
