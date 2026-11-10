@@ -16,6 +16,7 @@ import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
 import { PanelAdmin } from './features/admin/panel/panel-admin';
 import { PanelGestor } from './features/gestor/panel/panel-gestor';
+import { Proximamente } from './shared/proximamente/proximamente';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
@@ -73,6 +74,8 @@ describe('pantallas que crea cada ruta', () => {
     it.each([
       ['/ofertas/abc', Ficha],
       ['/iniciar-sesion', IniciarSesion],
+      ['/recomendaciones', Proximamente],
+      ['/alertas', Proximamente],
       ['/registro', Registro],
       ['/registro?tipo=prestador', Registro],
       ['/recuperar-contrasena', RecuperarContrasena],

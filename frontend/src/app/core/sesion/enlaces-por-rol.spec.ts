@@ -17,16 +17,16 @@ const textos = (rol: Rol | null) => enlacesDelRol(rol).map((enlace) => traducir(
 
 describe('enlacesDelRol', () => {
   it('sin sesión ofrece el catálogo y el camino para registrarse como prestador', () => {
-    expect(textos(null)).toEqual(['Catálogo', 'Soy prestador']);
-    expect(enlacesDelRol(null)[1]).toMatchObject({
+    expect(textos(null)).toEqual(['Catálogo', 'Recomendaciones', 'Soy prestador']);
+    expect(enlacesDelRol(null)[2]).toMatchObject({
       ruta: '/registro',
       consulta: { tipo: 'prestador' },
     });
   });
 
   it.each([
-    ['TURISTA', ['Catálogo', 'Mis solicitudes', 'Mis opiniones']],
-    ['PRESTADOR', ['Catálogo', 'Mis ofertas']],
+    ['TURISTA', ['Catálogo', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']],
+    ['PRESTADOR', ['Catálogo', 'Recomendaciones', 'Mis ofertas']],
     ['OPERADOR_DISPONIBILIDAD', ['Cola de solicitudes']],
     ['GESTOR_DESTINO', ['Indicadores']],
     ['ADMINISTRADOR', ['Administración']],
@@ -37,9 +37,9 @@ describe('enlacesDelRol', () => {
   it('el menú también está en inglés', () => {
     establecerIdioma('en', { recordar: false });
 
-    expect(textos(null)).toEqual(['Catalog', "I'm a provider"]);
-    expect(textos('TURISTA')).toEqual(['Catalog', 'My requests', 'My reviews']);
-    expect(textos('PRESTADOR')).toEqual(['Catalog', 'My offers']);
+    expect(textos(null)).toEqual(['Catalog', 'Recommendations', "I'm a provider"]);
+    expect(textos('TURISTA')).toEqual(['Catalog', 'Recommendations', 'My requests', 'My reviews']);
+    expect(textos('PRESTADOR')).toEqual(['Catalog', 'Recommendations', 'My offers']);
     expect(textos('ADMINISTRADOR')).toEqual(['Administration']);
   });
 
@@ -67,10 +67,41 @@ describe('enlacesDelRol', () => {
   });
 });
 
+describe('Recomendaciones y alertas', () => {
+  const recomendaciones = enlacesDelRol(null).find((enlace) => enlace.ruta === '/recomendaciones')!;
+
+  it('el menú solo tiene "Recomendaciones": las alertas no tienen enlace propio', () => {
+    for (const rol of [null, 'TURISTA', 'PRESTADOR'] as const) {
+      const rutas = enlacesDelRol(rol).map((enlace) => enlace.ruta);
+      expect(rutas).toContain('/recomendaciones');
+      expect(rutas).not.toContain('/alertas');
+    }
+  });
+
+  it('los roles internos no lo ven', () => {
+    for (const rol of ['OPERADOR_DISPONIBILIDAD', 'GESTOR_DESTINO', 'ADMINISTRADOR'] as const) {
+      expect(enlacesDelRol(rol).map((enlace) => enlace.ruta)).not.toContain('/recomendaciones');
+    }
+  });
+
+  it('queda marcado en Recomendaciones y también en las alertas, que se alcanzan desde ahí', () => {
+    expect(enlaceActivo(recomendaciones, '/recomendaciones')).toBe(true);
+    expect(enlaceActivo(recomendaciones, '/alertas')).toBe(true);
+    expect(enlaceActivo(recomendaciones, '/alertas?x=1')).toBe(true);
+    expect(enlaceActivo(recomendaciones, '/')).toBe(false);
+    expect(enlaceActivo(recomendaciones, '/ofertas/abc')).toBe(false);
+  });
+
+  it('es una página pública: ningún rol la exige', () => {
+    expect(rolQueExige('/recomendaciones')).toBeNull();
+    expect(rolQueExige('/alertas')).toBeNull();
+  });
+});
+
 describe('enlaceActivo', () => {
   const catalogo: EnlaceNavegacion = enlacesDelRol(null)[0];
-  const ofertas: EnlaceNavegacion = enlacesDelRol('PRESTADOR')[1];
-  const sinSecciones: EnlaceNavegacion = enlacesDelRol(null)[1];
+  const ofertas: EnlaceNavegacion = enlacesDelRol('PRESTADOR').find((enlace) => enlace.ruta === '/prestador/ofertas')!;
+  const sinSecciones: EnlaceNavegacion = enlacesDelRol(null).find((enlace) => enlace.secciones.length === 0)!;
 
   it('el catálogo se marca en la raíz, con filtros y en la ficha de una oferta', () => {
     expect(enlaceActivo(catalogo, '/')).toBe(true);

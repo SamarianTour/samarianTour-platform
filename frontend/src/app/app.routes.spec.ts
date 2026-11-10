@@ -39,6 +39,9 @@ describe('rutas de la aplicación', () => {
       '/recuperar-contrasena',
       // El correo de recuperación del núcleo enlaza exactamente aquí.
       '/restablecer-contrasena?token=abc123',
+      // P08.1 y P08.2: el turista no necesita sesión para pedir recomendaciones ni ver las alertas.
+      '/recomendaciones',
+      '/alertas',
     ])('%s es pública', async (url) => {
       expect(await ir(url)).toBe(url);
     });

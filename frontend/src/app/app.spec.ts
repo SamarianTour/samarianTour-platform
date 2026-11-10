@@ -62,7 +62,7 @@ describe('App (cabecera)', () => {
     it('la navegación es el catálogo y el camino para los prestadores', () => {
       crear();
 
-      expect(enlaces()).toEqual(['Catálogo', 'Soy prestador']);
+      expect(enlaces()).toEqual(['Catálogo', 'Recomendaciones', 'Soy prestador']);
       expect(
         raiz().querySelector<HTMLAnchorElement>('nav a[href^="/registro"]')?.getAttribute('href'),
       ).toBe('/registro?tipo=prestador');
@@ -86,8 +86,8 @@ describe('App (cabecera)', () => {
     });
 
     it.each([
-      ['TURISTA', ['Catálogo', 'Mis solicitudes', 'Mis opiniones']],
-      ['PRESTADOR', ['Catálogo', 'Mis ofertas']],
+      ['TURISTA', ['Catálogo', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']],
+      ['PRESTADOR', ['Catálogo', 'Recomendaciones', 'Mis ofertas']],
       ['OPERADOR_DISPONIBILIDAD', ['Cola de solicitudes']],
       ['GESTOR_DESTINO', ['Indicadores']],
       ['ADMINISTRADOR', ['Administración']],
@@ -103,7 +103,7 @@ describe('App (cabecera)', () => {
       TestBed.inject(SesionService).descartarSesion();
       fixture.detectChanges();
 
-      expect(enlaces()).toEqual(['Catálogo', 'Soy prestador']);
+      expect(enlaces()).toEqual(['Catálogo', 'Recomendaciones', 'Soy prestador']);
       expect(botonesDeCuenta().map((a) => a.textContent?.trim())).toEqual([
         'Iniciar sesión',
         'Registrarse',
@@ -129,7 +129,7 @@ describe('App (cabecera)', () => {
       botonDeIdioma('EN').click();
       fixture.detectChanges();
 
-      expect(enlaces()).toEqual(['Catalog', "I'm a provider"]);
+      expect(enlaces()).toEqual(['Catalog', 'Recommendations', "I'm a provider"]);
       expect(botonesDeCuenta().map((a) => a.textContent?.trim())).toEqual(['Log in', 'Sign up']);
       expect(raiz().querySelector('.saltar')?.textContent).toBe('Skip to content');
       expect(raiz().querySelector('nav')?.getAttribute('aria-label')).toBe('Main');
@@ -143,11 +143,11 @@ describe('App (cabecera)', () => {
 
       botonDeIdioma('EN').click();
       fixture.detectChanges();
-      expect(enlaces()).toEqual(['Catalog', 'My requests', 'My reviews']);
+      expect(enlaces()).toEqual(['Catalog', 'Recommendations', 'My requests', 'My reviews']);
 
       botonDeIdioma('ES').click();
       fixture.detectChanges();
-      expect(enlaces()).toEqual(['Catálogo', 'Mis solicitudes', 'Mis opiniones']);
+      expect(enlaces()).toEqual(['Catálogo', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']);
     });
 
     it('la elección se recuerda: una página nueva arranca en el idioma elegido', () => {

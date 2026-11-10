@@ -11,6 +11,18 @@ import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
  */
 export const routes: Routes = [
   {
+    // P08.1: pública. Se llega desde el menú.
+    path: 'recomendaciones',
+    loadChildren: () =>
+      import('./features/recomendacion/recomendacion.routes').then((modulo) => modulo.RUTAS_RECOMENDACIONES),
+  },
+  {
+    // P08.2: pública. No está en el menú: se llega desde Recomendaciones y desde la ficha de una oferta.
+    path: 'alertas',
+    loadChildren: () =>
+      import('./features/recomendacion/recomendacion.routes').then((modulo) => modulo.RUTAS_ALERTAS),
+  },
+  {
     path: 'prestador',
     canActivate: [rolGuard('PRESTADOR')],
     loadChildren: () =>
