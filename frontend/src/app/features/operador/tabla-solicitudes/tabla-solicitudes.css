@@ -1,0 +1,78 @@
+/* En celular la tabla se desplaza hacia los lados dentro de su caja; la caja se puede enfocar con el teclado. */
+.envoltura {
+  overflow-x: auto;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-md);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+}
+
+.envoltura:focus-visible {
+  outline: 2px solid var(--enlace);
+  outline-offset: 2px;
+}
+
+.tabla {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  text-align: left;
+}
+
+.tabla th {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  background: var(--superficie-suave);
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: top;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.oferta {
+  display: block;
+}
+
+.menor {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+}
+
+/* Las de 6 horas o menos: fondo cálido y una barra a la izquierda, además del texto "Urgente" y el icono. */
+.fila--urgente td {
+  background: var(--peligro-fondo);
+}
+
+.fila--urgente td:first-child {
+  box-shadow: inset 4px 0 0 var(--peligro);
+}
+
+.fila--vencida td {
+  color: var(--texto-suave);
+}
+
+.plazo--urgente {
+  color: var(--peligro);
+  font-weight: 700;
+}
+
+.accion {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.etiqueta app-icono {
+  margin-right: 0.25rem;
+}

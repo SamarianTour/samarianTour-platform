@@ -17,8 +17,8 @@ export const RUTAS_OPERADOR: Routes = [
         path: '',
         pathMatch: 'full',
         title: 'app.titulo.cola',
-        data: { codigo: 'P02.4', nombre: 'app.titulo.cola' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./cola/cola-operador').then((modulo) => modulo.ColaOperador),
       },
       {
         path: 'historial',

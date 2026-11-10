@@ -134,9 +134,18 @@ describe('pantallas que crea cada ruta', () => {
       await ir(url, Proximamente);
     });
 
+    // P02.4: la cola se crea dentro del panel y pide las solicitudes pendientes del operador.
+    it('el operador abre la cola en /operador y esta pide sus solicitudes', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador', PanelOperador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-cola-operador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/operador/solicitudes').length).toBeGreaterThan(0);
+    });
+
     // El operador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
     it.each([
-      '/operador',
       '/operador/historial',
       '/operador/avisos',
       '/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20',

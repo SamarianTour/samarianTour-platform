@@ -1,0 +1,41 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'operador.panel.control' | t }}</p>
+    <h1>{{ 'operador.cola.titulo' | t }}</h1>
+    <p class="texto-suave">{{ 'operador.cola.intro' | t }}</p>
+  </header>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (pagina(); as resultado) {
+      <p class="kpi">
+        <span class="kpi__icono" aria-hidden="true"><app-icono nombre="reloj" /></span>
+        <strong class="kpi__valor">{{ resultado.totalElementos }}</strong>
+        <span class="kpi__etiqueta">{{ 'operador.cola.pendientes' | t }}</span>
+      </p>
+
+      @if (solicitudes().length > 0) {
+        <app-tabla-solicitudes-operador [solicitudes]="solicitudes()" modo="cola" [ahora]="ahora()" />
+      } @else {
+        <div class="tarjeta vacio">
+          <h2>{{ 'operador.cola.vacioTitulo' | t }}</h2>
+          <p class="texto-suave">{{ 'operador.cola.vacioAyuda' | t }}</p>
+        </div>
+      }
+
+      <app-paginacion
+        [pagina]="resultado.pagina"
+        [totalPaginas]="resultado.totalPaginas"
+        (cambiar)="irAPagina($event)"
+      />
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'operador.cola.cargando' | t }}</p>
+    }
+  </div>
+</section>
