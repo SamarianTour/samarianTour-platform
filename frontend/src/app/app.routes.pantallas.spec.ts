@@ -14,6 +14,7 @@ import { RecuperarContrasena } from './features/cuentas/recuperar-contrasena/rec
 import { Registro } from './features/cuentas/registro/registro';
 import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena/restablecer-contrasena';
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
+import { PanelAdmin } from './features/admin/panel/panel-admin';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
@@ -151,11 +152,86 @@ describe('pantallas que crea cada ruta', () => {
 
     it.each([
       ['GESTOR_DESTINO', '/gestor'],
-      ['ADMINISTRADOR', '/admin'],
     ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {
       conSesion(rol);
 
       await ir(url, Proximamente);
+    });
+
+    // P05.5: las zonas se leen y se escriben directo en el catálogo.
+    it('el administrador abre las zonas y estas piden la lista del catálogo', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/zonas', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-zonas-admin')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/catalogo/admin/zonas')).toHaveLength(1);
+    });
+
+    // P05.1: el inicio del panel es la lista de prestadores; pide los prestadores y las cuentas para ponerle nombre al operador.
+    it('el administrador abre los prestadores en /admin y estos piden sus datos', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-prestadores-rnt')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/prestadores')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
+    });
+
+    // P05.2: la cola de ofertas se lee en el catálogo (con las zonas, para ponerles nombre) y se decide en el núcleo.
+    it('el administrador abre la moderación y esta pide la cola de ofertas del catálogo', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/moderacion', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-moderacion-admin')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/catalogo/admin/moderacion/ofertas')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/catalogo/admin/zonas')).toHaveLength(1);
+    });
+
+    // P05.3: las cuentas internas se leen del núcleo.
+    it('el administrador abre las cuentas internas y estas piden la lista', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/cuentas', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-cuentas-internas')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
+    });
+
+    // P05.4: la comisión y los pagos tardíos se leen del núcleo; las cuentas ponen nombre a quien cambió el porcentaje.
+    it('el administrador abre comisión y pagos y estos piden sus datos', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/comision', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-comision-pagos')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/comision')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/pagos-tardios')).toHaveLength(1);
+    });
+
+    // Pendientes técnicos: avisos al catálogo rechazados y eventos de pago fallidos, cada uno con su lista.
+    it('el administrador abre los pendientes técnicos y estos piden sus dos listas', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/pendientes', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-pendientes-tecnicos')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/bandeja/rechazados')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/pagos/eventos-fallidos')).toHaveLength(1);
+    });
+
+    // Alertas de sesgo (RET-02): se crea dentro del panel y pide las alertas y los nombres de los prestadores.
+    it('el administrador abre las alertas de sesgo y estas piden sus datos', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/alertas-sesgo', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-alertas-sesgo')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/alertas-sesgo')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/prestadores')).toHaveLength(1);
     });
 
     // P02.4: la cola se crea dentro del panel y pide las solicitudes pendientes del operador.

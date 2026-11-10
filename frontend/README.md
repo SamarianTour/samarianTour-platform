@@ -44,7 +44,7 @@ Los archivos generados están versionados para que la imagen de Docker se constr
 ```
 src/app
 ├── core/                    lo que existe una sola vez en la aplicación
-│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes, del operador y de pagos
+│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes, del operador, de pagos y del administrador (núcleo y catálogo)
 │   ├── tiempo/              reloj que se renueva solo, para los plazos
 │   ├── navegacion/          salir de la aplicación hacia otra dirección (la pasarela de pago)
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
@@ -55,6 +55,7 @@ src/app
     ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
     ├── prestador/           panel, mis ofertas, detalle y formulario de publicar o editar
     ├── operador/            panel con menú lateral, cola, historial, atender una solicitud y avisos
+    ├── admin/               panel con menú lateral: prestadores y RNT, moderación, cuentas internas, comisión y pagos tardíos, zonas, alertas de sesgo y pendientes técnicos
     └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
 ```
 
@@ -81,7 +82,13 @@ src/app
 | `/operador/solicitudes/:id` | Operador | P02.5 Atender: contactar al prestador por WhatsApp y registrar "hay cupo" (con precio total y condiciones) o "no hay cupo" |
 | `/operador/avisos` | Operador | Avisos de solicitudes nuevas, del más reciente al más antiguo |
 | `/gestor/**` | Gestor | Panel de indicadores (P09.1): por ahora "próximamente" |
-| `/admin/**` | Administrador | Administración (P05.1): por ahora "próximamente" |
+| `/admin` | Administrador | P05.1 Prestadores y RNT: verificar o sincronizar el RNT, asignar operador |
+| `/admin/moderacion` | Administrador | P05.2 Moderación de ofertas y de opiniones |
+| `/admin/cuentas` | Administrador | P05.3 Cuentas internas: crear operadores y gestores, desactivar y reactivar |
+| `/admin/comision` | Administrador | P05.4 Comisión vigente, historial y cambio; pagos tardíos |
+| `/admin/zonas?estado=` | Administrador | P05.5 Zonas: registrar, editar, inactivar y reactivar |
+| `/admin/alertas-sesgo` | Administrador | Alertas de sesgo |
+| `/admin/pendientes` | Administrador | Pendientes técnicos: avisos al catálogo rechazados y eventos de pago fallidos |
 
 ## Solicitudes de disponibilidad
 
@@ -121,6 +128,24 @@ El operador de disponibilidad verifica el cupo con el prestador y registra el re
 
 - **Claves de `datos` en los avisos.** El contrato describe `datos` como un mapa de texto sin fijar sus claves. El frontend usa las del ejemplo de `NUEVA_SOLICITUD` (`nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva`, `personas`) y omite lo que falte. Conviene fijarlas en el contrato.
 - **Historial sin "todos" (opcional).** Hoy no hay una consulta que devuelva todas las solicitudes tramitadas de una vez; el frontend las ofrece estado por estado. Si el equipo quiere una vista "todos", haría falta un valor o un parámetro nuevo en `GET /operador/solicitudes`.
+
+## Panel del administrador
+
+El administrador gestiona la plataforma desde `/admin`, dentro de un panel con menú lateral (`shared/panel-lateral`) que solo abre la sesión de un administrador. Está en `features/admin`; los servicios son `core/api/admin.service.ts` (núcleo, `/api/nucleo/admin/**`) y `core/api/admin-catalogo.service.ts` (catálogo, `/api/catalogo/admin/**`). Cada pantalla tiene su lógica en funciones puras con pruebas propias (`prestadores.ts`, `moderacion.ts`, `cuentas.ts`, `comision.ts`, `pagos-tardios.ts`, `zonas.ts`, `alertas-sesgo.ts`, `pendientes.ts`).
+
+- **Prestadores y RNT** (`/admin`, P05.1). Lista de prestadores con su estado de RNT. Sincronizar con el RNT puede tardar: el botón queda deshabilitado con "Sincronizando…" mientras responde y el frontend **no pone ningún tiempo máximo** a esa petición. Al asignar operador se muestra el nombre de cada operador (se lee de las cuentas internas), no su id.
+- **Moderación** (`/admin/moderacion`, P05.2). Las colas de ofertas y opiniones se leen en el catálogo; la decisión se envía al núcleo y el catálogo la aplica por la bandeja de salida en unos segundos, así que el cambio puede no verse al instante.
+- **Cuentas internas** (`/admin/cuentas`, P05.3). Se ven todas, pero solo se pueden crear operadores y gestores; las cuentas de administrador son de solo consulta. Desactivar pide confirmación y explica que las sesiones abiertas duran a lo sumo 15 minutos.
+- **Comisión y pagos tardíos** (`/admin/comision`, P05.4). Comisión vigente, historial y cambio (de 0 a menos de 100, con hasta 2 decimales; no es retroactiva), y la lista de pagos tardíos.
+- **Zonas** (`/admin/zonas`, P05.5). Se escriben directo en el catálogo. Una zona nunca se elimina: se inactiva, sale de la lista pública y no admite ofertas nuevas ni ediciones, pero sus ofertas siguen visibles. Como `PUT` reemplaza todos los datos, inactivar y reactivar mandan la zona completa con solo `activa` cambiada. El nombre es único sin importar mayúsculas, tildes ni espacios (`ZONA_DUPLICADA`).
+- **Alertas de sesgo** (`/admin/alertas-sesgo`). Cada día se compara el porcentaje de apariciones de cada prestador en las recomendaciones con su porcentaje de las ofertas visibles; si el índice pasa de 1,5 se abre una alerta, y se cierra sola cuando baja. La pantalla solo las consulta.
+- **Pendientes técnicos** (`/admin/pendientes`). Dos listas: los avisos al catálogo rechazados, con reenvío, y los eventos de pago fallidos, con reintento.
+
+### Para el equipo de backend
+
+- **Tiempo máximo de Nginx en la sincronización del RNT.** El frontend espera la respuesta sin límite, pero `/api/nucleo/` pasa por Nginx con el `proxy_read_timeout` por defecto (60 s). Si el RNT tarda más, el corte vendrá de la infraestructura. Conviene subirlo para esa ruta o hacer la sincronización asíncrona.
+- **Textos libres.** El `tipo` de un aviso y el estado que informa la pasarela en un evento fallido no son una lista cerrada en el contrato; el frontend los muestra tal como llegan. Conviene fijarlos.
+- **Motivo del rechazo de un intento de pago.** Ver "Pagos": `IntentoPago` no trae el motivo.
 
 ## Pagos
 
@@ -208,6 +233,12 @@ La interfaz está en español e inglés (RF-18, RF-19) y cambia al instante, sin
 
 Regla para las ramas nuevas: **todo texto de la interfaz va en los dos idiomas, en el diccionario de su área y con el pipe `t`; ningún texto suelto en las plantillas ni en el código.**
 
+## Tamaño de la aplicación
+
+El presupuesto de `angular.json` avisa cuando el paquete inicial pasa de **600 kB** y falla a partir de 1 MB (antes el aviso era a 500 kB; el paquete inicial está hoy en unos 517 kB). La causa es que los diccionarios de textos de todas las áreas (`core/idioma/*.i18n.ts`, en español e inglés) se cargan juntos en el paquete inicial, aunque las pantallas de cada rol sean rutas perezosas.
+
+**Mejora pendiente:** cargar los diccionarios de cada área junto con sus rutas perezosas (por ejemplo, el de `admin` solo al abrir `/admin`), en lugar de registrarlos todos en `textos.ts`. Hasta entonces el tamaño crece con cada pantalla nueva.
+
 ## Errores de la API
 
 El interceptor de errores lee el `application/problem+json` y traduce su `codigo` a un mensaje (`core/errores/error-api.ts`). El código nunca se muestra. Con `DATO_INVALIDO`, la API nombra el campo en `detail` (`campo: detalle`) y el formulario marca ese campo. Tres códigos del núcleo traen datos extra que `ErrorApi` conserva en `extras`: `bloqueadaHasta` (`CUENTA_BLOQUEADA`), `intentosRestantes` (`CODIGO_INCORRECTO`) y `compromisos` (`PRESTADOR_CON_COMPROMISOS`). Cada código tiene su mensaje en español y en inglés (ver "Idiomas").
@@ -239,6 +270,8 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Motivo de un intento de pago.** El contrato no entrega el texto de la pasarela, solo el estado del intento (`RECHAZADO`, `ERROR`, `ABANDONADO`…); el motivo que se muestra es una explicación fija de cada estado.
 - **Web Checkout, no widget.** El núcleo entrega también `llavePublica` y `firmaIntegridad` para el widget de Wompi; el frontend no los usa y abre siempre `checkout.url`, que sirve igual para la pasarela simulada y para Wompi.
 - **Intentos del pago.** Se piden con la solicitud confirmada, con el pago fallido, pagada o vencida (para mostrar la referencia de la transacción o por qué venció) y en ningún otro estado. Si no se pueden leer, se conservan los últimos que se leyeron.
+- **Zonas incompletas.** Si una zona del catálogo no tiene descripción o ubicación, no se puede inactivar ni reactivar desde la lista (el reemplazo completo exigiría inventar datos): la tarjeta pide completarla editándola.
+- **Estado de las cuentas internas y de las colas de moderación.** Se muestran tal como las entrega la API; los cambios de moderación se ven cuando el catálogo aplica la decisión.
 - **Plazo con minutos.** Los plazos se escriben con las dos unidades mayores ("20 h 0 min"), como en las solicitudes del turista.
 
 ## Docker

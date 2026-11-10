@@ -1,0 +1,198 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'admin.panel.control' | t }}</p>
+    <h1>{{ 'app.titulo.cuentasInternas' | t }}</h1>
+    <p class="texto-suave">{{ 'admin.cuentas.intro' | t }}</p>
+  </header>
+
+  <!-- Crear la cuenta de un operador o de un gestor -->
+  <section class="tarjeta crear" aria-labelledby="crear-titulo">
+    <h2 id="crear-titulo">{{ 'admin.cuentas.crear.titulo' | t }}</h2>
+    <p class="texto-suave">{{ 'admin.cuentas.crear.texto' | t }}</p>
+
+    <form class="formulario" [formGroup]="formulario" (ngSubmit)="crear()" novalidate>
+      @if (errorGeneral(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje() }}</span>
+        </p>
+      }
+
+      <div class="campos">
+        <div class="campo">
+          <label for="cuenta-rol">{{ 'admin.cuentas.crear.rol' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+          <select
+            id="cuenta-rol"
+            formControlName="rol"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('rol') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('rol') ? 'cuenta-rol-error' : null"
+          >
+            <option value="">{{ 'admin.cuentas.crear.elige' | t }}</option>
+            @for (rol of rolesCreables; track rol) {
+              <option [value]="rol">{{ etiquetaRol[rol] }}</option>
+            }
+          </select>
+          @if (errorDe('rol'); as mensaje) {
+            <p class="campo__error" id="cuenta-rol-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="cuenta-nombre">{{ 'admin.cuentas.crear.nombre' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+          <input
+            id="cuenta-nombre"
+            type="text"
+            formControlName="nombre"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('nombre') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('nombre') ? 'cuenta-nombre-error' : null"
+          />
+          @if (errorDe('nombre'); as mensaje) {
+            <p class="campo__error" id="cuenta-nombre-error">{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="cuenta-correo">{{ 'admin.cuentas.crear.correo' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+          <input
+            id="cuenta-correo"
+            type="email"
+            formControlName="correo"
+            autocomplete="off"
+            inputmode="email"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('correo') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('correo') ? 'cuenta-correo-error cuenta-correo-ayuda' : 'cuenta-correo-ayuda'"
+          />
+          <p class="campo__ayuda" id="cuenta-correo-ayuda">{{ 'admin.cuentas.crear.ayudaCorreo' | t }}</p>
+          @if (errorDe('correo'); as mensaje) {
+            <p class="campo__error" id="cuenta-correo-error">{{ mensaje }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton" [disabled]="creando()">
+          {{ (creando() ? 'admin.cuentas.crear.creando' : 'admin.cuentas.crear.boton') | t }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <nav class="filtros" [attr.aria-label]="'admin.cuentas.filtrar' | t">
+    @for (opcion of filtros; track opcion) {
+      <a
+        routerLink="/admin/cuentas"
+        [queryParams]="opcion === 'todas' ? {} : { rol: opcion }"
+        [attr.aria-current]="filtro() === opcion ? 'page' : null"
+        >{{ claveDelFiltro[opcion] | t }}</a
+      >
+    }
+  </nav>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (cuentas() !== null) {
+      <p class="total texto-suave">{{ 'admin.cuentas.total' | t: { n: filas().length } }}</p>
+
+      @if (filas().length > 0) {
+        <div class="envoltura" role="region" tabindex="0" aria-labelledby="titulo-tabla-cuentas">
+          <table class="tabla">
+            <caption class="solo-lectores" id="titulo-tabla-cuentas">
+              {{ 'admin.cuentas.caption' | t }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'admin.cuentas.columna.cuenta' | t }}</th>
+                <th scope="col">{{ 'admin.cuentas.columna.rol' | t }}</th>
+                <th scope="col">{{ 'admin.cuentas.columna.estado' | t }}</th>
+                <th scope="col">{{ 'admin.cuentas.columna.registrada' | t }}</th>
+                <th scope="col"><span class="solo-lectores">{{ 'admin.cuentas.columna.acciones' | t }}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of filas(); track fila.cuenta.id) {
+                <tr>
+                  <td>
+                    <strong class="nombre">
+                      {{ fila.cuenta.nombre }}
+                      @if (fila.esMia) {
+                        <span class="etiqueta etiqueta--info">{{ 'admin.cuentas.tu' | t }}</span>
+                      }
+                    </strong>
+                    <span class="menor">{{ fila.cuenta.correo }}</span>
+                    @if (!fila.cuenta.contrasenaEstablecida) {
+                      <span class="menor menor--aviso">{{ 'admin.cuentas.sinContrasena' | t }}.
+                        {{ 'admin.cuentas.sinContrasenaAyuda' | t }}</span>
+                    }
+                  </td>
+                  <td>{{ etiquetaRol[fila.cuenta.rol] }}</td>
+                  <td>
+                    <span class="etiqueta" [class]="claseDeEstado[fila.cuenta.estado]">{{ etiquetaEstado[fila.cuenta.estado] }}</span>
+                  </td>
+                  <td>{{ fila.cuenta.registradaEn | fecha }}</td>
+                  <td class="accion">
+                    @switch (fila.accion) {
+                      @case ('desactivar') {
+                        <button
+                          type="button"
+                          class="boton boton--secundario"
+                          [disabled]="accionEn() !== null"
+                          [attr.aria-label]="'admin.cuentas.desactivarA' | t: { nombre: fila.cuenta.nombre }"
+                          (click)="pedirDesactivar(fila.cuenta)"
+                        >
+                          {{ 'admin.cuentas.desactivar' | t }}
+                        </button>
+                      }
+                      @case ('reactivar') {
+                        <button
+                          type="button"
+                          class="boton boton--secundario"
+                          [disabled]="accionEn() !== null"
+                          [attr.aria-label]="'admin.cuentas.reactivarA' | t: { nombre: fila.cuenta.nombre }"
+                          (click)="reactivar(fila.cuenta)"
+                        >
+                          {{ 'admin.cuentas.reactivar' | t }}
+                        </button>
+                      }
+                      @default {
+                        <span class="texto-suave">{{ 'admin.cuentas.soloConsulta' | t }}</span>
+                      }
+                    }
+                    @if (fila.error; as mensaje) {
+                      <p class="campo__error" role="alert">{{ mensaje() }}</p>
+                      @if (fila.pidePrestadores) {
+                        <a routerLink="/admin" class="enlace-fila">{{ 'admin.cuentas.irAPrestadores' | t }}</a>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="tarjeta vacio">
+          <p class="texto-suave">{{ 'admin.cuentas.vacio' | t }}</p>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'admin.cuentas.cargando' | t }}</p>
+    }
+  </div>
+</section>
+
+<app-dialogo-confirmacion
+  [titulo]="'admin.cuentas.dialogoTitulo' | t: { nombre: porDesactivar()?.nombre ?? '' }"
+  [mensaje]="'admin.cuentas.dialogoMensaje' | t"
+  [accion]="'admin.cuentas.desactivar' | t"
+  (confirmado)="desactivar()"
+/>

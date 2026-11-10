@@ -52,3 +52,38 @@ export type CheckoutPago = Esquemas['Checkout'];
 /** Un intento de pago de una solicitud, con su estado y el id de la transacción en la pasarela (RF-52). */
 export type IntentoPago = Esquemas['IntentoPago'];
 export type EstadoIntento = Esquemas['EstadoIntento'];
+
+/** Un prestador como lo ve el administrador para asignarle su operador (RF-81). */
+export type PrestadorAdmin = Esquemas['PrestadorAdmin'];
+/** Un prestador que la recomendación muestra más de lo que le corresponde (RET-02). */
+export type AlertaSesgo = Esquemas['AlertaSesgo'];
+
+/** Cómo está un prestador frente al RNT (RF-76 a RF-78). */
+export type EstadoRnt = Esquemas['PrestadorAdmin']['estadoRnt'];
+/** Lo que hizo una sincronización con el RNT: cuántos se revisaron, retiraron y restituyeron. */
+export type SincronizacionRnt = Esquemas['SincronizacionRnt'];
+/** Una cuenta de administrador, operador de disponibilidad o gestor del destino (RF-81). */
+export type CuentaInterna = Esquemas['CuentaInterna'];
+
+/** Aprobar o rechazar lo que está en moderación (RF-79, RF-80). */
+export type DecisionModerar = Esquemas['Decision'];
+/** La decisión sobre una versión de oferta: lleva el número de la versión que el administrador revisó. */
+export type DecisionOfertaRequest = Esquemas['DecisionOfertaRequest'];
+export type DecisionOpinionRequest = Esquemas['DecisionOpinionRequest'];
+/** La decisión guardada por el núcleo; el catálogo la aplica en los siguientes segundos por la bandeja de salida. */
+export type DecisionModeracion = Esquemas['DecisionModeracion'];
+
+/** Lo que escribe el administrador para crear la cuenta de un administrador, un operador de disponibilidad o un gestor (RF-81). */
+export type CuentaInternaRequest = Esquemas['CuentaInternaRequest'];
+
+/** La comisión vigente de la plataforma y su historial, del cambio más reciente al más antiguo (RF-82). */
+export type Comision = Esquemas['Comision'];
+/** Un cambio del porcentaje de comisión; el inicial no trae quién lo hizo. */
+export type CambioComision = Esquemas['CambioComision'];
+/** Un pago que la pasarela aprobó pero no pagó la solicitud, para devolverlo a mano (RF-49, RF-50). */
+export type PagoTardio = Esquemas['PagoTardio'];
+
+/** Un aviso del núcleo al catálogo por la bandeja de salida; el catálogo lo rechazó si su estado es RECHAZADO (DN-06, DN-44). */
+export type AvisoBandeja = Esquemas['AvisoBandeja'];
+/** Un evento de la pasarela que falló cinco veces al procesarse y salió de la cola (DN-21, DN-44). */
+export type EventoPagoFallido = Esquemas['EventoPagoFallido'];

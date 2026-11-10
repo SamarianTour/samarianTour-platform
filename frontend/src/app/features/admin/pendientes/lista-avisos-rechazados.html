@@ -1,0 +1,75 @@
+<section class="tarjeta pendiente" aria-labelledby="avisos-titulo">
+  <h2 id="avisos-titulo">{{ 'admin.pendientes.avisos.titulo' | t }}</h2>
+  <p class="texto-suave">{{ 'admin.pendientes.avisos.intro' | t }}</p>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (lista() !== null) {
+      @if (filas().length > 0) {
+        <p class="total">{{ 'admin.pendientes.avisos.total' | t: { n: filas().length } }}</p>
+        <p class="texto-suave ayuda">{{ 'admin.pendientes.avisos.ayuda' | t }}</p>
+
+        <ul class="elementos">
+          @for (fila of filas(); track fila.aviso.idAviso) {
+            <li class="elemento">
+              <div class="elemento__cabecera">
+                <h3>{{ etiquetaTipo(fila.aviso.tipo) }}</h3>
+                <span class="etiqueta etiqueta--peligro">{{
+                  'admin.pendientes.avisos.destino' | t: { destino: etiquetaDestino[fila.aviso.destino] }
+                }}</span>
+              </div>
+              <p class="datos texto-suave">
+                <span><code>{{ 'admin.pendientes.avisos.id' | t: { id: fila.aviso.idAviso } }}</code></span>
+                <span>{{ 'admin.pendientes.avisos.intentos' | t: { n: fila.aviso.intentos } }}</span>
+                <span>{{ 'admin.pendientes.avisos.creado' | t: { fecha: (fila.aviso.creadoEn | fecha: 'conHora') } }}</span>
+              </p>
+
+              <div class="respuesta">
+                <p class="respuesta__titulo">{{ 'admin.pendientes.avisos.respuesta' | t }}</p>
+                @if (fila.aviso.ultimoError) {
+                  <p class="respuesta__linea"><code>{{ primeraLinea(fila.aviso.ultimoError) }}</code></p>
+                  @if (hayMas(fila.aviso.ultimoError)) {
+                    <details>
+                      <summary>{{ 'admin.pendientes.verCompleto' | t }}</summary>
+                      <pre>{{ fila.aviso.ultimoError }}</pre>
+                    </details>
+                  }
+                } @else {
+                  <p class="texto-suave">{{ 'admin.pendientes.avisos.sinRespuesta' | t }}</p>
+                }
+              </div>
+
+              @if (fila.error; as mensaje) {
+                <p class="campo__error" role="alert">{{ mensaje() }}</p>
+              }
+              <div class="acciones">
+                <button
+                  type="button"
+                  class="boton"
+                  [disabled]="!fila.puede || reenviando() !== null"
+                  [attr.aria-label]="'admin.pendientes.avisos.reenviarA' | t: { id: fila.aviso.idAviso }"
+                  (click)="reenviar(fila.aviso)"
+                >
+                  {{ (reenviando() === fila.aviso.idAviso ? 'admin.pendientes.avisos.reenviando' : 'admin.pendientes.avisos.reenviar') | t }}
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="vacio-interno">
+          <h3>{{ 'admin.pendientes.avisos.vacioTitulo' | t }}</h3>
+          <p class="texto-suave">{{ 'admin.pendientes.avisos.vacioAyuda' | t }}</p>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'admin.pendientes.avisos.cargando' | t }}</p>
+    }
+  </div>
+</section>

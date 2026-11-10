@@ -81,18 +81,7 @@ export const routes: Routes = [
   {
     path: 'admin',
     canActivate: [rolGuard('ADMINISTRADOR')],
-    children: [
-      {
-        path: '**',
-        title: 'app.titulo.administracion',
-        data: {
-          codigo: 'P05.1',
-          nombre: 'app.proximamente.admin.nombre',
-          descripcion: 'app.proximamente.admin.descripcion',
-        },
-        loadComponent: proximamente,
-      },
-    ],
+    loadChildren: () => import('./features/admin/admin.routes').then((modulo) => modulo.RUTAS_ADMIN),
   },
   // Las pantallas de cuentas van sueltas en la raíz y NO dentro de un grupo `path: ''`. Un grupo de ruta vacía que no
   // tiene un hijo para la dirección vacía "coincide" igual con "/" y la deja sin pantalla: el contenido queda en blanco,

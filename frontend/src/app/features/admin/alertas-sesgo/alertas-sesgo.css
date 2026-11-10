@@ -1,0 +1,59 @@
+.alertas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alerta-sesgo__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.alerta-sesgo h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+
+.alerta-sesgo p {
+  margin: 0;
+}
+
+.alerta-sesgo__explicacion {
+  margin-top: 0.5rem !important;
+  font-weight: 600;
+}
+
+.alerta-sesgo__cuentas {
+  margin-top: 0.25rem !important;
+  font-size: 0.875rem;
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 1rem 0 0;
+}
+
+.datos dt {
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.datos dd {
+  margin: 0.125rem 0 0;
+}
+
+@media (max-width: 40rem) {
+  .datos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,254 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'admin.panel.control' | t }}</p>
+    <h1>{{ 'app.titulo.zonasAdmin' | t }}</h1>
+    <p class="texto-suave">{{ 'admin.zonas.intro' | t }}</p>
+  </header>
+
+  <!-- Registrar una zona, o editar la elegida de la lista -->
+  <section class="tarjeta formulario-zona" aria-labelledby="zona-form-titulo">
+    <h2 id="zona-form-titulo">
+      @if (editando(); as zona) {
+        {{ 'admin.zonas.form.editar' | t: { nombre: zona.nombre } }}
+      } @else {
+        {{ 'admin.zonas.form.registrar' | t }}
+      }
+    </h2>
+    <p class="texto-suave">{{ 'admin.zonas.form.texto' | t }}</p>
+
+    <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+      @if (errorGeneral(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje() }}</span>
+        </p>
+      }
+
+      <div class="campo">
+        <label for="zona-nombre">{{ 'admin.zonas.form.nombre' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+        <input
+          id="zona-nombre"
+          type="text"
+          formControlName="nombre"
+          autocomplete="off"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('nombre') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('nombre') ? 'zona-nombre-error' : null"
+        />
+        @if (errorDe('nombre'); as mensaje) {
+          <p class="campo__error" id="zona-nombre-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="zona-descripcion">{{ 'admin.zonas.form.descripcion' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+        <textarea
+          id="zona-descripcion"
+          formControlName="descripcion"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe('descripcion') ? 'true' : null"
+          [attr.aria-describedby]="errorDe('descripcion') ? 'zona-descripcion-error' : null"
+        ></textarea>
+        @if (errorDe('descripcion'); as mensaje) {
+          <p class="campo__error" id="zona-descripcion-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="ubicacion">
+        <div class="campo">
+          <label for="zona-latitud">{{ 'admin.zonas.form.latitud' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+          <input
+            id="zona-latitud"
+            type="number"
+            inputmode="decimal"
+            step="any"
+            min="-90"
+            max="90"
+            formControlName="latitud"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('latitud') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('latitud') ? 'zona-latitud-error zona-ubicacion-ayuda' : 'zona-ubicacion-ayuda'"
+          />
+          @if (errorDe('latitud'); as mensaje) {
+            <p class="campo__error" id="zona-latitud-error">{{ mensaje }}</p>
+          }
+        </div>
+        <div class="campo">
+          <label for="zona-longitud">{{ 'admin.zonas.form.longitud' | t }} <span class="requerido" aria-hidden="true">*</span></label>
+          <input
+            id="zona-longitud"
+            type="number"
+            inputmode="decimal"
+            step="any"
+            min="-180"
+            max="180"
+            formControlName="longitud"
+            aria-required="true"
+            [attr.aria-invalid]="errorDe('longitud') ? 'true' : null"
+            [attr.aria-describedby]="errorDe('longitud') ? 'zona-longitud-error zona-ubicacion-ayuda' : 'zona-ubicacion-ayuda'"
+          />
+          @if (errorDe('longitud'); as mensaje) {
+            <p class="campo__error" id="zona-longitud-error">{{ mensaje }}</p>
+          }
+        </div>
+        <p class="campo__ayuda ubicacion__ayuda" id="zona-ubicacion-ayuda">{{ 'admin.zonas.form.ayudaUbicacion' | t }}</p>
+      </div>
+
+      <div class="marcas">
+        <label class="casilla" for="zona-areaProtegida">
+          <input id="zona-areaProtegida" type="checkbox" formControlName="areaProtegida" />
+          <span>{{ 'admin.zonas.form.areaProtegida' | t }}</span>
+        </label>
+        <label class="casilla" for="zona-altaAfluencia">
+          <input id="zona-altaAfluencia" type="checkbox" formControlName="altaAfluencia" />
+          <span>{{ 'admin.zonas.form.altaAfluencia' | t }}</span>
+        </label>
+      </div>
+
+      <div class="campo">
+        <label for="zona-buenasPracticas">{{ 'admin.zonas.form.buenasPracticas' | t }}</label>
+        <textarea
+          id="zona-buenasPracticas"
+          formControlName="buenasPracticas"
+          aria-describedby="zona-practicas-ayuda"
+        ></textarea>
+        <p class="campo__ayuda" id="zona-practicas-ayuda">{{ 'admin.zonas.form.ayudaPracticas' | t }}</p>
+      </div>
+
+      <div class="campo">
+        <label for="zona-condicionesVisita">{{ 'admin.zonas.form.condiciones' | t }}</label>
+        <textarea id="zona-condicionesVisita" formControlName="condicionesVisita"></textarea>
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton" [disabled]="guardando()">
+          {{
+            (guardando()
+              ? 'admin.zonas.form.guardando'
+              : editando()
+                ? 'admin.zonas.form.guardarEditar'
+                : 'admin.zonas.form.guardarRegistrar'
+            ) | t
+          }}
+        </button>
+        @if (editando()) {
+          <button type="button" class="boton boton--secundario" [disabled]="guardando()" (click)="cancelarEdicion()">
+            {{ 'admin.zonas.form.cancelarEdicion' | t }}
+          </button>
+        }
+      </div>
+    </form>
+  </section>
+
+  <nav class="filtros" [attr.aria-label]="'admin.zonas.filtrar' | t">
+    @for (opcion of filtros; track opcion) {
+      <a
+        routerLink="/admin/zonas"
+        [queryParams]="opcion === 'todas' ? {} : { estado: opcion }"
+        [attr.aria-current]="filtro() === opcion ? 'page' : null"
+        >{{ claveDeFiltro(opcion) | t }}</a
+      >
+    }
+  </nav>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (zonas() !== null) {
+      <p class="total texto-suave">{{ 'admin.zonas.total' | t: { n: filas().length } }}</p>
+
+      @if (filas().length > 0) {
+        <ul class="zonas">
+          @for (fila of filas(); track fila.zona.id) {
+            @let zona = fila.zona;
+            <li class="tarjeta zona" [class.zona--inactiva]="!zona.activa">
+              <div class="zona__cabecera">
+                <h3>{{ zona.nombre }}</h3>
+                <span class="etiquetas">
+                  <span class="etiqueta" [class]="zona.activa ? 'etiqueta--exito' : 'etiqueta--neutra'">{{
+                    (zona.activa ? 'admin.zonas.estado.activa' : 'admin.zonas.estado.inactiva') | t
+                  }}</span>
+                  @if (zona.areaProtegida) {
+                    <span class="etiqueta etiqueta--protegida">{{ 'admin.zonas.marca.areaProtegida' | t }}</span>
+                  }
+                  @if (zona.altaAfluencia) {
+                    <span class="etiqueta etiqueta--afluencia">{{ 'admin.zonas.marca.altaAfluencia' | t }}</span>
+                  }
+                </span>
+              </div>
+
+              @if (zona.descripcion) {
+                <p>{{ zona.descripcion }}</p>
+              }
+              <p class="datos texto-suave">
+                @if (zona.ubicacion; as punto) {
+                  <span>{{
+                    'admin.zonas.ubicacion' | t: { latitud: (punto.latitud | numero: 4), longitud: (punto.longitud | numero: 4) }
+                  }}</span>
+                }
+                <span>{{ 'admin.zonas.practicas' | t: { n: zona.buenasPracticas.length } }}</span>
+              </p>
+              @if (zona.condicionesVisita) {
+                <p class="texto-suave">{{ 'admin.zonas.condiciones' | t: { texto: zona.condicionesVisita } }}</p>
+              }
+
+              @if (fila.error; as mensaje) {
+                <p class="campo__error" role="alert">{{ mensaje() }}</p>
+              }
+              <div class="acciones">
+                <button
+                  type="button"
+                  class="boton boton--secundario"
+                  [disabled]="accionEn() !== null"
+                  [attr.aria-label]="'admin.zonas.editarA' | t: { nombre: zona.nombre }"
+                  (click)="editar(zona)"
+                >
+                  {{ 'admin.zonas.editar' | t }}
+                </button>
+                @if (zona.activa) {
+                  <button
+                    type="button"
+                    class="boton boton--secundario"
+                    [disabled]="accionEn() !== null"
+                    [attr.aria-label]="'admin.zonas.inactivarA' | t: { nombre: zona.nombre }"
+                    (click)="pedirInactivar(zona)"
+                  >
+                    {{ 'admin.zonas.inactivar' | t }}
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="boton boton--secundario"
+                    [disabled]="accionEn() !== null"
+                    [attr.aria-label]="'admin.zonas.reactivarA' | t: { nombre: zona.nombre }"
+                    (click)="reactivar(zona)"
+                  >
+                    {{ 'admin.zonas.reactivar' | t }}
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="tarjeta vacio">
+          <p class="texto-suave">{{ 'admin.zonas.vacio' | t }}</p>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'admin.zonas.cargando' | t }}</p>
+    }
+  </div>
+</section>
+
+<app-dialogo-confirmacion
+  [titulo]="'admin.zonas.dialogoTitulo' | t: { nombre: porInactivar()?.nombre ?? '' }"
+  [mensaje]="'admin.zonas.dialogoMensaje' | t"
+  [accion]="'admin.zonas.inactivar' | t"
+  (confirmado)="inactivar()"
+/>
