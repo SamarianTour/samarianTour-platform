@@ -7,6 +7,7 @@ import { ETIQUETAS } from './etiquetas.i18n';
 import { CUENTAS } from './cuentas.i18n';
 import type { Idioma } from './idioma';
 import { OPERADOR } from './operador.i18n';
+import { PAGOS } from './pagos.i18n';
 import { PRESTADOR } from './prestador.i18n';
 import { SOLICITUDES } from './solicitudes.i18n';
 import { TURISTA } from './turista.i18n';
@@ -26,6 +27,7 @@ export const AREAS: readonly Diccionario<string>[] = [
   PRESTADOR,
   SOLICITUDES,
   OPERADOR,
+  PAGOS,
 ];
 
 /** Toda clave de texto válida: el pipe `t` y `traducir` solo aceptan estas. */
@@ -39,7 +41,8 @@ export type ClaveTexto =
   | keyof typeof TURISTA.es
   | keyof typeof PRESTADOR.es
   | keyof typeof SOLICITUDES.es
-  | keyof typeof OPERADOR.es;
+  | keyof typeof OPERADOR.es
+  | keyof typeof PAGOS.es;
 
 export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>>> = {
   es: {
@@ -53,6 +56,7 @@ export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>
     ...PRESTADOR.es,
     ...SOLICITUDES.es,
     ...OPERADOR.es,
+    ...PAGOS.es,
   },
   en: {
     ...COMUN.en,
@@ -65,5 +69,6 @@ export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>
     ...PRESTADOR.en,
     ...SOLICITUDES.en,
     ...OPERADOR.en,
+    ...PAGOS.en,
   },
 };
