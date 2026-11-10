@@ -41,6 +41,8 @@ export const RECOMENDACION = diccionario(
     'recomendacion.alertas.noDisponible.conexion': 'Parece que no hay conexión a internet.',
     'recomendacion.alertas.noDisponible.ayuda':
       'Puedes intentarlo de nuevo. El resto de la plataforma sigue funcionando.',
+    'recomendacion.alertasZona.sinAyuda': 'No hay avisos vigentes para esta zona.',
+    'recomendacion.alertasZona.verTodas': 'Ver las alertas de todas las zonas',
     'recomendacion.alerta.nivel': 'Nivel',
     'recomendacion.alerta.nivel.AMARILLA': 'Amarilla',
     'recomendacion.alerta.nivel.NARANJA': 'Naranja',
@@ -147,6 +149,8 @@ export const RECOMENDACION = diccionario(
     'recomendacion.alertas.noDisponible.tiempo': 'The alerts are taking longer than usual, so we stopped waiting.',
     'recomendacion.alertas.noDisponible.conexion': 'You seem to be offline.',
     'recomendacion.alertas.noDisponible.ayuda': 'You can try again. The rest of the platform keeps working.',
+    'recomendacion.alertasZona.sinAyuda': 'There are no active notices for this area.',
+    'recomendacion.alertasZona.verTodas': 'See alerts for all areas',
     'recomendacion.alerta.nivel': 'Level',
     'recomendacion.alerta.nivel.AMARILLA': 'Yellow',
     'recomendacion.alerta.nivel.NARANJA': 'Orange',

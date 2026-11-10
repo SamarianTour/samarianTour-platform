@@ -8,6 +8,7 @@ import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import { SesionService } from '../../../core/sesion/sesion.service';
+import { AlertasZona } from '../../recomendacion/componentes/alertas-zona/alertas-zona';
 import { traducir } from '../../../core/idioma/traducir';
 import { DuracionPipe } from '../../../shared/duracion.pipe';
 import { MODALIDAD, NIVEL_ESFUERZO, TIPO_ACTIVIDAD, TIPO_OFERTA } from '../../../shared/etiquetas';
@@ -39,6 +40,7 @@ type Estado =
     Icono,
     GaleriaFotos,
     OpinionesDeLaOferta,
+    AlertasZona,
     TPipe,
   ],
   templateUrl: './ficha.html',

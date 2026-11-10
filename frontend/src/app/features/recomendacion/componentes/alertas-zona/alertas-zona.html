@@ -1,0 +1,32 @@
+@if (datos(); as lectura) {
+  <section class="tarjeta alertas-zona" aria-labelledby="alertas-zona-titulo">
+    <h2 id="alertas-zona-titulo">{{ 'recomendacion.alertas.titulo' | t }}</h2>
+    <p class="alertas-zona__actualizado texto-suave">
+      <app-icono nombre="reloj" />
+      <span>
+        {{ 'recomendacion.alertas.actualizado' | t }}
+        <time [attr.datetime]="lectura.actualizadoEn">{{ lectura.actualizadoEn | fecha: 'conHora' }}</time>
+      </span>
+    </p>
+
+    @if (lectura.alertas.length > 0) {
+      <ul class="alertas-zona__lista">
+        @for (alerta of lectura.alertas; track alerta.id) {
+          <li><app-tarjeta-alerta [alerta]="alerta" /></li>
+        }
+      </ul>
+    } @else {
+      <p class="alertas-zona__sin">
+        <app-icono nombre="info" />
+        <span>
+          <strong>{{ 'recomendacion.alertas.sin' | t }}</strong>
+          {{ 'recomendacion.alertasZona.sinAyuda' | t }}
+        </span>
+      </p>
+    }
+
+    <p class="alertas-zona__todas">
+      <a routerLink="/alertas">{{ 'recomendacion.alertasZona.verTodas' | t }}</a>
+    </p>
+  </section>
+}

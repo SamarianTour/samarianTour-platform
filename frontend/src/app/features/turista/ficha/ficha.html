@@ -216,6 +216,9 @@
                 <p class="ficha__texto">{{ zona.condicionesVisita }}</p>
               }
             </section>
+
+            <!-- Opcional (ADR-04): si el servicio de alertas falla o tarda más de 3 s, se oculta y la ficha sigue igual -->
+            <app-alertas-zona [zonaId]="zona.id" />
           }
 
           <app-opiniones-oferta [ofertaId]="oferta.id" />
