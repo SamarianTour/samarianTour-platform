@@ -1,0 +1,64 @@
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.cifra__valor {
+  font-family: var(--fuente-titulos);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.cifra__texto {
+  color: var(--texto-suave);
+  font-size: 0.9375rem;
+}
+
+.grafico {
+  margin-bottom: 1.5rem;
+}
+
+.grafico h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+}
+
+.grafico > p {
+  margin: 0 0 1.25rem;
+}
+
+.vacio {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+/* Cada tipo de oferta, separado del anterior. */
+.tipo + .tipo {
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 1.5rem;
+}
+
+.tipo h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 40rem) {
+  .cifras {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

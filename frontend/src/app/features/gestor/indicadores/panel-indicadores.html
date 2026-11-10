@@ -1,0 +1,82 @@
+<section class="pagina">
+  <header class="encabezado">
+    <h1>{{ 'app.titulo.indicadores' | t }}</h1>
+    <p class="texto-suave">{{ 'gestor.indicadores.subtitulo' | t }}</p>
+  </header>
+
+  <!-- El periodo: atajos y fechas. Lo comparten las tres vistas. -->
+  <form class="tarjeta periodo" [formGroup]="formulario" (ngSubmit)="aplicar()" aria-labelledby="periodo-titulo" novalidate>
+    <h2 id="periodo-titulo">{{ 'gestor.periodo.titulo' | t }}</h2>
+
+    <div class="atajos" role="group" [attr.aria-label]="'gestor.periodo.atajos' | t">
+      @for (opcion of atajos; track opcion) {
+        <button
+          type="button"
+          class="atajo"
+          [attr.aria-pressed]="atajo() === opcion"
+          (click)="elegirAtajo(opcion)"
+        >
+          {{ claveDeAtajo[opcion] | t }}
+        </button>
+      }
+    </div>
+
+    <div class="fechas">
+      <div class="campo">
+        <label for="periodo-desde">{{ 'gestor.periodo.desde' | t }}</label>
+        <input
+          id="periodo-desde"
+          type="date"
+          formControlName="desde"
+          [max]="hoy()"
+          [attr.aria-invalid]="mensajeDeError() ? 'true' : null"
+          [attr.aria-describedby]="mensajeDeError() ? 'periodo-error' : null"
+        />
+      </div>
+      <div class="campo">
+        <label for="periodo-hasta">{{ 'gestor.periodo.hasta' | t }}</label>
+        <input
+          id="periodo-hasta"
+          type="date"
+          formControlName="hasta"
+          [max]="hoy()"
+          [attr.aria-invalid]="mensajeDeError() ? 'true' : null"
+          [attr.aria-describedby]="mensajeDeError() ? 'periodo-error' : null"
+        />
+      </div>
+      <button type="submit" class="boton boton--secundario">{{ 'gestor.periodo.aplicar' | t }}</button>
+    </div>
+
+    @if (mensajeDeError(); as mensaje) {
+      <p class="campo__error" id="periodo-error" role="alert">{{ mensaje }}</p>
+    }
+
+    <p class="texto-suave consultado" aria-live="polite">
+      {{
+        'gestor.periodo.consultado'
+          | t: { desde: (periodo().desde | fecha: 'corta'), hasta: (periodo().hasta | fecha: 'corta'), n: dias() }
+      }}
+    </p>
+  </form>
+
+  <!-- Las tres vistas: cada una es una página con su dirección; el periodo se conserva al cambiar -->
+  <nav class="pestanas" [attr.aria-label]="'gestor.pestanas.etiqueta' | t">
+    @for (vista of vistas; track vista.ruta) {
+      <a
+        [routerLink]="vista.ruta"
+        queryParamsHandling="preserve"
+        routerLinkActive="activa"
+        ariaCurrentWhenActive="page"
+        [routerLinkActiveOptions]="{ exact: true }"
+        >{{ vista.clave | t }}</a
+      >
+    }
+  </nav>
+
+  <p class="nota-privacidad">
+    <app-icono nombre="info" />
+    <span>{{ 'gestor.privacidad' | t }}</span>
+  </p>
+
+  <router-outlet />
+</section>

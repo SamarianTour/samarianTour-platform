@@ -3,6 +3,7 @@ import { routes } from './app.routes';
 import { TEXTOS } from './core/idioma/textos';
 import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
 import { RUTAS_ADMIN } from './features/admin/admin.routes';
+import { RUTAS_GESTOR } from './features/gestor/gestor.routes';
 import { RUTAS_OPERADOR } from './features/operador/operador.routes';
 import { RUTAS_PRESTADOR } from './features/prestador/prestador.routes';
 import { RUTAS_TURISTA } from './features/turista/turista.routes';
@@ -25,6 +26,7 @@ const TODAS = [
   ...recorrer(RUTAS_PRESTADOR, 'prestador'),
   ...recorrer(RUTAS_OPERADOR, 'operador'),
   ...recorrer(RUTAS_ADMIN, 'admin'),
+  ...recorrer(RUTAS_GESTOR, 'gestor'),
 ];
 
 describe('títulos y textos de las rutas', () => {
@@ -42,13 +44,14 @@ describe('títulos y textos de las rutas', () => {
     },
   );
 
-  it('el nombre y la descripción de las pantallas "próximamente" son claves que existen', () => {
+  // Hoy ninguna ruta usa la pantalla "próximamente"; si una sección futura la vuelve a usar, su nombre y su descripción deben ser
+  // claves de texto que existan en los dos idiomas.
+  it('el nombre y la descripción de las pantallas "próximamente", si hay alguna, son claves que existen', () => {
     const claves = TODAS.flatMap(({ route }) => {
       const datos = route.data as { nombre?: string; descripcion?: string } | undefined;
       return datos ? [datos.nombre, datos.descripcion].filter((c): c is string => !!c) : [];
     });
 
-    expect(claves.length).toBeGreaterThan(0);
     for (const clave of claves) {
       expect(clave in TEXTOS.es, `${clave} no está en español`).toBe(true);
       expect(clave in TEXTOS.en, `${clave} no está en inglés`).toBe(true);

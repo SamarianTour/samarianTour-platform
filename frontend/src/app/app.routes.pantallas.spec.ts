@@ -15,6 +15,7 @@ import { Registro } from './features/cuentas/registro/registro';
 import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena/restablecer-contrasena';
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
 import { PanelAdmin } from './features/admin/panel/panel-admin';
+import { PanelGestor } from './features/gestor/panel/panel-gestor';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
@@ -23,7 +24,6 @@ import { MisSolicitudes } from './features/turista/solicitudes/mis-solicitudes/m
 import { FormularioSolicitud } from './features/turista/solicitudes/formulario-solicitud/formulario-solicitud';
 import { Ficha } from './features/turista/ficha/ficha';
 import { MisOpiniones } from './features/turista/mis-opiniones/mis-opiniones';
-import { Proximamente } from './shared/proximamente/proximamente';
 
 /**
  * Qué pantalla se CREA de verdad en cada ruta. `app.routes.spec.ts` solo comprueba a qué dirección termina la
@@ -211,13 +211,46 @@ describe('pantallas que crea cada ruta', () => {
       },
     );
 
-    it.each([
-      ['GESTOR_DESTINO', '/gestor'],
-    ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {
-      conSesion(rol);
+    // P09.1: el gestor entra a su panel; el panel de indicadores y la vista de cada dirección se crean dentro.
+    it('el gestor abre su panel en /gestor y dentro se crean el panel de indicadores y la demanda, que pide el tablero', async () => {
+      conSesion('GESTOR_DESTINO');
 
-      await ir(url, Proximamente);
+      await ir('/gestor', PanelGestor);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-demanda-gestor')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/tablero')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/catalogo/zonas')).toHaveLength(1);
     });
+
+    it('el gestor abre el embudo en /gestor/embudo y este pide el embudo del periodo', async () => {
+      conSesion('GESTOR_DESTINO');
+
+      await ir('/gestor/embudo', PanelGestor);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-embudo-gestor')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/embudo')).toHaveLength(1);
+    });
+
+    it('el gestor abre la distribución en /gestor/distribucion y esta pide la distribución por categoría', async () => {
+      conSesion('GESTOR_DESTINO');
+
+      await ir('/gestor/distribucion', PanelGestor);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-distribucion-gestor')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/categorias')).toHaveLength(1);
+    });
+
+    it.each(['/gestor', '/gestor/embudo', '/gestor/distribucion'])(
+      'un turista que abre %s ve "no tienes permiso"',
+      async (url) => {
+        conSesion('TURISTA');
+
+        await ir(url, SinPermiso);
+      },
+    );
 
     // P05.5: las zonas se leen y se escriben directo en el catálogo.
     it('el administrador abre las zonas y estas piden la lista del catálogo', async () => {

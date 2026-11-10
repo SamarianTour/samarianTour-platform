@@ -1,0 +1,50 @@
+.datos {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 0.75rem;
+}
+
+.datos summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--enlace);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.datos__tabla {
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.tabla th,
+.tabla td {
+  border-bottom: 1px solid var(--borde);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.tabla thead th {
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tabla tbody th {
+  font-weight: 600;
+}
+
+/* Las cifras, alineadas a la derecha para poder compararlas. */
+.tabla td:last-child,
+.tabla thead th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,50 @@
+<div aria-live="polite" [attr.aria-busy]="cargando()">
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  } @else if (embudo()) {
+    <ul class="cifras">
+      @for (cifra of cifras(); track cifra.clave) {
+        <li class="tarjeta cifra">
+          <span class="cifra__valor">{{ cifra.valor }}</span>
+          <span class="cifra__texto">{{ cifra.texto }}</span>
+        </li>
+      }
+    </ul>
+
+    <section class="tarjeta grafico" aria-labelledby="embudo-titulo">
+      <h2 id="embudo-titulo">{{ 'gestor.embudo.grafico.titulo' | t }}</h2>
+      <p class="texto-suave">{{ 'gestor.embudo.grafico.ayuda' | t }}</p>
+
+      @if (vacio()) {
+        <p class="vacio">{{ 'gestor.embudo.vacio' | t }}</p>
+      } @else {
+        <app-grafico-barras [barras]="barras()" [etiqueta]="resumen()" />
+        <app-tabla-datos [titulo]="tituloDeTabla()" [columnas]="columnas()" [filas]="filas()" />
+      }
+    </section>
+
+    @if (!vacio() && porTipo().length > 0) {
+      <section class="tarjeta grafico" aria-labelledby="embudo-tipos-titulo">
+        <h2 id="embudo-tipos-titulo">{{ 'gestor.embudo.porTipo.titulo' | t }}</h2>
+        <p class="texto-suave">{{ 'gestor.embudo.porTipo.ayuda' | t }}</p>
+
+        @for (tipo of porTipo(); track tipo.clave) {
+          <div class="tipo">
+            <h3>{{ tipo.nombre }}</h3>
+            @if (tipo.vacio) {
+              <p class="vacio">{{ 'gestor.embudo.tipoVacio' | t }}</p>
+            } @else {
+              <app-grafico-barras [barras]="tipo.barras" [etiqueta]="tipo.resumen" />
+              <app-tabla-datos [titulo]="tipo.titulo" [columnas]="tipo.columnas" [filas]="tipo.filas" />
+            }
+          </div>
+        }
+      </section>
+    }
+  } @else if (cargando()) {
+    <p class="texto-suave">{{ 'gestor.cargando' | t }}</p>
+  }
+</div>

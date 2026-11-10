@@ -1,0 +1,74 @@
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barra__texto {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.375rem;
+}
+
+.barra__nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+}
+
+.barra__etiqueta {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.barra__detalle {
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+}
+
+.barra__valor {
+  flex: none;
+  font-family: var(--fuente-titulos);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.barra__pista {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--superficie-suave);
+  overflow: hidden;
+}
+
+.barra__relleno {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  /* El color #0b7373 es el mínimo de la paleta para texto blanco, así que también contrasta contra el fondo claro. */
+  background: var(--enlace);
+}
+
+/* Un conteo omitido va rayado: no es una cantidad, es "menos de 3". */
+.barra--omitida .barra__relleno {
+  border-radius: 0;
+  background: repeating-linear-gradient(135deg, var(--enlace) 0 4px, transparent 4px 8px);
+  outline: 1px solid var(--enlace);
+  outline-offset: -1px;
+}
+
+.barra--omitida .barra__valor {
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barra__relleno {
+    transition: width 0.3s ease;
+  }
+}
