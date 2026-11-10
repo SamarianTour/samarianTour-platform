@@ -46,15 +46,23 @@ export function conversion(actual: number | null, anterior: number | null): numb
   return Math.round((actual / anterior) * 1000) / 10;
 }
 
-/** El ancho de la barra de una etapa, de 0 a 100: es el porcentaje sobre las enviadas. Un conteo omitido lleva la marca rayada. */
-export function anchoDeEtapa(etapa: EtapaCalculada): number {
-  if (etapa.solicitudes === null) {
+/**
+ * El ancho de una barra que mide un porcentaje, de 0 a 100. Un conteo omitido (1 o 2) lleva la marca rayada; un cero o un porcentaje
+ * que no existe, nada; lo demás, el porcentaje redondeado, con un mínimo para que se vea.
+ */
+export function anchoDePorcentaje(cantidad: number | null, porcentaje: number | null): number {
+  if (cantidad === null) {
     return ANCHO_MENOS_DE_TRES;
   }
-  if (etapa.solicitudes <= 0 || etapa.porcentaje === null) {
+  if (cantidad <= 0 || porcentaje === null) {
     return 0;
   }
-  return Math.min(100, Math.max(3, Math.round(etapa.porcentaje)));
+  return Math.min(100, Math.max(3, Math.round(porcentaje)));
+}
+
+/** El ancho de la barra de una etapa: es el porcentaje sobre las enviadas. */
+export function anchoDeEtapa(etapa: EtapaCalculada): number {
+  return anchoDePorcentaje(etapa.solicitudes, etapa.porcentaje);
 }
 
 export interface CifrasEmbudo {

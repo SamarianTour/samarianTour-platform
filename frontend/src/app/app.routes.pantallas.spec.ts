@@ -233,13 +233,14 @@ describe('pantallas que crea cada ruta', () => {
       expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/embudo')).toHaveLength(1);
     });
 
-    it('el gestor abre su panel en /gestor/distribucion y dentro se crean el panel de indicadores y la vista', async () => {
+    it('el gestor abre la distribución en /gestor/distribucion y esta pide la distribución por categoría', async () => {
       conSesion('GESTOR_DESTINO');
 
       await ir('/gestor/distribucion', PanelGestor);
 
       expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
-      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-proximamente')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-distribucion-gestor')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/categorias')).toHaveLength(1);
     });
 
     it.each(['/gestor', '/gestor/embudo', '/gestor/distribucion'])(

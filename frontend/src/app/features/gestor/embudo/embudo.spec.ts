@@ -3,6 +3,7 @@ import { ANCHO_MENOS_DE_TRES } from '../demanda/demanda';
 import {
   ETAPAS,
   anchoDeEtapa,
+  anchoDePorcentaje,
   cifrasDeEmbudo,
   conversion,
   embudoVacio,
@@ -115,6 +116,32 @@ describe('anchoDeEtapa', () => {
 
   it('un conteo omitido lleva la marca rayada', () => {
     expect(anchoDeEtapa(etapa(null, null))).toBe(ANCHO_MENOS_DE_TRES);
+  });
+});
+
+describe('anchoDePorcentaje', () => {
+  it('es el porcentaje redondeado, de 0 a 100', () => {
+    expect(anchoDePorcentaje(10, 59.5)).toBe(60);
+    expect(anchoDePorcentaje(10, 26.2)).toBe(26);
+    expect(anchoDePorcentaje(10, 100)).toBe(100);
+  });
+
+  it('nunca pasa de 100', () => {
+    expect(anchoDePorcentaje(10, 130)).toBe(100);
+  });
+
+  it('una cantidad con muy poco porcentaje se sigue viendo', () => {
+    expect(anchoDePorcentaje(3, 0.2)).toBe(3);
+  });
+
+  it('un cero o un porcentaje que no existe no tienen barra', () => {
+    expect(anchoDePorcentaje(0, 0)).toBe(0);
+    expect(anchoDePorcentaje(5, null)).toBe(0);
+  });
+
+  it('una cantidad omitida lleva la marca rayada, tenga o no porcentaje', () => {
+    expect(anchoDePorcentaje(null, null)).toBe(ANCHO_MENOS_DE_TRES);
+    expect(anchoDePorcentaje(null, 40)).toBe(ANCHO_MENOS_DE_TRES);
   });
 });
 

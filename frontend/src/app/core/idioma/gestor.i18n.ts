@@ -87,6 +87,31 @@ export const GESTOR = diccionario(
     'gestor.embudo.porTipo.ayuda': 'El mismo embudo, separado por el tipo de oferta de cada solicitud.',
     'gestor.embudo.vacio': 'No hubo solicitudes en este periodo.',
     'gestor.embudo.tipoVacio': 'No hubo solicitudes de este tipo en el periodo.',
+
+    // Distribución por tipo de prestador (RF-89)
+    'gestor.distribucion.categoria.SIN_CATEGORIA': 'Sin categoría',
+    'gestor.distribucion.cifra.total': 'Solicitudes del periodo',
+    'gestor.distribucion.cifra.mayor': 'Tipo de prestador con más solicitudes',
+    'gestor.distribucion.cifra.categorias': 'Tipos de prestador con solicitudes',
+    'gestor.distribucion.vacio': 'No hubo solicitudes en este periodo.',
+    'gestor.distribucion.solicitudes.titulo': 'Solicitudes por tipo de prestador',
+    'gestor.distribucion.solicitudes.ayuda':
+      'Cómo se reparte la demanda entre los prestadores grandes, medianos y pequeños y los guías independientes, según la categoría que tenía el prestador al recibir la solicitud. El porcentaje es sobre todas las solicitudes del periodo.',
+    'gestor.distribucion.solicitudes.resumen':
+      'Gráfico de barras horizontales de las solicitudes por tipo de prestador. {categorias}. Los datos completos están en la tabla que sigue.',
+    'gestor.distribucion.solicitudes.tabla': 'Solicitudes por tipo de prestador, del {desde} al {hasta}',
+    'gestor.distribucion.pagadas.titulo': 'Solicitudes pagadas por tipo de prestador',
+    'gestor.distribucion.pagadas.ayuda':
+      'De las solicitudes de cada tipo de prestador, cuántas llegaron a pagarse. La barra es el porcentaje de pago de ese tipo.',
+    'gestor.distribucion.pagadas.resumen':
+      'Gráfico de barras horizontales del porcentaje de solicitudes pagadas por tipo de prestador. {categorias}. Los datos completos están en la tabla que sigue.',
+    'gestor.distribucion.pagadas.tabla': 'Solicitudes pagadas por tipo de prestador, del {desde} al {hasta}',
+    'gestor.distribucion.pagadasDe': '{pagadas} de {solicitudes}',
+    'gestor.distribucion.col.tipo': 'Tipo de prestador',
+    'gestor.distribucion.col.solicitudes': 'Solicitudes',
+    'gestor.distribucion.col.porcentaje': 'Porcentaje del total',
+    'gestor.distribucion.col.pagadas': 'Pagadas',
+    'gestor.distribucion.col.tasa': 'Porcentaje de pago',
   },
   {
     // Panel (menú lateral)
@@ -169,5 +194,30 @@ export const GESTOR = diccionario(
     'gestor.embudo.porTipo.ayuda': 'The same funnel, split by the offer type of each request.',
     'gestor.embudo.vacio': 'There were no requests in this period.',
     'gestor.embudo.tipoVacio': 'There were no requests of this type in the period.',
+
+    // Distribution by provider type (RF-89)
+    'gestor.distribucion.categoria.SIN_CATEGORIA': 'No category',
+    'gestor.distribucion.cifra.total': 'Requests in the period',
+    'gestor.distribucion.cifra.mayor': 'Provider type with the most requests',
+    'gestor.distribucion.cifra.categorias': 'Provider types with requests',
+    'gestor.distribucion.vacio': 'There were no requests in this period.',
+    'gestor.distribucion.solicitudes.titulo': 'Requests by provider type',
+    'gestor.distribucion.solicitudes.ayuda':
+      'How demand is spread among large, medium and small providers and independent guides, based on the category the provider had when it received the request. The percentage is out of all requests in the period.',
+    'gestor.distribucion.solicitudes.resumen':
+      'Horizontal bar chart of requests by provider type. {categorias}. The full data is in the table that follows.',
+    'gestor.distribucion.solicitudes.tabla': 'Requests by provider type, from {desde} to {hasta}',
+    'gestor.distribucion.pagadas.titulo': 'Paid requests by provider type',
+    'gestor.distribucion.pagadas.ayuda':
+      'Of the requests of each provider type, how many were paid. The bar is the payment rate of that type.',
+    'gestor.distribucion.pagadas.resumen':
+      'Horizontal bar chart of the percentage of paid requests by provider type. {categorias}. The full data is in the table that follows.',
+    'gestor.distribucion.pagadas.tabla': 'Paid requests by provider type, from {desde} to {hasta}',
+    'gestor.distribucion.pagadasDe': '{pagadas} of {solicitudes}',
+    'gestor.distribucion.col.tipo': 'Provider type',
+    'gestor.distribucion.col.solicitudes': 'Requests',
+    'gestor.distribucion.col.porcentaje': 'Percentage of the total',
+    'gestor.distribucion.col.pagadas': 'Paid',
+    'gestor.distribucion.col.tasa': 'Payment rate',
   },
 );

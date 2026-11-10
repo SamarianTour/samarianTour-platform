@@ -1,8 +1,5 @@
 import { Routes } from '@angular/router';
 
-/** Las vistas que llegan en los siguientes commits ocupan su lugar con esta, ya con su ruta y su título. */
-const proximamente = () => import('../../shared/proximamente/proximamente').then((modulo) => modulo.Proximamente);
-
 /**
  * Rutas del gestor del destino, todas dentro de su panel. Las protege la ruta `/gestor` (solo la sesión de un gestor). El panel de
  * indicadores (P09.1) tiene tres vistas, cada una con su dirección: Demanda (`/gestor`), Embudo de conversión (`/gestor/embudo`) y
@@ -32,8 +29,8 @@ export const RUTAS_GESTOR: Routes = [
           {
             path: 'distribucion',
             title: 'app.titulo.distribucionPrestador',
-            data: { codigo: 'P09.1', nombre: 'app.titulo.distribucionPrestador' },
-            loadComponent: proximamente,
+            loadComponent: () =>
+              import('./distribucion/distribucion-gestor').then((modulo) => modulo.DistribucionGestor),
           },
         ],
       },

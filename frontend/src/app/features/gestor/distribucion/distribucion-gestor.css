@@ -1,0 +1,59 @@
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.cifra__valor {
+  font-family: var(--fuente-titulos);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+/* La categoría con más solicitudes es un nombre, no un número: más chica para que quepa. */
+.cifra:nth-child(2) .cifra__valor {
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+
+.cifra__texto {
+  color: var(--texto-suave);
+  font-size: 0.9375rem;
+}
+
+.grafico {
+  margin-bottom: 1.5rem;
+}
+
+.grafico h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+}
+
+.grafico > p {
+  margin: 0 0 1.25rem;
+}
+
+.vacio {
+  margin: 0 !important;
+  color: var(--texto-suave);
+}
+
+@media (max-width: 40rem) {
+  .cifras {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
