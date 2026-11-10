@@ -16,6 +16,7 @@ import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
 import { PanelAdmin } from './features/admin/panel/panel-admin';
 import { PanelGestor } from './features/gestor/panel/panel-gestor';
+import { AlertasDestino } from './features/recomendacion/alertas/alertas-destino';
 import { ChatRecomendaciones } from './features/recomendacion/chat/chat-recomendaciones';
 import { Proximamente } from './shared/proximamente/proximamente';
 import { PanelOperador } from './features/operador/panel/panel-operador';
@@ -76,7 +77,8 @@ describe('pantallas que crea cada ruta', () => {
       ['/ofertas/abc', Ficha],
       ['/iniciar-sesion', IniciarSesion],
       ['/recomendaciones', ChatRecomendaciones],
-      ['/alertas', Proximamente],
+      // P08.2: pública; al crearse pide todas las alertas.
+      ['/alertas', AlertasDestino],
       ['/registro', Registro],
       ['/registro?tipo=prestador', Registro],
       ['/recuperar-contrasena', RecuperarContrasena],
