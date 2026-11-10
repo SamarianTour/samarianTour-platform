@@ -5,6 +5,7 @@ import { API_NUCLEO } from './api.config';
 import {
   AlertaSesgo,
   CuentaInterna,
+  CuentaInternaRequest,
   DecisionModeracion,
   DecisionOfertaRequest,
   DecisionOpinionRequest,
@@ -34,6 +35,34 @@ export class AdminService {
   /** Las cuentas de administradores, operadores y gestores, activas y desactivadas, de la más antigua a la más reciente (RF-81). */
   cuentasInternas(): Observable<CuentaInterna[]> {
     return this.http.get<CuentaInterna[]>(`${BASE}/cuentas-internas`);
+  }
+
+  /**
+   * Crea la cuenta de un administrador, un operador de disponibilidad o un gestor (RF-01, RF-81). Nace activa y sin contraseña: le
+   * llega un correo con un enlace para ponerla, que vence a las 72 horas y sirve una sola vez (DN-40). La cuenta y el correo van
+   * en la misma transacción: si el correo falla (503 `CORREO_NO_DISPONIBLE`) no queda nada y se puede reintentar.
+   */
+  crearCuentaInterna(cuenta: CuentaInternaRequest): Observable<CuentaInterna> {
+    return this.http.post<CuentaInterna>(`${BASE}/cuentas-internas`, cuenta);
+  }
+
+  /**
+   * Da de baja una cuenta interna (RF-81): ya no inicia sesión y se cierran sus sesiones; no se borra nada y se puede reactivar. A un
+   * operador con prestadores asignados primero hay que reasignárselos (409 `OPERADOR_CON_PRESTADORES`).
+   */
+  desactivarCuentaInterna(usuarioId: string): Observable<CuentaInterna> {
+    return this.http.post<CuentaInterna>(
+      `${BASE}/cuentas-internas/${encodeURIComponent(usuarioId)}/desactivacion`,
+      null,
+    );
+  }
+
+  /** Vuelve a activar una cuenta desactivada (RF-81). Conserva su contraseña; un operador reactivado no recupera sus prestadores. */
+  reactivarCuentaInterna(usuarioId: string): Observable<CuentaInterna> {
+    return this.http.post<CuentaInterna>(
+      `${BASE}/cuentas-internas/${encodeURIComponent(usuarioId)}/reactivacion`,
+      null,
+    );
   }
 
   /**

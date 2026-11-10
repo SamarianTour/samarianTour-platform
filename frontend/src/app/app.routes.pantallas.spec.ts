@@ -160,7 +160,6 @@ describe('pantallas que crea cada ruta', () => {
 
     // El administrador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
     it.each([
-      '/admin/cuentas',
       '/admin/comision',
       '/admin/zonas',
       '/admin/pendientes',
@@ -192,6 +191,16 @@ describe('pantallas que crea cada ruta', () => {
       expect(harness.routeNativeElement?.querySelector('.contenido > app-moderacion-admin')).not.toBeNull();
       expect(http.match((p) => p.url === '/api/catalogo/admin/moderacion/ofertas')).toHaveLength(1);
       expect(http.match((p) => p.url === '/api/catalogo/admin/zonas')).toHaveLength(1);
+    });
+
+    // P05.3: las cuentas internas se leen del núcleo.
+    it('el administrador abre las cuentas internas y estas piden la lista', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/cuentas', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-cuentas-internas')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
     });
 
     // Alertas de sesgo (RET-02): se crea dentro del panel y pide las alertas y los nombres de los prestadores.

@@ -72,3 +72,6 @@ export type DecisionOfertaRequest = Esquemas['DecisionOfertaRequest'];
 export type DecisionOpinionRequest = Esquemas['DecisionOpinionRequest'];
 /** La decisión guardada por el núcleo; el catálogo la aplica en los siguientes segundos por la bandeja de salida. */
 export type DecisionModeracion = Esquemas['DecisionModeracion'];
+
+/** Lo que escribe el administrador para crear la cuenta de un administrador, un operador de disponibilidad o un gestor (RF-81). */
+export type CuentaInternaRequest = Esquemas['CuentaInternaRequest'];

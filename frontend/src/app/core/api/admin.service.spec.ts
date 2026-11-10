@@ -133,4 +133,42 @@ describe('AdminService', () => {
 
     http.expectOne(`${BASE}/moderacion/opiniones/a%2Fb/decision`).flush({});
   });
+
+  it('crea una cuenta interna con POST y el rol, el nombre y el correo', () => {
+    let creada: unknown;
+
+    servicio
+      .crearCuentaInterna({ rol: 'OPERADOR_DISPONIBILIDAD', nombre: 'Valentina Ríos', correo: 'valentina@samariantour.co' })
+      .subscribe((c) => (creada = c));
+
+    const peticion = http.expectOne(`${BASE}/cuentas-internas`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({
+      rol: 'OPERADOR_DISPONIBILIDAD',
+      nombre: 'Valentina Ríos',
+      correo: 'valentina@samariantour.co',
+    });
+    peticion.flush({ id: 'c1', estado: 'ACTIVA', contrasenaEstablecida: false });
+    expect(creada).toMatchObject({ id: 'c1', contrasenaEstablecida: false });
+  });
+
+  it('desactiva y reactiva una cuenta con POST y sin cuerpo', () => {
+    servicio.desactivarCuentaInterna('c1').subscribe();
+    const baja = http.expectOne(`${BASE}/cuentas-internas/c1/desactivacion`);
+    expect(baja.request.method).toBe('POST');
+    expect(baja.request.body).toBeNull();
+    baja.flush({ id: 'c1', estado: 'DESACTIVADA' });
+
+    servicio.reactivarCuentaInterna('c1').subscribe();
+    const alta = http.expectOne(`${BASE}/cuentas-internas/c1/reactivacion`);
+    expect(alta.request.method).toBe('POST');
+    expect(alta.request.body).toBeNull();
+    alta.flush({ id: 'c1', estado: 'ACTIVA' });
+  });
+
+  it('codifica el identificador de la cuenta en la dirección', () => {
+    servicio.desactivarCuentaInterna('a/b').subscribe();
+
+    http.expectOne(`${BASE}/cuentas-internas/a%2Fb/desactivacion`).flush({});
+  });
 });

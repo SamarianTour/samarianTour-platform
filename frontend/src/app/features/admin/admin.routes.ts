@@ -29,8 +29,8 @@ export const RUTAS_ADMIN: Routes = [
       {
         path: 'cuentas',
         title: 'app.titulo.cuentasInternas',
-        data: { codigo: 'P05.3', nombre: 'app.titulo.cuentasInternas' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./cuentas/cuentas-internas').then((modulo) => modulo.CuentasInternas),
       },
       {
         path: 'comision',

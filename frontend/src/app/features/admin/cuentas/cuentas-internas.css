@@ -1,0 +1,160 @@
+.crear {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.crear h2,
+.crear p {
+  margin: 0;
+}
+
+.crear h2 {
+  font-size: 1.125rem;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+@media (max-width: 56rem) {
+  .campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Filtros: enlaces, cada uno con su dirección; el activo se marca con color, relleno y aria-current. */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.filtros a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--borde-control);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.filtros a:hover {
+  border-color: var(--enlace);
+}
+
+.filtros a[aria-current='page'] {
+  border-color: var(--enlace);
+  background: var(--acento-suave);
+  color: var(--enlace-fuerte);
+  font-weight: 700;
+}
+
+.total {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
+
+/* Tabla: en celular se desplaza hacia los lados dentro de su caja, que se puede enfocar con el teclado. */
+.envoltura {
+  overflow-x: auto;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-md);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+}
+
+.envoltura:focus-visible {
+  outline: 2px solid var(--enlace);
+  outline-offset: 2px;
+}
+
+.tabla {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  text-align: left;
+}
+
+.tabla th {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  background: var(--superficie-suave);
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: top;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.nombre {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.menor {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.menor--aviso {
+  margin-top: 0.25rem;
+  color: var(--aviso-texto);
+}
+
+.accion {
+  white-space: nowrap;
+}
+
+.accion .boton {
+  min-height: 44px;
+}
+
+.accion .campo__error {
+  margin: 0.375rem 0 0;
+  white-space: normal;
+  max-width: 18rem;
+}
+
+.enlace-fila {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
