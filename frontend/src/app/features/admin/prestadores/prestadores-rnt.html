@@ -1,0 +1,201 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'admin.panel.control' | t }}</p>
+    <h1>{{ 'app.titulo.prestadoresRnt' | t }}</h1>
+    <p class="texto-suave">{{ 'admin.prestadores.intro' | t }}</p>
+  </header>
+
+  <!-- Sincronizar con el RNT: puede tardar, así que mientras responde el botón queda deshabilitado. -->
+  <section class="tarjeta sync" aria-labelledby="sync-titulo" [attr.aria-busy]="sincronizando()">
+    <h2 id="sync-titulo">{{ 'admin.rnt.sync.titulo' | t }}</h2>
+    <p class="texto-suave">{{ 'admin.rnt.sync.texto' | t }}</p>
+
+    <div class="sync__accion">
+      <button type="button" class="boton" [disabled]="sincronizando()" (click)="pedirSincronizacion()">
+        {{ (sincronizando() ? 'admin.rnt.sync.sincronizando' : 'admin.rnt.sync.boton') | t }}
+      </button>
+      @if (sincronizando()) {
+        <p class="sync__espera texto-suave" role="status">{{ 'admin.rnt.sync.espera' | t }}</p>
+      }
+    </div>
+
+    @if (errorSync(); as mensaje) {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensaje() }}</span>
+      </p>
+    }
+
+    @if (resultadoSync(); as resultado) {
+      <div class="sync__resultado" role="status">
+        <h3>{{ 'admin.rnt.sync.resultado' | t }}</h3>
+        <dl class="sync__cifras">
+          <div>
+            <dt>{{ 'admin.rnt.sync.revisados' | t }}</dt>
+            <dd>{{ resultado.revisados }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'admin.rnt.sync.retirados' | t }}</dt>
+            <dd>{{ resultado.retirados }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'admin.rnt.sync.restituidos' | t }}</dt>
+            <dd>{{ resultado.restituidos }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'admin.rnt.sync.sinRespuesta' | t }}</dt>
+            <dd>{{ resultado.sinRespuesta }}</dd>
+          </div>
+        </dl>
+        @if (resumenSync(); as resumen) {
+          @if (!resumen.huboCambios && !resumen.interrumpida) {
+            <p class="texto-suave">{{ 'admin.rnt.sync.sinCambios' | t }}</p>
+          }
+          @if (resumen.interrumpida) {
+            <p class="alerta alerta--aviso" role="note">
+              <app-icono nombre="alerta" />
+              <span>{{ 'admin.rnt.sync.interrumpida' | t }}</span>
+            </p>
+          } @else if (resumen.conservaron) {
+            <p class="alerta alerta--aviso" role="note">
+              <app-icono nombre="info" />
+              <span>{{ 'admin.rnt.sync.conservaron' | t }}</span>
+            </p>
+          }
+        }
+      </div>
+    }
+  </section>
+
+  <nav class="filtros" [attr.aria-label]="'admin.prestadores.filtrar' | t">
+    <a
+      routerLink="/admin"
+      [attr.aria-current]="filtro() === 'todos' ? 'page' : null"
+      >{{ 'admin.prestadores.filtro.todos' | t }}</a
+    >
+    <a
+      routerLink="/admin"
+      [queryParams]="{ sinOperador: true }"
+      [attr.aria-current]="filtro() === 'sin-operador' ? 'page' : null"
+      >{{ 'admin.prestadores.filtro.sinOperador' | t }}</a
+    >
+  </nav>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+  @if (errorOperadores(); as fallo) {
+    <p class="alerta alerta--aviso" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ 'admin.prestadores.errorOperadores' | t }} {{ fallo.mensaje }}</span>
+    </p>
+  } @else if (prestadores() !== null && asignables().length === 0) {
+    <p class="alerta alerta--info" role="note">
+      <app-icono nombre="info" />
+      <span>{{ 'admin.prestadores.sinOperadores' | t }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (prestadores() !== null) {
+      <p class="total texto-suave">{{ 'admin.prestadores.total' | t: { n: filas().length } }}</p>
+
+      @if (filas().length > 0) {
+        <div class="envoltura" role="region" tabindex="0" aria-labelledby="titulo-tabla-prestadores">
+          <table class="tabla">
+            <caption class="solo-lectores" id="titulo-tabla-prestadores">
+              {{ 'admin.prestadores.caption' | t }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'admin.prestadores.columna.prestador' | t }}</th>
+                <th scope="col">{{ 'admin.prestadores.columna.estadoRnt' | t }}</th>
+                <th scope="col">{{ 'admin.prestadores.columna.operador' | t }}</th>
+                <th scope="col">{{ 'admin.prestadores.columna.registrado' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of filas(); track fila.prestador.id) {
+                <tr>
+                  <td>
+                    <strong class="nombre">{{ fila.nombre ?? ('admin.prestadores.sinRazonSocial' | t) }}</strong>
+                    <span class="menor">
+                      {{ 'admin.prestadores.rnt' | t: { numero: fila.prestador.numeroRnt } }} ·
+                      {{ etiquetaTipo[fila.prestador.tipo] }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="etiqueta" [class]="claseDeEstado[fila.prestador.estadoRnt]">{{
+                      etiquetaEstado[fila.prestador.estadoRnt]
+                    }}</span>
+                  </td>
+                  <td>
+                    <div class="asignacion">
+                      <select
+                        [id]="'operador-' + fila.prestador.id"
+                        [attr.aria-label]="'admin.prestadores.operadorDe' | t: { prestador: fila.nombre ?? fila.prestador.numeroRnt }"
+                        [disabled]="asignando() !== null || errorOperadores() !== null"
+                        (change)="elegir(fila.prestador.id, $event)"
+                      >
+                        @if (!fila.prestador.operadorId) {
+                          <option value="" [selected]="!fila.elegido">{{ 'admin.prestadores.elige' | t }}</option>
+                        }
+                        @if (fila.actualNoAsignable) {
+                          <option [value]="fila.prestador.operadorId" disabled [selected]="fila.elegido === fila.prestador.operadorId">
+                            @if (fila.actual; as actual) {
+                              {{ actual.activo ? actual.nombre : ('admin.prestadores.desactivado' | t: { nombre: actual.nombre }) }}
+                            } @else {
+                              {{ 'admin.prestadores.desconocido' | t: { codigo: codigo(fila.prestador.operadorId ?? '') } }}
+                            }
+                          </option>
+                        }
+                        @for (cuenta of asignables(); track cuenta.id) {
+                          <option [value]="cuenta.id" [selected]="cuenta.id === fila.elegido">{{ etiquetaOperador(cuenta) }}</option>
+                        }
+                      </select>
+                      <button
+                        type="button"
+                        class="boton boton--secundario"
+                        [disabled]="!fila.puede || asignando() !== null"
+                        (click)="asignar(fila.prestador)"
+                      >
+                        {{ (asignando() === fila.prestador.id ? 'admin.prestadores.asignando' : 'admin.prestadores.asignar') | t }}
+                      </button>
+                    </div>
+                    @if (fila.error; as mensaje) {
+                      <p class="campo__error" role="alert">{{ mensaje() }}</p>
+                    }
+                  </td>
+                  <td>{{ fila.prestador.registradoEn | fecha }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="aviso texto-suave">{{ 'admin.prestadores.aviso' | t }}</p>
+      } @else {
+        <div class="tarjeta vacio">
+          @if (filtro() === 'sin-operador') {
+            <h2>{{ 'admin.prestadores.vacioSinOperadorTitulo' | t }}</h2>
+            <p class="texto-suave">{{ 'admin.prestadores.vacioSinOperadorAyuda' | t }}</p>
+          } @else {
+            <h2>{{ 'admin.prestadores.vacioTitulo' | t }}</h2>
+            <p class="texto-suave">{{ 'admin.prestadores.vacioAyuda' | t }}</p>
+          }
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'admin.prestadores.cargando' | t }}</p>
+    }
+  </div>
+</section>
+
+<app-dialogo-confirmacion
+  [titulo]="'admin.rnt.sync.dialogoTitulo' | t"
+  [mensaje]="'admin.rnt.sync.dialogoMensaje' | t"
+  [accion]="'admin.rnt.sync.dialogoAccion' | t"
+  (confirmado)="sincronizar()"
+/>

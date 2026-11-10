@@ -160,7 +160,6 @@ describe('pantallas que crea cada ruta', () => {
 
     // El administrador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
     it.each([
-      '/admin',
       '/admin/moderacion',
       '/admin/cuentas',
       '/admin/comision',
@@ -172,6 +171,17 @@ describe('pantallas que crea cada ruta', () => {
       await ir(url, PanelAdmin);
 
       expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
+    });
+
+    // P05.1: el inicio del panel es la lista de prestadores; pide los prestadores y las cuentas para ponerle nombre al operador.
+    it('el administrador abre los prestadores en /admin y estos piden sus datos', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-prestadores-rnt')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/prestadores')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
     });
 
     // Alertas de sesgo (RET-02): se crea dentro del panel y pide las alertas y los nombres de los prestadores.

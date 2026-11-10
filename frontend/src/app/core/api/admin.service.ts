@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_NUCLEO } from './api.config';
-import { AlertaSesgo, PrestadorAdmin } from './modelos-nucleo';
+import { AlertaSesgo, CuentaInterna, PrestadorAdmin, SincronizacionRnt } from './modelos-nucleo';
 
 const BASE = `${API_NUCLEO}/admin`;
 
@@ -21,6 +21,30 @@ export class AdminService {
       params = params.set('sinOperador', true);
     }
     return this.http.get<PrestadorAdmin[]>(`${BASE}/prestadores`, { params });
+  }
+
+  /** Las cuentas de administradores, operadores y gestores, activas y desactivadas, de la más antigua a la más reciente (RF-81). */
+  cuentasInternas(): Observable<CuentaInterna[]> {
+    return this.http.get<CuentaInterna[]>(`${BASE}/cuentas-internas`);
+  }
+
+  /**
+   * Asigna el operador de disponibilidad que atiende al prestador (RF-32, RF-81). Rige para las solicitudes que se envíen desde
+   * ahora; las abiertas siguen con el operador que tenían. Devuelve el prestador con su operador.
+   */
+  asignarOperador(prestadorId: string, operadorId: string): Observable<PrestadorAdmin> {
+    return this.http.put<PrestadorAdmin>(
+      `${BASE}/prestadores/${encodeURIComponent(prestadorId)}/operador`,
+      { operadorId },
+    );
+  }
+
+  /**
+   * Ejecuta ahora la sincronización con el RNT (RF-76 a RF-78). El núcleo responde cuando termina, así que puede tardar. Este
+   * servicio no le pone ningún tiempo máximo: cortar la petición no detiene la sincronización, solo se perdería su resultado.
+   */
+  sincronizarRnt(): Observable<SincronizacionRnt> {
+    return this.http.post<SincronizacionRnt>(`${BASE}/rnt/sincronizacion`, null);
   }
 
   /** Los prestadores que la recomendación muestra más de lo que les corresponde (RET-02): solo las alertas abiertas, de mayor a menor índice. */

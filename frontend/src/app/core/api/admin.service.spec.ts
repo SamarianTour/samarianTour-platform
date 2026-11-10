@@ -46,4 +46,62 @@ describe('AdminService', () => {
     peticion.flush([{ prestadorId: 'p1', indice: 3 }]);
     expect(alertas).toEqual([{ prestadorId: 'p1', indice: 3 }]);
   });
+
+  it('pide las cuentas internas', () => {
+    servicio.cuentasInternas().subscribe();
+
+    const peticion = http.expectOne(`${BASE}/cuentas-internas`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush([]);
+  });
+
+  it('asigna el operador con PUT y solo el identificador del operador en el cuerpo', () => {
+    let prestador: unknown;
+
+    servicio.asignarOperador('50000000-0000-0000-0000-000000000005', 'op-1').subscribe((p) => (prestador = p));
+
+    const peticion = http.expectOne(`${BASE}/prestadores/50000000-0000-0000-0000-000000000005/operador`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual({ operadorId: 'op-1' });
+    peticion.flush({ id: '50000000-0000-0000-0000-000000000005', operadorId: 'op-1' });
+    expect(prestador).toEqual({ id: '50000000-0000-0000-0000-000000000005', operadorId: 'op-1' });
+  });
+
+  it('codifica el identificador del prestador en la dirección', () => {
+    servicio.asignarOperador('a/b', 'op-1').subscribe();
+
+    http.expectOne(`${BASE}/prestadores/a%2Fb/operador`).flush({});
+  });
+
+  it('sincroniza con el RNT con POST y sin cuerpo', () => {
+    let resultado: unknown;
+
+    servicio.sincronizarRnt().subscribe((r) => (resultado = r));
+
+    const peticion = http.expectOne(`${BASE}/rnt/sincronizacion`);
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toBeNull();
+    peticion.flush({ revisados: 5, retirados: 1, restituidos: 0, sinRespuesta: 0, interrumpida: false });
+    expect(resultado).toEqual({ revisados: 5, retirados: 1, restituidos: 0, sinRespuesta: 0, interrumpida: false });
+  });
+
+  it('la sincronización no tiene tiempo máximo: responde aunque tarde mucho', () => {
+    vi.useFakeTimers();
+    try {
+      let resultado: unknown;
+      let fallo: unknown;
+      servicio.sincronizarRnt().subscribe({ next: (r) => (resultado = r), error: (e) => (fallo = e) });
+      const peticion = http.expectOne(`${BASE}/rnt/sincronizacion`);
+
+      // Pasan 30 minutos sin respuesta: nada del lado del navegador debe haber cortado la petición.
+      vi.advanceTimersByTime(30 * 60_000);
+      expect(peticion.cancelled).toBe(false);
+      expect(fallo).toBeUndefined();
+
+      peticion.flush({ revisados: 5, retirados: 0, restituidos: 0, sinRespuesta: 0, interrumpida: false });
+      expect(resultado).toMatchObject({ revisados: 5 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

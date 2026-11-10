@@ -17,8 +17,8 @@ export const RUTAS_ADMIN: Routes = [
         path: '',
         pathMatch: 'full',
         title: 'app.titulo.prestadoresRnt',
-        data: { codigo: 'P05.1', nombre: 'app.titulo.prestadoresRnt' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./prestadores/prestadores-rnt').then((modulo) => modulo.PrestadoresRnt),
       },
       {
         path: 'moderacion',

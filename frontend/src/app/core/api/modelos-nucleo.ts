@@ -57,3 +57,10 @@ export type EstadoIntento = Esquemas['EstadoIntento'];
 export type PrestadorAdmin = Esquemas['PrestadorAdmin'];
 /** Un prestador que la recomendación muestra más de lo que le corresponde (RET-02). */
 export type AlertaSesgo = Esquemas['AlertaSesgo'];
+
+/** Cómo está un prestador frente al RNT (RF-76 a RF-78). */
+export type EstadoRnt = Esquemas['PrestadorAdmin']['estadoRnt'];
+/** Lo que hizo una sincronización con el RNT: cuántos se revisaron, retiraron y restituyeron. */
+export type SincronizacionRnt = Esquemas['SincronizacionRnt'];
+/** Una cuenta de administrador, operador de disponibilidad o gestor del destino (RF-81). */
+export type CuentaInterna = Esquemas['CuentaInterna'];
