@@ -1,0 +1,29 @@
+@if (alternativas(); as lectura) {
+  <section class="tarjeta" aria-labelledby="alternativas-titulo">
+    <h2 id="alternativas-titulo">{{ 'recomendacion.alternativas.titulo' | t }}</h2>
+    <p class="alternativas__intro">
+      {{
+        (lectura.zonaOrigen?.nombre ? 'recomendacion.alternativas.intro' : 'recomendacion.alternativas.introSinZona')
+          | t: { zona: lectura.zonaOrigen?.nombre ?? '' }
+      }}
+    </p>
+
+    @if (lectura.aviso === 'POCAS_COINCIDENCIAS') {
+      <p class="alerta alerta--aviso">
+        <app-icono nombre="alerta" />
+        <span>{{ 'recomendacion.alternativas.pocas' | t }}</span>
+      </p>
+    }
+
+    <ol class="alternativas__lista">
+      @for (alternativa of lectura.alternativas; track alternativa.oferta.id) {
+        <li><app-tarjeta-recomendada [recomendacion]="alternativa" /></li>
+      }
+    </ol>
+
+    <p class="alternativas__nota texto-suave">
+      <app-icono nombre="info" />
+      <span>{{ 'recomendacion.alternativas.nota' | t }}</span>
+    </p>
+  </section>
+}

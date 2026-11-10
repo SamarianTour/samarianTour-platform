@@ -219,6 +219,11 @@
 
             <!-- Opcional (ADR-04): si el servicio de alertas falla o tarda más de 3 s, se oculta y la ficha sigue igual -->
             <app-alertas-zona [zonaId]="zona.id" />
+
+            <!-- RF-29: solo en una zona de alta afluencia. Opcional también: se oculta si falla, tarda más de 3 s o no hay alternativas -->
+            @if (zona.altaAfluencia) {
+              <app-alternativas-oferta [ofertaId]="oferta.id" />
+            }
           }
 
           <app-opiniones-oferta [ofertaId]="oferta.id" />

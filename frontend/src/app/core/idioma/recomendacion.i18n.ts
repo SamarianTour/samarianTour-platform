@@ -41,6 +41,16 @@ export const RECOMENDACION = diccionario(
     'recomendacion.alertas.noDisponible.conexion': 'Parece que no hay conexión a internet.',
     'recomendacion.alertas.noDisponible.ayuda':
       'Puedes intentarlo de nuevo. El resto de la plataforma sigue funcionando.',
+    // Alternativas en la ficha (P08.3)
+    'recomendacion.alternativas.titulo': 'Alternativas con menos visitantes',
+    'recomendacion.alternativas.intro':
+      'Esta oferta está en {zona}, una zona con alta afluencia. Estas ofertas parecidas están en zonas con menos visitantes.',
+    'recomendacion.alternativas.introSinZona':
+      'Esta oferta está en una zona con alta afluencia. Estas ofertas parecidas están en zonas con menos visitantes.',
+    'recomendacion.alternativas.pocas':
+      'Encontramos pocas ofertas parecidas fuera de las zonas con alta afluencia. Te mostramos las que hay.',
+    'recomendacion.alternativas.nota':
+      'Son sugerencias automáticas con criterios explícitos, no publicidad: tú decides.',
     'recomendacion.alertasZona.sinAyuda': 'No hay avisos vigentes para esta zona.',
     'recomendacion.alertasZona.verTodas': 'Ver las alertas de todas las zonas',
     'recomendacion.alerta.nivel': 'Nivel',
@@ -149,6 +159,16 @@ export const RECOMENDACION = diccionario(
     'recomendacion.alertas.noDisponible.tiempo': 'The alerts are taking longer than usual, so we stopped waiting.',
     'recomendacion.alertas.noDisponible.conexion': 'You seem to be offline.',
     'recomendacion.alertas.noDisponible.ayuda': 'You can try again. The rest of the platform keeps working.',
+    // Alternatives on the detail page (P08.3)
+    'recomendacion.alternativas.titulo': 'Alternatives with fewer visitors',
+    'recomendacion.alternativas.intro':
+      'This offer is in {zona}, an area with high visitor traffic. These similar offers are in areas with fewer visitors.',
+    'recomendacion.alternativas.introSinZona':
+      'This offer is in an area with high visitor traffic. These similar offers are in areas with fewer visitors.',
+    'recomendacion.alternativas.pocas':
+      'We found few similar offers outside areas with high visitor traffic. Here are the ones we have.',
+    'recomendacion.alternativas.nota':
+      'These are automatic suggestions based on explicit criteria, not advertising: you decide.',
     'recomendacion.alertasZona.sinAyuda': 'There are no active notices for this area.',
     'recomendacion.alertasZona.verTodas': 'See alerts for all areas',
     'recomendacion.alerta.nivel': 'Level',
