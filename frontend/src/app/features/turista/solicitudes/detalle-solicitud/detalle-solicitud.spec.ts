@@ -66,8 +66,8 @@ describe('DetalleSolicitud (P02.2)', () => {
   const bloqueDePago = () => raiz().querySelector('app-pagar-solicitud');
 
   /**
-   * Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. Una solicitud por pagar también pide
-   * sus intentos de pago, que se responden con `intentos` (ninguno por defecto).
+   * Abre el detalle con la sesión de un turista y responde las zonas y la solicitud. Una solicitud por pagar, con el pago
+   * fallido o pagada también pide sus intentos de pago, que se responden con `intentos` (ninguno por defecto).
    */
   function crear(contenido: SolicitudTurista, id = ID, intentos: IntentoPago[] = []): void {
     localStorage.setItem(
@@ -80,7 +80,11 @@ describe('DetalleSolicitud (P02.2)', () => {
     http.expectOne('/api/catalogo/zonas').flush(ZONAS);
     http.expectOne(`/api/nucleo/turista/solicitudes/${id}`).flush(contenido);
     fixture.detectChanges();
-    if (contenido.estado === 'CONFIRMADA' || contenido.estado === 'PAGO_FALLIDO') {
+    if (
+      contenido.estado === 'CONFIRMADA' ||
+      contenido.estado === 'PAGO_FALLIDO' ||
+      contenido.estado === 'PAGADA'
+    ) {
       http.expectOne(`/api/nucleo/turista/solicitudes/${id}/pagos`).flush(intentos);
       fixture.detectChanges();
     }
@@ -484,6 +488,9 @@ describe('DetalleSolicitud (P02.2)', () => {
       http
         .expectOne('/api/nucleo/turista/solicitudes/otra')
         .flush(solicitud('PAGADA', { id: 'otra' }));
+      fixture.detectChanges();
+      // Pagada: se piden también sus intentos de pago, para mostrar la referencia de la transacción.
+      http.expectOne('/api/nucleo/turista/solicitudes/otra/pagos').flush([]);
     });
   });
 
@@ -693,6 +700,174 @@ describe('DetalleSolicitud (P02.2)', () => {
       fixture.detectChanges();
 
       expect(bloqueDePago()).not.toBeNull();
+    });
+  });
+
+  describe('esperar la confirmación del pago (RF-50, RF-51)', () => {
+    const CONFIRMADA = solicitud('CONFIRMADA', {
+      venceEn: en(3 * HORA),
+      condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+    });
+    const intentoPago = (
+      numero: number,
+      estado: IntentoPago['estado'],
+      extra: Partial<IntentoPago> = {},
+    ): IntentoPago => ({
+      id: `i${numero}`,
+      numero,
+      estado,
+      referencia: `ST-${numero}`,
+      montoCentavos: 30000000,
+      creadoEn: en(-HORA),
+      ...extra,
+    });
+    const pagos = () => http.expectOne(`${URL}/pagos`);
+    const confirmando = () => raiz().querySelector('app-confirmando-pago');
+    const pagoConfirmado = () => raiz().querySelector('app-pago-confirmado');
+
+    /** El tiempo corre de verdad solo aquí: la espera usa temporizadores, que las demás pruebas no necesitan. */
+    beforeEach(() => {
+      vi.useRealTimers();
+      vi.useFakeTimers({
+        now: AHORA,
+        toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
+      });
+    });
+
+    /** Pasan los segundos indicados y el servidor responde la solicitud y sus intentos. */
+    function reconsultar(
+      segundos: number,
+      solicitudNueva: SolicitudTurista,
+      intentos: IntentoPago[],
+    ): void {
+      vi.advanceTimersByTime(segundos * 1000);
+      consulta().flush(solicitudNueva);
+      fixture.detectChanges();
+      pagos().flush(intentos);
+      fixture.detectChanges();
+    }
+
+    it('al volver de la pasarela con un intento en curso dice "Confirmando tu pago", no que se pagó', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      expect(confirmando()).not.toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+      expect(texto()).toContain('Confirmando tu pago');
+      // Mientras tanto se puede continuar el mismo pago, no empezar otro.
+      expect(texto()).toContain('Continúa tu pago');
+    });
+
+    it('una solicitud por pagar sin un intento en curso no espera nada ni reconsulta', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'ABANDONADO')]);
+
+      expect(confirmando()).toBeNull();
+      vi.advanceTimersByTime(60_000);
+      http.expectNone(URL);
+    });
+
+    it('reconsulta a los 3 segundos y, cuando el servidor dice pagada, confirma el pago con la referencia', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+      http.expectNone(URL);
+
+      reconsultar(3, solicitud('PAGADA', { condiciones: CONFIRMADA.condiciones, actualizadaEn: en(0) }), [
+        intentoPago(1, 'APROBADO', { transaccionId: '1234-1610641025-49201', resueltoEn: en(0) }),
+      ]);
+
+      expect(confirmando()).toBeNull();
+      expect(pagoConfirmado()).not.toBeNull();
+      expect(texto()).toContain('Pago confirmado');
+      expect(texto()).toContain('1234-1610641025-49201');
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Pagada');
+      // El turista esperaba: el foco va al aviso para que el cambio se anuncie.
+      expect(document.activeElement?.id).toBe('confirmado-titulo');
+    });
+
+    it('el estado lo decide el servidor: si sigue en curso, sigue esperando y vuelve a preguntar', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      reconsultar(3, CONFIRMADA, [intentoPago(1, 'EN_CURSO')]);
+      expect(confirmando()).not.toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+
+      reconsultar(3, CONFIRMADA, [intentoPago(1, 'EN_CURSO')]);
+      expect(confirmando()).not.toBeNull();
+    });
+
+    it('si la pasarela rechaza, deja de esperar y no dice que se pagó', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      reconsultar(3, solicitud('PAGO_FALLIDO', { condiciones: CONFIRMADA.condiciones, venceEn: en(2 * HORA) }), [
+        intentoPago(1, 'RECHAZADO'),
+      ]);
+
+      expect(confirmando()).toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Pago fallido');
+      vi.advanceTimersByTime(60_000);
+      http.expectNone(URL);
+    });
+
+    it('si el intento se abandona deja de esperar y vuelve a ofrecer pagar', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      reconsultar(3, CONFIRMADA, [intentoPago(1, 'ABANDONADO')]);
+
+      expect(confirmando()).toBeNull();
+      expect(texto()).toContain('Paga para asegurar tu cupo');
+      expect(texto()).toContain('Te quedan 3 intentos de pago');
+    });
+
+    it('una vez pagada deja de reconsultar', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+      reconsultar(3, solicitud('PAGADA', { condiciones: CONFIRMADA.condiciones }), [
+        intentoPago(1, 'APROBADO', { transaccionId: 'T-1' }),
+      ]);
+
+      vi.advanceTimersByTime(120_000);
+
+      http.expectNone(URL);
+    });
+
+    it('si falla la consulta de los intentos conserva la espera en vez de dar el pago por hecho', () => {
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      vi.advanceTimersByTime(3_000);
+      consulta().flush(CONFIRMADA);
+      fixture.detectChanges();
+      pagos().error(new ProgressEvent('error'));
+      fixture.detectChanges();
+
+      expect(confirmando()).not.toBeNull();
+      expect(pagoConfirmado()).toBeNull();
+    });
+
+    it('con la pestaña oculta no reconsulta', () => {
+      const visibilidad = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      vi.advanceTimersByTime(30_000);
+
+      http.expectNone(URL);
+      visibilidad.mockRestore();
+    });
+
+    it('una solicitud ya pagada al abrirla muestra el pago confirmado sin quitarle el foco', () => {
+      crear(solicitud('PAGADA', { condiciones: CONFIRMADA.condiciones }), ID, [
+        intentoPago(1, 'APROBADO', { transaccionId: 'T-9' }),
+      ]);
+
+      expect(pagoConfirmado()).not.toBeNull();
+      expect(texto()).toContain('T-9');
+      expect(confirmando()).toBeNull();
+      expect(document.activeElement?.id).not.toBe('confirmado-titulo');
+    });
+
+    it('está en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+      crear(CONFIRMADA, ID, [intentoPago(1, 'EN_CURSO')]);
+
+      expect(texto()).toContain('Confirming your payment');
+      expect(texto()).toContain('Continue your payment');
     });
   });
 });

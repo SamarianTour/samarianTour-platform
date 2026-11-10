@@ -69,11 +69,13 @@ describe('PagarSolicitud (P04.1)', () => {
     intentos: IntentoPago[] = [],
     plazo: Plazo = VIGENTE,
     solicitud: SolicitudTurista = CONFIRMADA,
+    enCurso = false,
   ): void {
     fixture = TestBed.createComponent(PagarSolicitud);
     fixture.componentRef.setInput('solicitud', solicitud);
     fixture.componentRef.setInput('intentos', intentos);
     fixture.componentRef.setInput('plazo', plazo);
+    fixture.componentRef.setInput('enCurso', enCurso);
     reconsultas = 0;
     fixture.componentInstance.reconsultar.subscribe(() => reconsultas++);
     fixture.detectChanges();
@@ -248,6 +250,40 @@ describe('PagarSolicitud (P04.1)', () => {
         expect(irA).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe('con un intento esperando la confirmación', () => {
+    it('ofrece continuar el pago, no empezar uno nuevo', () => {
+      crear([intento(1, 'EN_CURSO')], VIGENTE, CONFIRMADA, true);
+
+      expect(texto()).toContain('Continúa tu pago');
+      expect(texto()).toContain('No se te cobrará dos veces');
+      expect(boton().textContent?.trim()).toBe('Continuar el pago');
+      expect(boton().disabled).toBe(false);
+    });
+
+    it('continuar vuelve a abrir el pago: el núcleo devuelve el mismo intento', () => {
+      crear([intento(1, 'EN_CURSO')], VIGENTE, CONFIRMADA, true);
+
+      boton().click();
+      http.expectOne(PAGO).flush(SESION('https://checkout.wompi.co/p/?x=1'));
+
+      expect(irA).toHaveBeenCalledWith('https://checkout.wompi.co/p/?x=1');
+    });
+
+    it('un intento en curso no cuenta contra el límite de tres', () => {
+      crear([intento(1, 'EN_CURSO')], VIGENTE, CONFIRMADA, true);
+
+      expect(texto()).toContain('Te quedan 3 intentos de pago');
+    });
+
+    it('está en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+      crear([intento(1, 'EN_CURSO')], VIGENTE, CONFIRMADA, true);
+
+      expect(texto()).toContain('Continue your payment');
+      expect(boton().textContent?.trim()).toBe('Continue payment');
+    });
   });
 
   describe('cuando no se puede pagar', () => {

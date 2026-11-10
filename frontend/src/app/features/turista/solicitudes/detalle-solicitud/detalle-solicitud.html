@@ -157,13 +157,22 @@
             />
           }
 
+          @if (confirmando()) {
+            <app-confirmando-pago (consultar)="reconsultar()" />
+          }
+
           @if (s.estado === 'CONFIRMADA') {
             <app-pagar-solicitud
               [solicitud]="s"
               [intentos]="intentos()"
               [plazo]="plazo()"
+              [enCurso]="confirmando()"
               (reconsultar)="reconsultar()"
             />
+          }
+
+          @if (s.estado === 'PAGADA') {
+            <app-pago-confirmado [solicitud]="s" [intentos]="intentos()" [enfocar]="estabaConfirmando()" />
           }
         </div>
 

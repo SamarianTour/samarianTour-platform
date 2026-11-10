@@ -42,7 +42,26 @@ export const PAGOS = diccionario(
     'pagos.pagar.enlaceManual': 'Si la pasarela no se abre, continúa aquí.',
     'pagos.pagar.sinUrl':
       'No pudimos abrir la pasarela de pago. Inténtalo de nuevo en unos minutos.',
+    'pagos.pagar.tituloContinuar': 'Continúa tu pago',
+    'pagos.pagar.textoContinuar':
+      'Si cerraste la pasarela antes de terminar, puedes continuar con el mismo pago. No se te cobrará dos veces.',
+    'pagos.pagar.botonContinuar': 'Continuar el pago',
     'pagos.lista.pagar': 'Pagar',
+
+    // Al volver de la pasarela: el estado del pago lo decide solo el servidor (RF-50, RF-51)
+    'pagos.confirmando.titulo': 'Confirmando tu pago',
+    'pagos.confirmando.texto':
+      'Estamos esperando que la pasarela confirme tu pago. Esta pantalla se actualiza sola; no hace falta volver a pagar.',
+    'pagos.confirmando.tardanza':
+      'Si ves un cobro en tu banco, la confirmación puede tardar unos minutos.',
+
+    // Pago confirmado (P04.1)
+    'pagos.confirmado.titulo': 'Pago confirmado',
+    'pagos.confirmado.texto': 'La pasarela confirmó tu pago. Tu cupo está asegurado.',
+    'pagos.confirmado.pagado': 'Total pagado',
+    'pagos.confirmado.referencia': 'Referencia de la transacción',
+    'pagos.confirmado.fecha': 'Fecha del pago',
+    'pagos.confirmado.seguir': 'Seguir explorando',
   },
   {
     'pagos.intento.estado.EN_CURSO': 'In progress',
@@ -77,6 +96,23 @@ export const PAGOS = diccionario(
     'pagos.pagar.seguro': 'Payment processed by the external gateway, over an encrypted connection.',
     'pagos.pagar.enlaceManual': 'If the payment gateway does not open, continue here.',
     'pagos.pagar.sinUrl': "We couldn't open the payment gateway. Try again in a few minutes.",
+    'pagos.pagar.tituloContinuar': 'Continue your payment',
+    'pagos.pagar.textoContinuar':
+      'If you closed the payment gateway before finishing, you can continue with the same payment. You will not be charged twice.',
+    'pagos.pagar.botonContinuar': 'Continue payment',
     'pagos.lista.pagar': 'Pay',
+
+    'pagos.confirmando.titulo': 'Confirming your payment',
+    'pagos.confirmando.texto':
+      'We are waiting for the payment gateway to confirm your payment. This screen updates by itself; you do not need to pay again.',
+    'pagos.confirmando.tardanza':
+      'If you see a charge from your bank, the confirmation may take a few minutes.',
+
+    'pagos.confirmado.titulo': 'Payment confirmed',
+    'pagos.confirmado.texto': 'The payment gateway confirmed your payment. Your spot is secured.',
+    'pagos.confirmado.pagado': 'Total paid',
+    'pagos.confirmado.referencia': 'Transaction reference',
+    'pagos.confirmado.fecha': 'Payment date',
+    'pagos.confirmado.seguir': 'Keep exploring',
   },
 );

@@ -15,6 +15,7 @@ import {
   intentoAprobado,
   intentoEnCurso,
   intentosRestantes,
+  mostrarIntentos,
   intentosUsados,
   puedePagar,
   urlDeCheckoutSegura,
@@ -270,4 +271,17 @@ describe('centavosAPesos', () => {
     expect(centavosAPesos(30000000)).toBe(300000);
     expect(centavosAPesos(0)).toBe(0);
   });
+});
+
+describe('mostrarIntentos', () => {
+  it.each(['CONFIRMADA', 'PAGO_FALLIDO', 'PAGADA'] as const)('con la solicitud %s se piden los intentos', (estado) => {
+    expect(mostrarIntentos(estado)).toBe(true);
+  });
+
+  it.each(['PENDIENTE', 'ATENDIDA', 'NO_DISPONIBLE', 'SIN_RESPUESTA', 'DECLINADA', 'VENCIDA'] as const)(
+    'con la solicitud %s no se piden',
+    (estado) => {
+      expect(mostrarIntentos(estado)).toBe(false);
+    },
+  );
 });

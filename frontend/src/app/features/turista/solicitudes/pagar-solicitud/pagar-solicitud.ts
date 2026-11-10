@@ -42,6 +42,8 @@ export class PagarSolicitud {
   /** Los intentos de pago que ya tiene la solicitud, para decir cuántos le quedan. */
   readonly intentos = input<readonly IntentoPago[]>([]);
   readonly plazo = input.required<Plazo>();
+  /** Hay un intento esperando la confirmación: pagar de nuevo devuelve ese mismo intento, así que se ofrece "continuar". */
+  readonly enCurso = input(false);
   /** La solicitud cambió por su lado (ya no se puede pagar): la pantalla debe volver a consultarla. */
   readonly reconsultar = output<void>();
 

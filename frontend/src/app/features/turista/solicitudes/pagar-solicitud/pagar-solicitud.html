@@ -1,5 +1,8 @@
 <section class="tarjeta pago" aria-labelledby="pago-titulo">
-  <h2 id="pago-titulo">{{ 'pagos.pagar.titulo' | t }}</h2>
+  <h2 id="pago-titulo">{{ (enCurso() ? 'pagos.pagar.tituloContinuar' : 'pagos.pagar.titulo') | t }}</h2>
+  @if (enCurso()) {
+    <p>{{ 'pagos.pagar.textoContinuar' | t }}</p>
+  }
 
   <dl class="pago__resumen">
     <div>
@@ -49,7 +52,10 @@
   }
 
   <button type="button" class="boton boton--ancho" [disabled]="enviando() || !puede()" (click)="pagar()">
-    {{ (enviando() ? 'pagos.pagar.abriendo' : 'pagos.pagar.boton') | t: { total: (total() | precio) } }}
+    {{
+      (enviando() ? 'pagos.pagar.abriendo' : enCurso() ? 'pagos.pagar.botonContinuar' : 'pagos.pagar.boton')
+        | t: { total: (total() | precio) }
+    }}
   </button>
 
   @if (urlAbierta(); as enlace) {
