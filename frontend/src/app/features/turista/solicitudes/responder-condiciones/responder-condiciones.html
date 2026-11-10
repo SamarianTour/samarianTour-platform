@@ -1,0 +1,35 @@
+<section class="tarjeta decision" aria-labelledby="decision-titulo">
+  <h2 id="decision-titulo">{{ 'solicitudes.decision.titulo' | t }}</h2>
+  <p>{{ 'solicitudes.decision.texto' | t }}</p>
+
+  @if (solicitud().venceEn; as vence) {
+    <p class="decision__plazo">
+      {{ 'solicitudes.decision.hasta' | t: { fecha: (vence | fecha: 'conHora') } }}
+    </p>
+  }
+
+  @if (error(); as mensaje) {
+    <p class="alerta alerta--error" role="alert">{{ mensaje() }}</p>
+  }
+
+  <div class="decision__acciones">
+    <button type="button" class="boton" [disabled]="enviando() !== null || plazoVencido()" (click)="confirmar()">
+      {{ (enviando() === 'CONFIRMAR' ? 'solicitudes.decision.confirmando' : 'solicitudes.decision.confirmar') | t }}
+    </button>
+    <button
+      type="button"
+      class="boton boton--secundario"
+      [disabled]="enviando() !== null || plazoVencido()"
+      (click)="pedirDeclinar()"
+    >
+      {{ (enviando() === 'DECLINAR' ? 'solicitudes.decision.declinando' : 'solicitudes.decision.declinar') | t }}
+    </button>
+  </div>
+</section>
+
+<app-dialogo-confirmacion
+  [titulo]="'solicitudes.decision.dialogoTitulo' | t"
+  [mensaje]="'solicitudes.decision.dialogoMensaje' | t"
+  [accion]="'solicitudes.decision.declinar' | t"
+  (confirmado)="declinar()"
+/>

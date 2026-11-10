@@ -1,0 +1,200 @@
+<section class="pagina">
+  <nav class="migas" [attr.aria-label]="'turista.ficha.migas' | t">
+    <a routerLink="/turista/solicitudes">{{ 'app.nav.misSolicitudes' | t }}</a>
+    <app-icono nombre="chevron" />
+    <span aria-current="page">{{ 'app.titulo.detalleSolicitud' | t }}</span>
+  </nav>
+
+  @switch (estado().tipo) {
+    @case ('cargando') {
+      <p class="texto-suave" aria-live="polite">{{ 'solicitudes.detalle.cargando' | t }}</p>
+    }
+    @case ('no-encontrada') {
+      <div class="tarjeta vacio" role="alert">
+        <h1>{{ 'solicitudes.detalle.noEncontrada' | t }}</h1>
+        <p class="texto-suave">{{ 'solicitudes.detalle.noEncontradaAyuda' | t }}</p>
+        <a class="boton" routerLink="/turista/solicitudes">{{ 'solicitudes.form.verMisSolicitudes' | t }}</a>
+      </div>
+    }
+    @case ('error') {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensajeDeError() }}</span>
+      </p>
+      <a class="boton boton--secundario" routerLink="/turista/solicitudes">{{ 'solicitudes.form.verMisSolicitudes' | t }}</a>
+    }
+    @case ('lista') {
+      @let s = solicitud()!;
+
+      @if (paso(); as pasoActual) {
+        <app-pasos-solicitud [paso]="pasoActual" />
+      }
+
+      @if (errorDeActualizacion(); as fallo) {
+        <p class="alerta alerta--aviso" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ 'solicitudes.detalle.errorActualizar' | t }} {{ fallo.mensaje }}</span>
+        </p>
+      }
+
+      <header class="detalle__cabecera">
+        <span class="detalle__icono portada" aria-hidden="true">
+          <app-icono [nombre]="iconoDeTipo[s.oferta.tipo]" />
+        </span>
+        <div class="detalle__titulo">
+          <p class="rotulo">{{ etiquetaTipo[s.oferta.tipo] }}</p>
+          <h1 id="titulo-solicitud" tabindex="-1">{{ s.oferta.nombre }}</h1>
+        </div>
+        <span class="etiqueta" [class]="claseDeEstado[s.estado]">{{ etiquetaEstado[s.estado] }}</span>
+      </header>
+      <p class="texto-suave detalle__descripcion" aria-live="polite">{{ descripcionEstado[s.estado] }}</p>
+
+      @if (avisoDePlazo(); as aviso) {
+        <p class="plazo" [class.plazo--urgente]="plazo().nivel !== 'vigente'" role="status">
+          <app-icono nombre="reloj" />
+          <span>{{ aviso }}</span>
+        </p>
+      }
+
+      <div class="detalle">
+        <div class="detalle__principal">
+          <section class="tarjeta" aria-labelledby="datos-titulo">
+            <h2 id="datos-titulo">{{ 'solicitudes.detalle.datos' | t }}</h2>
+            <dl class="datos">
+              <div>
+                <dt>{{ 'turista.misOpiniones.oferta' | t }}</dt>
+                <dd>
+                  <a [routerLink]="['/ofertas', s.oferta.id]">{{ s.oferta.nombre }}</a>
+                </dd>
+              </div>
+              @if (nombreDeZona(); as zona) {
+                <div>
+                  <dt>{{ 'turista.catalogo.zona' | t }}</dt>
+                  <dd>{{ zona }}</dd>
+                </div>
+              }
+              <div>
+                <dt>{{ (s.fechaSalida ? 'solicitudes.form.fechaEntrada' : 'solicitudes.resumen.fecha') | t }}</dt>
+                <dd>{{ s.fechaInicio | fecha: 'larga' }}</dd>
+              </div>
+              @if (s.fechaSalida) {
+                <div>
+                  <dt>{{ 'solicitudes.form.fechaSalida' | t }}</dt>
+                  <dd>{{ s.fechaSalida | fecha: 'larga' }}</dd>
+                </div>
+              }
+              @if (hora(); as horaDeLaSolicitud) {
+                <div>
+                  <dt>{{ (s.horaReserva ? 'solicitudes.form.horaReserva' : 'solicitudes.form.horaSalida') | t }}</dt>
+                  <dd>{{ horaDeLaSolicitud }}</dd>
+                </div>
+              }
+              <div>
+                <dt>{{ 'solicitudes.resumen.personas' | t }}</dt>
+                <dd>{{ s.personas }}</dd>
+              </div>
+              @if (s.numeroUnidades) {
+                <div>
+                  <dt>{{ 'solicitudes.resumen.unidades' | t }}</dt>
+                  <dd>{{ s.numeroUnidades }}</dd>
+                </div>
+              }
+              @if (s.nota) {
+                <div class="datos__ancho">
+                  <dt>{{ 'solicitudes.detalle.nota' | t }}</dt>
+                  <dd>{{ s.nota }}</dd>
+                </div>
+              }
+              <div>
+                <dt>{{ 'solicitudes.detalle.enviada' | t }}</dt>
+                <dd>{{ s.creadaEn | fecha: 'conHora' }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'solicitudes.detalle.actualizada' | t }}</dt>
+                <dd>{{ s.actualizadaEn | fecha: 'conHora' }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'solicitudes.detalle.referencia' | t }}</dt>
+                <dd class="detalle__codigo">{{ codigo() }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          @if (s.condiciones; as condiciones) {
+            <section class="tarjeta" aria-labelledby="condiciones-titulo">
+              <h2 id="condiciones-titulo">{{ 'solicitudes.detalle.condiciones' | t }}</h2>
+              <dl class="datos">
+                <div>
+                  <dt>{{ 'solicitudes.detalle.precioBase' | t }}</dt>
+                  <dd class="detalle__precio">{{ condiciones.precioBase | precio }}</dd>
+                </div>
+                @if (condiciones.aparteHasta) {
+                  <div>
+                    <dt>{{ 'solicitudes.detalle.apartadoHasta' | t }}</dt>
+                    <dd>{{ condiciones.aparteHasta | fecha: 'conHora' }}</dd>
+                  </div>
+                }
+                <div class="datos__ancho">
+                  <dt>{{ 'solicitudes.detalle.politica' | t }}</dt>
+                  <dd>{{ condiciones.politicaCancelacion }}</dd>
+                </div>
+                @if (condiciones.nota) {
+                  <div class="datos__ancho">
+                    <dt>{{ 'solicitudes.detalle.notaOperador' | t }}</dt>
+                    <dd>{{ condiciones.nota }}</dd>
+                  </div>
+                }
+              </dl>
+            </section>
+          }
+
+          @if (s.estado === 'ATENDIDA') {
+            <app-responder-condiciones
+              [solicitud]="s"
+              [plazoVencido]="plazo().nivel === 'vencido'"
+              (respondida)="alResponder($event)"
+              (reconsultar)="reconsultar()"
+            />
+          }
+        </div>
+
+        <aside class="detalle__lateral">
+          <section class="tarjeta" aria-labelledby="historial-titulo">
+            <h2 id="historial-titulo">{{ 'solicitudes.detalle.historial' | t }}</h2>
+            <ol class="historial">
+              @for (paso of historial(); track paso.en + paso.a) {
+                <li class="historial__paso">
+                  <p class="historial__estado">
+                    <strong>{{ etiquetaEstado[paso.a] }}</strong>&ngsp;<span class="texto-suave">· {{ etiquetaActor[paso.actor] }}</span>
+                  </p>
+                  <p class="historial__fecha texto-suave">
+                    <time [attr.datetime]="paso.en">{{ paso.en | fecha: 'conHora' }}</time>
+                  </p>
+                  @if (paso.motivo) {
+                    <p class="historial__motivo">{{ 'solicitudes.detalle.motivo' | t: { motivo: paso.motivo } }}</p>
+                  }
+                </li>
+              }
+            </ol>
+          </section>
+
+          @switch (accion()) {
+            @case ('volver-a-solicitar') {
+              <a class="boton boton--ancho" [routerLink]="['/turista/solicitar', s.oferta.id]">{{
+                'solicitudes.lista.volverASolicitar' | t
+              }}</a>
+            }
+            @case ('opinar') {
+              <a class="boton boton--ancho" [routerLink]="['/ofertas', s.oferta.id]">{{ 'solicitudes.lista.opinar' | t }}</a>
+            }
+            @default {
+              <a class="boton boton--secundario boton--ancho" [routerLink]="['/ofertas', s.oferta.id]">{{
+                'solicitudes.lista.verOferta' | t
+              }}</a>
+            }
+          }
+        </aside>
+      </div>
+    }
+  }
+</section>

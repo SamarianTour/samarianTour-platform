@@ -1,0 +1,34 @@
+.decision {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-color: var(--enlace);
+}
+
+.decision h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.decision p {
+  margin: 0;
+}
+
+.decision__plazo {
+  color: var(--aviso-texto);
+  font-weight: 600;
+}
+
+.decision .alerta {
+  margin: 0;
+}
+
+.decision__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.decision__acciones .boton {
+  flex: 1 1 12rem;
+}

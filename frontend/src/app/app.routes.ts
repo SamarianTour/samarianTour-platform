@@ -27,14 +27,32 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'solicitudes' },
       {
-        path: '**',
+        // P02.2: la lista.
+        path: 'solicitudes',
+        pathMatch: 'full',
         title: 'app.titulo.misSolicitudes',
-        data: {
-          codigo: 'P02.2',
-          nombre: 'app.proximamente.turista.nombre',
-          descripcion: 'app.proximamente.turista.descripcion',
-        },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./features/turista/solicitudes/mis-solicitudes/mis-solicitudes').then(
+            (modulo) => modulo.MisSolicitudes,
+          ),
+      },
+      {
+        // P02.1: el botón "Solicitar disponibilidad" de la ficha lleva aquí. Sin sesión, el guard lleva a iniciar sesión y vuelve.
+        path: 'solicitar/:ofertaId',
+        title: 'app.titulo.solicitar',
+        loadComponent: () =>
+          import('./features/turista/solicitudes/formulario-solicitud/formulario-solicitud').then(
+            (modulo) => modulo.FormularioSolicitud,
+          ),
+      },
+      {
+        // P02.2: el detalle. El núcleo enlaza exactamente aquí: el regreso de la pasarela de pago y el aviso de WhatsApp.
+        path: 'solicitudes/:id',
+        title: 'app.titulo.detalleSolicitud',
+        loadComponent: () =>
+          import('./features/turista/solicitudes/detalle-solicitud/detalle-solicitud').then(
+            (modulo) => modulo.DetalleSolicitud,
+          ),
       },
     ],
   },

@@ -232,6 +232,17 @@
             </div>
             <p class="campo__ayuda">{{ 'turista.ficha.informativo' | t }}</p>
 
+            @if (puedeSolicitar()) {
+              <a class="boton boton--ancho" [routerLink]="['/turista/solicitar', oferta.id]">{{
+                'solicitudes.solicitar' | t
+              }}</a>
+              @if (!autenticada()) {
+                <p class="campo__ayuda">{{ 'solicitudes.pedirSesion' | t }}</p>
+              }
+            } @else {
+              <p class="campo__ayuda">{{ 'solicitudes.soloTuristas' | t }}</p>
+            }
+
             <hr class="separador" />
 
             <ul class="resumen__lista">

@@ -12,6 +12,12 @@ const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
   'etiquetas.modalidad.KAYAK',
   // WhatsApp es un nombre propio.
   'cuentas.campo.whatsapp',
+  // Las abreviaturas de tiempo (d, h, min) son las mismas en los dos idiomas.
+  'solicitudes.plazo.dias',
+  'solicitudes.plazo.horas',
+  'solicitudes.plazo.minutos',
+  // "Ref." es la misma abreviatura en los dos idiomas.
+  'solicitudes.lista.ref',
 ]);
 
 /**
