@@ -150,6 +150,38 @@ describe('pantallas que crea cada ruta', () => {
       await ir('/prestador/ofertas', PanelPrestador);
     });
 
+    // P03.0: el inicio del panel es el dashboard; pide su registro (núcleo) y sus ofertas (catálogo).
+    it('el prestador abre su inicio en /prestador y este pide su registro y sus ofertas', async () => {
+      conSesion('PRESTADOR');
+
+      await ir('/prestador', PanelPrestador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-inicio-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/prestador/registro')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/catalogo/prestador/ofertas')).toHaveLength(1);
+    });
+
+    // Las secciones que llegan en los siguientes commits ya tienen su ruta dentro del panel.
+    it.each(['/prestador/rnt', '/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
+      'el prestador abre su panel en %s y dentro se crea una pantalla',
+      async (url) => {
+        conSesion('PRESTADOR');
+
+        await ir(url, PanelPrestador);
+
+        expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
+      },
+    );
+
+    it.each(['/prestador', '/prestador/rnt', '/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
+      'un turista que abre %s ve "no tienes permiso"',
+      async (url) => {
+        conSesion('TURISTA');
+
+        await ir(url, SinPermiso);
+      },
+    );
+
     it.each([
       ['GESTOR_DESTINO', '/gestor'],
     ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {

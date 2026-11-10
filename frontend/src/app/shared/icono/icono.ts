@@ -19,7 +19,11 @@ export type NombreIcono =
   | 'mas'
   | 'escudo'
   | 'externo'
-  | 'estrella';
+  | 'estrella'
+  | 'inicio'
+  | 'perfil'
+  | 'mensaje'
+  | 'tarjeta';
 
 /** Icono con el que se representa cada tipo de oferta. */
 export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
@@ -124,6 +128,21 @@ export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
         }
         @case ('estrella') {
           <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        }
+        @case ('inicio') {
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <path d="M9 22V12h6v10" />
+        }
+        @case ('perfil') {
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        }
+        @case ('mensaje') {
+          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+        }
+        @case ('tarjeta') {
+          <rect width="20" height="14" x="2" y="5" rx="2" />
+          <path d="M2 10h20" />
         }
         @case ('externo') {
           <path d="M15 3h6v6" />

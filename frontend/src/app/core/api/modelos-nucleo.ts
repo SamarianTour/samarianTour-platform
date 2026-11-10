@@ -55,6 +55,8 @@ export type EstadoIntento = Esquemas['EstadoIntento'];
 
 /** Un prestador como lo ve el administrador para asignarle su operador (RF-81). */
 export type PrestadorAdmin = Esquemas['PrestadorAdmin'];
+/** El prestador como se ve a sí mismo: su RNT, su tipo, su WhatsApp. `PrestadorAdmin` es la vista del administrador. */
+export type PrestadorPropio = Esquemas['Prestador'];
 /** Un prestador que la recomendación muestra más de lo que le corresponde (RET-02). */
 export type AlertaSesgo = Esquemas['AlertaSesgo'];
 

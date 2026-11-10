@@ -14,7 +14,48 @@ export const PRESTADOR = diccionario(
     'prestador.panel.control': 'Panel de control',
     'prestador.panel.rntPorRegistrar': 'RNT por registrar',
     'prestador.panel.sinRnt':
-      'Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ofertas. Esa pantalla llegará en una próxima fase.',
+      'Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ofertas. Hazlo en la sección RNT.',
+
+    // Dashboard (P03.0)
+    'prestador.inicio.titulo': 'Hola, {nombre}',
+    'prestador.inicio.subtitulo': 'Este es el resumen de tu registro y de tus ofertas.',
+    'prestador.inicio.cargando': 'Cargando…',
+    'prestador.inicio.irARnt': 'Ir a la sección RNT',
+    'prestador.inicio.aviso.sinRegistrar.titulo': 'Registra tu RNT para publicar',
+    'prestador.inicio.aviso.sinRegistrar.texto':
+      'Mientras no registres tu RNT (Registro Nacional de Turismo) no puedes publicar ofertas, y ninguna se muestra en el catálogo.',
+    'prestador.inicio.aviso.inactivo.titulo': 'Tu RNT está inactivo',
+    'prestador.inicio.aviso.inactivo.texto':
+      'Tus ofertas no se muestran en el catálogo mientras tu RNT esté inactivo. Cuando vuelva a estar activo se verán de nuevo. Revisa el número y su estado en la sección RNT.',
+    'prestador.inicio.aviso.noEncontrado.titulo': 'No encontramos tu RNT',
+    'prestador.inicio.aviso.noEncontrado.texto':
+      'Tus ofertas no se muestran en el catálogo porque no encontramos ese número en el registro oficial. Revisa que esté bien escrito o cámbialo en la sección RNT.',
+    'prestador.inicio.aviso.pendiente.titulo': 'Estamos verificando tu RNT',
+    'prestador.inicio.aviso.pendiente.texto':
+      'El registro oficial no respondió a tiempo. Lo revisaremos de nuevo en la siguiente sincronización; no tienes que hacer nada.',
+    'prestador.inicio.registro.titulo': 'Tu registro',
+    'prestador.inicio.registro.estado': 'Estado del RNT',
+    'prestador.inicio.registro.sinRegistrar': 'Sin registrar',
+    'prestador.inicio.registro.numero': 'Número de RNT',
+    'prestador.inicio.registro.razonSocial': 'Razón social',
+    'prestador.inicio.registro.tipo': 'Tipo de prestador',
+    'prestador.inicio.registro.sincronizado': 'Última sincronización',
+    'prestador.inicio.registro.nuncaSincronizado': 'Aún no ha respondido',
+    'prestador.inicio.registro.whatsapp': 'WhatsApp de contacto',
+    'prestador.inicio.whatsapp.verificado': 'Verificado',
+    'prestador.inicio.whatsapp.sinVerificar': 'Sin verificar',
+    'prestador.inicio.whatsapp.sinConfigurar': 'Sin configurar',
+    'prestador.inicio.whatsapp.noDisponible': 'Registra primero tu RNT',
+    'prestador.inicio.ofertas.titulo': 'Tus ofertas',
+    'prestador.inicio.ofertas.total': { uno: '{n} oferta en total', otros: '{n} ofertas en total' },
+    'prestador.inicio.accesos.titulo': 'Configura tu cuenta',
+    'prestador.inicio.accesos.rnt':
+      'Registra o cambia tu RNT y tu tipo de prestador, y mira cómo quedó la validación.',
+    'prestador.inicio.accesos.perfil': 'Cuenta quién eres y muestra fotos de tu negocio a los turistas.',
+    'prestador.inicio.accesos.whatsapp':
+      'El número donde recibes los avisos de las solicitudes. Nunca se muestra al público.',
+    'prestador.inicio.accesos.cuentaCobro':
+      'La cuenta donde recibes lo que te corresponde por cada pago. La comisión se descuenta de lo que recibes; nunca se suma al turista.',
 
     // Mis ofertas
     'prestador.ofertas.subtitulo':
@@ -176,7 +217,48 @@ export const PRESTADOR = diccionario(
     'prestador.panel.control': 'Control panel',
     'prestador.panel.rntPorRegistrar': 'RNT not registered yet',
     'prestador.panel.sinRnt':
-      "You haven't registered your RNT and provider type yet, so you can't publish offers. That screen will arrive in an upcoming phase.",
+      "You haven't registered your RNT and provider type yet, so you can't publish offers. Do it in the RNT section.",
+
+    // Dashboard (P03.0)
+    'prestador.inicio.titulo': 'Hello, {nombre}',
+    'prestador.inicio.subtitulo': 'This is a summary of your registration and your offers.',
+    'prestador.inicio.cargando': 'Loading…',
+    'prestador.inicio.irARnt': 'Go to the RNT section',
+    'prestador.inicio.aviso.sinRegistrar.titulo': 'Register your RNT to publish',
+    'prestador.inicio.aviso.sinRegistrar.texto':
+      "Until you register your RNT (National Tourism Registry) you can't publish offers, and none are shown in the catalog.",
+    'prestador.inicio.aviso.inactivo.titulo': 'Your RNT is inactive',
+    'prestador.inicio.aviso.inactivo.texto':
+      'Your offers are not shown in the catalog while your RNT is inactive. They will appear again once it is active. Check the number and its status in the RNT section.',
+    'prestador.inicio.aviso.noEncontrado.titulo': "We couldn't find your RNT",
+    'prestador.inicio.aviso.noEncontrado.texto':
+      'Your offers are not shown in the catalog because we could not find that number in the official registry. Check that it is typed correctly or change it in the RNT section.',
+    'prestador.inicio.aviso.pendiente.titulo': 'We are verifying your RNT',
+    'prestador.inicio.aviso.pendiente.texto':
+      "The official registry did not respond in time. We will check again at the next synchronization; you don't need to do anything.",
+    'prestador.inicio.registro.titulo': 'Your registration',
+    'prestador.inicio.registro.estado': 'RNT status',
+    'prestador.inicio.registro.sinRegistrar': 'Not registered',
+    'prestador.inicio.registro.numero': 'RNT number',
+    'prestador.inicio.registro.razonSocial': 'Business name',
+    'prestador.inicio.registro.tipo': 'Provider type',
+    'prestador.inicio.registro.sincronizado': 'Last synchronization',
+    'prestador.inicio.registro.nuncaSincronizado': 'No response yet',
+    'prestador.inicio.registro.whatsapp': 'Contact WhatsApp',
+    'prestador.inicio.whatsapp.verificado': 'Verified',
+    'prestador.inicio.whatsapp.sinVerificar': 'Not verified',
+    'prestador.inicio.whatsapp.sinConfigurar': 'Not set up',
+    'prestador.inicio.whatsapp.noDisponible': 'Register your RNT first',
+    'prestador.inicio.ofertas.titulo': 'Your offers',
+    'prestador.inicio.ofertas.total': { uno: '{n} offer in total', otros: '{n} offers in total' },
+    'prestador.inicio.accesos.titulo': 'Set up your account',
+    'prestador.inicio.accesos.rnt':
+      'Register or change your RNT and your provider type, and see how the validation went.',
+    'prestador.inicio.accesos.perfil': 'Tell tourists who you are and show photos of your business.',
+    'prestador.inicio.accesos.whatsapp':
+      'The number where you receive notices about requests. It is never shown to the public.',
+    'prestador.inicio.accesos.cuentaCobro':
+      "The account where you receive what you are owed for each payment. The commission is deducted from what you receive and is never added to the tourist's price.",
 
     'prestador.ofertas.subtitulo':
       'Every new or edited offer goes through moderation before it appears in the catalog.',

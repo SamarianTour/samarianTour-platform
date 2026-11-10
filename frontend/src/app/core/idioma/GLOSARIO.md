@@ -44,6 +44,7 @@ No estaban en el glosario original. Siguen la redacción de `_referencia-html/js
 | contraseña | password |
 | catálogo | catalog |
 | ficha de la oferta | offer page |
+| cuenta de cobro | payout account |
 
 ## Criterios de estilo
 

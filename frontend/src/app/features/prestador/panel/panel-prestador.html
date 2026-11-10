@@ -25,22 +25,18 @@
   <nav aria-labelledby="panel-titulo">
     <p class="rotulo" id="panel-titulo">{{ 'prestador.panel.control' | t }}</p>
     <ul class="menu">
-      <li>
-        <a routerLink="/prestador/ofertas" [class.activo]="!enPublicar()" [attr.aria-current]="enPublicar() ? null : 'page'">
-          <app-icono nombre="paquete" />
-          {{ 'app.nav.misOfertas' | t }}
-        </a>
-      </li>
-      <li>
-        <a
-          routerLink="/prestador/ofertas/nueva"
-          [class.activo]="enPublicar()"
-          [attr.aria-current]="enPublicar() ? 'page' : null"
-        >
-          <app-icono nombre="mas" />
-          {{ 'app.titulo.publicarOferta' | t }}
-        </a>
-      </li>
+      @for (enlace of enlaces; track enlace.ruta) {
+        <li>
+          <a
+            [routerLink]="enlace.ruta"
+            [class.activo]="activo(enlace)"
+            [attr.aria-current]="activo(enlace) ? 'page' : null"
+          >
+            <app-icono [nombre]="enlace.icono" />
+            {{ enlace.clave | t }}
+          </a>
+        </li>
+      }
     </ul>
   </nav>
 </aside>

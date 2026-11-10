@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { TipoPrestador } from '../../../core/api/modelos';
 import { CLAVE_SESION, aSesionGuardada } from '../../../core/sesion/almacen-sesion';
 import { respuestaDeSesion } from '../../../core/sesion/testing';
@@ -55,13 +55,58 @@ describe('PanelPrestador', () => {
     expect(raiz().querySelector('.alerta')?.textContent).toContain('Todavía no registras tu RNT');
   });
 
-  it('ofrece "Mis ofertas" y "Publicar oferta"', () => {
+  it('ofrece el inicio, las ofertas y cada sección del registro', () => {
     crear('AGENCIA_OPERADORA');
 
     const enlaces = Array.from(raiz().querySelectorAll<HTMLAnchorElement>('.menu a'));
     expect(enlaces.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Inicio', '/prestador'],
       ['Mis ofertas', '/prestador/ofertas'],
       ['Publicar oferta', '/prestador/ofertas/nueva'],
+      ['Mi RNT', '/prestador/rnt'],
+      ['Perfil público', '/prestador/perfil'],
+      ['WhatsApp de contacto', '/prestador/whatsapp'],
+      ['Cuenta de cobro', '/prestador/cuenta-cobro'],
     ]);
+  });
+
+  describe('la sección marcada', () => {
+    const marcados = () =>
+      Array.from(raiz().querySelectorAll<HTMLAnchorElement>('.menu a[aria-current="page"]')).map((a) =>
+        a.getAttribute('href'),
+      );
+
+    async function irA(url: string): Promise<void> {
+      await TestBed.inject(Router).navigateByUrl(url);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([{ path: '**', children: [] }]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+        ],
+      });
+      crear('AGENCIA_OPERADORA');
+    });
+
+    it.each([
+      ['/prestador', '/prestador'],
+      ['/prestador/ofertas', '/prestador/ofertas'],
+      ['/prestador/ofertas/abc', '/prestador/ofertas'],
+      ['/prestador/ofertas/abc/editar', '/prestador/ofertas'],
+      ['/prestador/ofertas/nueva', '/prestador/ofertas/nueva'],
+      ['/prestador/rnt', '/prestador/rnt'],
+      ['/prestador/perfil', '/prestador/perfil'],
+      ['/prestador/whatsapp', '/prestador/whatsapp'],
+      ['/prestador/cuenta-cobro', '/prestador/cuenta-cobro'],
+    ])('en %s se marca solo %s', async (url, esperado) => {
+      await irA(url);
+
+      expect(marcados()).toEqual([esperado]);
+    });
   });
 });
