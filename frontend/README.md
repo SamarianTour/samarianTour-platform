@@ -75,8 +75,8 @@ src/app
 | `/turista/solicitudes/:id` | Turista | P02.2 Detalle: estado, historial, plazo y condiciones; P02.3 confirmar o declinar si está atendida; P04.1 pagar, "Confirmando tu pago" y P04.2 intentos y reintento. El núcleo y la pasarela enlazan aquí (regreso del pago, aviso de WhatsApp) |
 | `/prestador/ofertas` | Prestador | Mis ofertas, con su estado y las acciones |
 | `/prestador/ofertas/nueva` | Prestador | Publicar una oferta, con sus fotos |
-| `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente |
-| `/prestador/ofertas/:id/editar` | Prestador | Editar una oferta |
+| `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente, con su contenido completo (`GET /prestador/ofertas/{id}`, DC-50) |
+| `/prestador/ofertas/:id/editar` | Prestador | Editar una oferta, partiendo de su versión pendiente (en moderación o rechazada, con su motivo) si existe y si no de la publicada |
 | `/operador` | Operador | P02.4 Cola: las solicitudes pendientes, las urgentes (6 h o menos) primero y resaltadas, con paginación |
 | `/operador/historial?estado=` | Operador | Historial: la misma consulta de la cola con un estado, de la más reciente a la más antigua |
 | `/operador/solicitudes/:id` | Operador | P02.5 Atender: contactar al prestador por WhatsApp y registrar "hay cupo" (con precio total y condiciones) o "no hay cupo" |
@@ -247,9 +247,6 @@ El interceptor de errores lee el `application/problem+json` y traduce su `codigo
 
 Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SUPUESTO]` en el código:
 
-- **Detalle de una oferta propia.** No hay un `GET` de una sola oferta del prestador: se pide la lista y se busca por `id`.
-- **Edición.** La API no devuelve el contenido completo de una oferta propia. El formulario se llena con la ficha pública (`GET /ofertas/{id}`), es decir, con la versión publicada. Por eso una oferta que solo tiene versión pendiente no ofrece "Editar", y tampoco se puede editar una oferta publicada que en ese momento no es visible en el catálogo.
-- **Fotos al editar.** Las fotos que el formulario muestra al editar salen de la ficha pública, igual que el resto de los datos. Una versión publicada sin fotos (anterior a DC-47) se abre sin fotos y el prestador debe agregar al menos una para guardar.
 - **Texto alternativo de las fotos.** La API no guarda una descripción de cada foto, así que el texto alternativo es genérico: la posición de la foto, el total y el nombre de la oferta. En las tarjetas del catálogo la imagen es decorativa.
 - **Unidad del precio en "Mis ofertas".** La lista de ofertas propias no trae `unidadPrecio`; se toma de la tabla por tipo de oferta de DC-22.
 - **Estado de la oferta.** Se calcula con `retirada`, `publicada` y `pendiente`. Si cumple más de una definición manda este orden: retirada, rechazada, publicada con cambios en revisión, en moderación, publicada.

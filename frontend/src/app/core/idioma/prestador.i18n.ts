@@ -231,7 +231,6 @@ export const PRESTADOR = diccionario(
     'prestador.ofertas.deLaOferta': 'de {nombre}',
     'prestador.ofertas.editar': 'Editar',
     'prestador.ofertas.retirar': 'Retirar',
-    'prestador.ofertas.nota': 'Podrás editarla cuando tenga una versión publicada.',
     'prestador.ofertas.vacioTitulo': 'Todavía no tienes ofertas',
     'prestador.ofertas.vacioAyuda': 'Publica la primera y la enviaremos a moderación.',
     'prestador.ofertas.cargando': 'Cargando tus ofertas…',
@@ -259,6 +258,12 @@ export const PRESTADOR = diccionario(
     'prestador.detalle.motivoRechazo': 'Motivo del rechazo',
     'prestador.detalle.nombre': 'Nombre',
     'prestador.detalle.precio': 'Precio de referencia',
+    'prestador.detalle.capacidad': 'Capacidad máxima',
+    'prestador.detalle.descripcion': 'Descripción',
+    'prestador.detalle.fotos': 'Fotos',
+    'prestador.detalle.fotosN': { uno: '{n} foto', otros: '{n} fotos' },
+    'prestador.detalle.sinFotos': 'Sin fotos',
+    'prestador.detalle.corregir': 'Corregir la versión rechazada',
     'prestador.detalle.verEnCatalogo': 'Ver en el catálogo',
 
     // Formulario: encabezado y estados
@@ -268,14 +273,14 @@ export const PRESTADOR = diccionario(
     'prestador.form.cargando': 'Cargando el formulario…',
     'prestador.form.volver': 'Volver a mis ofertas',
     'prestador.form.cambiosEnRevision':
-      'Esta oferta ya tiene cambios en revisión. El formulario parte de la versión publicada; al guardar, la versión nueva reemplaza a la que está pendiente.',
+      'Esta oferta ya tiene cambios en revisión (versión {numero}). El formulario parte de esa versión; al guardar, la versión nueva reemplaza a la que está pendiente y la publicada sigue visible.',
+    'prestador.form.primeraEnRevision':
+      'La primera versión de esta oferta (versión {numero}) todavía está en moderación. El formulario parte de ella; al guardar, la versión nueva la reemplaza.',
+    'prestador.form.rechazada':
+      'Rechazaron la versión {numero} de esta oferta. Motivo: {motivo}. El formulario parte de esa versión: corrígela y envíala de nuevo para que vuelva a moderación.',
     'prestador.form.sinTipo':
       'Todavía no registras tu RNT y tu tipo de prestador, así que no puedes publicar ni editar ofertas. Esa pantalla llegará en una próxima fase.',
     'prestador.form.noPropia': 'No encontramos esta oferta entre las tuyas.',
-    'prestador.form.sinPublicada':
-      'Esta oferta todavía no tiene una versión publicada. Podrás editarla cuando la moderación la apruebe.',
-    'prestador.form.noVisible':
-      'No podemos cargar esta oferta para editarla porque ahora no está visible en el catálogo.',
 
     // Formulario: datos generales
     'prestador.form.generales': 'Datos generales',
@@ -591,7 +596,6 @@ export const PRESTADOR = diccionario(
     'prestador.ofertas.deLaOferta': 'of {nombre}',
     'prestador.ofertas.editar': 'Edit',
     'prestador.ofertas.retirar': 'Withdraw',
-    'prestador.ofertas.nota': 'You will be able to edit it once it has a published version.',
     'prestador.ofertas.vacioTitulo': "You don't have any offers yet",
     'prestador.ofertas.vacioAyuda': 'Publish your first one and we will send it to moderation.',
     'prestador.ofertas.cargando': 'Loading your offers…',
@@ -618,6 +622,12 @@ export const PRESTADOR = diccionario(
     'prestador.detalle.motivoRechazo': 'Reason for rejection',
     'prestador.detalle.nombre': 'Name',
     'prestador.detalle.precio': 'Reference price',
+    'prestador.detalle.capacidad': 'Maximum capacity',
+    'prestador.detalle.descripcion': 'Description',
+    'prestador.detalle.fotos': 'Photos',
+    'prestador.detalle.fotosN': { uno: '{n} photo', otros: '{n} photos' },
+    'prestador.detalle.sinFotos': 'No photos',
+    'prestador.detalle.corregir': 'Fix the rejected version',
     'prestador.detalle.verEnCatalogo': 'View in the catalog',
 
     'prestador.form.alGuardar': 'When you save, the offer goes to moderation.',
@@ -626,14 +636,14 @@ export const PRESTADOR = diccionario(
     'prestador.form.cargando': 'Loading the form…',
     'prestador.form.volver': 'Back to my offers',
     'prestador.form.cambiosEnRevision':
-      'This offer already has changes under review. The form starts from the published version; when you save, the new version replaces the pending one.',
+      'This offer already has changes under review (version {numero}). The form starts from that version; when you save, the new version replaces the pending one and the published one stays visible.',
+    'prestador.form.primeraEnRevision':
+      'The first version of this offer (version {numero}) is still in moderation. The form starts from it; when you save, the new version replaces it.',
+    'prestador.form.rechazada':
+      'Version {numero} of this offer was rejected. Reason: {motivo}. The form starts from that version: fix it and submit it again so it goes back to moderation.',
     'prestador.form.sinTipo':
       "You haven't registered your RNT and provider type yet, so you can't publish or edit offers. That screen will arrive in an upcoming phase.",
     'prestador.form.noPropia': "We couldn't find this offer among yours.",
-    'prestador.form.sinPublicada':
-      "This offer doesn't have a published version yet. You will be able to edit it once moderation approves it.",
-    'prestador.form.noVisible':
-      "We can't load this offer for editing because it isn't currently visible in the catalog.",
 
     'prestador.form.generales': 'General information',
     'prestador.form.unicoTipo': '(the only type your provider type can publish)',

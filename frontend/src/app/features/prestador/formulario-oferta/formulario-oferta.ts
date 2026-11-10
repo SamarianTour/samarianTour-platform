@@ -14,12 +14,13 @@ import { Observable, catchError, forkJoin, map, of, startWith, switchMap, tap } 
 import { modalidadRecorridoValues, nivelEsfuerzoValues, tipoActividadValues } from '../../../core/api/catalogo-api';
 import { CatalogoService } from '../../../core/api/catalogo.service';
 import {
+  ContenidoVersion,
   Coordenada,
-  FichaOferta,
   Foto,
   ModalidadRecorrido,
   NivelEsfuerzo,
   OfertaPrestador,
+  OfertaPropia,
   TipoActividad,
   TipoOferta,
   Zona,
@@ -44,19 +45,33 @@ import { Icono } from '../../../shared/icono/icono';
 import { Mapa } from '../../../shared/mapa/mapa';
 import { versionVigente } from '../estado-oferta';
 import { MINIMO_FOTOS } from './fotos-oferta';
-import { ValoresOferta, aLista, aPeticion, valoresDeFicha } from './peticion-oferta';
+import { ValoresOferta, aLista, aPeticion, valoresDeContenido } from './peticion-oferta';
 import { SelectorFotos } from './selector-fotos/selector-fotos';
 
 type Campo = keyof ValoresOferta;
 
 type Estado = { tipo: 'cargando' } | { tipo: 'lista' } | { tipo: 'bloqueada'; mensaje: TextoVivo };
 
+/** Lo que se edita de una oferta propia: el contenido de una de sus versiones (DC-50). */
+interface Edicion {
+  readonly tipo: TipoOferta;
+  readonly contenido: ContenidoVersion;
+  /** El aviso que se muestra arriba del formulario según de qué versión parte. */
+  readonly aviso: AvisoDeEdicion | null;
+  readonly hayPublicada: boolean;
+}
+
+/** Qué se le dice al prestador al editar: de qué versión parte el formulario y qué pasa al guardar. */
+interface AvisoDeEdicion {
+  readonly tono: 'aviso' | 'error';
+  readonly texto: TextoVivo;
+}
+
 /** Lo que hace falta para mostrar el formulario; `bloqueo` explica por qué no se puede editar. */
 interface Carga {
   readonly zonas: Zona[];
   readonly propias: OfertaPrestador[];
-  readonly ficha?: FichaOferta;
-  readonly conCambiosEnRevision?: boolean;
+  readonly edicion?: Edicion;
   /** Por qué no se puede mostrar el formulario; se arma al mostrarlo para que siga el idioma. */
   readonly bloqueo?: TextoVivo;
 }
@@ -165,7 +180,10 @@ export class FormularioOferta {
   private readonly intentoDeEnvio = signal(false);
   /** Error sobre `fotos` que devolvió la API; se quita al cambiar las fotos. */
   private readonly errorDeFotosApi = signal<TextoVivo | null>(null);
-  protected readonly conCambiosEnRevision = signal(false);
+  /** Al editar, el aviso de qué versión se está corrigiendo; es null si el formulario parte de la publicada sin cambios pendientes. */
+  protected readonly avisoDeEdicion = signal<AvisoDeEdicion | null>(null);
+  /** Si la oferta ya tiene una versión publicada, que sigue visible mientras se revisan los cambios. */
+  protected readonly hayPublicada = signal(false);
   protected readonly guardando = signal(false);
   protected readonly errorGeneral = signal<TextoVivo | null>(null);
   /** Errores de campo que devolvió la API, por nombre de campo. */
@@ -299,7 +317,7 @@ export class FormularioOferta {
     });
   }
 
-  /** Zonas, ofertas propias y, al editar, la ficha publicada de la oferta. */
+  /** Zonas, ofertas propias (para las actividades de un paquete) y, al editar, el contenido de la oferta (DC-50). */
   private cargar(id: string | undefined): Observable<Carga> {
     if (!this.tipoPrestador) {
       return of({ zonas: [], propias: [], bloqueo: BLOQUEO_SIN_TIPO });
@@ -309,27 +327,13 @@ export class FormularioOferta {
         if (!id) {
           return of(base);
         }
-        const propia = base.propias.find((oferta) => oferta.id === id);
-        if (!propia) {
-          return of({ ...base, bloqueo: textoVivo('prestador.form.noPropia') });
-        }
-        if (propia.retirada) {
-          return of({ ...base, bloqueo: () => MENSAJES.OFERTA_NO_EDITABLE });
-        }
-        if (!propia.publicada) {
-          return of({
-            ...base,
-            bloqueo: textoVivo('prestador.form.sinPublicada'),
-          });
-        }
-        return this.catalogo.ficha(id).pipe(
-          map((ficha): Carga => ({ ...base, ficha, conCambiosEnRevision: !!propia.pendiente })),
+        return this.servicio.consultar(id).pipe(
+          map((propia): Carga => conEdicion(base, propia)),
           catchError((error: unknown) => {
             const fallo = aErrorApi(error);
-            return of<Carga>({
-              ...base,
-              bloqueo: fallo.noEncontrado ? textoVivo('prestador.form.noVisible') : () => fallo.mensaje,
-            });
+            // La oferta de otro prestador responde 403; una que no existe, 404: para quien edita es lo mismo.
+            const ajena = fallo.estado === 403 || fallo.noEncontrado;
+            return of<Carga>({ ...base, bloqueo: ajena ? textoVivo('prestador.form.noPropia') : () => fallo.mensaje });
           }),
         );
       }),
@@ -355,8 +359,8 @@ export class FormularioOferta {
           sinAprobar: !oferta.publicada,
         })),
     );
-    if (carga.ficha) {
-      const { valores, ubicacion, fotos } = valoresDeFicha(carga.ficha);
+    if (carga.edicion) {
+      const { valores, ubicacion, fotos } = valoresDeContenido(carga.edicion.tipo, carga.edicion.contenido);
       const disponibles = new Set(this.actividades().map((actividad) => actividad.id));
       this.formulario.setValue({
         ...valores,
@@ -365,7 +369,8 @@ export class FormularioOferta {
       this.ubicacion.set(ubicacion);
       this.fotos.set(fotos);
     }
-    this.conCambiosEnRevision.set(carga.conCambiosEnRevision ?? false);
+    this.avisoDeEdicion.set(carga.edicion?.aviso ?? null);
+    this.hayPublicada.set(carga.edicion?.hayPublicada ?? false);
     this.estado.set({ tipo: 'lista' });
   }
 
@@ -437,6 +442,43 @@ export class FormularioOferta {
       this.anfitrion.nativeElement.querySelector<HTMLElement>(`#${campo}`)?.focus();
     }
   }
+}
+
+/**
+ * Qué versión se edita y qué se le avisa al prestador. Parte de la pendiente si existe —una en moderación o una rechazada, que es
+ * la que hay que corregir— y si no, de la publicada. Guardar crea una versión nueva que reemplaza a la pendiente; la publicada sigue
+ * visible hasta que se apruebe la nueva.
+ */
+function conEdicion(base: Carga, propia: OfertaPropia): Carga {
+  if (propia.retirada) {
+    return { ...base, bloqueo: () => MENSAJES.OFERTA_NO_EDITABLE };
+  }
+  const version = propia.pendiente ?? propia.publicada;
+  if (!version) {
+    return { ...base, bloqueo: textoVivo('prestador.form.noPropia') };
+  }
+  let aviso: AvisoDeEdicion | null = null;
+  if (propia.pendiente?.estadoModeracion === 'RECHAZADA') {
+    const { numero, motivoRechazo } = propia.pendiente;
+    aviso = {
+      tono: 'error',
+      texto: () =>
+        traducir('prestador.form.rechazada', {
+          numero,
+          motivo: motivoRechazo ?? traducir('prestador.ofertas.sinMotivo'),
+        }),
+    };
+  } else if (propia.pendiente) {
+    const numero = propia.pendiente.numero;
+    aviso = {
+      tono: 'aviso',
+      texto: textoVivo(propia.publicada ? 'prestador.form.cambiosEnRevision' : 'prestador.form.primeraEnRevision', { numero }),
+    };
+  }
+  return {
+    ...base,
+    edicion: { tipo: propia.tipo, contenido: version.contenido, aviso, hayPublicada: !!propia.publicada },
+  };
 }
 
 function esCampo(nombre: string, controles: Record<Campo, AbstractControl>): nombre is Campo {

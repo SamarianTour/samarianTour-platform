@@ -1,5 +1,15 @@
-import { OfertaPrestador, VersionOferta } from '../../core/api/modelos';
+import { EstadoModeracion, OfertaPrestador, VersionOferta } from '../../core/api/modelos';
 import { tablaDeTextos } from '../../core/idioma/tabla-de-textos';
+
+/**
+ * Lo único que hace falta saber de una oferta para calcular su estado: si está retirada y qué versiones tiene. Lo cumplen tanto el
+ * resumen de la lista (`OfertaPrestador`) como la oferta con el contenido completo (`OfertaPropia`, DC-50).
+ */
+export interface OfertaConVersiones {
+  readonly retirada: boolean;
+  readonly publicada?: object;
+  readonly pendiente?: { readonly estadoModeracion: EstadoModeracion; readonly motivoRechazo?: string };
+}
 
 /** Estado de una oferta tal como lo ve su prestador. Se calcula: la API no lo envía. */
 export type EstadoOferta = 'PUBLICADA' | 'EN_MODERACION' | 'RECHAZADA' | 'PUBLICADA_CON_CAMBIOS' | 'RETIRADA';
@@ -27,7 +37,7 @@ export const CLASE_DE_ESTADO: Record<EstadoOferta, string> = {
  * [SUPUESTO] Cuando una oferta cumple más de una definición, manda este orden: retirada; versión pendiente
  * rechazada; publicada con una edición en moderación; primera versión en moderación; publicada.
  */
-export function estadoDe(oferta: OfertaPrestador): EstadoOferta {
+export function estadoDe(oferta: OfertaConVersiones): EstadoOferta {
   if (oferta.retirada) {
     return 'RETIRADA';
   }
@@ -46,15 +56,15 @@ export function versionVigente(oferta: OfertaPrestador): VersionOferta | undefin
 }
 
 /** El motivo del rechazo de la versión pendiente, si fue rechazada. */
-export function motivoDeRechazo(oferta: OfertaPrestador): string | undefined {
+export function motivoDeRechazo(oferta: OfertaConVersiones): string | undefined {
   return oferta.pendiente?.estadoModeracion === 'RECHAZADA' ? oferta.pendiente.motivoRechazo : undefined;
 }
 
 /**
- * Una oferta retirada no se edita: el retiro es definitivo (DC-09).
- * [SUPUESTO] El formulario de edición se llena con la ficha pública, así que hace falta una versión publicada:
- * una oferta que solo tiene versión pendiente no se puede editar desde aquí.
+ * Una oferta retirada no se edita: el retiro es definitivo (DC-09). Cualquier otra sí, tenga o no versión publicada: con el
+ * contenido completo de sus versiones (DC-50) también se corrige la primera versión mientras espera moderación o una que fue
+ * rechazada.
  */
-export function sePuedeEditar(oferta: OfertaPrestador): boolean {
-  return !oferta.retirada && !!oferta.publicada;
+export function sePuedeEditar(oferta: OfertaConVersiones): boolean {
+  return !oferta.retirada && !!(oferta.publicada ?? oferta.pendiente);
 }

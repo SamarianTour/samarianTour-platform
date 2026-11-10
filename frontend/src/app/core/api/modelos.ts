@@ -25,6 +25,9 @@ export type PerfilPublico = Esquemas['PerfilPublico'];
 export type PerfilRequest = Esquemas['PerfilRequest'];
 export type OfertaRequest = Esquemas['OfertaRequest'];
 export type OfertaPrestador = Esquemas['OfertaPrestador'];
+/** Una oferta propia con el contenido completo de sus versiones (DC-50): la publicada y la pendiente. */
+export type OfertaPropia = Esquemas['OfertaPropia'];
+export type VersionPropia = Esquemas['VersionPropia'];
 export type PaginaOfertasPrestador = Esquemas['PaginaOfertasPrestador'];
 export type VersionOferta = Esquemas['Version'];
 export type EstadoOpinion = Esquemas['EstadoOpinion'];

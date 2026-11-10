@@ -9,7 +9,7 @@
     <h1>{{ (editando() ? 'app.titulo.editarOferta' : 'app.titulo.publicarOferta') | t }}</h1>
     <p class="texto-suave">
       {{ 'prestador.form.alGuardar' | t }}
-      @if (editando()) {
+      @if (editando() && hayPublicada()) {
         {{ 'prestador.form.versionSigue' | t }}
       }
     </p>
@@ -27,10 +27,14 @@
       <a class="boton boton--secundario" routerLink="/prestador/ofertas">{{ 'prestador.form.volver' | t }}</a>
     }
     @case ('lista') {
-      @if (conCambiosEnRevision()) {
-        <p class="alerta alerta--aviso formulario__aviso">
+      @if (avisoDeEdicion(); as aviso) {
+        <p
+          class="alerta formulario__aviso"
+          [class.alerta--aviso]="aviso.tono === 'aviso'"
+          [class.alerta--error]="aviso.tono === 'error'"
+        >
           <app-icono nombre="alerta" />
-          <span>{{ 'prestador.form.cambiosEnRevision' | t }}</span>
+          <span>{{ aviso.texto() }}</span>
         </p>
       }
 

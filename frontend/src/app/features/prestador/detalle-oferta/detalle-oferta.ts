@@ -2,7 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
-import { OfertaPrestador } from '../../../core/api/modelos';
+import { OfertaPropia } from '../../../core/api/modelos';
 import { OfertasPrestadorService } from '../../../core/api/ofertas-prestador.service';
 import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
@@ -16,11 +16,14 @@ import { CLASE_DE_ESTADO, ESTADO_OFERTA, estadoDe, sePuedeEditar } from '../esta
 
 type Estado =
   | { tipo: 'cargando' }
-  | { tipo: 'lista'; oferta: OfertaPrestador }
+  | { tipo: 'lista'; oferta: OfertaPropia }
   | { tipo: 'no-encontrada' }
   | { tipo: 'error'; error: ErrorApi };
 
-/** Detalle de una oferta propia: su versión publicada y su versión pendiente, lado a lado (RF-66). */
+/**
+ * Detalle de una oferta propia: su versión publicada y su versión pendiente, lado a lado, con el contenido que envió el prestador
+ * (RF-66, DC-50). Sirve para revisar una versión en moderación y para ver por qué se rechazó otra.
+ */
 @Component({
   selector: 'app-detalle-oferta',
   imports: [RouterLink, FechaPipe, PrecioPipe, Icono, TPipe],
@@ -88,9 +91,15 @@ export class DetalleOferta {
       .pipe(
         tap(() => this.estado.set({ tipo: 'cargando' })),
         switchMap((id) =>
-          this.servicio.buscarPropia(id).pipe(
-            map((oferta): Estado => (oferta ? { tipo: 'lista', oferta } : { tipo: 'no-encontrada' })),
-            catchError((error: unknown) => of<Estado>({ tipo: 'error', error: aErrorApi(error) })),
+          this.servicio.consultar(id).pipe(
+            map((oferta): Estado => ({ tipo: 'lista', oferta })),
+            catchError((error: unknown) => {
+              const fallo = aErrorApi(error);
+              // La oferta de otro prestador responde 403; una que no existe, 404: para quien mira es lo mismo.
+              return of<Estado>(
+                fallo.estado === 403 || fallo.noEncontrado ? { tipo: 'no-encontrada' } : { tipo: 'error', error: fallo },
+              );
+            }),
           ),
         ),
         takeUntilDestroyed(),
