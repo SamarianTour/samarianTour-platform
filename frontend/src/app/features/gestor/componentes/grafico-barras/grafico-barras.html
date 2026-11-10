@@ -1,0 +1,21 @@
+<ul class="barras" role="img" [attr.aria-label]="etiqueta()">
+  @for (barra of barras(); track barra.id) {
+    <li class="barra" [class.barra--omitida]="barra.omitida">
+      <div class="barra__texto">
+        <span class="barra__nombre">
+          <span class="barra__etiqueta">{{ barra.etiqueta }}</span>
+          @for (marca of barra.marcas ?? []; track marca.texto) {
+            <span class="etiqueta" [class]="marca.clase">{{ marca.texto }}</span>
+          }
+          @if (barra.detalle) {
+            <span class="barra__detalle">{{ barra.detalle }}</span>
+          }
+        </span>
+        <span class="barra__valor">{{ barra.valor }}</span>
+      </div>
+      <div class="barra__pista">
+        <span class="barra__relleno" [style.width.%]="barra.ancho"></span>
+      </div>
+    </li>
+  }
+</ul>

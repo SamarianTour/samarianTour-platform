@@ -1,3 +1,5 @@
+import { convertToParamMap } from '@angular/router';
+import { Subject } from 'rxjs';
 import {
   ATAJOS,
   MAXIMO_DIAS,
@@ -7,6 +9,7 @@ import {
   hoyEnColombia,
   parametrosDe,
   periodoDeAtajo,
+  periodoDeLaRuta,
   periodoDeParametros,
   periodoPorDefecto,
   validarPeriodo,
@@ -147,5 +150,48 @@ describe('periodoDeParametros', () => {
 
   it('los parámetros de un periodo son sus dos fechas', () => {
     expect(parametrosDe({ desde: '2026-10-01', hasta: '2026-10-31' })).toEqual({ desde: '2026-10-01', hasta: '2026-10-31' });
+  });
+});
+
+describe('periodoDeLaRuta', () => {
+  const AHORA = Date.parse('2026-11-10T15:00:00Z');
+
+  function ruta() {
+    const parametros = new Subject<ReturnType<typeof convertToParamMap>>();
+    const periodos: { desde: string; hasta: string }[] = [];
+    periodoDeLaRuta({ queryParamMap: parametros }, () => AHORA).subscribe((p) => periodos.push(p));
+    return { parametros, periodos };
+  }
+
+  it('entrega el periodo de la dirección, o el de por defecto si no trae', () => {
+    const { parametros, periodos } = ruta();
+
+    parametros.next(convertToParamMap({ desde: '2026-10-01', hasta: '2026-10-31' }));
+    parametros.next(convertToParamMap({}));
+
+    expect(periodos).toEqual([
+      { desde: '2026-10-01', hasta: '2026-10-31' },
+      { desde: '2026-10-12', hasta: '2026-11-10' },
+    ]);
+  });
+
+  it('no repite el periodo si solo cambió otro parámetro', () => {
+    const { parametros, periodos } = ruta();
+
+    parametros.next(convertToParamMap({ desde: '2026-10-01', hasta: '2026-10-31' }));
+    parametros.next(convertToParamMap({ desde: '2026-10-01', hasta: '2026-10-31', otro: 'x' }));
+
+    expect(periodos).toHaveLength(1);
+  });
+
+  it('cuenta hoy en hora de Colombia', () => {
+    const periodos: { desde: string; hasta: string }[] = [];
+    const parametros = new Subject<ReturnType<typeof convertToParamMap>>();
+    // 03:00 UTC del 10 son las 22:00 del 9 en Colombia.
+    periodoDeLaRuta({ queryParamMap: parametros }, () => Date.parse('2026-11-10T03:00:00Z')).subscribe((p) => periodos.push(p));
+
+    parametros.next(convertToParamMap({}));
+
+    expect(periodos[0].hasta).toBe('2026-11-09');
   });
 });

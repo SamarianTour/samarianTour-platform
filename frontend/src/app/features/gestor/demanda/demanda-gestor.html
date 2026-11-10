@@ -1,0 +1,31 @@
+<div aria-live="polite" [attr.aria-busy]="cargando()">
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  } @else if (tablero()) {
+    <ul class="cifras">
+      @for (cifra of cifras(); track cifra.clave) {
+        <li class="tarjeta cifra">
+          <span class="cifra__valor">{{ cifra.valor }}</span>
+          <span class="cifra__texto">{{ cifra.texto }}</span>
+        </li>
+      }
+    </ul>
+
+    <section class="tarjeta grafico" aria-labelledby="demanda-titulo">
+      <h2 id="demanda-titulo">{{ 'gestor.demanda.grafico.titulo' | t }}</h2>
+      <p class="texto-suave">{{ 'gestor.demanda.grafico.ayuda' | t }}</p>
+
+      @if (hayFilas()) {
+        <app-grafico-barras [barras]="barras()" [etiqueta]="resumen()" />
+        <app-tabla-datos [titulo]="tituloDeTabla()" [columnas]="columnas()" [filas]="datos()" />
+      } @else {
+        <p class="vacio">{{ 'gestor.demanda.vacio' | t }}</p>
+      }
+    </section>
+  } @else if (cargando()) {
+    <p class="texto-suave">{{ 'gestor.cargando' | t }}</p>
+  }
+</div>

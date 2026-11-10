@@ -22,8 +22,7 @@ export const RUTAS_GESTOR: Routes = [
             path: '',
             pathMatch: 'full',
             title: 'app.titulo.demanda',
-            data: { codigo: 'P09.1', nombre: 'app.titulo.demanda' },
-            loadComponent: proximamente,
+            loadComponent: () => import('./demanda/demanda-gestor').then((modulo) => modulo.DemandaGestor),
           },
           {
             path: 'embudo',

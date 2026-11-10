@@ -1,0 +1,28 @@
+<details class="datos">
+  <summary>{{ 'gestor.tabla.ver' | t }}</summary>
+  <div class="datos__tabla">
+    <table class="tabla">
+      <caption class="solo-lectores">{{ titulo() }}</caption>
+      <thead>
+        <tr>
+          @for (columna of columnas(); track $index) {
+            <th scope="col">{{ columna }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (fila of filas(); track $index) {
+          <tr>
+            @for (celda of fila; track $index; let primera = $first) {
+              @if (primera) {
+                <th scope="row">{{ celda }}</th>
+              } @else {
+                <td>{{ celda }}</td>
+              }
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</details>

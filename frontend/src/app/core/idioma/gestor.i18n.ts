@@ -37,6 +37,27 @@ export const GESTOR = diccionario(
     'gestor.periodo.error.desdeMayor': 'La fecha de inicio no puede ser posterior a la final.',
     'gestor.periodo.error.hastaFutura': 'La fecha final no puede ser posterior a hoy.',
     'gestor.periodo.error.demasiadoLargo': 'El periodo puede tener como máximo 366 días.',
+
+    // Vistas (comunes)
+    'gestor.cargando': 'Cargando los indicadores…',
+    'gestor.menosDeTres': 'menos de 3',
+    'gestor.tabla.ver': 'Ver los datos en una tabla',
+
+    // Demanda (RF-85, RF-86)
+    'gestor.demanda.cifra.total': 'Solicitudes del periodo',
+    'gestor.demanda.cifra.zonas': 'Zonas con solicitudes',
+    'gestor.demanda.cifra.tipos': 'Tipos de oferta con solicitudes',
+    'gestor.demanda.grafico.titulo': 'Solicitudes por zona y tipo de oferta',
+    'gestor.demanda.grafico.ayuda':
+      'De mayor a menor. Una zona aparece una vez por cada tipo de oferta que recibió solicitudes; las zonas sensibles llevan su marca.',
+    'gestor.demanda.vacio': 'No hubo solicitudes en este periodo.',
+    'gestor.demanda.zonaSinNombre': 'Zona sin nombre ({id})',
+    'gestor.demanda.resumen':
+      'Gráfico de barras horizontales de solicitudes por zona y tipo de oferta, de mayor a menor. La mayor es {zona}, {tipo}: {cantidad} solicitudes. Los datos completos están en la tabla que sigue.',
+    'gestor.demanda.col.zona': 'Zona',
+    'gestor.demanda.col.tipo': 'Tipo de oferta',
+    'gestor.demanda.col.solicitudes': 'Solicitudes',
+    'gestor.demanda.tabla.titulo': 'Solicitudes por zona y tipo de oferta, del {desde} al {hasta}',
   },
   {
     // Panel (menú lateral)
@@ -69,5 +90,26 @@ export const GESTOR = diccionario(
     'gestor.periodo.error.desdeMayor': 'The start date cannot be after the end date.',
     'gestor.periodo.error.hastaFutura': 'The end date cannot be after today.',
     'gestor.periodo.error.demasiadoLargo': 'The period can be at most 366 days long.',
+
+    // Views (shared)
+    'gestor.cargando': 'Loading the indicators…',
+    'gestor.menosDeTres': 'fewer than 3',
+    'gestor.tabla.ver': 'View the data in a table',
+
+    // Demand (RF-85, RF-86)
+    'gestor.demanda.cifra.total': 'Requests in the period',
+    'gestor.demanda.cifra.zonas': 'Areas with requests',
+    'gestor.demanda.cifra.tipos': 'Offer types with requests',
+    'gestor.demanda.grafico.titulo': 'Requests by area and offer type',
+    'gestor.demanda.grafico.ayuda':
+      'From highest to lowest. An area appears once for each offer type that received requests; sensitive areas carry their label.',
+    'gestor.demanda.vacio': 'There were no requests in this period.',
+    'gestor.demanda.zonaSinNombre': 'Unnamed area ({id})',
+    'gestor.demanda.resumen':
+      'Horizontal bar chart of requests by area and offer type, from highest to lowest. The highest is {zona}, {tipo}: {cantidad} requests. The full data is in the table that follows.',
+    'gestor.demanda.col.zona': 'Area',
+    'gestor.demanda.col.tipo': 'Offer type',
+    'gestor.demanda.col.solicitudes': 'Requests',
+    'gestor.demanda.tabla.titulo': 'Requests by area and offer type, from {desde} to {hasta}',
   },
 );

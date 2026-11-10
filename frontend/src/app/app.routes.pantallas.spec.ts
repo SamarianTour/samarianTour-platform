@@ -212,8 +212,18 @@ describe('pantallas que crea cada ruta', () => {
     );
 
     // P09.1: el gestor entra a su panel; el panel de indicadores y la vista de cada dirección se crean dentro.
+    it('el gestor abre su panel en /gestor y dentro se crean el panel de indicadores y la demanda, que pide el tablero', async () => {
+      conSesion('GESTOR_DESTINO');
+
+      await ir('/gestor', PanelGestor);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-demanda-gestor')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/tablero')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/catalogo/zonas')).toHaveLength(1);
+    });
+
     it.each([
-      ['/gestor', 'Demanda'],
       ['/gestor/embudo', 'Embudo de conversión'],
       ['/gestor/distribucion', 'Distribución por tipo de prestador'],
     ])('el gestor abre su panel en %s y dentro se crean el panel de indicadores y la vista', async (url) => {

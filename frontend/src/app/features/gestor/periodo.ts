@@ -1,3 +1,5 @@
+import { ActivatedRoute } from '@angular/router';
+import { Observable, distinctUntilChanged, map } from 'rxjs';
 import { fechaEnColombia, sumarDias } from '../turista/solicitudes/peticion-solicitud';
 
 /** El periodo de los indicadores: dos fechas AAAA-MM-DD, las dos incluidas, en hora de Colombia. */
@@ -104,6 +106,17 @@ export function periodoDeParametros(desde: string | null, hasta: string | null, 
     return { desde, hasta };
   }
   return periodoPorDefecto(hoy);
+}
+
+/**
+ * El periodo de la dirección de una pestaña, cada vez que cambia: las tres vistas lo leen igual. Solo emite si el periodo cambió de
+ * verdad, así un cambio de pestaña o de otro parámetro no repite la consulta.
+ */
+export function periodoDeLaRuta(ruta: Pick<ActivatedRoute, 'queryParamMap'>, ahora: () => number = Date.now): Observable<Periodo> {
+  return ruta.queryParamMap.pipe(
+    map((parametros) => periodoDeParametros(parametros.get('desde'), parametros.get('hasta'), hoyEnColombia(ahora()))),
+    distinctUntilChanged((a, b) => a.desde === b.desde && a.hasta === b.hasta),
+  );
 }
 
 /** Los parámetros de la dirección y de la consulta para un periodo. */
