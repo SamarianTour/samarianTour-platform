@@ -47,6 +47,20 @@ export const PAGOS = diccionario(
       'Si cerraste la pasarela antes de terminar, puedes continuar con el mismo pago. No se te cobrará dos veces.',
     'pagos.pagar.botonContinuar': 'Continuar el pago',
     'pagos.lista.pagar': 'Pagar',
+    'pagos.lista.reintentar': 'Reintentar pago',
+
+    // P04.2 Intentos y reintento
+    'pagos.intentos.titulo': 'Intentos de pago',
+    'pagos.intentos.numero': 'Intento {n}',
+    'pagos.intentos.iniciado': 'Iniciado {fecha}',
+    'pagos.intentos.resuelto': 'Resuelto {fecha}',
+    'pagos.intentos.referencia': 'Referencia {codigo}',
+    'pagos.reintentar.titulo': 'Tu pago no se completó',
+    'pagos.reintentar.texto': 'Puedes intentarlo de nuevo hasta el {fecha}.',
+    'pagos.reintentar.textoSinFecha': 'Puedes intentarlo de nuevo.',
+    'pagos.reintentar.boton': 'Reintentar pago',
+    'pagos.reintentar.sinReintento':
+      'Ya no puedes reintentar el pago de esta solicitud. Puedes pedir disponibilidad de nuevo.',
 
     // Al volver de la pasarela: el estado del pago lo decide solo el servidor (RF-50, RF-51)
     'pagos.confirmando.titulo': 'Confirmando tu pago',
@@ -101,6 +115,19 @@ export const PAGOS = diccionario(
       'If you closed the payment gateway before finishing, you can continue with the same payment. You will not be charged twice.',
     'pagos.pagar.botonContinuar': 'Continue payment',
     'pagos.lista.pagar': 'Pay',
+    'pagos.lista.reintentar': 'Retry payment',
+
+    'pagos.intentos.titulo': 'Payment attempts',
+    'pagos.intentos.numero': 'Attempt {n}',
+    'pagos.intentos.iniciado': 'Started {fecha}',
+    'pagos.intentos.resuelto': 'Resolved {fecha}',
+    'pagos.intentos.referencia': 'Reference {codigo}',
+    'pagos.reintentar.titulo': 'Your payment was not completed',
+    'pagos.reintentar.texto': 'You can try again until {fecha}.',
+    'pagos.reintentar.textoSinFecha': 'You can try again.',
+    'pagos.reintentar.boton': 'Retry payment',
+    'pagos.reintentar.sinReintento':
+      'You can no longer retry the payment for this request. You can request availability again.',
 
     'pagos.confirmando.titulo': 'Confirming your payment',
     'pagos.confirmando.texto':

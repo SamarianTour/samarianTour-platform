@@ -1,0 +1,24 @@
+<section class="tarjeta" aria-labelledby="intentos-titulo">
+  <h2 id="intentos-titulo">{{ 'pagos.intentos.titulo' | t }}</h2>
+  <ol class="intentos">
+    @for (intento of intentos(); track intento.id) {
+      <li class="intento">
+        <p class="intento__cabecera">
+          <strong>{{ 'pagos.intentos.numero' | t: { n: intento.numero } }}</strong>
+          <span class="etiqueta" [class]="clase[intento.estado]">{{ etiqueta[intento.estado] }}</span>
+        </p>
+        <p class="intento__motivo">{{ motivo[intento.estado] }}</p>
+        <p class="intento__datos texto-suave">
+          <span>{{ pesos(intento.montoCentavos) | precio }}</span>
+          <span>{{ 'pagos.intentos.iniciado' | t: { fecha: (intento.creadoEn | fecha: 'conHora') } }}</span>
+          @if (intento.resueltoEn) {
+            <span>{{ 'pagos.intentos.resuelto' | t: { fecha: (intento.resueltoEn | fecha: 'conHora') } }}</span>
+          }
+          @if (intento.transaccionId) {
+            <span class="intento__referencia">{{ 'pagos.intentos.referencia' | t: { codigo: intento.transaccionId } }}</span>
+          }
+        </p>
+      </li>
+    }
+  </ol>
+</section>

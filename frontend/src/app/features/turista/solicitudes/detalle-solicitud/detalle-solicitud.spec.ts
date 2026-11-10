@@ -7,6 +7,7 @@ import { erroresInterceptor } from '../../../../core/errores/errores.interceptor
 import { establecerIdioma } from '../../../../core/idioma/idioma';
 import { CLAVE_SESION, aSesionGuardada } from '../../../../core/sesion/almacen-sesion';
 import { respuestaDeSesion } from '../../../../core/sesion/testing';
+import { mostrarIntentos } from '../pagos';
 import { DetalleSolicitud } from './detalle-solicitud';
 
 const ID = '6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20';
@@ -80,11 +81,7 @@ describe('DetalleSolicitud (P02.2)', () => {
     http.expectOne('/api/catalogo/zonas').flush(ZONAS);
     http.expectOne(`/api/nucleo/turista/solicitudes/${id}`).flush(contenido);
     fixture.detectChanges();
-    if (
-      contenido.estado === 'CONFIRMADA' ||
-      contenido.estado === 'PAGO_FALLIDO' ||
-      contenido.estado === 'PAGADA'
-    ) {
+    if (mostrarIntentos(contenido.estado)) {
       http.expectOne(`/api/nucleo/turista/solicitudes/${id}/pagos`).flush(intentos);
       fixture.detectChanges();
     }
@@ -589,6 +586,8 @@ describe('DetalleSolicitud (P02.2)', () => {
       fixture.detectChanges();
       consulta().flush(solicitud('VENCIDA', { venceEn: undefined }));
       fixture.detectChanges();
+      // Vencida: se piden sus intentos de pago, por si el vencimiento fue por rechazos (RF-58).
+      http.expectOne(`${URL}/pagos`).flush([]);
 
       expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Vencida');
       expect(bloque()).toBeNull();
@@ -653,7 +652,7 @@ describe('DetalleSolicitud (P02.2)', () => {
       expect(bloqueDePago()!.textContent!.replace(/[  ]/g, ' ')).toContain('Pagar $ 300.000');
     });
 
-    it.each(['PENDIENTE', 'ATENDIDA', 'DECLINADA', 'PAGADA', 'VENCIDA'] as const)(
+    it.each(['PENDIENTE', 'ATENDIDA', 'DECLINADA'] as const)(
       '%s no muestra el bloque de pago ni pide intentos',
       (estado) => {
         crear(solicitud(estado));
@@ -868,6 +867,125 @@ describe('DetalleSolicitud (P02.2)', () => {
 
       expect(texto()).toContain('Confirming your payment');
       expect(texto()).toContain('Continue your payment');
+    });
+  });
+
+  describe('intentos de pago y reintento (P04.2)', () => {
+    const intentoPago = (
+      numero: number,
+      estado: IntentoPago['estado'],
+      extra: Partial<IntentoPago> = {},
+    ): IntentoPago => ({
+      id: `i${numero}`,
+      numero,
+      estado,
+      referencia: `ST-${numero}`,
+      montoCentavos: 30000000,
+      creadoEn: en(-HORA),
+      ...extra,
+    });
+    const FALLIDA = solicitud('PAGO_FALLIDO', {
+      venceEn: en(2 * HORA),
+      condiciones: { precioBase: 300000, politicaCancelacion: 'Sin reembolso' },
+    });
+    const lista = () => raiz().querySelector('app-intentos-pago');
+    const bloqueDePago = () => raiz().querySelector('app-pagar-solicitud');
+    const aside = () => raiz().querySelector('aside')!;
+
+    it('con el pago fallido muestra los intentos con su motivo y ofrece reintentar', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO')]);
+
+      expect(lista()).not.toBeNull();
+      expect(lista()!.textContent).toContain('Intento 1');
+      expect(lista()!.textContent).toContain('Rechazado');
+      expect(lista()!.textContent).toContain('No se te cobró nada');
+      expect(bloqueDePago()!.textContent).toContain('Reintentar pago');
+      expect(bloqueDePago()!.textContent).toContain('Te quedan 2 intentos de pago');
+    });
+
+    it('el estado de la solicitud sigue siendo "Pago fallido" y no se afirma que se pagó', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO')]);
+
+      expect(raiz().querySelector('header .etiqueta')?.textContent?.trim()).toBe('Pago fallido');
+      expect(raiz().querySelector('app-pago-confirmado')).toBeNull();
+    });
+
+    it('tras el error de la pasarela explica que puede reintentar', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'ERROR')]);
+
+      expect(lista()!.textContent).toContain(
+        'Hubo un error al procesar el pago. Puedes intentarlo de nuevo.',
+      );
+    });
+
+    it('con el último intento avisa que si se rechaza la solicitud vencerá', () => {
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO'), intentoPago(2, 'ERROR')]);
+
+      expect(bloqueDePago()!.textContent).toContain('Te queda 1 intento de pago');
+      expect(bloqueDePago()!.textContent).toContain('si el pago se rechaza, la solicitud vencerá');
+    });
+
+    it('sin intentos que reintentar explica por qué y ofrece pedir disponibilidad de nuevo', () => {
+      crear(FALLIDA, ID, [
+        intentoPago(1, 'RECHAZADO'),
+        intentoPago(2, 'RECHAZADO'),
+        intentoPago(3, 'RECHAZADO'),
+      ]);
+
+      expect(bloqueDePago()!.textContent).toContain('Ya no puedes reintentar el pago');
+      expect(bloqueDePago()!.querySelector('button')).toBeNull();
+      expect(bloqueDePago()!.querySelector('a.boton')?.getAttribute('href')).toBe(
+        '/turista/solicitar/b00000000000000000000001',
+      );
+    });
+
+    it('al tercer rechazo la solicitud vence: la lista de intentos explica por qué y se ofrece volver a solicitar', () => {
+      crear(solicitud('VENCIDA'), ID, [
+        intentoPago(1, 'RECHAZADO'),
+        intentoPago(2, 'RECHAZADO'),
+        intentoPago(3, 'RECHAZADO'),
+      ]);
+
+      expect(lista()).not.toBeNull();
+      expect(lista()!.querySelectorAll('li.intento')).toHaveLength(3);
+      expect(bloqueDePago()).toBeNull();
+      expect(aside().textContent).toContain('Volver a solicitar');
+    });
+
+    it('una solicitud vencida sin intentos no muestra la lista', () => {
+      crear(solicitud('VENCIDA'), ID, []);
+
+      expect(lista()).toBeNull();
+    });
+
+    it('una solicitud pagada muestra el pago confirmado y también los intentos anteriores', () => {
+      crear(solicitud('PAGADA', { condiciones: FALLIDA.condiciones }), ID, [
+        intentoPago(1, 'RECHAZADO'),
+        intentoPago(2, 'APROBADO', { transaccionId: 'T-2' }),
+      ]);
+
+      expect(raiz().querySelector('app-pago-confirmado')).not.toBeNull();
+      expect(lista()!.querySelectorAll('li.intento')).toHaveLength(2);
+    });
+
+    it('un único intento en curso no repite la lista: ya lo cuenta "Confirmando tu pago"', () => {
+      crear(
+        solicitud('CONFIRMADA', { condiciones: FALLIDA.condiciones, venceEn: en(2 * HORA) }),
+        ID,
+        [intentoPago(1, 'EN_CURSO')],
+      );
+
+      expect(lista()).toBeNull();
+      expect(raiz().querySelector('app-confirmando-pago')).not.toBeNull();
+    });
+
+    it('está en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+      crear(FALLIDA, ID, [intentoPago(1, 'RECHAZADO')]);
+
+      expect(lista()!.textContent).toContain('Payment attempts');
+      expect(bloqueDePago()!.textContent).toContain('Retry payment');
+      expect(bloqueDePago()!.textContent).toContain('You have 2 payment attempts left');
     });
   });
 });

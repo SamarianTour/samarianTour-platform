@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { EstadoIntento, IntentoPago, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
 import { AvisosService } from '../../../../core/avisos/avisos.service';
 import { erroresInterceptor } from '../../../../core/errores/errores.interceptor';
@@ -86,6 +87,7 @@ describe('PagarSolicitud (P04.1)', () => {
     irA = vi.fn();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         provideHttpClient(withInterceptors([erroresInterceptor])),
         provideHttpClientTesting(),
         { provide: Navegador, useValue: { irA } },
@@ -283,6 +285,84 @@ describe('PagarSolicitud (P04.1)', () => {
 
       expect(texto()).toContain('Continue your payment');
       expect(boton().textContent?.trim()).toBe('Continue payment');
+    });
+  });
+
+  describe('reintentar un pago fallido (P04.2)', () => {
+    const FALLIDA = { ...CONFIRMADA, estado: 'PAGO_FALLIDO' } as SolicitudTurista;
+
+    it('explica que el pago no se completó, hasta cuándo puede intentarlo y ofrece reintentar', () => {
+      crear([intento(1, 'RECHAZADO')], VIGENTE, FALLIDA);
+
+      expect(texto()).toContain('Tu pago no se completó');
+      expect(texto()).toContain('Puedes intentarlo de nuevo hasta el');
+      expect(boton().textContent?.trim()).toBe('Reintentar pago');
+      expect(boton().disabled).toBe(false);
+    });
+
+    it('dice cuántos intentos le quedan y, antes del último, que si se rechaza la solicitud vencerá', () => {
+      crear([intento(1, 'RECHAZADO'), intento(2, 'ERROR')], VIGENTE, FALLIDA);
+
+      expect(texto()).toContain('Te queda 1 intento de pago');
+      expect(texto()).toContain('si el pago se rechaza, la solicitud vencerá');
+    });
+
+    it('reintentar abre el pago otra vez y manda a la pasarela', () => {
+      crear([intento(1, 'RECHAZADO')], VIGENTE, FALLIDA);
+
+      boton().click();
+      const peticion = http.expectOne(PAGO);
+      expect(peticion.request.method).toBe('POST');
+      expect(peticion.request.body).toBeNull();
+      peticion.flush(SESION('https://checkout.wompi.co/p/?x=2'));
+
+      expect(irA).toHaveBeenCalledWith('https://checkout.wompi.co/p/?x=2');
+    });
+
+    it('sigue sin pedir datos de tarjeta', () => {
+      crear([intento(1, 'RECHAZADO')], VIGENTE, FALLIDA);
+
+      expect(raiz().querySelector('input, select, textarea, form')).toBeNull();
+    });
+
+    it('sin intentos ya no se puede reintentar: lo explica y ofrece pedir disponibilidad de nuevo', () => {
+      crear(
+        [intento(1, 'RECHAZADO'), intento(2, 'RECHAZADO'), intento(3, 'ERROR')],
+        VIGENTE,
+        FALLIDA,
+      );
+
+      expect(texto()).toContain('Ya no puedes reintentar el pago de esta solicitud');
+      expect(texto()).toContain('No te quedan intentos de pago.');
+      expect(raiz().querySelector('button')).toBeNull();
+      const enlace = raiz().querySelector<HTMLAnchorElement>('a.boton')!;
+      expect(enlace.textContent?.trim()).toBe('Volver a solicitar');
+      expect(enlace.getAttribute('href')).toBe('/turista/solicitar/b1');
+    });
+
+    it('con el plazo terminado tampoco se puede reintentar', () => {
+      crear([intento(1, 'RECHAZADO')], VENCIDO, FALLIDA);
+
+      expect(texto()).toContain('Ya no puedes reintentar el pago de esta solicitud');
+      expect(texto()).toContain('El plazo terminó');
+      expect(raiz().querySelector('button')).toBeNull();
+      http.expectNone(PAGO);
+    });
+
+    it('con un intento esperando la confirmación ofrece continuar, no reintentar', () => {
+      crear([intento(1, 'RECHAZADO'), intento(2, 'EN_CURSO')], VIGENTE, FALLIDA, true);
+
+      expect(texto()).toContain('Continúa tu pago');
+      expect(boton().textContent?.trim()).toBe('Continuar el pago');
+    });
+
+    it('está en inglés', () => {
+      establecerIdioma('en', { recordar: false });
+      crear([intento(1, 'RECHAZADO')], VIGENTE, FALLIDA);
+
+      expect(texto()).toContain('Your payment was not completed');
+      expect(texto()).toContain('You can try again until');
+      expect(boton().textContent?.trim()).toBe('Retry payment');
     });
   });
 

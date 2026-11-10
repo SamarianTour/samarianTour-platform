@@ -278,10 +278,13 @@ describe('MisSolicitudes (P02.2)', () => {
       expect(accion(0)).toEqual(['Pagar', '/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a21']);
     });
 
-    it('con el pago fallido todavía solo ofrece ver la oferta: el reintento llega con su pantalla', () => {
+    it('con el pago fallido ofrece "Reintentar pago", que lleva a su detalle', () => {
       crear([solicitud(1, 'PAGO_FALLIDO')]);
 
-      expect(accion(0)[0]).toBe('Ver oferta');
+      expect(accion(0)).toEqual([
+        'Reintentar pago',
+        '/turista/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a21',
+      ]);
     });
   });
 

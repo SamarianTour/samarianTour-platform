@@ -96,12 +96,14 @@ export type AccionSolicitud =
   | 'opinar'
   /** Confirmó las condiciones: le falta pagar, en la pasarela externa (P04.1). */
   | 'pagar'
+  /** El pago no se completó: puede intentarlo de nuevo mientras queden intentos y plazo (P04.2). */
+  | 'reintentar-pago'
   /** Sigue su curso: solo puede ver la oferta. */
   | 'ver-oferta';
 
 /**
- * La acción principal de cada estado. Una solicitud confirmada ofrece pagar (P04.1); con el pago fallido, mientras llega la
- * pantalla de reintento, solo ofrece ver la oferta.
+ * La acción principal de cada estado. Una solicitud confirmada ofrece pagar (P04.1) y una con el pago fallido, reintentarlo
+ * (P04.2); si ya no quedan intentos o plazo, su detalle lo explica y ofrece pedir disponibilidad de nuevo.
  */
 export function accionPrincipal(estado: EstadoSolicitud): AccionSolicitud {
   switch (estado) {
@@ -113,6 +115,8 @@ export function accionPrincipal(estado: EstadoSolicitud): AccionSolicitud {
       return 'volver-a-solicitar';
     case 'CONFIRMADA':
       return 'pagar';
+    case 'PAGO_FALLIDO':
+      return 'reintentar-pago';
     case 'PAGADA':
       return 'opinar';
     default:

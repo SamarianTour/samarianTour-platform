@@ -155,9 +155,15 @@ export function estaConfirmandoPago(
 
 /**
  * Si los intentos de pago de la solicitud importan en pantalla: mientras se puede pagar (confirmada o con el pago fallido,
- * para saber cuántos intentos quedan y si hay uno esperando) y una vez pagada (para mostrar la referencia de la transacción,
- * RF-52). En los demás estados nunca hubo, o ya no importan, así que no se piden.
+ * para saber cuántos intentos quedan y si hay uno esperando), una vez pagada (para mostrar la referencia de la transacción,
+ * RF-52) y vencida (al tercer rechazo la solicitud vence, y la lista explica por qué, RF-58). En los demás estados nunca hubo
+ * intentos, así que no se piden.
  */
 export function mostrarIntentos(estado: EstadoSolicitud): boolean {
-  return estado === 'CONFIRMADA' || estado === 'PAGO_FALLIDO' || estado === 'PAGADA';
+  return (
+    estado === 'CONFIRMADA' ||
+    estado === 'PAGO_FALLIDO' ||
+    estado === 'PAGADA' ||
+    estado === 'VENCIDA'
+  );
 }

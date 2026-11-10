@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ClaveDeIdempotencia } from '../../../../core/api/idempotencia';
 import { IntentoPago, SolicitudTurista } from '../../../../core/api/modelos-nucleo';
 import { PagosService } from '../../../../core/api/pagos.service';
@@ -6,6 +7,7 @@ import { AvisosService } from '../../../../core/avisos/avisos.service';
 import { aErrorApi } from '../../../../core/errores/errores.interceptor';
 import { TPipe } from '../../../../core/idioma/t.pipe';
 import { TextoVivo, textoVivo } from '../../../../core/idioma/texto-vivo';
+import type { ClaveTexto } from '../../../../core/idioma/textos';
 import { Navegador } from '../../../../core/navegacion/navegador';
 import { FechaPipe } from '../../../../shared/fecha.pipe';
 import { Icono } from '../../../../shared/icono/icono';
@@ -33,7 +35,7 @@ const CODIGOS_DE_ESTADO_CAMBIADO = new Set([
  */
 @Component({
   selector: 'app-pagar-solicitud',
-  imports: [TPipe, FechaPipe, PrecioPipe, Icono],
+  imports: [RouterLink, TPipe, FechaPipe, PrecioPipe, Icono],
   templateUrl: './pagar-solicitud.html',
   styleUrl: './pagar-solicitud.css',
 })
@@ -63,6 +65,31 @@ export class PagarSolicitud {
     puedePagar(this.solicitud().estado, this.intentos(), this.plazo()),
   );
   protected readonly plazoVencido = computed(() => this.plazo().nivel === 'vencido');
+  /** El pago de esta solicitud ya falló antes: el bloque pasa de "pagar" a "reintentar" (P04.2). */
+  protected readonly esReintento = computed(() => this.solicitud().estado === 'PAGO_FALLIDO');
+  /**
+   * Con el pago fallido, sin intentos o sin plazo ya no hay reintento (RF-58): solo queda pedir disponibilidad de nuevo. Con un
+   * intento esperando la confirmación sí se puede continuar, aunque el plazo esté por terminar.
+   */
+  protected readonly sinReintento = computed(
+    () => this.esReintento() && !this.enCurso() && !this.puede(),
+  );
+  protected readonly titulo = computed<ClaveTexto>(() =>
+    this.enCurso()
+      ? 'pagos.pagar.tituloContinuar'
+      : this.esReintento()
+        ? 'pagos.reintentar.titulo'
+        : 'pagos.pagar.titulo',
+  );
+  protected readonly textoDelBoton = computed<ClaveTexto>(() =>
+    this.enviando()
+      ? 'pagos.pagar.abriendo'
+      : this.enCurso()
+        ? 'pagos.pagar.botonContinuar'
+        : this.esReintento()
+          ? 'pagos.reintentar.boton'
+          : 'pagos.pagar.boton',
+  );
   /** La hora de salida o de la reserva, sin segundos. */
   protected readonly hora = computed(() => {
     const hora = this.solicitud().horaSalida ?? this.solicitud().horaReserva;

@@ -28,6 +28,7 @@ import { ICONO_DE_TIPO, Icono } from '../../../../shared/icono/icono';
 import { PasosSolicitud } from '../../../../shared/pasos-solicitud/pasos-solicitud';
 import { PrecioPipe } from '../../../../shared/precio.pipe';
 import { ConfirmandoPago } from '../confirmando-pago/confirmando-pago';
+import { IntentosPago } from '../intentos-pago/intentos-pago';
 import { PagarSolicitud } from '../pagar-solicitud/pagar-solicitud';
 import { PagoConfirmado } from '../pago-confirmado/pago-confirmado';
 import { estaConfirmandoPago, mostrarIntentos } from '../pagos';
@@ -72,6 +73,7 @@ type Estado =
     PagarSolicitud,
     ConfirmandoPago,
     PagoConfirmado,
+    IntentosPago,
   ],
   templateUrl: './detalle-solicitud.html',
   styleUrl: './detalle-solicitud.css',
@@ -110,6 +112,10 @@ export class DetalleSolicitud {
     const solicitud = this.solicitud();
     return solicitud ? estaConfirmandoPago(solicitud.estado, this.intentos()) : false;
   });
+  /** Hay intentos con resultado que contar (rechazado, con error, abandonado, aprobado): se muestra la lista (P04.2). */
+  protected readonly hayIntentosResueltos = computed(() =>
+    this.intentos().some((intento) => intento.estado !== 'EN_CURSO'),
+  );
   /** El turista estuvo esperando la confirmación en esta pantalla: al confirmarse, el foco va al aviso. */
   protected readonly estabaConfirmando = signal(false);
 

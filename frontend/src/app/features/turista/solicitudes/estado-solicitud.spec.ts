@@ -106,14 +106,20 @@ describe('acción principal de cada estado', () => {
     ['NO_DISPONIBLE', 'volver-a-solicitar'],
     ['SIN_RESPUESTA', 'volver-a-solicitar'],
     ['DECLINADA', 'ver-oferta'],
-    ['PAGO_FALLIDO', 'ver-oferta'],
+    ['PAGO_FALLIDO', 'reintentar-pago'],
     ['PAGADA', 'opinar'],
     ['VENCIDA', 'volver-a-solicitar'],
   ] as const)('%s → %s', (estado, accion) => {
     expect(accionPrincipal(estado)).toBe(accion);
   });
 
-  it('solo una solicitud confirmada se ofrece pagar (con el pago fallido llega en la pantalla de reintento)', () => {
+  it('solo una solicitud con el pago fallido se ofrece reintentar el pago', () => {
+    expect(ESTADOS_SOLICITUD.filter((estado) => accionPrincipal(estado) === 'reintentar-pago')).toEqual([
+      'PAGO_FALLIDO',
+    ]);
+  });
+
+  it('solo una solicitud confirmada se ofrece pagar', () => {
     expect(ESTADOS_SOLICITUD.filter((estado) => accionPrincipal(estado) === 'pagar')).toEqual([
       'CONFIRMADA',
     ]);
