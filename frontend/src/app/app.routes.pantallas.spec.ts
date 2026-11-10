@@ -223,13 +223,20 @@ describe('pantallas que crea cada ruta', () => {
       expect(http.match((p) => p.url === '/api/catalogo/zonas')).toHaveLength(1);
     });
 
-    it.each([
-      ['/gestor/embudo', 'Embudo de conversión'],
-      ['/gestor/distribucion', 'Distribución por tipo de prestador'],
-    ])('el gestor abre su panel en %s y dentro se crean el panel de indicadores y la vista', async (url) => {
+    it('el gestor abre el embudo en /gestor/embudo y este pide el embudo del periodo', async () => {
       conSesion('GESTOR_DESTINO');
 
-      await ir(url, PanelGestor);
+      await ir('/gestor/embudo', PanelGestor);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-embudo-gestor')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/gestor/indicadores/embudo')).toHaveLength(1);
+    });
+
+    it('el gestor abre su panel en /gestor/distribucion y dentro se crean el panel de indicadores y la vista', async () => {
+      conSesion('GESTOR_DESTINO');
+
+      await ir('/gestor/distribucion', PanelGestor);
 
       expect(harness.routeNativeElement?.querySelector('.contenido > app-panel-indicadores')).not.toBeNull();
       expect(harness.routeNativeElement?.querySelector('app-panel-indicadores app-proximamente')).not.toBeNull();

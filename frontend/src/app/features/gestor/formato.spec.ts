@@ -1,5 +1,5 @@
 import { establecerIdioma } from '../../core/idioma/idioma';
-import { formatoCantidad } from './formato';
+import { formatoCantidad, formatoPorcentaje } from './formato';
 
 describe('formatoCantidad', () => {
   afterEach(() => establecerIdioma('es', { recordar: false }));
@@ -24,5 +24,31 @@ describe('formatoCantidad', () => {
     establecerIdioma('en', { recordar: false });
 
     expect(formatoCantidad(null)).toBe('fewer than 3');
+  });
+});
+
+describe('formatoPorcentaje', () => {
+  afterEach(() => establecerIdioma('es', { recordar: false }));
+
+  const normal = (texto: string) => texto.replace(/[\u00a0\u202f]/g, ' ');
+
+  it('escribe un decimal y el signo según el idioma', () => {
+    expect(normal(formatoPorcentaje(71.4))).toBe('71,4%');
+    expect(normal(formatoPorcentaje(100))).toBe('100,0%');
+    expect(normal(formatoPorcentaje(0))).toBe('0,0%');
+    establecerIdioma('en', { recordar: false });
+    expect(normal(formatoPorcentaje(71.4))).toBe('71.4%');
+  });
+
+  it('no inventa decimales ni redondea de más', () => {
+    expect(normal(formatoPorcentaje(14.3))).toBe('14,3%');
+    expect(normal(formatoPorcentaje(59.5))).toBe('59,5%');
+  });
+
+  it('sin porcentaje escribe "sin dato", no 0%', () => {
+    expect(formatoPorcentaje(null)).toBe('sin dato');
+    expect(formatoPorcentaje(undefined)).toBe('sin dato');
+    establecerIdioma('en', { recordar: false });
+    expect(formatoPorcentaje(null)).toBe('no data');
   });
 });

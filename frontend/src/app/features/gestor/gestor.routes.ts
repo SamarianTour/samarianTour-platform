@@ -27,8 +27,7 @@ export const RUTAS_GESTOR: Routes = [
           {
             path: 'embudo',
             title: 'app.titulo.embudo',
-            data: { codigo: 'P09.1', nombre: 'app.titulo.embudo' },
-            loadComponent: proximamente,
+            loadComponent: () => import('./embudo/embudo-gestor').then((modulo) => modulo.EmbudoGestor),
           },
           {
             path: 'distribucion',

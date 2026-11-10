@@ -42,6 +42,8 @@ export const GESTOR = diccionario(
     'gestor.cargando': 'Cargando los indicadores…',
     'gestor.menosDeTres': 'menos de 3',
     'gestor.tabla.ver': 'Ver los datos en una tabla',
+    'gestor.sinDato': 'sin dato',
+    'gestor.noAplica': 'no aplica',
 
     // Demanda (RF-85, RF-86)
     'gestor.demanda.cifra.total': 'Solicitudes del periodo',
@@ -58,6 +60,33 @@ export const GESTOR = diccionario(
     'gestor.demanda.col.tipo': 'Tipo de oferta',
     'gestor.demanda.col.solicitudes': 'Solicitudes',
     'gestor.demanda.tabla.titulo': 'Solicitudes por zona y tipo de oferta, del {desde} al {hasta}',
+
+    // Embudo de conversión (RF-87, RF-88)
+    'gestor.embudo.etapa.ENVIADAS': 'Enviadas',
+    'gestor.embudo.etapa.ATENDIDAS': 'Atendidas',
+    'gestor.embudo.etapa.CONFIRMADAS': 'Confirmadas',
+    'gestor.embudo.etapa.PAGADAS': 'Pagadas',
+    'gestor.embudo.cifra.enviadas': 'Solicitudes enviadas',
+    'gestor.embudo.cifra.pagadas': 'Solicitudes pagadas',
+    'gestor.embudo.cifra.conversion': 'De las enviadas, se pagaron',
+    'gestor.embudo.grafico.titulo': 'Embudo de conversión del periodo',
+    'gestor.embudo.grafico.ayuda':
+      'De las solicitudes enviadas en el periodo, cuántas llegaron a ser atendidas, confirmadas y pagadas. El porcentaje es sobre las enviadas; una solicitud que se atendió y después venció cuenta como atendida.',
+    'gestor.embudo.deLaAnterior': '{porcentaje} de las {anterior}',
+    'gestor.embudo.resumen':
+      'Gráfico de barras horizontales del embudo de conversión, de las solicitudes enviadas a las pagadas. {etapas}. Los datos completos están en la tabla que sigue.',
+    'gestor.embudo.resumenTipo':
+      'Gráfico de barras horizontales del embudo de las ofertas de tipo {tipo}. {etapas}. Los datos completos están en la tabla que sigue.',
+    'gestor.embudo.col.etapa': 'Etapa',
+    'gestor.embudo.col.solicitudes': 'Solicitudes',
+    'gestor.embudo.col.porcentaje': 'Porcentaje de las enviadas',
+    'gestor.embudo.col.anterior': 'Porcentaje de la etapa anterior',
+    'gestor.embudo.tabla.titulo': 'Embudo de conversión, del {desde} al {hasta}',
+    'gestor.embudo.tabla.tituloTipo': 'Embudo de las ofertas de tipo {tipo}, del {desde} al {hasta}',
+    'gestor.embudo.porTipo.titulo': 'Por tipo de oferta',
+    'gestor.embudo.porTipo.ayuda': 'El mismo embudo, separado por el tipo de oferta de cada solicitud.',
+    'gestor.embudo.vacio': 'No hubo solicitudes en este periodo.',
+    'gestor.embudo.tipoVacio': 'No hubo solicitudes de este tipo en el periodo.',
   },
   {
     // Panel (menú lateral)
@@ -95,6 +124,8 @@ export const GESTOR = diccionario(
     'gestor.cargando': 'Loading the indicators…',
     'gestor.menosDeTres': 'fewer than 3',
     'gestor.tabla.ver': 'View the data in a table',
+    'gestor.sinDato': 'no data',
+    'gestor.noAplica': 'not applicable',
 
     // Demand (RF-85, RF-86)
     'gestor.demanda.cifra.total': 'Requests in the period',
@@ -111,5 +142,32 @@ export const GESTOR = diccionario(
     'gestor.demanda.col.tipo': 'Offer type',
     'gestor.demanda.col.solicitudes': 'Requests',
     'gestor.demanda.tabla.titulo': 'Requests by area and offer type, from {desde} to {hasta}',
+
+    // Conversion funnel (RF-87, RF-88)
+    'gestor.embudo.etapa.ENVIADAS': 'Sent',
+    'gestor.embudo.etapa.ATENDIDAS': 'Handled',
+    'gestor.embudo.etapa.CONFIRMADAS': 'Confirmed',
+    'gestor.embudo.etapa.PAGADAS': 'Paid',
+    'gestor.embudo.cifra.enviadas': 'Requests sent',
+    'gestor.embudo.cifra.pagadas': 'Requests paid',
+    'gestor.embudo.cifra.conversion': 'Of those sent, were paid',
+    'gestor.embudo.grafico.titulo': 'Conversion funnel for the period',
+    'gestor.embudo.grafico.ayuda':
+      'Of the requests sent in the period, how many were handled, confirmed and paid. The percentage is out of those sent; a request that was handled and later expired counts as handled.',
+    'gestor.embudo.deLaAnterior': '{porcentaje} of those {anterior}',
+    'gestor.embudo.resumen':
+      'Horizontal bar chart of the conversion funnel, from requests sent to requests paid. {etapas}. The full data is in the table that follows.',
+    'gestor.embudo.resumenTipo':
+      'Horizontal bar chart of the funnel for offers of type {tipo}. {etapas}. The full data is in the table that follows.',
+    'gestor.embudo.col.etapa': 'Stage',
+    'gestor.embudo.col.solicitudes': 'Requests',
+    'gestor.embudo.col.porcentaje': 'Percentage of those sent',
+    'gestor.embudo.col.anterior': 'Percentage of the previous stage',
+    'gestor.embudo.tabla.titulo': 'Conversion funnel, from {desde} to {hasta}',
+    'gestor.embudo.tabla.tituloTipo': 'Funnel for offers of type {tipo}, from {desde} to {hasta}',
+    'gestor.embudo.porTipo.titulo': 'By offer type',
+    'gestor.embudo.porTipo.ayuda': 'The same funnel, split by the offer type of each request.',
+    'gestor.embudo.vacio': 'There were no requests in this period.',
+    'gestor.embudo.tipoVacio': 'There were no requests of this type in the period.',
   },
 );
