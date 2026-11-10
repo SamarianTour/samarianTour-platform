@@ -21,6 +21,7 @@ export const APP = diccionario(
     'app.nav.misOfertas': 'Mis ofertas',
     'app.nav.cola': 'Cola de solicitudes',
     'app.nav.indicadores': 'Indicadores',
+    'app.nav.recomendaciones': 'Recomendaciones',
     'app.nav.administracion': 'Administración',
 
     // Menú de la cuenta.
@@ -39,6 +40,8 @@ export const APP = diccionario(
     'app.titulo.avisosOperador': 'Avisos',
     'app.titulo.atenderSolicitud': 'Atender solicitud',
     'app.titulo.indicadores': 'Panel de indicadores',
+    'app.titulo.recomendaciones': 'Recomendaciones',
+    'app.titulo.alertas': 'Alertas del destino',
     'app.titulo.demanda': 'Demanda',
     'app.titulo.embudo': 'Embudo de conversión',
     'app.titulo.distribucionPrestador': 'Distribución por tipo de prestador',
@@ -87,6 +90,7 @@ export const APP = diccionario(
     'app.nav.misOfertas': 'My offers',
     'app.nav.cola': 'Request queue',
     'app.nav.indicadores': 'Indicators',
+    'app.nav.recomendaciones': 'Recommendations',
     'app.nav.administracion': 'Administration',
 
     'app.menu.cuenta': 'account menu',
@@ -103,6 +107,8 @@ export const APP = diccionario(
     'app.titulo.avisosOperador': 'Notices',
     'app.titulo.atenderSolicitud': 'Handle request',
     'app.titulo.indicadores': 'Indicators dashboard',
+    'app.titulo.recomendaciones': 'Recommendations',
+    'app.titulo.alertas': 'Destination alerts',
     'app.titulo.demanda': 'Demand',
     'app.titulo.embudo': 'Conversion funnel',
     'app.titulo.distribucionPrestador': 'Distribution by provider type',

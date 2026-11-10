@@ -1,0 +1,82 @@
+<section class="pagina alertas-pagina">
+  <header class="alertas__cabecera">
+    <h1>{{ 'recomendacion.alertas.titulo' | t }}</h1>
+    <p class="texto-suave">{{ 'recomendacion.alertas.subtitulo' | t }}</p>
+  </header>
+
+  @switch (vista()) {
+    @case ('cargando') {
+      <p class="alertas__cargando" role="status">
+        {{ 'recomendacion.alertas.cargando' | t }}
+      </p>
+    }
+
+    @case ('noDisponible') {
+      <div class="alerta alerta--aviso" role="alert">
+        <app-icono nombre="alerta" />
+        <div>
+          <p class="alertas__aviso-texto">{{ claveDeNoDisponible() | t }}</p>
+          <p class="alertas__aviso-texto">{{ 'recomendacion.alertas.noDisponible.ayuda' | t }}</p>
+          <p class="alertas__acciones">
+            <button type="button" class="boton" (click)="cargar()">{{ 'recomendacion.noDisponible.reintentar' | t }}</button>
+            <a class="boton boton--secundario" routerLink="/recomendaciones">{{ 'recomendacion.alertas.volver' | t }}</a>
+          </p>
+        </div>
+      </div>
+    }
+
+    @case ('error') {
+      <div class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <div>
+          <p class="alertas__aviso-texto">{{ mensajeDeError() }}</p>
+          <p class="alertas__acciones">
+            <button type="button" class="boton" (click)="cargar()">{{ 'recomendacion.noDisponible.reintentar' | t }}</button>
+          </p>
+        </div>
+      </div>
+    }
+
+    @default {
+      @let datos = resumen()!;
+      <p class="alertas__actualizado">
+        <app-icono nombre="reloj" />
+        <span>
+          {{ 'recomendacion.alertas.actualizado' | t }}
+          <time [attr.datetime]="datos.actualizadoEn">{{ datos.actualizadoEn | fecha: 'conHora' }}</time>
+        </span>
+      </p>
+
+      @if (vista() === 'sinAlertas') {
+        <div class="vacio">
+          <h2>{{ 'recomendacion.alertas.sin' | t }}</h2>
+          <p class="texto-suave">{{ 'recomendacion.alertas.sinAyuda' | t }}</p>
+        </div>
+      } @else {
+        <p class="alertas__resumen">{{ 'recomendacion.alertas.total' | t: { n: total() } }}</p>
+
+        @for (zona of zonas(); track zona.zonaId) {
+          <section class="alertas__zona" [attr.aria-labelledby]="'zona-' + zona.zonaId">
+            <h2 [id]="'zona-' + zona.zonaId">
+              <app-icono nombre="ubicacion" />
+              {{ zona.zonaNombre ?? ('recomendacion.alertas.zonaSinNombre' | t) }}
+            </h2>
+            <ul class="alertas__lista">
+              @for (alerta of zona.alertas; track alerta.id) {
+                <li><app-tarjeta-alerta [alerta]="alerta" /></li>
+              }
+            </ul>
+          </section>
+        }
+      }
+
+      <p class="alertas__pie texto-suave">
+        <app-icono nombre="info" />
+        <span>{{ 'recomendacion.alertas.pie' | t }}</span>
+      </p>
+      <p>
+        <a class="boton boton--secundario" routerLink="/recomendaciones">{{ 'recomendacion.alertas.volver' | t }}</a>
+      </p>
+    }
+  }
+</section>

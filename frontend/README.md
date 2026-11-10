@@ -57,13 +57,16 @@ src/app
     ├── operador/            panel con menú lateral, cola, historial, atender una solicitud y avisos
     ├── admin/               panel con menú lateral: prestadores y RNT, moderación, cuentas internas, comisión y pagos tardíos, zonas, alertas de sesgo y pendientes técnicos
     ├── gestor/              panel con menú lateral y el panel de indicadores: Demanda, Embudo de conversión y Distribución por tipo de prestador, con el filtro de periodo, gráficos de barras y sus tablas de datos
+    ├── recomendacion/       asistente de recomendaciones, página de alertas del destino y las secciones de alertas y alternativas de la ficha (públicas)
     └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
 ```
 
 | Ruta | Quién | Pantalla |
 |---|---|---|
 | `/` | Todos | Catálogo con filtros en los query params y paginación de 12; cada tarjeta muestra la miniatura de la portada |
-| `/ofertas/:id` | Todos | Ficha con galería de fotos, zona, perfil del prestador, mapa y opiniones; el turista con sesión puede "Dejar una opinión" |
+| `/ofertas/:id` | Todos | Ficha con galería de fotos, zona, perfil del prestador, mapa y opiniones; el turista con sesión puede "Dejar una opinión". Trae las alertas de su zona (P08.2) y, si la zona es de alta afluencia, alternativas con menos visitantes (P08.3) |
+| `/recomendaciones` | Todos | P08.1 Recomendaciones: asistente de viaje que sugiere de 3 a 5 ofertas explicadas |
+| `/alertas` | Todos | P08.2 Alertas del destino por zona, con su fuente y la hora de actualización. No está en el menú: se llega desde Recomendaciones y desde la ficha |
 | `/iniciar-sesion` | Todos | P06.2 Iniciar sesión (`?volver=` lleva a la página que se quería ver) |
 | `/registro` | Todos | P06.1 Registro de turista o prestador (`?tipo=prestador` deja elegido el prestador) |
 | `/recuperar-contrasena` | Todos | P06.3 Pedir el enlace para elegir una contraseña nueva |
@@ -247,6 +250,50 @@ La lógica (intentos que quedan, si se puede pagar, motivos, validación del che
 ### Para el equipo de backend
 
 - **Motivo del rechazo (opcional).** `IntentoPago` trae solo el estado del intento, no el motivo que dio la pasarela (fondos insuficientes, tarjeta rechazada, etc.). El frontend muestra una explicación fija por estado. Si el equipo quiere mostrar el motivo real, haría falta un campo nuevo en `IntentoPago`.
+
+## Recomendaciones y alertas
+
+El turista —con o sin sesión— pide sugerencias, consulta las alertas del destino y ve alternativas a una oferta muy concurrida (RF-26 a RF-29, P08). Está en `features/recomendacion` y todo es público. El servicio es `core/api/recomendacion.service.ts` (`/api/recomendacion/**`); pide siempre los textos en el idioma vigente (`conIdioma` en el cuerpo del `POST`, `?idioma=` en los `GET`). Los tipos salen del contrato (`modelos-recomendacion.ts`). La lógica está en funciones puras con pruebas propias (`consulta.ts`, `conversacion.ts`, `alertas/alertas.ts`, `core/api/degradacion.ts`).
+
+- **Recomendaciones** (`/recomendaciones`, P08.1). Un asistente en forma de conversación: el turista escribe lo que busca (hasta 500 caracteres) o toca una de cuatro ideas, y recibe de 3 a 5 ofertas con la explicación de por qué se eligieron, los criterios que cumplen y quién las eligió (reglas o inteligencia artificial). Los filtros del contrato están plegados en "Afinar la búsqueda": tipo de oferta, tipo de actividad, zona, accesibilidad, esfuerzo máximo y precio máximo; la accesibilidad, el esfuerzo y el precio nunca se relajan. Con menos de 3 coincidencias se muestran las que haya con el aviso de pocas coincidencias, y sin ninguna se lleva al catálogo. Hace falta escribir algo o elegir un filtro. Las tarjetas no muestran calificaciones ni datos del prestador, y no hay ofertas patrocinadas.
+- **Alertas del destino** (`/alertas`, P08.2). Las alertas activas agrupadas por zona, las de nivel más grave primero. Cada una dice su nivel (Amarilla, Naranja o Roja, con color, icono y palabra), su tipo, el título y la descripción, **quién la emite** y, si el servicio las da, cuándo se emitió y hasta cuándo vale; arriba, la hora de la última actualización. Una fuente "(simulado)" se muestra tal cual la entrega el servicio: un dato simulado nunca se presenta como oficial (DR-17). Sin alertas dice "Sin alertas activas".
+- **Alertas en la ficha** (P08.2). La ficha de una oferta con zona trae la sección "Alertas del destino" de esa zona, con las mismas tarjetas, "Sin alertas activas" y la hora si no hay, y un enlace a `/alertas`.
+- **Alternativas** (P08.3). Solo en la ficha de una oferta de una zona de alta afluencia: de 2 a 3 ofertas parecidas en zonas con menos visitantes, con la misma tarjeta y explicación que las recomendaciones. Siempre por regla, sin IA (DR-19). La ficha ni siquiera las pide si la zona no es de alta afluencia.
+
+### Si la recomendación no está disponible (degradación)
+
+El servicio de recomendación es opcional (ADR-04): sin él, el resto de la plataforma debe funcionar. `conDegradacion` le pone un límite de tiempo a cada consulta y la convierte en un `Resultado` (nunca lanza): `ok`, `no-disponible` (por tiempo, servicio o conexión) o `error` propio de la consulta (un dato inválido, una oferta que no existe). Cuentan como **no disponible**: pasar del límite, no tener conexión y un 502, 503 o 504. Al pasar el límite la petición se cancela.
+
+| Dónde | Límite | Si no está disponible |
+|---|---|---|
+| `POST /recomendaciones` | 10 s | Mientras espera dice "Buscando opciones…". Después, un aviso en la conversación con "Intentar de nuevo" (repite la misma consulta) y un enlace al catálogo. Lo ya conversado se conserva |
+| `GET /alertas` (página) | 8 s | Aviso con "Intentar de nuevo" y enlace de vuelta; la página no queda en blanco |
+| `GET /zonas/{id}/alertas` (ficha) | 3 s | La sección se oculta, sin avisos ni errores |
+| `GET /ofertas/{id}/alternativas` (ficha) | 3 s | La sección se oculta, sin avisos ni errores; también si responde `aplica: false`, 404 o ninguna alternativa |
+
+Las secciones de la ficha no ocupan lugar mientras consultan, así la página no se mueve al llegar, y son independientes entre sí y del resto de la ficha. Hay pruebas del límite con temporizadores simulados (una respuesta que llega un poco antes del límite sí se muestra; al llegar al límite se cancela), de cada código de fallo y de que la ficha sigue completa.
+
+### Decisiones de diseño
+
+- **El menú del turista tiene solo "Recomendaciones"**, como en el documento de diseño (Entregable 2, Tabla 3): Catálogo · Paquetes · Recomendaciones · Mis solicitudes · Opiniones. A `/alertas` se llega con el enlace visible "Ver alertas del destino" del asistente y con el de la sección de la ficha. Quien no ha iniciado sesión, el turista y el prestador ven el enlace; las rutas son públicas.
+- **La conversación vive solo en memoria.** Lo que escribe el turista puede incluir datos personales: no se guarda en el navegador ni viaja en la dirección (el servicio usa `POST` por eso, DR-09), y una nota pide no escribirlos. Al recargar, se borra. Una prueba revisa `localStorage` y `sessionStorage`.
+- **Los textos del servicio se muestran tal cual.** Las explicaciones, y el título y la descripción de las alertas, los escribe el servicio en el idioma pedido; la fuente no se traduce (DR-21). Lo demás (niveles, tipos, criterios, avisos) sigue el idioma de la interfaz.
+- **Una sola tarjeta para recomendaciones y alternativas** (`tarjeta-recomendada`), porque el contrato les da la misma forma; y una sola para las alertas (`tarjeta-alerta`), compartida por la página y la ficha.
+- **Lo que el diseño de referencia traía y no se construyó:** `alertas.html` no existe en `_referencia-html/`, así que la página usa el estilo del resto de la interfaz.
+
+### Supuestos del frontend
+
+- **[SUPUESTO] El 504 también es "no disponible"**: es el mismo caso que un 502 o un 503 (el Nginx se cansó de esperar al servicio).
+- **[SUPUESTO] Las zonas con alertas se ordenan por gravedad**, de la más grave a la menos grave; a igual nivel se conserva el orden del servicio (el de su id).
+- **[SUPUESTO] El límite de 10 s del `POST /recomendaciones`** se eligió porque el servicio puede tardar hasta unos 9 s (catálogo 3 s, IA 6 s y luego reglas; ver `docs/decisiones-recomendacion.md`).
+- Una zona sin nombre en el resumen de alertas se muestra como "Zona sin nombre".
+
+### Para el equipo de backend
+
+- **Margen del `POST /recomendaciones`.** En el peor caso el servicio tarda unos 9 s y el frontend espera 10 s: queda 1 s de margen, y el Nginx (`proxy_read_timeout`) o cualquier retraso de red lo puede consumir. Conviene confirmar que la ruta `/api/recomendacion/` tiene un tiempo máximo mayor y, si se puede, acortar el camino de la IA.
+- **Nombre de la zona en las alertas.** `ZonaConAlertas.zonaNombre` se omite si el catálogo no lo pudo dar; el turista solo vería un id. El frontend lo muestra como "Zona sin nombre". Conviene que el servicio siempre lo entregue o lo pida al catálogo con un respaldo.
+- **504.** El contrato solo documenta el 503 (`RECOMENDACION_NO_DISPONIBLE`, `ALERTAS_NO_DISPONIBLES`). Si el Nginx devuelve 502 o 504 cuando el servicio está caído, conviene documentarlo.
+- **Fecha de la alerta del IDEAM.** Las alertas del IDEAM no traen fecha de emisión ni de fin (DR-15); la ficha solo puede mostrar la hora de consulta de la fuente, no desde cuándo está vigente.
 
 ## Diseño
 

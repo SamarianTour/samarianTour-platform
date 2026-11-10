@@ -1,0 +1,87 @@
+<details class="filtros">
+  <summary>
+    {{ 'recomendacion.filtro.titulo' | t }}
+    @if (hayFiltros()) {
+      <span class="etiqueta etiqueta--exito">{{ 'recomendacion.filtro.activos' | t }}</span>
+    }
+  </summary>
+  <p class="texto-suave">{{ 'recomendacion.filtro.ayuda' | t }}</p>
+
+  <fieldset class="grupo">
+    <legend>{{ 'recomendacion.filtro.tipoOferta' | t }}</legend>
+    <div class="opciones">
+      @for (tipo of tiposOferta; track tipo) {
+        <label class="opcion">
+          <input
+            type="checkbox"
+            [checked]="filtros().tiposOferta.includes(tipo)"
+            (change)="alternarTipoOferta(tipo, $any($event.target).checked)"
+          />
+          <span>{{ etiquetaTipoOferta[tipo] }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <fieldset class="grupo">
+    <legend>{{ 'recomendacion.filtro.tipoActividad' | t }}</legend>
+    <div class="opciones opciones--rejilla">
+      @for (tipo of tiposActividad; track tipo) {
+        <label class="opcion">
+          <input
+            type="checkbox"
+            [checked]="filtros().tiposActividad.includes(tipo)"
+            (change)="alternarActividad(tipo, $any($event.target).checked)"
+          />
+          <span>{{ etiquetaActividad[tipo] }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <div class="fila">
+    @if (zonas().length > 0) {
+      <div class="campo">
+        <label for="filtro-zona">{{ 'recomendacion.filtro.zona' | t }}</label>
+        <select id="filtro-zona" (change)="cambiarZona($any($event.target).value)">
+          <option value="" [selected]="filtros().zonaId === ''">{{ 'recomendacion.filtro.cualquiera' | t }}</option>
+          @for (zona of zonas(); track zona.id) {
+            <option [value]="zona.id" [selected]="filtros().zonaId === zona.id">{{ zona.nombre }}</option>
+          }
+        </select>
+      </div>
+    }
+    <div class="campo">
+      <label for="filtro-esfuerzo">{{ 'recomendacion.filtro.esfuerzo' | t }}</label>
+      <select id="filtro-esfuerzo" (change)="cambiarNivel($any($event.target).value)">
+        <option value="" [selected]="filtros().nivelEsfuerzoMaximo === ''">{{ 'recomendacion.filtro.cualquiera' | t }}</option>
+        @for (nivel of niveles; track nivel) {
+          <option [value]="nivel" [selected]="filtros().nivelEsfuerzoMaximo === nivel">{{ etiquetaNivel[nivel] }}</option>
+        }
+      </select>
+    </div>
+    <div class="campo">
+      <label for="filtro-precio">{{ 'recomendacion.filtro.precio' | t }}</label>
+      <input
+        id="filtro-precio"
+        type="number"
+        inputmode="numeric"
+        min="1"
+        step="1000"
+        [value]="filtros().precioMaximo ?? ''"
+        (input)="cambiarPrecio($any($event.target).valueAsNumber)"
+      />
+    </div>
+  </div>
+
+  <label class="opcion">
+    <input type="checkbox" [checked]="filtros().accesibleSillaRuedas" (change)="cambiarAccesible($any($event.target).checked)" />
+    <span>{{ 'recomendacion.filtro.accesible' | t }}</span>
+  </label>
+
+  @if (hayFiltros()) {
+    <button type="button" class="boton boton--secundario" (click)="quitar()">
+      {{ 'recomendacion.filtro.quitar' | t }}
+    </button>
+  }
+</details>

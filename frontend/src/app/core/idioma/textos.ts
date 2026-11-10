@@ -2,6 +2,7 @@ import { APP } from './app.i18n';
 import { COMPARTIDO } from './compartido.i18n';
 import { ADMIN } from './admin.i18n';
 import { GESTOR } from './gestor.i18n';
+import { RECOMENDACION } from './recomendacion.i18n';
 import { COMUN } from './comun.i18n';
 import type { Diccionario, Texto } from './diccionario';
 import { ERRORES } from './errores.i18n';
@@ -32,6 +33,7 @@ export const AREAS: readonly Diccionario<string>[] = [
   PAGOS,
   ADMIN,
   GESTOR,
+  RECOMENDACION,
 ];
 
 /** Toda clave de texto válida: el pipe `t` y `traducir` solo aceptan estas. */
@@ -48,7 +50,8 @@ export type ClaveTexto =
   | keyof typeof OPERADOR.es
   | keyof typeof PAGOS.es
   | keyof typeof ADMIN.es
-  | keyof typeof GESTOR.es;
+  | keyof typeof GESTOR.es
+  | keyof typeof RECOMENDACION.es;
 
 export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>>> = {
   es: {
@@ -65,6 +68,7 @@ export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>
     ...PAGOS.es,
     ...ADMIN.es,
     ...GESTOR.es,
+    ...RECOMENDACION.es,
   },
   en: {
     ...COMUN.en,
@@ -80,5 +84,6 @@ export const TEXTOS: Readonly<Record<Idioma, Readonly<Record<ClaveTexto, Texto>>
     ...PAGOS.en,
     ...ADMIN.en,
     ...GESTOR.en,
+    ...RECOMENDACION.en,
   },
 };

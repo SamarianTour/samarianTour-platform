@@ -1,0 +1,38 @@
+@let a = alerta();
+<article class="tarjeta-alerta" [class]="'tarjeta-alerta--' + a.nivel.toLowerCase()">
+  <div class="tarjeta-alerta__encabezado">
+    <span class="tarjeta-alerta__nivel">
+      <app-icono nombre="alerta" />
+      <span class="solo-lectores">{{ 'recomendacion.alerta.nivel' | t }}: </span>{{ claveDeNivel[a.nivel] | t }}
+    </span>
+    <span class="tarjeta-alerta__tipo">{{ claveDeTipo[a.tipo] | t }}</span>
+  </div>
+
+  <h3 class="tarjeta-alerta__titulo">{{ a.titulo }}</h3>
+  @if (a.descripcion) {
+    <p class="tarjeta-alerta__descripcion">{{ a.descripcion }}</p>
+  }
+
+  <dl class="tarjeta-alerta__datos">
+    <div>
+      <dt>{{ 'recomendacion.alerta.fuente' | t }}</dt>
+      <dd>{{ a.fuente }}</dd>
+    </div>
+    @if (a.emitidaEn) {
+      <div>
+        <dt>{{ 'recomendacion.alerta.emitida' | t }}</dt>
+        <dd>
+          <time [attr.datetime]="a.emitidaEn">{{ a.emitidaEn | fecha: 'conHora' }}</time>
+        </dd>
+      </div>
+    }
+    @if (a.vigenteHasta) {
+      <div>
+        <dt>{{ 'recomendacion.alerta.vigenteHasta' | t }}</dt>
+        <dd>
+          <time [attr.datetime]="a.vigenteHasta">{{ a.vigenteHasta | fecha: 'conHora' }}</time>
+        </dd>
+      </div>
+    }
+  </dl>
+</article>
