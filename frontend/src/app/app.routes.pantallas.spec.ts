@@ -192,16 +192,15 @@ describe('pantallas que crea cada ruta', () => {
       expect(http.match((p) => p.url === '/api/nucleo/prestador/cuenta-cobro')).toHaveLength(1);
     });
 
-    it.each(['/prestador/perfil'])(
-      'el prestador abre su panel en %s y dentro se crea una pantalla',
-      async (url) => {
-        conSesion('PRESTADOR');
+    // P03.2: el perfil público se lee en el catálogo.
+    it('el prestador abre su perfil público y este pide el perfil al catálogo', async () => {
+      conSesion('PRESTADOR');
 
-        await ir(url, PanelPrestador);
+      await ir('/prestador/perfil', PanelPrestador);
 
-        expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
-      },
-    );
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-perfil-prestador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/catalogo/prestador/perfil')).toHaveLength(1);
+    });
 
     it.each(['/prestador', '/prestador/rnt', '/prestador/perfil', '/prestador/whatsapp', '/prestador/cuenta-cobro'])(
       'un turista que abre %s ve "no tienes permiso"',

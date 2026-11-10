@@ -180,6 +180,41 @@ export const PRESTADOR = diccionario(
     'prestador.cobro.error.titularRequerido': 'Escribe el nombre del titular.',
     'prestador.cobro.error.titularLargo': 'El nombre puede tener hasta 100 caracteres.',
 
+    // Perfil público del prestador (P03.2)
+    'prestador.perfil.intro':
+      'Esta información aparece en tu perfil público y ayuda a los turistas a conocerte. Se publica de inmediato, sin moderación.',
+    'prestador.perfil.cargando': 'Cargando tu perfil…',
+    'prestador.perfil.datos.titulo': 'Datos del perfil',
+    'prestador.perfil.sinPerfil':
+      'Todavía no tienes perfil público. Escribe la descripción y guárdalo para publicarlo.',
+    'prestador.perfil.opcional': '(opcional)',
+    'prestador.perfil.nombreComercial': 'Nombre comercial',
+    'prestador.perfil.descripcion': 'Descripción',
+    'prestador.perfil.ayudaDescripcion': 'Cuenta en pocas líneas quién eres y qué ofreces.',
+    'prestador.perfil.horarios': 'Horario de atención',
+    'prestador.perfil.ayudaHorarios': 'Por ejemplo: lunes a sábado, de 8:00 a. m. a 6:00 p. m.',
+    'prestador.perfil.sitioWeb': 'Sitio web',
+    'prestador.perfil.ayudaEnlace': 'Una dirección que empiece por http:// o https://.',
+    'prestador.perfil.redes': 'Redes sociales',
+    'prestador.perfil.ayudaRedes': 'Una dirección por línea, que empiece por http:// o https://.',
+    'prestador.perfil.guardar': 'Guardar perfil',
+    'prestador.perfil.creado': 'Creaste tu perfil público. Ya lo ven los turistas.',
+    'prestador.perfil.guardado': 'Guardaste tu perfil público.',
+    'prestador.perfil.error.descripcionRequerida': 'Escribe la descripción de tu perfil.',
+    'prestador.perfil.error.sitioInvalido': 'Escribe una dirección web que empiece por http:// o https://.',
+    'prestador.perfil.error.redesInvalidas':
+      'Cada red social va en su propia línea y empieza por http:// o https://.',
+    'prestador.perfil.fotos.titulo': 'Fotos del perfil',
+    'prestador.perfil.fotos.primeroGuarda': 'Guarda primero los datos del perfil para poder agregar fotos.',
+    'prestador.perfil.fotos.leyenda': 'Fotos del perfil',
+    'prestador.perfil.fotos.ayuda':
+      'Puedes tener hasta {maximo} fotos en JPG, PNG o WebP de hasta 5 MB. Cada foto se sube y se quita al instante; no hace falta guardar.',
+    'prestador.perfil.fotos.alt': 'Foto {indice} de {total} del perfil',
+    'prestador.perfil.fotos.agregada': 'Foto agregada. El perfil tiene {n} de {maximo} fotos.',
+    'prestador.perfil.fotos.quitada': 'Foto quitada. El perfil tiene {n} de {maximo} fotos.',
+    'prestador.perfil.fotos.quitadaSinFotos': 'Foto quitada. El perfil no tiene fotos.',
+    'prestador.perfil.fotos.motivoMaximo': 'el perfil lleva máximo {maximo} fotos',
+
     // Mis ofertas
     'prestador.ofertas.subtitulo':
       'Cada oferta nueva o editada pasa por moderación antes de verse en el catálogo.',
@@ -505,6 +540,41 @@ export const PRESTADOR = diccionario(
     'prestador.cobro.error.numeroCelularInvalido': 'The mobile number has 10 digits and starts with 3.',
     'prestador.cobro.error.titularRequerido': "Enter the account holder's name.",
     'prestador.cobro.error.titularLargo': 'The name can have up to 100 characters.',
+
+    // Provider public profile (P03.2)
+    'prestador.perfil.intro':
+      'This information appears on your public profile and helps tourists get to know you. It is published right away, without moderation.',
+    'prestador.perfil.cargando': 'Loading your profile…',
+    'prestador.perfil.datos.titulo': 'Profile details',
+    'prestador.perfil.sinPerfil':
+      "You don't have a public profile yet. Write the description and save it to publish it.",
+    'prestador.perfil.opcional': '(optional)',
+    'prestador.perfil.nombreComercial': 'Business name',
+    'prestador.perfil.descripcion': 'Description',
+    'prestador.perfil.ayudaDescripcion': 'Tell tourists in a few lines who you are and what you offer.',
+    'prestador.perfil.horarios': 'Opening hours',
+    'prestador.perfil.ayudaHorarios': 'For example: Monday to Saturday, 8:00 AM to 6:00 PM.',
+    'prestador.perfil.sitioWeb': 'Website',
+    'prestador.perfil.ayudaEnlace': 'An address that starts with http:// or https://.',
+    'prestador.perfil.redes': 'Social media',
+    'prestador.perfil.ayudaRedes': 'One address per line, starting with http:// or https://.',
+    'prestador.perfil.guardar': 'Save profile',
+    'prestador.perfil.creado': 'You created your public profile. Tourists can see it now.',
+    'prestador.perfil.guardado': 'You saved your public profile.',
+    'prestador.perfil.error.descripcionRequerida': 'Enter the description of your profile.',
+    'prestador.perfil.error.sitioInvalido': 'Enter a web address that starts with http:// or https://.',
+    'prestador.perfil.error.redesInvalidas':
+      'Put each social media address on its own line, starting with http:// or https://.',
+    'prestador.perfil.fotos.titulo': 'Profile photos',
+    'prestador.perfil.fotos.primeroGuarda': 'Save the profile details first so you can add photos.',
+    'prestador.perfil.fotos.leyenda': 'Profile photos',
+    'prestador.perfil.fotos.ayuda':
+      'You can have up to {maximo} photos in JPG, PNG or WebP format, up to 5 MB each. Each photo is uploaded and removed right away; there is no need to save.',
+    'prestador.perfil.fotos.alt': 'Photo {indice} of {total} of the profile',
+    'prestador.perfil.fotos.agregada': 'Photo added. The profile has {n} of {maximo} photos.',
+    'prestador.perfil.fotos.quitada': 'Photo removed. The profile has {n} of {maximo} photos.',
+    'prestador.perfil.fotos.quitadaSinFotos': 'Photo removed. The profile has no photos.',
+    'prestador.perfil.fotos.motivoMaximo': 'a profile can have at most {maximo} photos',
 
     'prestador.ofertas.subtitulo':
       'Every new or edited offer goes through moderation before it appears in the catalog.',

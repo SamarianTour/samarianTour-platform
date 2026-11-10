@@ -22,7 +22,9 @@ import { traducir } from '../../../../core/idioma/traducir';
 import { Icono } from '../../../../shared/icono/icono';
 import {
   MAXIMO_FOTOS,
+  TEXTOS_FOTOS_OFERTA,
   TIPOS_FOTO,
+  TextosFotos,
   agregar,
   avisoDeMaximo,
   clasificarArchivos,
@@ -46,6 +48,10 @@ type Accion = 'antes' | 'despues';
  * Fotos de una oferta (DC-47): de 1 a 6, la primera es la portada. Cada foto se sube apenas se elige y entra a la
  * lista con la miniatura que devuelve la API. El orden se cambia con botones, no arrastrando, para que sirva con
  * teclado y en celular. Las fotos van en `fotos` (enlace de dos vías) y `subiendo` avisa si hay subidas en curso.
+ *
+ * También lo usa el perfil público (P03.2), con otras rutas y sin orden: `subirCon` y `quitarCon` dicen cómo se sube y se quita una
+ * foto, `textos` cambia lo que dice de "la oferta", `ordenable` quita los botones de orden y la portada, y `obligatorio` quita el
+ * asterisco. Sin ellos funciona como siempre para las ofertas.
  */
 @Component({
   selector: 'app-selector-fotos',
@@ -60,6 +66,16 @@ export class SelectorFotos {
   readonly subiendo = model(false);
   /** Mensaje de error del formulario para este campo, por ejemplo que falta al menos una foto. */
   readonly error = input<string | null>(null);
+  /** Los textos que dependen de qué son las fotos; por defecto, los de una oferta. */
+  readonly textos = input<TextosFotos>(TEXTOS_FOTOS_OFERTA);
+  /** Si el orden importa (la primera es la portada). El perfil público no tiene orden ni portada. */
+  readonly ordenable = input(true);
+  /** Si hace falta al menos una foto. El perfil público puede quedarse sin fotos. */
+  readonly obligatorio = input(true);
+  /** Cómo se sube una foto. Sin esto se sube suelta, para una oferta (`POST /prestador/fotos`). */
+  readonly subirCon = input<(archivo: File) => Observable<Foto>>();
+  /** Cómo se quita una foto en el servidor. Sin esto se quita solo de la lista, como en una oferta que aún no se guarda. */
+  readonly quitarCon = input<(foto: Foto) => Observable<unknown>>();
 
   private readonly servicio = inject(OfertasPrestadorService);
   private readonly destruccion = inject(DestroyRef);
@@ -72,6 +88,8 @@ export class SelectorFotos {
   protected readonly maximo = MAXIMO_FOTOS;
   protected readonly formatos = TIPOS_FOTO.join(',');
   protected readonly pendientes = signal<readonly Pendiente[]>([]);
+  /** Las fotos que se están quitando en el servidor: su botón queda deshabilitado mientras responde. */
+  protected readonly quitando = signal<ReadonlySet<string>>(new Set());
   /**
    * Un aviso por cada archivo que no se subió al elegir. Se guarda la manera de armarlos y no los textos: así los avisos
    * que ya están en pantalla cambian de idioma con la interfaz.
@@ -95,8 +113,9 @@ export class SelectorFotos {
     // Se vacía para que elegir otra vez el mismo archivo vuelva a disparar el evento.
     entrada.value = '';
     const cupos = this.cupos();
-    const { aceptados } = clasificarArchivos(archivos, cupos);
-    this.avisos.set(() => clasificarArchivos(archivos, cupos).avisos);
+    const motivoMaximo = this.textos().motivoMaximo;
+    const { aceptados } = clasificarArchivos(archivos, cupos, motivoMaximo);
+    this.avisos.set(() => clasificarArchivos(archivos, cupos, motivoMaximo).avisos);
 
     const nuevos = aceptados.map((archivo): Pendiente => ({
       clave: ++this.contador,
@@ -115,7 +134,8 @@ export class SelectorFotos {
 
   protected reintentar(pendiente: Pendiente): void {
     if (this.cupos() === 0) {
-      this.avisos.set(() => [avisoDeMaximo(pendiente.archivo.name)]);
+      const motivoMaximo = this.textos().motivoMaximo;
+      this.avisos.set(() => [avisoDeMaximo(pendiente.archivo.name, motivoMaximo)]);
       return;
     }
     this.avisos.set(() => []);
@@ -155,12 +175,47 @@ export class SelectorFotos {
   }
 
   protected quitarFoto(foto: Foto): void {
+    const quitarCon = this.quitarCon();
+    if (!quitarCon) {
+      this.quitarDeLaLista(foto);
+      return;
+    }
+    if (this.quitando().has(foto.id)) {
+      return;
+    }
+    this.avisos.set(() => []);
+    this.quitando.update((ids) => new Set(ids).add(foto.id));
+    quitarCon(foto)
+      .pipe(takeUntilDestroyed(this.destruccion))
+      .subscribe({
+        next: () => {
+          this.terminarDeQuitar(foto.id);
+          this.quitarDeLaLista(foto);
+        },
+        error: (fallo: unknown) => {
+          this.terminarDeQuitar(foto.id);
+          const mensaje = aErrorApi(fallo).mensaje;
+          this.avisos.set(() => [mensaje]);
+        },
+      });
+  }
+
+  private terminarDeQuitar(id: string): void {
+    this.quitando.update((ids) => {
+      const restantes = new Set(ids);
+      restantes.delete(id);
+      return restantes;
+    });
+  }
+
+  private quitarDeLaLista(foto: Foto): void {
     const restantes = quitar(this.fotos(), foto.id);
     this.fotos.set(restantes);
+    const textos = this.textos();
     this.anuncio.set(
       restantes.length === 0
-        ? traducir('prestador.fotos.quitadaSinFotos')
-        : traducir('prestador.fotos.quitada', { n: restantes.length, maximo: MAXIMO_FOTOS }),
+        ? traducir(textos.quitadaSinFotos)
+        : traducir(textos.quitada, { n: restantes.length, maximo: MAXIMO_FOTOS }),
     );
     afterNextRender(
       () => {
@@ -176,7 +231,8 @@ export class SelectorFotos {
    * la posición de la foto y si es la portada.
    */
   protected textoAlternativo(indice: number): string {
-    return traducir(indice === 0 ? 'prestador.fotos.altPortada' : 'prestador.fotos.alt', {
+    const textos = this.textos();
+    return traducir(indice === 0 && this.ordenable() ? textos.altPortada : textos.alt, {
       indice: indice + 1,
       total: this.fotos().length,
     });
@@ -184,14 +240,15 @@ export class SelectorFotos {
 
   /** Sube un archivo; si sale bien entra a la lista de fotos y si falla queda como pendiente con su motivo. */
   private subir(pendiente: Pendiente): Observable<Foto> {
-    return this.servicio.subirFoto(pendiente.archivo).pipe(
+    const subirCon = this.subirCon();
+    return (subirCon ? subirCon(pendiente.archivo) : this.servicio.subirFoto(pendiente.archivo)).pipe(
       tap((foto) => {
         this.fotos.update((actuales) => agregar(actuales, foto));
         this.cambiarPendientes((actuales) =>
           actuales.filter((actual) => actual.clave !== pendiente.clave),
         );
         this.anuncio.set(
-          traducir('prestador.fotos.agregada', { n: this.fotos().length, maximo: MAXIMO_FOTOS }),
+          traducir(this.textos().agregada, { n: this.fotos().length, maximo: MAXIMO_FOTOS }),
         );
       }),
       catchError((fallo: unknown) => {

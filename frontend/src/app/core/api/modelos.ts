@@ -21,6 +21,8 @@ export type FichaOferta = Esquemas['FichaOferta'];
 export type Foto = Esquemas['Foto'];
 export type Zona = Esquemas['Zona'];
 export type PerfilPublico = Esquemas['PerfilPublico'];
+/** Lo que el prestador escribe de su perfil público; las fotos se suben aparte. */
+export type PerfilRequest = Esquemas['PerfilRequest'];
 export type OfertaRequest = Esquemas['OfertaRequest'];
 export type OfertaPrestador = Esquemas['OfertaPrestador'];
 export type PaginaOfertasPrestador = Esquemas['PaginaOfertasPrestador'];

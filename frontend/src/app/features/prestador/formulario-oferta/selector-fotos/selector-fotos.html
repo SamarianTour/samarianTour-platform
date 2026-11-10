@@ -5,8 +5,13 @@
   [attr.aria-invalid]="error() ? 'true' : null"
   [attr.aria-describedby]="error() ? 'fotos-error fotos-ayuda' : 'fotos-ayuda'"
 >
-  <legend>{{ 'prestador.fotos.leyenda' | t }} <span class="requerido" aria-hidden="true">*</span></legend>
-  <p class="campo__ayuda" id="fotos-ayuda">{{ 'prestador.fotos.ayuda' | t: { maximo: maximo } }}</p>
+  <legend>
+    {{ textos().leyenda | t }}
+    @if (obligatorio()) {
+      <span class="requerido" aria-hidden="true">*</span>
+    }
+  </legend>
+  <p class="campo__ayuda" id="fotos-ayuda">{{ textos().ayuda | t: { maximo: maximo } }}</p>
 
   <div class="selector__barra">
     <button
@@ -47,38 +52,41 @@
         <li class="miniatura">
           <div class="miniatura__imagen">
             <img [src]="foto.urlMiniatura" [alt]="textoAlternativo(i)" loading="lazy" />
-            @if (primera) {
+            @if (primera && ordenable()) {
               <span class="etiqueta miniatura__portada">{{ 'prestador.fotos.portada' | t }}</span>
             }
           </div>
           <div class="miniatura__acciones">
-            <button
-              type="button"
-              class="miniatura__boton"
-              [attr.data-foto]="foto.id"
-              data-accion="antes"
-              [disabled]="primera"
-              (click)="moverFoto(foto, -1)"
-            >
-              {{ 'prestador.fotos.moverAntes' | t
-              }}<span class="solo-lectores"> {{ 'prestador.fotos.laFoto' | t: { n: i + 1 } }}</span>
-            </button>
-            <button
-              type="button"
-              class="miniatura__boton"
-              [attr.data-foto]="foto.id"
-              data-accion="despues"
-              [disabled]="ultima"
-              (click)="moverFoto(foto, 1)"
-            >
-              {{ 'prestador.fotos.moverDespues' | t
-              }}<span class="solo-lectores"> {{ 'prestador.fotos.laFoto' | t: { n: i + 1 } }}</span>
-            </button>
+            @if (ordenable()) {
+              <button
+                type="button"
+                class="miniatura__boton"
+                [attr.data-foto]="foto.id"
+                data-accion="antes"
+                [disabled]="primera"
+                (click)="moverFoto(foto, -1)"
+              >
+                {{ 'prestador.fotos.moverAntes' | t
+                }}<span class="solo-lectores"> {{ 'prestador.fotos.laFoto' | t: { n: i + 1 } }}</span>
+              </button>
+              <button
+                type="button"
+                class="miniatura__boton"
+                [attr.data-foto]="foto.id"
+                data-accion="despues"
+                [disabled]="ultima"
+                (click)="moverFoto(foto, 1)"
+              >
+                {{ 'prestador.fotos.moverDespues' | t
+                }}<span class="solo-lectores"> {{ 'prestador.fotos.laFoto' | t: { n: i + 1 } }}</span>
+              </button>
+            }
             <button
               type="button"
               class="miniatura__boton miniatura__boton--quitar"
               [attr.data-foto]="foto.id"
               data-accion="quitar"
+              [disabled]="quitando().has(foto.id)"
               (click)="quitarFoto(foto)"
             >
               {{ 'prestador.fotos.quitar' | t

@@ -1,4 +1,5 @@
 import { Foto } from '../../../core/api/modelos';
+import type { ClaveTexto } from '../../../core/idioma/textos';
 import { traducir } from '../../../core/idioma/traducir';
 
 /** Una oferta lleva de 1 a 6 fotos (DC-47). */
@@ -38,6 +39,32 @@ export function motivoDeRechazo(archivo: DatosArchivo): string | null {
   return null;
 }
 
+/**
+ * Los textos del selector que dependen de de qué son las fotos ("la oferta tiene 3 de 6 fotos", "el perfil tiene…"). El selector lo
+ * usan las ofertas y el perfil público; los demás textos son los mismos.
+ */
+export interface TextosFotos {
+  readonly leyenda: ClaveTexto;
+  readonly ayuda: ClaveTexto;
+  readonly alt: ClaveTexto;
+  readonly altPortada: ClaveTexto;
+  readonly agregada: ClaveTexto;
+  readonly quitada: ClaveTexto;
+  readonly quitadaSinFotos: ClaveTexto;
+  readonly motivoMaximo: ClaveTexto;
+}
+
+export const TEXTOS_FOTOS_OFERTA: TextosFotos = {
+  leyenda: 'prestador.fotos.leyenda',
+  ayuda: 'prestador.fotos.ayuda',
+  alt: 'prestador.fotos.alt',
+  altPortada: 'prestador.fotos.altPortada',
+  agregada: 'prestador.fotos.agregada',
+  quitada: 'prestador.fotos.quitada',
+  quitadaSinFotos: 'prestador.fotos.quitadaSinFotos',
+  motivoMaximo: 'prestador.fotos.motivoMaximo',
+};
+
 /** Cuántas fotos más caben en la oferta. */
 export function cuposLibres(cantidad: number): number {
   return Math.max(0, MAXIMO_FOTOS - cantidad);
@@ -50,6 +77,7 @@ export function cuposLibres(cantidad: number): number {
 export function clasificarArchivos<T extends DatosArchivo>(
   archivos: readonly T[],
   cupos: number,
+  motivoMaximo: ClaveTexto = 'prestador.fotos.motivoMaximo',
 ): ClasificacionArchivos<T> {
   const aceptados: T[] = [];
   const avisos: string[] = [];
@@ -58,7 +86,7 @@ export function clasificarArchivos<T extends DatosArchivo>(
     if (motivo) {
       avisos.push(traducir('prestador.fotos.noSubido', { nombre: archivo.name, motivo }));
     } else if (aceptados.length >= cupos) {
-      avisos.push(avisoDeMaximo(archivo.name));
+      avisos.push(avisoDeMaximo(archivo.name, motivoMaximo));
     } else {
       aceptados.push(archivo);
     }
@@ -67,10 +95,10 @@ export function clasificarArchivos<T extends DatosArchivo>(
 }
 
 /** "No se subió «x»: una oferta lleva máximo 6 fotos." en el idioma vigente. */
-export function avisoDeMaximo(nombre: string): string {
+export function avisoDeMaximo(nombre: string, motivoMaximo: ClaveTexto = 'prestador.fotos.motivoMaximo'): string {
   return traducir('prestador.fotos.noSubido', {
     nombre,
-    motivo: traducir('prestador.fotos.motivoMaximo', { maximo: MAXIMO_FOTOS }),
+    motivo: traducir(motivoMaximo, { maximo: MAXIMO_FOTOS }),
   });
 }
 

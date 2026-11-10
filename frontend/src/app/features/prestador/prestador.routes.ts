@@ -1,10 +1,5 @@
 import { Routes } from '@angular/router';
 
-/**
- * Las secciones del panel que llegan en los siguientes commits ocupan su lugar con esta, ya con su ruta y su título.
- */
-const proximamente = () => import('../../shared/proximamente/proximamente').then((modulo) => modulo.Proximamente);
-
 /** Rutas del prestador, todas dentro de su panel. Las protege la ruta `/prestador` (solo la sesión de un prestador). */
 export const RUTAS_PRESTADOR: Routes = [
   {
@@ -47,8 +42,7 @@ export const RUTAS_PRESTADOR: Routes = [
       {
         path: 'perfil',
         title: 'app.titulo.perfilPublico',
-        data: { codigo: 'P03.2', nombre: 'app.titulo.perfilPublico' },
-        loadComponent: proximamente,
+        loadComponent: () => import('./perfil/perfil-prestador').then((modulo) => modulo.PerfilPrestador),
       },
       {
         path: 'whatsapp',
