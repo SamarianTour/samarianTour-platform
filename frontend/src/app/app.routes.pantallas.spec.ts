@@ -14,6 +14,7 @@ import { RecuperarContrasena } from './features/cuentas/recuperar-contrasena/rec
 import { Registro } from './features/cuentas/registro/registro';
 import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena/restablecer-contrasena';
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
+import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
 import { DetalleSolicitud } from './features/turista/solicitudes/detalle-solicitud/detalle-solicitud';
@@ -125,13 +126,63 @@ describe('pantallas que crea cada ruta', () => {
     });
 
     it.each([
-      ['OPERADOR_DISPONIBILIDAD', '/operador'],
       ['GESTOR_DESTINO', '/gestor'],
       ['ADMINISTRADOR', '/admin'],
     ] as const)('un %s abre su pantalla "próximamente" en %s', async (rol, url) => {
       conSesion(rol);
 
       await ir(url, Proximamente);
+    });
+
+    // P02.4: la cola se crea dentro del panel y pide las solicitudes pendientes del operador.
+    it('el operador abre la cola en /operador y esta pide sus solicitudes', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador', PanelOperador);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-cola-operador')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/operador/solicitudes').length).toBeGreaterThan(0);
+    });
+
+    // Historial: la misma consulta de la cola con el parámetro estado.
+    it('el operador abre el historial en /operador/historial y este pide el estado de la dirección', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador/historial?estado=PAGADA', PanelOperador);
+
+      expect(
+        harness.routeNativeElement?.querySelector('.contenido > app-historial-operador'),
+      ).not.toBeNull();
+      const peticiones = http.match((p) => p.url === '/api/nucleo/operador/solicitudes');
+      expect(peticiones.map((p) => p.request.params.get('estado'))).toEqual(['PAGADA']);
+    });
+
+    // P02.5: atender se crea con el id de la dirección y pide esa solicitud al núcleo.
+    it('el operador abre atender en /operador/solicitudes/:id y este pide esa solicitud', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20', PanelOperador);
+
+      expect(
+        harness.routeNativeElement?.querySelector('.contenido > app-atender-solicitud'),
+      ).not.toBeNull();
+      expect(
+        http.match(
+          (p) => p.url === '/api/nucleo/operador/solicitudes/6f1c2a9e-4b7d-4c1e-9a52-3d8e0f7b1a20',
+        ),
+      ).toHaveLength(1);
+    });
+
+    // Avisos (RF-34): la lista se crea dentro del panel y pide los avisos del operador.
+    it('el operador abre los avisos en /operador/avisos y estos piden sus avisos', async () => {
+      conSesion('OPERADOR_DISPONIBILIDAD');
+
+      await ir('/operador/avisos', PanelOperador);
+
+      expect(
+        harness.routeNativeElement?.querySelector('.contenido > app-avisos-operador'),
+      ).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/operador/avisos')).toHaveLength(1);
     });
   });
 });

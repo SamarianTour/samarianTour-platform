@@ -33,3 +33,14 @@ export type TransicionSolicitud = Esquemas['Transicion'];
 export type DecisionCondiciones = Esquemas['RespuestaCondicionesRequest']['decision'];
 /** Una solicitud como aparece en la lista: sin historial ni condiciones (esas llegan al abrirla). */
 export type SolicitudResumen = Esquemas['SolicitudResumen'];
+
+/** Una solicitud en la cola o el historial del operador (RF-35, RF-36): `proximaAVencer` marca las de 6 h o menos. */
+export type SolicitudCola = Esquemas['SolicitudCola'];
+export type PaginaColaOperador = Esquemas['PaginaColaOperador'];
+/** Una solicitud para verificarla con el prestador (RF-37): trae su WhatsApp y su historial, no datos del turista. */
+export type SolicitudOperador = Esquemas['SolicitudOperador'];
+/** Lo que el operador registra al atender: hay cupo con sus condiciones, o no hay (RF-37 a RF-40). */
+export type AtencionRequest = Esquemas['AtencionRequest'];
+/** Un aviso del operador en la plataforma (RF-34): cada solicitud nueva de su cola deja uno. */
+export type AvisoOperador = Esquemas['Aviso'];
+export type PaginaAvisos = Esquemas['PaginaAvisos'];

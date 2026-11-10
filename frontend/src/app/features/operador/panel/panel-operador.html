@@ -1,0 +1,47 @@
+<aside class="lateral">
+  @if (cuenta(); as actual) {
+    <div class="identidad">
+      <span class="identidad__avatar" aria-hidden="true">{{ actual.nombre.trim().charAt(0).toUpperCase() }}</span>
+      <div class="identidad__datos">
+        <p class="rotulo">{{ 'etiquetas.rol.OPERADOR_DISPONIBILIDAD' | t }}</p>
+        <p class="identidad__nombre">{{ actual.nombre }}</p>
+      </div>
+    </div>
+  }
+
+  <nav aria-labelledby="panel-titulo">
+    <p class="rotulo" id="panel-titulo">{{ 'operador.panel.control' | t }}</p>
+    <ul class="menu">
+      <li>
+        <a routerLink="/operador" [class.activo]="seccion() === 'cola'" [attr.aria-current]="seccion() === 'cola' ? 'page' : null">
+          <app-icono nombre="reloj" />
+          {{ 'operador.panel.cola' | t }}
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/operador/historial"
+          [class.activo]="seccion() === 'historial'"
+          [attr.aria-current]="seccion() === 'historial' ? 'page' : null"
+        >
+          <app-icono nombre="escudo" />
+          {{ 'operador.panel.historial' | t }}
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/operador/avisos"
+          [class.activo]="seccion() === 'avisos'"
+          [attr.aria-current]="seccion() === 'avisos' ? 'page' : null"
+        >
+          <app-icono nombre="info" />
+          {{ 'operador.panel.avisos' | t }}
+        </a>
+      </li>
+    </ul>
+  </nav>
+</aside>
+
+<div class="contenido">
+  <router-outlet />
+</div>

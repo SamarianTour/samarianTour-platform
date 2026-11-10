@@ -1,0 +1,58 @@
+.avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aviso {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.aviso__icono {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: var(--acento-suave);
+  color: var(--enlace);
+}
+
+.aviso__cuerpo p {
+  margin: 0;
+}
+
+.aviso__oferta {
+  margin: 0.125rem 0 0.25rem;
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+
+.aviso__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.875rem;
+}
+
+.aviso__recibido {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+}
+
+/* En celular la acción pasa bajo el texto, a todo el ancho. */
+@media (max-width: 40rem) {
+  .aviso {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+  }
+
+  .aviso .boton {
+    grid-column: 1 / -1;
+  }
+}

@@ -1,0 +1,33 @@
+/* La cifra de pendientes, como la tarjeta "kpi" del diseño de la cola. */
+.kpi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1.25rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-md);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+}
+
+.kpi__icono {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: var(--acento-suave);
+  color: var(--enlace);
+}
+
+.kpi__valor {
+  font-family: var(--fuente-titulos);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.kpi__etiqueta {
+  color: var(--texto-suave);
+  font-size: 0.9375rem;
+}

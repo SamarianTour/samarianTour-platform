@@ -44,7 +44,7 @@ Los archivos generados están versionados para que la imagen de Docker se constr
 ```
 src/app
 ├── core/                    lo que existe una sola vez en la aplicación
-│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas y de solicitudes
+│   ├── api/                 tipos generados, servicios HTTP del catálogo, del prestador, de opiniones, de cuentas, de solicitudes y del operador
 │   ├── tiempo/              reloj que se renueva solo, para los plazos
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
 │   ├── sesion/              sesión con token, interceptor, guards por rol, rutas y enlaces por rol
@@ -53,6 +53,7 @@ src/app
 └── features/
     ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
     ├── prestador/           panel, mis ofertas, detalle y formulario de publicar o editar
+    ├── operador/            panel con menú lateral, cola, historial, atender una solicitud y avisos
     └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
 ```
 
@@ -74,7 +75,10 @@ src/app
 | `/prestador/ofertas/nueva` | Prestador | Publicar una oferta, con sus fotos |
 | `/prestador/ofertas/:id` | Prestador | Detalle: versión publicada y versión pendiente |
 | `/prestador/ofertas/:id/editar` | Prestador | Editar una oferta |
-| `/operador/**` | Operador | Cola de solicitudes (P02.4): por ahora "próximamente" |
+| `/operador` | Operador | P02.4 Cola: las solicitudes pendientes, las urgentes (6 h o menos) primero y resaltadas, con paginación |
+| `/operador/historial?estado=` | Operador | Historial: la misma consulta de la cola con un estado, de la más reciente a la más antigua |
+| `/operador/solicitudes/:id` | Operador | P02.5 Atender: contactar al prestador por WhatsApp y registrar "hay cupo" (con precio total y condiciones) o "no hay cupo" |
+| `/operador/avisos` | Operador | Avisos de solicitudes nuevas, del más reciente al más antiguo |
 | `/gestor/**` | Gestor | Panel de indicadores (P09.1): por ahora "próximamente" |
 | `/admin/**` | Administrador | Administración (P05.1): por ahora "próximamente" |
 
@@ -90,6 +94,32 @@ El turista pide disponibilidad sobre una oferta (RF-30 a RF-34), el operador la 
 - **El pago** no está en esta rama: una solicitud confirmada o con el pago fallido solo ofrece ver la oferta hasta que llegue la rama de pagos.
 
 La lógica (estados, plazos, validaciones y armado de la petición) está en funciones puras con pruebas propias.
+
+## Panel del operador
+
+El operador de disponibilidad verifica el cupo con el prestador y registra el resultado (RF-32 a RF-40). Está en `features/operador`, dentro de un panel con menú lateral (Cola, Historial y Avisos) que solo abre la sesión de un operador. El servicio es `core/api/operador.service.ts`; solo ve las solicitudes de los prestadores que tiene asignados.
+
+- **Cola** (`/operador`, P02.4). Las pendientes, con la urgencia de cada una (`cola.ts`): *urgente* con 6 horas o menos para atenderla (RF-36), *en plazo*, o *vencida* si el plazo ya terminó. Van primero las urgentes, luego las que están en plazo y al final las vencidas; dentro de cada grupo, la que vence antes. La urgencia se lee de `proximaAVencer` y también del reloj de la pantalla, para que una solicitud que se vuelve urgente con la pantalla abierta se resalte sin recargar. Las urgentes no dependen solo del color: llevan el texto "Urgente", un icono y una barra a la izquierda.
+- **Historial** (`/operador/historial?estado=`). La API usa la misma ruta de la cola: sin `estado` devuelve las pendientes y con otro estado, el historial. Por eso el historial se consulta estado por estado, con un enlace por cada uno de los ocho estados distintos de Pendiente; no existe una vista "todos". El estado y la página viajan en la dirección. Un estado desconocido, o `PENDIENTE`, abre las atendidas en lugar de llegar a la API.
+- **Atender** (`/operador/solicitudes/:id`, P02.5). Muestra la solicitud, un enlace de WhatsApp al prestador (`wa.me`, en otra pestaña) y el historial, y pide el resultado:
+  - *Hay cupo*: **precio total** en pesos (un solo campo, el contrato pide el total y no el precio por persona), política de cancelación, la casilla *"Confirmé con el prestador que el cupo queda apartado durante el plazo"* (RF-38, sin ella no se envía) y otras condiciones opcionales.
+  - *No hay cupo*: un motivo opcional de hasta 500 caracteres (RF-40).
+  - **Referencia junto al precio.** Se muestra lo que pidieron (personas; o noches, unidades y huéspedes en alojamiento), el precio de la oferta en el catálogo y un cálculo de referencia. Es solo informativo: el campo de precio nace vacío y el total lo escribe el operador. Si el catálogo no responde, se avisa y se puede seguir.
+  - **Errores del núcleo.** `SIN_TIEMPO_PARA_CONFIRMAR` deja solo "no hay cupo" (RF-39); `TRANSICION_INVALIDA` y `PLAZO_VENCIDO` vuelven a consultar la solicitud y muestran su estado real, ya sin formulario. Una solicitud que ya no está pendiente se muestra como consulta, con lo que se registró (una vez atendida, sus datos no cambian).
+- **Avisos** (`/operador/avisos`, RF-34). Cada solicitud nueva deja un aviso `NUEVA_SOLICITUD`, que lleva a atenderla.
+- **Actualización.** Cola, historial y avisos vuelven a consultar al regresar a la pestaña y al reconectarse (`core/api/reconsulta.ts`), para ver las solicitudes nuevas sin recargar.
+
+### Decisiones de diseño
+
+- **El operador no ve datos personales del turista.** Ni la cola, ni atender, ni los avisos muestran su nombre, su correo o su WhatsApp: el operador gestiona con el prestador y no los necesita (minimización de datos, Ley 1581). La API tampoco los entrega. Por eso la tabla del diseño de referencia no tiene la columna "Turista". El único dato que viene del turista es el comentario que escribió en la solicitud, porque el operador debe transmitirlo al prestador.
+- **No existe "el prestador no respondió".** El diseño de referencia ofrecía esa opción, pero el contrato solo deja registrar *Atendida* o *No disponible*; `SIN_RESPUESTA` lo pone el sistema cuando se vence el plazo.
+- **Sin cifras de "En revisión" ni "Resueltas hoy".** La API no las entrega; la cola muestra solo los pendientes, con el total que informa la API.
+- **Cada pantalla tiene su propio `.css`.** Las clases del diseño de referencia (tabla, fila urgente, tarjeta de cifra, opciones del resultado) están en el `.css` de la pantalla que las usa; la tabla de solicitudes, que comparten la cola y el historial, es un componente aparte (`tabla-solicitudes`).
+
+### Para el equipo de backend
+
+- **Claves de `datos` en los avisos.** El contrato describe `datos` como un mapa de texto sin fijar sus claves. El frontend usa las del ejemplo de `NUEVA_SOLICITUD` (`nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva`, `personas`) y omite lo que falte. Conviene fijarlas en el contrato.
+- **Historial sin "todos" (opcional).** Hoy no hay una consulta que devuelva todas las solicitudes tramitadas de una vez; el frontend las ofrece estado por estado. Si el equipo quiere una vista "todos", haría falta un valor o un parámetro nuevo en `GET /operador/solicitudes`.
 
 ## Diseño
 
@@ -118,7 +148,7 @@ El núcleo emite el token al iniciar sesión (`POST /api/nucleo/cuentas/sesion`)
 - **Dónde se guarda.** Con "Recordarme" desmarcado, en `sessionStorage`: sobrevive a recargar la página pero no a cerrar la pestaña. Marcado, en `localStorage` hasta que venza la renovación (7 días). Si el navegador bloquea el almacenamiento, la sesión dura lo que dure la página. Las pestañas se avisan entre sí al iniciar, renovar o cerrar la sesión.
 - **Renovación.** El token de acceso vale 15 minutos y se renueva solo un minuto antes de vencer (`POST /cuentas/sesion/renovacion`) y al arrancar la aplicación si ya venció. El token de renovación sirve una sola vez y usar uno gastado cierra la sesión (DN-29), así que solo hay **una renovación a la vez** y varias peticiones comparten su resultado.
 - **Interceptor** (`core/sesion/sesion.interceptor.ts`). Manda el token a `/api/**`, menos a las rutas de acceso (`/cuentas/*` y `/politica-datos/*`). Ante un 401 `NO_AUTENTICADO` renueva y repite la petición **una sola vez**. Si la renovación es rechazada, en una ruta protegida lleva a `/iniciar-sesion?volver=…` y en una pública (el catálogo) repite sin token. Otros 401, como `CONTRASENA_INCORRECTA`, no renuevan.
-- **Guards** (`core/sesion/guards.ts`). Cada sección es de un rol: sin sesión llevan a iniciar sesión (recordando la página) y con otro rol, a `/sin-permiso`. El servidor vuelve a comprobar el rol en cada petición. Operador, gestor y administrador tienen una pantalla "próximamente" que reemplazarán sus ramas.
+- **Guards** (`core/sesion/guards.ts`). Cada sección es de un rol: sin sesión llevan a iniciar sesión (recordando la página) y con otro rol, a `/sin-permiso`. El servidor vuelve a comprobar el rol en cada petición. Gestor y administrador tienen una pantalla "próximamente" que reemplazarán sus ramas.
 - **Regreso seguro.** `?volver=` solo acepta rutas internas de la aplicación (`rutaSegura`): rechaza `https://…`, `//…` y `javascript:`, las pantallas de acceso y las secciones de otro rol.
 - **Cabecera.** Sin sesión: "Iniciar sesión" y "Registrarse". Con sesión: los enlaces del rol (`core/sesion/enlaces-por-rol.ts`) y un menú con el nombre, "Mis datos" y "Cerrar sesión".
 
@@ -177,6 +207,10 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Nombre de la zona.** La solicitud trae solo `zonaId`; el nombre se busca en el catálogo.
 - **Referencia de la solicitud.** Se muestran las primeras 8 letras de su identificador para citarla.
 - **Cuentas internas.** Operador, gestor y administrador no tienen ruta de supresión: su cuenta la gestiona un administrador.
+- **Orden de la cola.** La API entrega la cola de la más antigua a la más reciente y el frontend la reordena por urgencia solo dentro de la página cargada, así que una urgente de la página 2 no sube a la página 1. En la práctica el orden coincide, porque el plazo del operador es siempre de 24 horas desde que se crea la solicitud.
+- **Datos de un aviso.** Los avisos del operador leen las claves `nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva` y `personas` de `datos`; el contrato no las fija.
+- **Cálculo de referencia al atender.** El precio del catálogo por lo pedido (personas, o noches por unidades en alojamiento) se muestra al operador como orientación; el precio total que se envía lo escribe él.
+- **Plazo con minutos.** Los plazos se escriben con las dos unidades mayores ("20 h 0 min"), como en las solicitudes del turista.
 
 ## Docker
 

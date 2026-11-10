@@ -1,0 +1,77 @@
+<div class="envoltura" role="region" tabindex="0" aria-labelledby="titulo-tabla-solicitudes">
+  <table class="tabla">
+    <caption class="solo-lectores" id="titulo-tabla-solicitudes">
+      {{ (modo() === 'cola' ? 'operador.tabla.captionCola' : 'operador.tabla.captionHistorial') | t }}
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ (modo() === 'cola' ? 'operador.tabla.urgencia' : 'operador.tabla.estado') | t }}</th>
+        <th scope="col">{{ 'operador.tabla.oferta' | t }}</th>
+        <th scope="col">{{ 'operador.tabla.servicio' | t }}</th>
+        <th scope="col">{{ 'operador.tabla.cantidad' | t }}</th>
+        <th scope="col">{{ 'operador.tabla.recibida' | t }}</th>
+        @if (modo() === 'cola') {
+          <th scope="col">{{ 'operador.tabla.plazo' | t }}</th>
+        }
+        <th scope="col"><span class="solo-lectores">{{ 'operador.tabla.accion' | t }}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (solicitud of solicitudes(); track solicitud.id) {
+        <tr [class.fila--urgente]="nivel(solicitud) === 'urgente'" [class.fila--vencida]="nivel(solicitud) === 'vencida'">
+          <td>
+            @if (modo() === 'cola') {
+              <span class="etiqueta" [class]="claseDeUrgencia[nivel(solicitud)]">
+                @if (nivel(solicitud) === 'urgente') {
+                  <app-icono nombre="alerta" />
+                }
+                {{ etiquetaUrgencia[nivel(solicitud)] }}
+              </span>
+            } @else {
+              <span class="etiqueta" [class]="claseDeEstado[solicitud.estado]">{{ etiquetaEstado[solicitud.estado] }}</span>
+            }
+          </td>
+          <td>
+            <strong class="oferta">{{ solicitud.oferta.nombre }}</strong>
+            <span class="menor">
+              {{ etiquetaTipo[solicitud.oferta.tipo] }} · {{ 'solicitudes.lista.ref' | t: { codigo: codigo(solicitud.id) } }}
+            </span>
+          </td>
+          <td>
+            {{ solicitud.fechaInicio | fecha }}@if (hora(solicitud); as hora) {, {{ hora }}}
+            @if (solicitud.fechaSalida) {
+              <span class="menor">{{ 'solicitudes.lista.salida' | t: { fecha: (solicitud.fechaSalida | fecha) } }}</span>
+            }
+          </td>
+          <td>
+            {{ 'solicitudes.lista.personas' | t: { n: solicitud.personas } }}
+            @if (solicitud.numeroUnidades) {
+              <span class="menor">{{ 'solicitudes.lista.unidades' | t: { n: solicitud.numeroUnidades } }}</span>
+            }
+          </td>
+          <td>{{ solicitud.creadaEn | fecha: 'conHora' }}</td>
+          @if (modo() === 'cola') {
+            <td [class.plazo--urgente]="nivel(solicitud) === 'urgente'">{{ plazo(solicitud) }}</td>
+          }
+          <td class="accion">
+            @if (modo() === 'cola') {
+              <a
+                class="boton"
+                [routerLink]="['/operador/solicitudes', solicitud.id]"
+                [attr.aria-label]="'operador.tabla.atenderA' | t: { oferta: solicitud.oferta.nombre }"
+                >{{ 'operador.tabla.atender' | t }}</a
+              >
+            } @else {
+              <a
+                class="boton boton--secundario"
+                [routerLink]="['/operador/solicitudes', solicitud.id]"
+                [attr.aria-label]="'operador.tabla.verA' | t: { oferta: solicitud.oferta.nombre }"
+                >{{ 'operador.tabla.ver' | t }}</a
+              >
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
