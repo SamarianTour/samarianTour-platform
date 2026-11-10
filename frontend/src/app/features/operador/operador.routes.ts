@@ -1,12 +1,9 @@
 import { Routes } from '@angular/router';
 
-/** Las pantallas del panel que llegan en los siguientes commits ocupan su lugar con esta, ya con su ruta y su título. */
-const proximamente = () =>
-  import('../../shared/proximamente/proximamente').then((modulo) => modulo.Proximamente);
-
 /**
  * Rutas del operador de disponibilidad, todas dentro de su panel. Las protege la ruta `/operador` (solo la sesión de un
- * operador). `solicitudes/:id` es P02.5, la pantalla a la que lleva cada fila de la cola.
+ * operador): la cola (P02.4), su historial, atender una solicitud (P02.5, a la que lleva cada fila de la cola y cada aviso)
+ * y los avisos.
  */
 export const RUTAS_OPERADOR: Routes = [
   {
@@ -35,8 +32,8 @@ export const RUTAS_OPERADOR: Routes = [
       {
         path: 'avisos',
         title: 'app.titulo.avisosOperador',
-        data: { nombre: 'app.titulo.avisosOperador' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./avisos/avisos-operador').then((modulo) => modulo.AvisosOperador),
       },
     ],
   },

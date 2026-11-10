@@ -1,0 +1,67 @@
+<section class="pagina">
+  <header class="encabezado">
+    <p class="rotulo">{{ 'operador.panel.control' | t }}</p>
+    <h1>{{ 'operador.avisos.titulo' | t }}</h1>
+    <p class="texto-suave">{{ 'operador.avisos.intro' | t }}</p>
+  </header>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (pagina(); as resultado) {
+      @if (resultado.contenido.length > 0) {
+        <ul class="avisos">
+          @for (aviso of resultado.contenido; track aviso.id) {
+            @let datos = resumen(aviso);
+            @let oferta = datos.nombreOferta ?? ('solicitudes.lista.ref' | t: { codigo: codigo(aviso.solicitudId) });
+            <li class="tarjeta aviso">
+              <span class="aviso__icono" aria-hidden="true"><app-icono nombre="info" /></span>
+
+              <div class="aviso__cuerpo">
+                <p class="rotulo">{{ claveDeTipo(aviso.tipo) | t }}</p>
+                <h2 class="aviso__oferta">{{ oferta }}</h2>
+                <p class="aviso__datos texto-suave">
+                  @if (datos.fechaInicio) {
+                    <span>{{ datos.fechaInicio | fecha }}@if (datos.hora) {, {{ datos.hora }}}</span>
+                  }
+                  @if (datos.personas) {
+                    <span>{{ 'solicitudes.lista.personas' | t: { n: datos.personas } }}</span>
+                  }
+                  <span>{{ 'solicitudes.lista.ref' | t: { codigo: codigo(aviso.solicitudId) } }}</span>
+                </p>
+                <p class="aviso__recibido texto-suave">
+                  {{ 'operador.avisos.recibido' | t: { fecha: (aviso.creadoEn | fecha: 'conHora') } }}
+                </p>
+              </div>
+
+              <a
+                class="boton boton--secundario"
+                [routerLink]="['/operador/solicitudes', aviso.solicitudId]"
+                [attr.aria-label]="'operador.tabla.atenderA' | t: { oferta: oferta }"
+                >{{ 'operador.tabla.atender' | t }}</a
+              >
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="tarjeta vacio">
+          <h2>{{ 'operador.avisos.vacioTitulo' | t }}</h2>
+          <p class="texto-suave">{{ 'operador.avisos.vacioAyuda' | t }}</p>
+        </div>
+      }
+
+      <app-paginacion
+        [pagina]="resultado.pagina"
+        [totalPaginas]="resultado.totalPaginas"
+        (cambiar)="irAPagina($event)"
+      />
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'operador.avisos.cargando' | t }}</p>
+    }
+  </div>
+</section>

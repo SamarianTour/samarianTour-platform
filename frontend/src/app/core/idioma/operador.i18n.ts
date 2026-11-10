@@ -53,6 +53,17 @@ export const OPERADOR = diccionario(
     'operador.historial.vacioTitulo': 'Sin solicitudes en este estado',
     'operador.historial.vacioAyuda': 'Aquí aparecerán las solicitudes que lleguen a este estado.',
 
+    // Avisos
+    'operador.avisos.titulo': 'Avisos',
+    'operador.avisos.intro':
+      'Cada solicitud nueva que llega a tu cola deja un aviso aquí, del más reciente al más antiguo.',
+    'operador.avisos.cargando': 'Cargando los avisos…',
+    'operador.avisos.vacioTitulo': 'No tienes avisos',
+    'operador.avisos.vacioAyuda': 'Cuando llegue una solicitud nueva, la verás aquí.',
+    'operador.avisos.tipo.NUEVA_SOLICITUD': 'Nueva solicitud',
+    'operador.avisos.tipo.otro': 'Aviso',
+    'operador.avisos.recibido': 'Recibido {fecha}',
+
     // P02.5 Atender
     'operador.atender.intro':
       'Verifica el cupo con el prestador, por WhatsApp o por llamada, y registra aquí el resultado.',
@@ -198,6 +209,16 @@ export const OPERADOR = diccionario(
     'operador.historial.cargando': 'Loading the history…',
     'operador.historial.vacioTitulo': 'No requests with this status',
     'operador.historial.vacioAyuda': 'Requests that reach this status will appear here.',
+
+    'operador.avisos.titulo': 'Notices',
+    'operador.avisos.intro':
+      'Every new request that reaches your queue leaves a notice here, from most recent to oldest.',
+    'operador.avisos.cargando': 'Loading the notices…',
+    'operador.avisos.vacioTitulo': 'You have no notices',
+    'operador.avisos.vacioAyuda': 'When a new request arrives, you will see it here.',
+    'operador.avisos.tipo.NUEVA_SOLICITUD': 'New request',
+    'operador.avisos.tipo.otro': 'Notice',
+    'operador.avisos.recibido': 'Received {fecha}',
 
     'operador.atender.intro':
       'Check the spot with the provider, by WhatsApp or phone, and record the result here.',

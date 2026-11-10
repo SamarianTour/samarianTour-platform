@@ -173,13 +173,16 @@ describe('pantallas que crea cada ruta', () => {
       ).toHaveLength(1);
     });
 
-    // Avisos llega en el siguiente commit: por ahora su ruta ya existe, con su título y su protección.
-    it('el operador abre su panel en /operador/avisos y dentro se crea una pantalla', async () => {
+    // Avisos (RF-34): la lista se crea dentro del panel y pide los avisos del operador.
+    it('el operador abre los avisos en /operador/avisos y estos piden sus avisos', async () => {
       conSesion('OPERADOR_DISPONIBILIDAD');
 
       await ir('/operador/avisos', PanelOperador);
 
-      expect(harness.routeNativeElement?.querySelector('.contenido > app-proximamente')).not.toBeNull();
+      expect(
+        harness.routeNativeElement?.querySelector('.contenido > app-avisos-operador'),
+      ).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/operador/avisos')).toHaveLength(1);
     });
   });
 });
