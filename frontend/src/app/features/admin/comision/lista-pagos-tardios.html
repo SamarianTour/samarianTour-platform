@@ -1,0 +1,72 @@
+<section class="tarjeta tardios" aria-labelledby="tardios-titulo">
+  <h2 id="tardios-titulo">{{ 'admin.pagosTardios.titulo' | t }}</h2>
+  <p class="texto-suave">{{ 'admin.pagosTardios.intro' | t }}</p>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  <div aria-live="polite" [attr.aria-busy]="cargando()">
+    @if (pagos() !== null) {
+      @if (ordenados().length > 0) {
+        <p class="total">
+          {{ 'admin.pagosTardios.total' | t: { monto: (total() | precio), n: ordenados().length } }}
+        </p>
+
+        <div class="envoltura" role="region" tabindex="0" aria-labelledby="tardios-caption">
+          <table class="tabla">
+            <caption class="solo-lectores" id="tardios-caption">{{ 'admin.pagosTardios.caption' | t }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'admin.pagosTardios.columna.pago' | t }}</th>
+                <th scope="col">{{ 'admin.pagosTardios.columna.monto' | t }}</th>
+                <th scope="col">{{ 'admin.pagosTardios.columna.motivo' | t }}</th>
+                <th scope="col">{{ 'admin.pagosTardios.columna.registrado' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (pago of ordenados(); track pago.id) {
+                <tr>
+                  <td>
+                    <span class="transaccion">
+                      <code>{{ 'admin.pagosTardios.transaccion' | t: { id: pago.transaccionId } }}</code>
+                      <button
+                        type="button"
+                        class="boton boton--secundario"
+                        [attr.aria-label]="'admin.pagosTardios.copiarId' | t: { id: pago.transaccionId }"
+                        (click)="copiar(pago.transaccionId)"
+                      >
+                        {{ 'admin.pagosTardios.copiar' | t }}
+                      </button>
+                    </span>
+                    <span class="menor">{{ 'admin.pagosTardios.referencia' | t: { referencia: pago.referencia } }}</span>
+                    <span class="menor">{{ 'solicitudes.lista.ref' | t: { codigo: codigo(pago.solicitudId) } }}</span>
+                    @if (!pago.avisado) {
+                      <span class="etiqueta etiqueta--aviso">{{ 'admin.pagosTardios.sinAvisar' | t }}</span>
+                    }
+                  </td>
+                  <td class="monto">{{ pago.monto | precio }}</td>
+                  <td>
+                    <span class="etiqueta etiqueta--peligro">{{ etiquetaMotivo[pago.motivo] }}</span>
+                    <span class="menor">{{ explicacion[pago.motivo] }}</span>
+                  </td>
+                  <td>{{ pago.registradoEn | fecha: 'conHora' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="vacio-interno">
+          <h3>{{ 'admin.pagosTardios.vacioTitulo' | t }}</h3>
+          <p class="texto-suave">{{ 'admin.pagosTardios.vacioAyuda' | t }}</p>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="texto-suave">{{ 'admin.pagosTardios.cargando' | t }}</p>
+    }
+  </div>
+</section>

@@ -1,0 +1,110 @@
+<section class="tarjeta comision" aria-labelledby="comision-titulo">
+  <h2 id="comision-titulo">{{ 'admin.comision.titulo' | t }}</h2>
+
+  @if (error(); as fallo) {
+    <p class="alerta alerta--error" role="alert">
+      <app-icono nombre="alerta" />
+      <span>{{ fallo.mensaje }}</span>
+    </p>
+  }
+
+  @if (comision(); as actual) {
+    <div class="vigente" aria-live="polite">
+      <p class="vigente__rotulo">{{ 'admin.comision.vigente' | t }}</p>
+      <p class="vigente__valor">{{ actual.porcentaje | numero: 2 }} %</p>
+      <p class="texto-suave">{{ 'admin.comision.desde' | t: { fecha: (actual.vigenteDesde | fecha: 'conHora') } }}</p>
+    </div>
+    <p class="texto-suave">{{ 'admin.comision.nota' | t }}</p>
+
+    <form class="formulario" (ngSubmit)="pedirCambio()" [formGroup]="formulario" novalidate>
+      <h3>{{ 'admin.comision.cambiar' | t }}</h3>
+
+      @if (errorGeneral(); as mensaje) {
+        <p class="alerta alerta--error" role="alert">
+          <app-icono nombre="alerta" />
+          <span>{{ mensaje() }}</span>
+        </p>
+      }
+
+      <div class="campo">
+        <label for="comision-porcentaje">{{ 'admin.comision.porcentaje' | t }}</label>
+        <input
+          id="comision-porcentaje"
+          type="number"
+          inputmode="decimal"
+          min="0"
+          max="99.99"
+          step="0.01"
+          formControlName="porcentaje"
+          aria-required="true"
+          [attr.aria-invalid]="errorDe() ? 'true' : null"
+          [attr.aria-describedby]="errorDe() ? 'comision-error comision-ayuda' : 'comision-ayuda'"
+        />
+        <p class="campo__ayuda" id="comision-ayuda">{{ 'admin.comision.ayuda' | t }}</p>
+        @if (errorDe(); as mensaje) {
+          <p class="campo__error" id="comision-error">{{ mensaje }}</p>
+        }
+      </div>
+
+      @if (ejemplo(); as caso) {
+        <p class="ejemplo texto-suave" aria-live="polite">
+          {{
+            'admin.comision.ejemplo'
+              | t: { precio: (caso.precioBase | precio), comision: (caso.comision | precio), prestador: (caso.prestador | precio) }
+          }}
+        </p>
+      }
+
+      <div class="acciones">
+        <button type="submit" class="boton" [disabled]="cambiando()">
+          {{ (cambiando() ? 'admin.comision.cambiando' : 'admin.comision.boton') | t }}
+        </button>
+      </div>
+    </form>
+
+    <h3>{{ 'admin.comision.historial' | t }}</h3>
+    <div class="envoltura" role="region" tabindex="0" aria-labelledby="comision-historial">
+      <table class="tabla">
+        <caption class="solo-lectores" id="comision-historial">{{ 'admin.comision.historial' | t }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'admin.comision.columna.porcentaje' | t }}</th>
+            <th scope="col">{{ 'admin.comision.columna.desde' | t }}</th>
+            <th scope="col">{{ 'admin.comision.columna.por' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of historial(); track fila.cambio.vigenteDesde) {
+            <tr>
+              <td>
+                {{ fila.cambio.porcentaje | numero: 2 }} %
+                @if (fila.vigente) {
+                  <span class="etiqueta etiqueta--exito">{{ 'admin.comision.marcaVigente' | t }}</span>
+                }
+              </td>
+              <td>{{ fila.cambio.vigenteDesde | fecha: 'conHora' }}</td>
+              <td>
+                @if (fila.quien; as nombre) {
+                  {{ nombre }}
+                } @else if (fila.cambio.administradorId; as id) {
+                  {{ 'admin.comision.administrador' | t: { codigo: codigo(id) } }}
+                } @else {
+                  {{ 'admin.comision.inicial' | t }}
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (cargando()) {
+    <p class="texto-suave">{{ 'admin.comision.cargando' | t }}</p>
+  }
+</section>
+
+<app-dialogo-confirmacion
+  [titulo]="tituloDelDialogo()"
+  [mensaje]="mensajeDelDialogo()"
+  [accion]="'admin.comision.dialogoAccion' | t"
+  (confirmado)="cambiar()"
+/>

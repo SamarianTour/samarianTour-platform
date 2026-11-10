@@ -35,8 +35,8 @@ export const RUTAS_ADMIN: Routes = [
       {
         path: 'comision',
         title: 'app.titulo.comisionPagos',
-        data: { codigo: 'P05.4', nombre: 'app.titulo.comisionPagos' },
-        loadComponent: proximamente,
+        loadComponent: () =>
+          import('./comision/comision-pagos').then((modulo) => modulo.ComisionPagos),
       },
       {
         path: 'zonas',

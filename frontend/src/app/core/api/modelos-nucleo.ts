@@ -75,3 +75,10 @@ export type DecisionModeracion = Esquemas['DecisionModeracion'];
 
 /** Lo que escribe el administrador para crear la cuenta de un administrador, un operador de disponibilidad o un gestor (RF-81). */
 export type CuentaInternaRequest = Esquemas['CuentaInternaRequest'];
+
+/** La comisión vigente de la plataforma y su historial, del cambio más reciente al más antiguo (RF-82). */
+export type Comision = Esquemas['Comision'];
+/** Un cambio del porcentaje de comisión; el inicial no trae quién lo hizo. */
+export type CambioComision = Esquemas['CambioComision'];
+/** Un pago que la pasarela aprobó pero no pagó la solicitud, para devolverlo a mano (RF-49, RF-50). */
+export type PagoTardio = Esquemas['PagoTardio'];

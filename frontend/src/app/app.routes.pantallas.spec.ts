@@ -160,7 +160,6 @@ describe('pantallas que crea cada ruta', () => {
 
     // El administrador entra a su panel y, dentro de él, a la pantalla de cada ruta. Se comprueba que esa pantalla se crea.
     it.each([
-      '/admin/comision',
       '/admin/zonas',
       '/admin/pendientes',
     ])('el administrador abre su panel en %s y dentro se crea una pantalla', async (url) => {
@@ -201,6 +200,18 @@ describe('pantallas que crea cada ruta', () => {
 
       expect(harness.routeNativeElement?.querySelector('.contenido > app-cuentas-internas')).not.toBeNull();
       expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
+    });
+
+    // P05.4: la comisión y los pagos tardíos se leen del núcleo; las cuentas ponen nombre a quien cambió el porcentaje.
+    it('el administrador abre comisión y pagos y estos piden sus datos', async () => {
+      conSesion('ADMINISTRADOR');
+
+      await ir('/admin/comision', PanelAdmin);
+
+      expect(harness.routeNativeElement?.querySelector('.contenido > app-comision-pagos')).not.toBeNull();
+      expect(http.match((p) => p.url === '/api/nucleo/admin/comision')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/cuentas-internas')).toHaveLength(1);
+      expect(http.match((p) => p.url === '/api/nucleo/admin/pagos-tardios')).toHaveLength(1);
     });
 
     // Alertas de sesgo (RET-02): se crea dentro del panel y pide las alertas y los nombres de los prestadores.

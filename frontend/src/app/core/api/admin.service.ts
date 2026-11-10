@@ -4,11 +4,13 @@ import { Observable } from 'rxjs';
 import { API_NUCLEO } from './api.config';
 import {
   AlertaSesgo,
+  Comision,
   CuentaInterna,
   CuentaInternaRequest,
   DecisionModeracion,
   DecisionOfertaRequest,
   DecisionOpinionRequest,
+  PagoTardio,
   PrestadorAdmin,
   SincronizacionRnt,
 } from './modelos-nucleo';
@@ -35,6 +37,27 @@ export class AdminService {
   /** Las cuentas de administradores, operadores y gestores, activas y desactivadas, de la más antigua a la más reciente (RF-81). */
   cuentasInternas(): Observable<CuentaInterna[]> {
     return this.http.get<CuentaInterna[]>(`${BASE}/cuentas-internas`);
+  }
+
+  /** La comisión vigente (el porcentaje del precio base que se descuenta al prestador, RF-53) y su historial (RF-82). */
+  comision(): Observable<Comision> {
+    return this.http.get<Comision>(`${BASE}/comision`);
+  }
+
+  /**
+   * Cambia el porcentaje de comisión (RF-82): de 0 a menos de 100, con hasta dos decimales. Rige para los pagos que se confirmen desde
+   * ahora; los ya confirmados conservan el porcentaje que se les aplicó, sin efecto retroactivo (RF-83). Devuelve la nueva vigente.
+   */
+  cambiarComision(porcentaje: number): Observable<Comision> {
+    return this.http.put<Comision>(`${BASE}/comision`, { porcentaje });
+  }
+
+  /**
+   * Los pagos que la pasarela aprobó pero no pagaron la solicitud (llegaron con ella vencida, cerrada o pagada, o por otro monto), del
+   * más reciente al más antiguo. La solicitud no cambia y el administrador los reembolsa a mano, fuera del sistema (RF-49, RF-50).
+   */
+  pagosTardios(): Observable<PagoTardio[]> {
+    return this.http.get<PagoTardio[]>(`${BASE}/pagos-tardios`);
   }
 
   /**

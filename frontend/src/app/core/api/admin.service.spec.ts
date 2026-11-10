@@ -171,4 +171,35 @@ describe('AdminService', () => {
 
     http.expectOne(`${BASE}/cuentas-internas/a%2Fb/desactivacion`).flush({});
   });
+
+  it('pide la comisión vigente con su historial', () => {
+    let comision: unknown;
+
+    servicio.comision().subscribe((c) => (comision = c));
+
+    const peticion = http.expectOne(`${BASE}/comision`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush({ porcentaje: 4, vigenteDesde: '2026-01-01T00:00:00Z', historial: [] });
+    expect(comision).toMatchObject({ porcentaje: 4 });
+  });
+
+  it('cambia la comisión con PUT y solo el porcentaje', () => {
+    let comision: unknown;
+
+    servicio.cambiarComision(5.5).subscribe((c) => (comision = c));
+
+    const peticion = http.expectOne(`${BASE}/comision`);
+    expect(peticion.request.method).toBe('PUT');
+    expect(peticion.request.body).toEqual({ porcentaje: 5.5 });
+    peticion.flush({ porcentaje: 5.5, vigenteDesde: '2026-10-27T15:00:00Z', historial: [] });
+    expect(comision).toMatchObject({ porcentaje: 5.5 });
+  });
+
+  it('pide los pagos tardíos', () => {
+    servicio.pagosTardios().subscribe();
+
+    const peticion = http.expectOne(`${BASE}/pagos-tardios`);
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush([]);
+  });
 });
