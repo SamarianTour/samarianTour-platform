@@ -51,7 +51,7 @@ src/app
 │   ├── errores/             interceptor que traduce el problem+json a un mensaje para el usuario
 │   ├── sesion/              sesión con token, interceptor, guards por rol, rutas y enlaces por rol
 │   └── avisos/              mensajes breves de confirmación
-├── shared/                  piezas reutilizables: mapa, galería de fotos, menú de la cuenta, marco de las pantallas de acceso, "próximamente", iconos, estrellas, paginación, diálogo de confirmación, pasos de la solicitud, pipes y textos
+├── shared/                  piezas reutilizables: mapa, galería de fotos, menú de la cuenta, marco de las pantallas de acceso, iconos, estrellas, paginación, diálogo de confirmación, pasos de la solicitud, pipes y textos
 └── features/
     ├── turista/             inicio (/), catálogo (/catalogo), paquetes (/paquetes), ficha de zona (/zonas/:id), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
     ├── prestador/           panel con menú lateral: inicio (dashboard), mis ofertas, detalle y formulario de publicar o editar, RNT y tipo, perfil público, WhatsApp de contacto y cuenta de cobro
@@ -59,7 +59,8 @@ src/app
     ├── admin/               panel con menú lateral: prestadores y RNT, moderación, cuentas internas, comisión y pagos tardíos, zonas, alertas de sesgo y pendientes técnicos
     ├── gestor/              panel con menú lateral y el panel de indicadores: Demanda, Embudo de conversión y Distribución por tipo de prestador, con el filtro de periodo, gráficos de barras y sus tablas de datos
     ├── recomendacion/       asistente de recomendaciones, página de alertas del destino y las secciones de alertas y alternativas de la ficha (públicas)
-    └── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
+    ├── cuentas/             iniciar sesión, registro, recuperar la contraseña, mis datos y "no tienes permiso"
+    └── errores/             "página no encontrada" (cualquier dirección que ninguna ruta reconoce)
 ```
 
 | Ruta | Quién | Pantalla |
@@ -77,6 +78,7 @@ src/app
 | `/restablecer-contrasena?token=…` | Todos | Poner la contraseña nueva; es el enlace que envía el correo del núcleo |
 | `/mis-datos` | Con sesión | P06.4 Mis datos y derechos, verificar el WhatsApp y eliminar la cuenta |
 | `/sin-permiso` | Con sesión | "No tienes permiso" cuando se abre la sección de otro rol |
+| cualquier otra dirección | Todos | "Página no encontrada", con el enlace al Inicio. Ya no redirige en silencio |
 | `/mis-opiniones` | Turista | Opiniones del turista, con su estado y el motivo si fue rechazada |
 | `/turista/solicitar/:ofertaId` | Turista | P02.1 Formulario de solicitud de disponibilidad (el botón de la ficha lleva aquí) |
 | `/turista/solicitudes` | Turista | P02.2 Mis solicitudes: los 9 estados, filtros Todas / Activas / Finalizadas y plazos |
@@ -104,6 +106,55 @@ src/app
 | `/admin/zonas?estado=` | Administrador | P05.5 Zonas: registrar, editar, inactivar y reactivar |
 | `/admin/alertas-sesgo` | Administrador | Alertas de sesgo |
 | `/admin/pendientes` | Administrador | Pendientes técnicos: avisos al catálogo rechazados y eventos de pago fallidos |
+
+## Pantallas, rutas, roles y endpoints
+
+Todas las pantallas de la aplicación. El **código** es el de la hoja de ruta (P01.0 a P09.1); las pantallas sin código en la hoja de ruta llevan «—». En **endpoints**, **C** es el catálogo (`/api/catalogo`), **N** el núcleo (`/api/nucleo`) y **R** la recomendación (`/api/recomendacion`). El **RF** es el que consta en los comentarios del código de la pantalla; donde no consta dice **por confirmar**.
+
+**Roles.** *Público* lo abre cualquiera. *Con sesión* lo abre cualquier rol. Las secciones de un rol (`/turista`, `/prestador`, `/operador`, `/gestor`, `/admin`) las protege un guard: sin sesión llevan a `/iniciar-sesion?volver=…` y con otro rol, a `/sin-permiso`. Una dirección que ninguna ruta reconoce muestra «Página no encontrada».
+
+| Código | Ruta en Angular | Rol | Endpoints | RF |
+|---|---|---|---|---|
+| P01.0 Inicio | `/` | Público | C `GET /zonas` | por confirmar |
+| P01.3 Catálogo de paquetes | `/paquetes` | Público | C `GET /ofertas?tipo=PAQUETE`, `GET /zonas` | por confirmar (usa la búsqueda del catálogo, RF-14 a RF-17) |
+| — Catálogo | `/catalogo` | Público | C `GET /ofertas`, `GET /zonas` | RF-14 a RF-17, RF-25, RF-29 |
+| — Ficha de la oferta | `/ofertas/:id` | Público (el turista con sesión opina y solicita) | C `GET /ofertas/{id}`, `GET /ofertas/{id}/opiniones`, `POST /turista/opiniones`; R `GET /zonas/{zonaId}/alertas`, `GET /ofertas/{ofertaId}/alternativas` | RF-20, RF-24, RF-25, RF-29, RF-59, RF-60 |
+| — Ficha de la zona | `/zonas/:id` | Público | C `GET /zonas/{zonaId}`; R `GET /zonas/{zonaId}/alertas` | RF-25 (HU-TUR-16) |
+| — Mis opiniones | `/mis-opiniones` | Turista | C `GET /turista/opiniones` | por confirmar |
+| P02.1 Formulario de solicitud | `/turista/solicitar/:ofertaId` | Turista | C `GET /ofertas/{id}`; N `POST /turista/solicitudes` | RF-30 a RF-32 (QAS-08) |
+| P02.2 Estado de mis solicitudes | `/turista/solicitudes`, `/turista/solicitudes/:id` | Turista | N `GET /turista/solicitudes`, `GET /turista/solicitudes/{id}`; C `GET /zonas` | RF-33, RF-42 |
+| P02.3 Confirmar o declinar condiciones | `/turista/solicitudes/:id` | Turista | N `POST /turista/solicitudes/{id}/respuesta` | RF-33, RF-43 |
+| P02.4 Cola del operador | `/operador` | Operador | N `GET /operador/solicitudes` | RF-35, RF-36 |
+| P02.5 Atender solicitud | `/operador/solicitudes/:id` | Operador | N `GET /operador/solicitudes/{id}`, `POST /operador/solicitudes/{id}/atencion`; C `GET /ofertas/{id}` | RF-37 a RF-40 |
+| P02.5 Historial del operador | `/operador/historial?estado=` | Operador | N `GET /operador/solicitudes?estado=` | RF-35 |
+| P02.5 Avisos del operador | `/operador/avisos` | Operador | N `GET /operador/avisos` | RF-34 |
+| P03.0 Dashboard del prestador | `/prestador` | Prestador | N `GET /prestador/registro`; C `GET /prestador/ofertas` | RF-77 (HU-PRE-01) |
+| P03.1 RNT y tipo | `/prestador/rnt` | Prestador | N `GET`/`POST /prestador/registro`, `PUT /prestador/rnt`, `PUT /prestador/tipo` | RF-68, RF-69, RF-72 (HU-PRE-02) |
+| P03.2 Perfil público | `/prestador/perfil` | Prestador | C `GET`/`PUT /prestador/perfil`, `POST /prestador/perfil/fotos`, `DELETE /prestador/perfil/fotos/{fotoId}` | RF-64, RF-72 (HU-PRE-03) |
+| P03.4 WhatsApp de contacto | `/prestador/whatsapp` | Prestador | N `PUT /prestador/whatsapp`, `POST /prestador/whatsapp/codigo`, `POST /prestador/whatsapp/verificacion` | RF-57, RF-71 (HU-PRE-04) |
+| P03.5 Cuenta de cobro | `/prestador/cuenta-cobro` | Prestador | N `GET`/`PUT /prestador/cuenta-cobro` | RF-74, RF-75 (HU-PRE-05) |
+| — Mis ofertas, publicar, detalle y editar | `/prestador/ofertas`, `/prestador/ofertas/nueva`, `/prestador/ofertas/:id`, `/prestador/ofertas/:id/editar` | Prestador | C `GET`/`POST /prestador/ofertas`, `GET`/`PUT /prestador/ofertas/{id}`, `PATCH /prestador/ofertas/{id}/retiro`, `POST /prestador/fotos`, `GET /zonas` | RF-65, RF-66, RF-67 |
+| P04.1 Pagar la solicitud | `/turista/solicitudes/:id` (solicitud confirmada) | Turista | N `POST /turista/solicitudes/{id}/pago` | RF-46 a RF-49 |
+| P04.2 Pago fallido o reintentar | `/turista/solicitudes/:id` (pago fallido, en curso o pagado) | Turista | N `GET /turista/solicitudes/{id}/pagos`, `POST /turista/solicitudes/{id}/pago` | RF-50 a RF-52, RF-58 |
+| P05.1 RNT y prestadores | `/admin` | Administrador | N `GET /admin/prestadores`, `PUT /admin/prestadores/{id}/operador`, `POST /admin/rnt/sincronizacion`, `GET /admin/cuentas-internas` | RF-76 a RF-78, RF-81 |
+| P05.2 Moderación | `/admin/moderacion` | Administrador | C `GET /admin/moderacion/ofertas`, `GET /admin/moderacion/opiniones`; N `POST /admin/moderacion/ofertas/{id}/decision`, `POST /admin/moderacion/opiniones/{id}/decision` | RF-79, RF-80 |
+| P05.3 Cuentas internas | `/admin/cuentas` | Administrador | N `GET`/`POST /admin/cuentas-internas`, `POST /admin/cuentas-internas/{id}/desactivacion`, `.../reactivacion` | RF-81 |
+| P05.4 Comisión y pagos tardíos | `/admin/comision` | Administrador | N `GET`/`PUT /admin/comision`, `GET /admin/pagos-tardios` | RF-49, RF-50, RF-82, RF-83 |
+| P05.5 Zonas | `/admin/zonas?estado=` | Administrador | C `GET`/`POST /admin/zonas`, `PUT /admin/zonas/{zonaId}` | RF-84 (HU-ADM-06) |
+| P05.5 Alertas de sesgo | `/admin/alertas-sesgo` | Administrador | N `GET /admin/alertas-sesgo`, `GET /admin/prestadores` | por confirmar |
+| — Pendientes técnicos | `/admin/pendientes` | Administrador | N `GET /admin/bandeja/rechazados`, `POST /admin/bandeja/{idAviso}/reenvio`, `GET /admin/pagos/eventos-fallidos`, `POST /admin/pagos/eventos-fallidos/{eventoId}/reintento` | por confirmar |
+| P06.1 Registro con política de datos | `/registro` (`?tipo=prestador`) | Público | N `POST /cuentas/registro`, `GET /politica-datos/vigente` | RF-01 a RF-03, RF-09 a RF-11 |
+| P06.2 Iniciar sesión | `/iniciar-sesion` (`?volver=`) | Público | N `POST /cuentas/sesion`, `POST /cuentas/sesion/renovacion`, `POST /cuentas/sesion/cierre` | RF-04, RF-05 |
+| P06.3 Recuperar acceso | `/recuperar-contrasena`, `/restablecer-contrasena?token=` | Público | N `POST /cuentas/contrasena/restablecimiento`, `POST /cuentas/contrasena` | RF-07, RF-08 |
+| P06.4 Mis datos y derechos | `/mis-datos` | Con sesión | N `GET`/`PUT /cuenta`, `POST /turista/whatsapp/codigo`, `POST /turista/whatsapp/verificacion`, `POST /turista/supresion`, `POST /prestador/supresion`, `GET /politica-datos/{version}` | RF-03, RF-05, RF-12, RF-13 |
+| P08.1 Recomendaciones | `/recomendaciones` | Público | R `POST /recomendaciones`; C `GET /zonas` | RF-26, RF-27 (HU-TUR-04) |
+| P08.2 Alertas | `/alertas`, y la sección de la ficha de una oferta | Público | R `GET /alertas`, `GET /zonas/{zonaId}/alertas` | RF-28 (HU-TUR-05) |
+| P08.3 Alternativas | sección de `/ofertas/:id` (zona de alta afluencia) | Público | R `GET /ofertas/{ofertaId}/alternativas` | RF-29 (HU-TUR-06) |
+| P09.1 Panel de indicadores | `/gestor`, `/gestor/embudo`, `/gestor/distribucion` (`?desde=&hasta=`) | Gestor | N `GET /gestor/indicadores/tablero`, `/embudo`, `/categorias`; C `GET /zonas` | RF-85 a RF-89 (HU-GES-01) |
+| — No tienes permiso | `/sin-permiso` | Con sesión | — | — |
+| — Página no encontrada | cualquier dirección que ninguna ruta reconoce (`**`) | Público | — | — |
+
+Las rutas `/internal/**` y `/pagos/eventos` del núcleo no son del frontend.
 
 ## Solicitudes de disponibilidad
 
@@ -302,7 +353,7 @@ El núcleo emite el token al iniciar sesión (`POST /api/nucleo/cuentas/sesion`)
 - **Dónde se guarda.** Con "Recordarme" desmarcado, en `sessionStorage`: sobrevive a recargar la página pero no a cerrar la pestaña. Marcado, en `localStorage` hasta que venza la renovación (7 días). Si el navegador bloquea el almacenamiento, la sesión dura lo que dure la página. Las pestañas se avisan entre sí al iniciar, renovar o cerrar la sesión.
 - **Renovación.** El token de acceso vale 15 minutos y se renueva solo un minuto antes de vencer (`POST /cuentas/sesion/renovacion`) y al arrancar la aplicación si ya venció. El token de renovación sirve una sola vez y usar uno gastado cierra la sesión (DN-29), así que solo hay **una renovación a la vez** y varias peticiones comparten su resultado.
 - **Interceptor** (`core/sesion/sesion.interceptor.ts`). Manda el token a `/api/**`, menos a las rutas de acceso (`/cuentas/*` y `/politica-datos/*`). Ante un 401 `NO_AUTENTICADO` renueva y repite la petición **una sola vez**. Si la renovación es rechazada, en una ruta protegida lleva a `/iniciar-sesion?volver=…` y en una pública (el catálogo) repite sin token. Otros 401, como `CONTRASENA_INCORRECTA`, no renuevan.
-- **Guards** (`core/sesion/guards.ts`). Cada sección es de un rol: sin sesión llevan a iniciar sesión (recordando la página) y con otro rol, a `/sin-permiso`. El servidor vuelve a comprobar el rol en cada petición. Gestor y administrador tienen una pantalla "próximamente" que reemplazarán sus ramas.
+- **Guards** (`core/sesion/guards.ts`). Cada sección es de un rol: sin sesión llevan a iniciar sesión (recordando la página) y con otro rol, a `/sin-permiso`. El servidor vuelve a comprobar el rol en cada petición.
 - **Regreso seguro.** `?volver=` solo acepta rutas internas de la aplicación (`rutaSegura`): rechaza `https://…`, `//…` y `javascript:`, las pantallas de acceso y las secciones de otro rol.
 - **Cabecera.** Sin sesión: "Iniciar sesión" y "Registrarse". Con sesión: los enlaces del rol (`core/sesion/enlaces-por-rol.ts`) y un menú con el nombre, "Mis datos" y "Cerrar sesión".
 
