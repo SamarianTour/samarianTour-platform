@@ -73,6 +73,10 @@ export const APP = diccionario(
     'app.titulo.recuperarAcceso': 'Recuperar el acceso',
     'app.titulo.contrasenaNueva': 'Contraseña nueva',
     'app.titulo.sinPermiso': 'Sin permiso',
+    'app.titulo.noEncontrada': 'Página no encontrada',
+    'app.noEncontrada.titulo': 'Página no encontrada',
+    'app.noEncontrada.explicacion': 'La dirección que abriste no existe o cambió de lugar. Revisa que esté bien escrita.',
+    'app.noEncontrada.irInicio': 'Ir al inicio',
     'app.titulo.solicitar': 'Solicitar disponibilidad',
     'app.titulo.detalleSolicitud': 'Detalle de la solicitud',
 
@@ -145,6 +149,10 @@ export const APP = diccionario(
     'app.titulo.recuperarAcceso': 'Recover access',
     'app.titulo.contrasenaNueva': 'New password',
     'app.titulo.sinPermiso': 'No permission',
+    'app.titulo.noEncontrada': 'Page not found',
+    'app.noEncontrada.titulo': 'Page not found',
+    'app.noEncontrada.explicacion': "The address you opened doesn't exist or has moved. Check that it is spelled correctly.",
+    'app.noEncontrada.irInicio': 'Go to the home page',
     'app.titulo.solicitar': 'Request availability',
     'app.titulo.detalleSolicitud': 'Request details',
 

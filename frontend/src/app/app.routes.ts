@@ -100,5 +100,11 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/turista/turista.routes').then((modulo) => modulo.RUTAS_TURISTA),
   },
-  { path: '**', redirectTo: '' },
+  {
+    // Cualquier dirección que ninguna ruta reconoce: una pantalla que lo dice, con enlace al Inicio. Va al final.
+    path: '**',
+    title: 'app.titulo.noEncontrada',
+    loadComponent: () =>
+      import('./features/errores/pagina-no-encontrada/pagina-no-encontrada').then((modulo) => modulo.PaginaNoEncontrada),
+  },
 ];
