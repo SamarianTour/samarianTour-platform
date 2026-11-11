@@ -20,7 +20,10 @@ import {
   SIN_FILTROS,
   consultaDeFiltros,
   filtrosDesdeUrl,
+  TEXTO_MAXIMO,
   hayFiltros,
+  normalizarTexto,
+  textoInvalido,
   urlDeFiltros,
 } from './filtros';
 
@@ -46,7 +49,11 @@ export class Catalogo {
   protected readonly etiquetaNivel = NIVEL_ESFUERZO;
   protected readonly iconoDeTipo = ICONO_DE_TIPO;
 
+  /** El largo máximo del texto, para el atributo `maxlength` del campo. */
+  protected readonly textoMaximo = TEXTO_MAXIMO;
+
   protected readonly formulario = new FormGroup({
+    texto: new FormControl('', { nonNullable: true }),
     tipo: new FormControl<TipoOferta | ''>('', { nonNullable: true }),
     zonaId: new FormControl('', { nonNullable: true }),
     tipoActividad: new FormControl<TipoActividad | ''>('', { nonNullable: true }),
@@ -61,6 +68,10 @@ export class Catalogo {
   protected readonly pagina = signal<PaginaOfertas | null>(null);
   protected readonly error = signal<ErrorApi | null>(null);
   protected readonly zonas = signal<readonly Zona[]>([]);
+  /** Lo que hay escrito en el campo de búsqueda, aunque todavía no alcance para buscar. */
+  protected readonly escrito = signal('');
+  /** Hay texto, pero de menos de 2 caracteres: se avisa y no se busca (DC-37). */
+  protected readonly textoCorto = computed(() => textoInvalido(this.escrito()));
 
   protected readonly conFiltros = computed(() => hayFiltros(this.filtros()));
   /** La zona del filtro, para avisar si es de alta afluencia o un área protegida (RF-25, RF-29). */
@@ -83,7 +94,11 @@ export class Catalogo {
         tap((filtros) => {
           this.filtros.set(filtros);
           this.cargando.set(true);
-          this.formulario.setValue(aFormulario(filtros), { emitEvent: false });
+          // Si el campo tiene un texto que todavía no se puede buscar ("b"), no se pisa mientras la persona escribe.
+          const campo = this.formulario.controls.texto.value;
+          const texto = normalizarTexto(campo) === filtros.texto ? campo : (filtros.texto ?? '');
+          this.formulario.setValue({ ...aFormulario(filtros), texto }, { emitEvent: false });
+          this.escrito.set(texto);
         }),
         switchMap((filtros) =>
           this.catalogo.buscar(consultaDeFiltros(filtros)).pipe(
@@ -103,6 +118,10 @@ export class Catalogo {
     this.formulario.valueChanges
       .pipe(debounceTime(350), takeUntilDestroyed())
       .subscribe(() => this.navegar({ ...this.filtrosDelFormulario(), pagina: 0 }));
+
+    this.formulario.controls.texto.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((valor) => this.escrito.set(valor));
   }
 
   protected zona(id: string): string {
@@ -111,6 +130,10 @@ export class Catalogo {
 
   protected irAPagina(pagina: number): void {
     this.navegar({ ...this.filtros(), pagina });
+  }
+
+  protected borrarTexto(): void {
+    this.formulario.controls.texto.setValue('');
   }
 
   protected limpiar(): void {
@@ -137,6 +160,7 @@ export class Catalogo {
   private filtrosDelFormulario(): FiltrosCatalogo {
     const valores = this.formulario.getRawValue();
     return {
+      texto: normalizarTexto(valores.texto),
       tipo: valores.tipo || null,
       zonaId: valores.zonaId || null,
       tipoActividad: valores.tipoActividad || null,
@@ -151,6 +175,7 @@ export class Catalogo {
 
 function aFormulario(filtros: FiltrosCatalogo) {
   return {
+    texto: filtros.texto ?? '',
     tipo: filtros.tipo ?? ('' as const),
     zonaId: filtros.zonaId ?? '',
     tipoActividad: filtros.tipoActividad ?? ('' as const),
