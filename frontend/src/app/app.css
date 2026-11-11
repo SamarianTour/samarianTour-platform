@@ -194,4 +194,19 @@ main {
     flex-basis: 100%;
     margin-inline: 0;
   }
+
+  /* Con cinco enlaces (turista) la línea no cabe en 320 px: baja a una segunda fila en vez de desbordar (WCAG 1.4.10). */
+  .navegacion {
+    flex-wrap: wrap;
+    gap: 0 0.25rem;
+  }
+
+  .navegacion a {
+    padding-inline: 0.625rem;
+  }
+
+  .navegacion a.activo::after {
+    right: 0.625rem;
+    left: 0.625rem;
+  }
 }

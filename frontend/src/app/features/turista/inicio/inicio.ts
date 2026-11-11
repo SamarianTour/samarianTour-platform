@@ -1,14 +1,12 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, of } from 'rxjs';
-import { CatalogoService } from '../../../core/api/catalogo.service';
-import { TipoOferta, Zona } from '../../../core/api/modelos';
+import { TipoOferta } from '../../../core/api/modelos';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import type { ClaveTexto } from '../../../core/idioma/textos';
 import { Icono, ICONO_DE_TIPO } from '../../../shared/icono/icono';
 import { TEXTO_MAXIMO, normalizarTexto, textoInvalido } from '../catalogo/filtros';
+import { ZonasInicio } from './zonas-inicio/zonas-inicio';
 
 /** Una de las cuatro tarjetas de tipo. El paquete tiene su propia pantalla (`/paquetes`); los demás filtran el catálogo. */
 interface TarjetaDeTipo {
@@ -49,28 +47,20 @@ const TARJETAS: readonly TarjetaDeTipo[] = [
   },
 ];
 
-/** Cuántas zonas se muestran con un mismo fondo antes de repetir. El contrato no trae imagen de la zona. */
-const FONDOS_DE_ZONA = 6;
-
 /**
  * P01.0 Inicio, público. Reúne el buscador (lleva al catálogo con el texto), las cuatro tarjetas de tipo, las zonas reales
- * (`GET /zonas`) y la invitación a pedir recomendaciones. No hay "destacados" ni patrocinados, y tampoco consulta el servicio
- * de recomendación: cada visita gastaría cupo de la IA y, sin la consulta del turista, la respuesta sería genérica.
- *
- * Las zonas van en una fila con desplazamiento horizontal, que se desliza en el celular y se mueve con los botones anterior y
- * siguiente. No avanza sola (WCAG 2.2.2).
+ * (`ZonasInicio`, que pide `GET /zonas`) y la invitación a pedir recomendaciones. No hay "destacados" ni patrocinados, y tampoco
+ * consulta el servicio de recomendación: cada visita gastaría cupo de la IA y, sin la consulta del turista, la respuesta sería
+ * genérica.
  */
 @Component({
   selector: 'app-inicio',
-  imports: [ReactiveFormsModule, RouterLink, Icono, TPipe],
+  imports: [ReactiveFormsModule, RouterLink, Icono, TPipe, ZonasInicio],
   templateUrl: './inicio.html',
   styleUrl: './inicio.css',
 })
 export class Inicio {
   private readonly router = inject(Router);
-  private readonly catalogo = inject(CatalogoService);
-
-  private readonly pista = viewChild<ElementRef<HTMLElement>>('pista');
 
   protected readonly tarjetas = TARJETAS;
   protected readonly iconoDeTipo = ICONO_DE_TIPO;
@@ -79,26 +69,6 @@ export class Inicio {
   protected readonly texto = new FormControl('', { nonNullable: true });
   /** Se avisa al enviar, no mientras se escribe: la persona aún puede estar a medias. */
   protected readonly textoCorto = signal(false);
-
-  /** `null` mientras carga; la lista vacía si falla o no hay zonas, y entonces la sección no aparece. */
-  protected readonly zonas = signal<readonly Zona[] | null>(null);
-  protected readonly hayZonas = computed(() => (this.zonas()?.length ?? 0) > 0);
-  protected readonly hayAnterior = signal(false);
-  protected readonly haySiguiente = signal(false);
-
-  constructor() {
-    this.catalogo
-      .zonas()
-      .pipe(
-        catchError(() => of<Zona[]>([])),
-        takeUntilDestroyed(),
-      )
-      .subscribe((zonas) => {
-        this.zonas.set(zonas);
-        // Las tarjetas se pintan en el siguiente ciclo: ahí se sabe si la fila se desborda.
-        queueMicrotask(() => this.actualizarBotones());
-      });
-  }
 
   protected buscar(evento: Event): void {
     evento.preventDefault();
@@ -110,29 +80,5 @@ export class Inicio {
     this.textoCorto.set(false);
     const texto = normalizarTexto(escrito);
     void this.router.navigate(['/catalogo'], { queryParams: texto ? { texto } : {} });
-  }
-
-  protected fondoDeZona(posicion: number): string {
-    return `zona--fondo-${posicion % FONDOS_DE_ZONA}`;
-  }
-
-  /** Mueve la fila casi un ancho de pantalla; sin animación si la persona pidió menos movimiento. */
-  protected mover(sentido: -1 | 1): void {
-    const pista = this.pista()?.nativeElement;
-    // Los botones usan aria-disabled y no disabled: así conservan el foco del teclado al llegar al extremo.
-    if (!pista || !(sentido === -1 ? this.hayAnterior() : this.haySiguiente())) {
-      return;
-    }
-    const reducido = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    pista.scrollBy?.({ left: sentido * pista.clientWidth * 0.85, behavior: reducido ? 'auto' : 'smooth' });
-  }
-
-  protected actualizarBotones(): void {
-    const pista = this.pista()?.nativeElement;
-    if (!pista) {
-      return;
-    }
-    this.hayAnterior.set(pista.scrollLeft > 4);
-    this.haySiguiente.set(pista.scrollLeft + pista.clientWidth < pista.scrollWidth - 4);
   }
 }
