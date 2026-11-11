@@ -11,10 +11,11 @@ import { TPipe } from '../../../core/idioma/t.pipe';
 import { traducir } from '../../../core/idioma/traducir';
 import { SesionService } from '../../../core/sesion/sesion.service';
 import { DialogoConfirmacion } from '../../../shared/dialogo-confirmacion/dialogo-confirmacion';
-import { TIPO_OFERTA, UNIDAD_PRECIO } from '../../../shared/etiquetas';
+import { TIPO_OFERTA } from '../../../shared/etiquetas';
 import { Icono } from '../../../shared/icono/icono';
 import { Paginacion } from '../../../shared/paginacion/paginacion';
 import { PrecioPipe } from '../../../shared/precio.pipe';
+import { UnidadPipe } from '../../../shared/unidad.pipe';
 import { CLASE_DE_ESTADO, ESTADO_OFERTA, EstadoOferta, estadoDe, motivoDeRechazo, sePuedeEditar, versionVigente } from '../estado-oferta';
 
 const TAMANO_PAGINA = 10;
@@ -26,6 +27,8 @@ interface Fila {
   readonly oferta: OfertaPrestador;
   readonly nombre: string;
   readonly precio: number | undefined;
+  /** La unidad que entrega la API ("por persona"); el pipe `precio` la traduce. */
+  readonly unidadPrecio: string | undefined;
   readonly estado: EstadoOferta;
   readonly motivoRechazo: string | undefined;
   readonly editable: boolean;
@@ -34,7 +37,7 @@ interface Fila {
 /** Ofertas del prestador, con su estado calculado y las acciones de ver, editar y retirar (RF-65, RF-66). */
 @Component({
   selector: 'app-mis-ofertas',
-  imports: [RouterLink, PrecioPipe, Paginacion, DialogoConfirmacion, Icono, TPipe],
+  imports: [RouterLink, PrecioPipe, UnidadPipe, Paginacion, DialogoConfirmacion, Icono, TPipe],
   templateUrl: './mis-ofertas.html',
   styleUrl: './mis-ofertas.css',
 })
@@ -54,7 +57,6 @@ export class MisOfertas {
   protected readonly etiquetaTipo = TIPO_OFERTA;
   protected readonly etiquetaEstado = ESTADO_OFERTA;
   protected readonly claseDeEstado = CLASE_DE_ESTADO;
-  protected readonly unidad = UNIDAD_PRECIO;
 
   protected readonly cargando = signal(true);
   protected readonly pagina = signal<PaginaOfertasPrestador | null>(null);
@@ -128,6 +130,7 @@ function aFila(oferta: OfertaPrestador): Fila {
       return version?.nombre ?? traducir('prestador.ofertas.sinNombre');
     },
     precio: version?.precioReferencia,
+    unidadPrecio: version?.unidadPrecio,
     estado: estadoDe(oferta),
     motivoRechazo: motivoDeRechazo(oferta),
     editable: sePuedeEditar(oferta),

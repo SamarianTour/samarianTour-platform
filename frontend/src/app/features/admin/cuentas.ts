@@ -112,7 +112,3 @@ export function filtrarCuentas(cuentas: readonly CuentaInterna[], filtro: Filtro
   return filtro === 'todas' ? [...cuentas] : cuentas.filter((cuenta) => cuenta.rol === filtro);
 }
 
-/** Cuántas cuentas hay de un rol. */
-export function contarPorRol(cuentas: readonly CuentaInterna[], rol: Rol): number {
-  return cuentas.filter((cuenta) => cuenta.rol === rol).length;
-}

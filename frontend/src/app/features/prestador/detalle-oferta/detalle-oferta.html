@@ -70,7 +70,7 @@
                 </div>
                 <div>
                   <dt>{{ 'prestador.detalle.precio' | t }}</dt>
-                  <dd class="renglon__precio">{{ version.contenido.precioReferencia | precio: unidad[propia.tipo] }}</dd>
+                  <dd class="renglon__precio">{{ version.contenido.precioReferencia | precio: version.contenido.unidadPrecio }}</dd>
                 </div>
                 <div>
                   <dt>{{ 'prestador.detalle.capacidad' | t }}</dt>

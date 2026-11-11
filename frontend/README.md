@@ -22,6 +22,7 @@ npm run gen:api    # regenerar los tipos de la API desde los tres contratos
 
 - Hay tres bases, siempre relativas al origen de la página: `/api/catalogo`, `/api/nucleo` (cuentas, solicitudes, pagos, administración) y `/api/recomendacion` (`core/api/api.config.ts`).
 - En desarrollo, `ng serve` reenvía `/api` a `http://localhost:8080` (`proxy.conf.json`). En Docker Compose, el mismo Nginx sirve la aplicación y reenvía la API. En los dos casos el navegador habla con un solo origen, así que el backend no necesita CORS.
+- Lo que el contrato no cubre y el equipo de backend debería revisar está reunido en [Para el equipo de backend](#para-el-equipo-de-backend).
 
 ## Tipos generados desde el contrato
 
@@ -138,11 +139,6 @@ El operador de disponibilidad verifica el cupo con el prestador y registra el re
 - **Sin cifras de "En revisión" ni "Resueltas hoy".** La API no las entrega; la cola muestra solo los pendientes, con el total que informa la API.
 - **Cada pantalla tiene su propio `.css`.** Las clases del diseño de referencia (tabla, fila urgente, tarjeta de cifra, opciones del resultado) están en el `.css` de la pantalla que las usa; la tabla de solicitudes, que comparten la cola y el historial, es un componente aparte (`tabla-solicitudes`).
 
-### Para el equipo de backend
-
-- **Claves de `datos` en los avisos.** El contrato describe `datos` como un mapa de texto sin fijar sus claves. El frontend usa las del ejemplo de `NUEVA_SOLICITUD` (`nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva`, `personas`) y omite lo que falte. Conviene fijarlas en el contrato.
-- **Historial sin "todos" (opcional).** Hoy no hay una consulta que devuelva todas las solicitudes tramitadas de una vez; el frontend las ofrece estado por estado. Si el equipo quiere una vista "todos", haría falta un valor o un parámetro nuevo en `GET /operador/solicitudes`.
-
 ## Panel del administrador
 
 El administrador gestiona la plataforma desde `/admin`, dentro de un panel con menú lateral (`shared/panel-lateral`) que solo abre la sesión de un administrador. Está en `features/admin`; los servicios son `core/api/admin.service.ts` (núcleo, `/api/nucleo/admin/**`) y `core/api/admin-catalogo.service.ts` (catálogo, `/api/catalogo/admin/**`). Cada pantalla tiene su lógica en funciones puras con pruebas propias (`prestadores.ts`, `moderacion.ts`, `cuentas.ts`, `comision.ts`, `pagos-tardios.ts`, `zonas.ts`, `alertas-sesgo.ts`, `pendientes.ts`).
@@ -154,12 +150,6 @@ El administrador gestiona la plataforma desde `/admin`, dentro de un panel con m
 - **Zonas** (`/admin/zonas`, P05.5). Se escriben directo en el catálogo. Una zona nunca se elimina: se inactiva, sale de la lista pública y no admite ofertas nuevas ni ediciones, pero sus ofertas siguen visibles. Como `PUT` reemplaza todos los datos, inactivar y reactivar mandan la zona completa con solo `activa` cambiada. El nombre es único sin importar mayúsculas, tildes ni espacios (`ZONA_DUPLICADA`).
 - **Alertas de sesgo** (`/admin/alertas-sesgo`). Cada día se compara el porcentaje de apariciones de cada prestador en las recomendaciones con su porcentaje de las ofertas visibles; si el índice pasa de 1,5 se abre una alerta, y se cierra sola cuando baja. La pantalla solo las consulta.
 - **Pendientes técnicos** (`/admin/pendientes`). Dos listas: los avisos al catálogo rechazados, con reenvío, y los eventos de pago fallidos, con reintento.
-
-### Para el equipo de backend
-
-- **Tiempo máximo de Nginx en la sincronización del RNT.** El frontend espera la respuesta sin límite, pero `/api/nucleo/` pasa por Nginx con el `proxy_read_timeout` por defecto (60 s). Si el RNT tarda más, el corte vendrá de la infraestructura. Conviene subirlo para esa ruta o hacer la sincronización asíncrona.
-- **Textos libres.** El `tipo` de un aviso y el estado que informa la pasarela en un evento fallido no son una lista cerrada en el contrato; el frontend los muestra tal como llegan. Conviene fijarlos.
-- **Motivo del rechazo de un intento de pago.** Ver "Pagos": `IntentoPago` no trae el motivo.
 
 ## Panel del prestador
 
@@ -179,13 +169,6 @@ El prestador gestiona su registro y sus ofertas desde `/prestador`, dentro de un
 - **La verificación del WhatsApp es el mismo componente del turista.** `VerificarWhatsapp` acepta, de forma opcional, el número, el aviso y cómo verificar y pedir otro código; sin ellas se comporta como en Mis datos. En el prestador no toca la cuenta de la sesión.
 - **Las fotos del perfil usan el selector de las ofertas.** `SelectorFotos` recibe cómo subir y quitar, los textos ("del perfil"), si hay orden y si es obligatorio. En el perfil cada foto se sube y se quita en el servidor al instante, sin orden ni portada (la API no los tiene) y el perfil puede quedarse sin fotos. Hay que crear el perfil antes de subir fotos.
 - **Lo que el diseño de referencia traía y no se construyó** porque el contrato no lo tiene: las cifras de vistas, calificación y solicitudes recientes del dashboard; el certificado del RNT en PDF; la persona responsable, el logo y las zonas del perfil; el teléfono fijo, el correo, el horario y el mensaje automático del canal de contacto (el horario de atención va en el perfil); y el documento del titular de la cuenta de cobro.
-
-### Para el equipo de backend
-
-- **Dashboard.** No hay datos de actividad del prestador (vistas de sus ofertas, calificación promedio, solicitudes recientes). Si el equipo los quiere mostrar, haría falta un endpoint nuevo.
-- **Perfil público.** El contrato solo tiene nombre comercial, descripción, horario, sitio web, redes y fotos. Persona responsable, logo y zonas donde opera, que traía el diseño, no existen. Las fotos del perfil no se pueden reordenar.
-- **Cuenta de cobro.** El detalle de un `DATO_INVALIDO` sobre `numero` no debería repetir el número recibido (el frontend ya no lo muestra, pero queda en la respuesta y puede acabar en un registro). `CuentaCobro.entidad` es obligatorio en la respuesta: para Nequi y Daviplata el frontend no lo muestra, pero conviene confirmar qué devuelve el núcleo. El historial de cuentas anteriores no se puede consultar.
-- **Canal de contacto.** No hay teléfono fijo, correo, horario ni mensaje automático del prestador, que el diseño de referencia mostraba.
 
 ## Panel del gestor
 
@@ -221,14 +204,6 @@ Los gráficos son barras horizontales hechas con HTML y CSS (`componentes/grafic
 - **Sin "Exportar".** El diseño de referencia traía el botón, pero el contrato no tiene ninguna ruta de exportación.
 - **Lo que el diseño de referencia traía y no se construyó** porque el contrato no lo tiene: las variaciones frente al periodo anterior (+5 %), las solicitudes por mes, las visitas por zona y la distribución de tipos de oferta del catálogo.
 
-### Para el equipo de backend
-
-- **Nombre de la zona.** El tablero trae solo `zonaId`. El frontend busca el nombre en `GET /zonas`, que solo devuelve las zonas **activas**: una zona inactiva con solicitudes en el periodo se muestra como "Zona sin nombre (id)". Conviene que `DemandaZona` traiga también el nombre de la zona, o que el gestor pueda leer las zonas inactivas.
-- **Series y comparaciones.** No hay solicitudes por mes ni variación frente al periodo anterior, que el diseño de referencia mostraba. Si se quieren, haría falta un endpoint nuevo (o un parámetro de agrupación).
-- **Visitas.** No hay datos de visitas a las ofertas ni a las zonas.
-- **Exportación.** No hay ruta para descargar los indicadores.
-- **Fecha final en el futuro.** El contrato no dice qué pasa; el frontend no la deja enviar.
-
 ## Pagos
 
 El turista paga una solicitud confirmada (RF-46 a RF-52) en la pasarela externa, que puede ser la **simulada** del núcleo (con los botones "Aprobar" y "Rechazar") o el sandbox de **Wompi**; ver "Pasarela de pagos" en el README principal. La pantalla es el detalle de la solicitud (`/turista/solicitudes/:id`): el núcleo y la pasarela devuelven al turista exactamente ahí. El código está en `features/turista/solicitudes` (`pagar-solicitud`, `confirmando-pago`, `pago-confirmado`, `intentos-pago` y la lógica pura de `pagos.ts`) y en `core/api/pagos.service.ts`.
@@ -250,10 +225,6 @@ El turista paga una solicitud confirmada (RF-46 a RF-52) en la pasarela externa,
 
 La lógica (intentos que quedan, si se puede pagar, motivos, validación del checkout y calendario de reconsulta) está en funciones puras con pruebas propias.
 
-### Para el equipo de backend
-
-- **Motivo del rechazo (opcional).** `IntentoPago` trae solo el estado del intento, no el motivo que dio la pasarela (fondos insuficientes, tarjeta rechazada, etc.). El frontend muestra una explicación fija por estado. Si el equipo quiere mostrar el motivo real, haría falta un campo nuevo en `IntentoPago`.
-
 ## Inicio, catálogo y zonas
 
 Pantallas públicas del turista, en `features/turista` (`inicio/`, `catalogo/`, `zona/`).
@@ -265,11 +236,6 @@ Pantallas públicas del turista, en `features/turista` (`inicio/`, `catalogo/`, 
 - **Paquetes** (`/paquetes`, P01.3). Usa el mismo componente del catálogo con el dato de ruta `tipoFijo: 'PAQUETE'`: no ofrece elegir el tipo y la URL no lo repite.
 - **Ficha de zona** (`/zonas/:id`, RF-25). `GET /zonas/{zonaId}`. También responde por una zona inactiva (DC-49) y entonces lo avisa. Las "marcas" son `areaProtegida` y `altaAfluencia` del contrato. Las alertas son la misma sección opcional de la ficha de una oferta.
 - **Menú.** "Paquetes" está junto a "Catálogo" para quien no ha iniciado sesión, el turista y el prestador. No hay enlace "Inicio": el logo (`Samarian Tour, inicio`) lleva a `/`.
-
-### Para el equipo de backend
-
-- **Orden de los paquetes.** El diseño de referencia traía "Ordenar por" (precio de mayor a menor, más actividades incluidas). `GET /ofertas` solo ordena por precio ascendente y luego por id, así que el selector no se construyó. Haría falta un parámetro `orden` o un conteo de actividades por paquete en `OfertaResumen`.
-- **Imagen de la zona (opcional).** `Zona` no trae foto; las tarjetas del Inicio usan seis fondos de color que se repiten. Una portada por zona permitiría mostrarla.
 
 ## Recomendaciones y alertas
 
@@ -307,13 +273,6 @@ Las secciones de la ficha no ocupan lugar mientras consultan, así la página no
 - **[SUPUESTO] Las zonas con alertas se ordenan por gravedad**, de la más grave a la menos grave; a igual nivel se conserva el orden del servicio (el de su id).
 - **[SUPUESTO] El límite de 10 s del `POST /recomendaciones`** se eligió porque el servicio puede tardar hasta unos 9 s (catálogo 3 s, IA 6 s y luego reglas; ver `docs/decisiones-recomendacion.md`).
 - Una zona sin nombre en el resumen de alertas se muestra como "Zona sin nombre".
-
-### Para el equipo de backend
-
-- **Margen del `POST /recomendaciones`.** En el peor caso el servicio tarda unos 9 s y el frontend espera 10 s: queda 1 s de margen, y el Nginx (`proxy_read_timeout`) o cualquier retraso de red lo puede consumir. Conviene confirmar que la ruta `/api/recomendacion/` tiene un tiempo máximo mayor y, si se puede, acortar el camino de la IA.
-- **Nombre de la zona en las alertas.** `ZonaConAlertas.zonaNombre` se omite si el catálogo no lo pudo dar; el turista solo vería un id. El frontend lo muestra como "Zona sin nombre". Conviene que el servicio siempre lo entregue o lo pida al catálogo con un respaldo.
-- **504.** El contrato solo documenta el 503 (`RECOMENDACION_NO_DISPONIBLE`, `ALERTAS_NO_DISPONIBLES`). Si el Nginx devuelve 502 o 504 cuando el servicio está caído, conviene documentarlo.
-- **Fecha de la alerta del IDEAM.** Las alertas del IDEAM no traen fecha de emisión ni de fin (DR-15); la ficha solo puede mostrar la hora de consulta de la fuente, no desde cuándo está vigente.
 
 ## Diseño
 
@@ -392,7 +351,7 @@ El interceptor de errores lee el `application/problem+json` y traduce su `codigo
 Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SUPUESTO]` en el código:
 
 - **Texto alternativo de las fotos.** La API no guarda una descripción de cada foto, así que el texto alternativo es genérico: la posición de la foto, el total y el nombre de la oferta. En las tarjetas del catálogo la imagen es decorativa.
-- **Unidad del precio en "Mis ofertas".** La lista de ofertas propias no trae `unidadPrecio`; se toma de la tabla por tipo de oferta de DC-22.
+- **Unidad del precio en el formulario.** Al publicar o editar todavía no hay una versión con `unidadPrecio`, así que la ayuda del campo de precio usa la tabla por tipo de oferta de DC-22. La búsqueda, la ficha, Mis ofertas y el detalle muestran la unidad que entrega la API.
 - **Estado de la oferta.** Se calcula con `retirada`, `publicada` y `pendiente`. Si cumple más de una definición manda este orden: retirada, rechazada, publicada con cambios en revisión, en moderación, publicada.
 - **Tipo de prestador.** La cuenta no lo trae; se lee del token. Un prestador recién registrado no lo tiene hasta registrar su RNT en la sección RNT, y mientras tanto el panel y el formulario le explican que no puede publicar. Como el tipo viaja en el token, tras registrar el RNT o cambiar el tipo se renueva la sesión.
 - **Ofertas sin RNT activo.** El dashboard dice que con el RNT inactivo, no encontrado o sin registrar las ofertas no se muestran en el catálogo (RF-77); lo calcula con `estadoRnt`, no con `habilitado`.
@@ -422,6 +381,61 @@ Lo que el contrato no cubre se resolvió en el frontend y está marcado con `[SU
 - **Nombre de las zonas del tablero.** Se toma de la lista pública de zonas (solo activas); sin él se muestra el `zonaId`.
 - **Conversiones calculadas.** El paso de una etapa del embudo a la siguiente y el porcentaje de pago por categoría no los entrega el núcleo: se calculan en el frontend, solo con cantidades conocidas, y con un decimal.
 - **Orden de las categorías.** De la más grande a la más pequeña, no el del núcleo.
+
+## Para el equipo de backend
+
+Todo lo que el contrato no cubre y que el frontend resolvió por su cuenta, o que dejó sin construir, reunido en un solo lugar. Cada punto dice la pantalla, el contrato y el endpoint, y qué hace el frontend hoy. Los que están marcados **(opcional)** son mejoras; el resto pide una decisión o un ajuste del contrato. Los detalles de cada pantalla están en su sección de este archivo y en la sección "Supuestos".
+
+Contratos: `catalogo` = `contratos/catalogo.openapi.yaml`, `núcleo` = `contratos/nucleo.openapi.yaml` y `recomendación` = `contratos/recomendacion.openapi.yaml`.
+
+### Datos que faltan en una respuesta
+
+| Punto | Pantalla | Contrato y endpoint | Qué hace el frontend hoy |
+|---|---|---|---|
+| **Estado de la oferta.** `OfertaPrestador` solo trae `retirada`, `publicada` y `pendiente`. | Mis ofertas | catálogo, `GET /prestador/ofertas` | Calcula el estado: retirada, rechazada, publicada con cambios en revisión, en moderación, publicada. Un campo `estado` evitaría que dos implementaciones difieran. |
+| **Tipo de prestador.** La cuenta no lo trae. | Panel del prestador | núcleo, `GET /cuenta` | Lo lee del token; tras registrar el RNT o cambiar el tipo renueva la sesión. |
+| **Nombre del prestador en las alertas de sesgo.** `AlertaSesgo` trae solo `prestadorId`. | P05.5 Alertas de sesgo | núcleo, `GET /admin/alertas-sesgo` | Busca el nombre en `GET /admin/prestadores`; si esa lista no se puede leer, muestra el identificador. |
+| **Nombre del administrador en la comisión.** El cambio de comisión trae solo `administradorId`. | P05.4 Comisión | núcleo, `GET /admin/comision` | Busca el nombre en `GET /admin/cuentas-internas`. |
+| **Nombre de la zona en el tablero.** `DemandaZona` trae solo `zonaId`. | P09.1 Panel de indicadores | núcleo, `GET /gestor/indicadores/tablero` | Busca el nombre en `GET /zonas` (catálogo), que devuelve solo las zonas **activas**: una zona inactiva con solicitudes se muestra como "Zona sin nombre". Conviene que `DemandaZona` traiga el nombre. |
+| **Nombre de la zona en la solicitud.** Trae solo `zonaId`. | P02.2 Mis solicitudes | núcleo, `GET /turista/solicitudes` | Busca el nombre en el catálogo. |
+| **Nombre de la zona en las alertas.** `ZonaConAlertas.zonaNombre` se omite si el catálogo no lo pudo dar. | P08.2 Alertas | recomendación, `GET /alertas` | Muestra "Zona sin nombre". Conviene que el servicio siempre lo entregue o lo pida al catálogo con un respaldo. |
+| **Motivo del rechazo de un intento de pago.** `IntentoPago` trae el estado, no el motivo de la pasarela. **(opcional)** | P04.2 Pago fallido | núcleo, `GET /turista/solicitudes/{solicitudId}/pagos` | Muestra una explicación fija por estado (`RECHAZADO`, `ERROR`, `ABANDONADO`…). |
+| **Texto alternativo de las fotos.** La API no guarda una descripción de cada foto (DC-47). **(opcional)** | Ficha de la oferta; Publicar oferta | catálogo, `GET /ofertas/{id}`, `POST /prestador/fotos` | Usa un texto genérico: posición, total y nombre de la oferta. |
+| **Imagen de la zona.** `Zona` no trae foto. **(opcional)** | P01.0 Inicio | catálogo, `GET /zonas` | Las tarjetas usan seis fondos de color que se repiten. |
+| **Fecha de las alertas del IDEAM.** No traen fecha de emisión ni de fin (DR-15). | P08.2 Alertas | recomendación, `GET /alertas`, `GET /zonas/{zonaId}/alertas` | Solo muestra la hora de consulta de la fuente, no desde cuándo está vigente. |
+| **Claves de `datos` en los avisos.** El contrato lo describe como un mapa de texto sin fijar las claves. | P02.5 Avisos del operador | núcleo, `GET /operador/avisos` (`Aviso.datos`) | Lee las del ejemplo de `NUEVA_SOLICITUD` (`nombreOferta`, `fechaInicio`, `horaSalida` o `horaReserva`, `personas`) y omite las que falten. Conviene fijarlas en el contrato. |
+| **Listas no cerradas.** El `tipo` de un aviso rechazado y el estado de la pasarela en un evento fallido no son una lista cerrada. | Pendientes técnicos (admin) | núcleo, `GET /admin/bandeja/rechazados`, `GET /admin/pagos/eventos-fallidos` | Traduce los que conoce y muestra tal cual los demás. |
+
+### Consultas y parámetros que faltan
+
+| Punto | Pantalla | Contrato y endpoint | Qué hace el frontend hoy |
+|---|---|---|---|
+| **Orden de los paquetes.** El diseño traía "Ordenar por" (precio de mayor a menor, más actividades). | P01.3 Paquetes | catálogo, `GET /ofertas` | Solo hay precio ascendente y luego id, así que el selector no se construyó. Haría falta un parámetro `orden` o un conteo de actividades en `OfertaResumen`. |
+| **Filtro por estado en Mis solicitudes.** | P02.2 Mis solicitudes | núcleo, `GET /turista/solicitudes` | Filtra "Activas" y "Finalizadas" en el navegador, solo sobre la página cargada. |
+| **Orden y "todos" en la cola.** La API entrega la cola de la más antigua a la más reciente; el historial se consulta estado por estado. **(opcional)** | P02.4 Cola; P02.5 Historial | núcleo, `GET /operador/solicitudes` | Reordena por urgencia solo dentro de la página cargada (en la práctica coincide: el plazo es de 24 h). Una vista "todos" pediría un valor o parámetro nuevo. |
+| **Zonas incompletas.** El reemplazo es completo y exige descripción y ubicación. | P05.5 Zonas | catálogo, `PUT /admin/zonas/{zonaId}` | Una zona sin descripción o ubicación no se puede inactivar ni reactivar desde la lista: la tarjeta pide completarla. |
+| **Fecha final futura en los indicadores.** El contrato no dice qué pasa. | P09.1 Indicadores | núcleo, `GET /gestor/indicadores/*` (`hasta`) | No deja enviarla y usa los últimos 30 días ante un periodo inválido. |
+| **Conversiones.** El paso de una etapa del embudo a la siguiente y el porcentaje de pago por categoría no los entrega el núcleo. | P09.1 Indicadores | núcleo, `GET /gestor/indicadores/embudo`, `/categorias` | Los calcula, con un decimal. |
+
+### Pantallas del diseño sin datos en el contrato
+
+| Punto | Pantalla | Contrato y endpoint | Qué hace el frontend hoy |
+|---|---|---|---|
+| **Actividad del prestador** (vistas de sus ofertas, calificación promedio, solicitudes recientes). | P03.0 Dashboard | sin endpoint | No se muestra; haría falta un endpoint nuevo. |
+| **Perfil público.** Persona responsable, logo y zonas donde opera no existen. Las fotos del perfil no se pueden reordenar. | P03.2 Perfil público | catálogo, `GET/PUT /prestador/perfil`, `/prestador/perfil/fotos` | No se muestran. |
+| **Canal de contacto.** No hay teléfono fijo, correo, horario ni mensaje automático. | P03.4 WhatsApp de contacto | núcleo, `/prestador/whatsapp` | Solo el número de WhatsApp. |
+| **Cuentas de cobro.** El historial de cuentas anteriores no se puede consultar. `CuentaCobro.entidad` es obligatorio en la respuesta: para Nequi y Daviplata el frontend no lo muestra y conviene confirmar qué devuelve el núcleo. | P03.5 Cuenta de cobro | núcleo, `GET/PUT /prestador/cuenta-cobro` | Muestra solo la cuenta vigente. |
+| **Series, comparaciones, visitas y exportación.** No hay solicitudes por mes, variación frente al periodo anterior, visitas a ofertas o zonas, ni descarga. | P09.1 Indicadores | núcleo, `GET /gestor/indicadores/*` | No se muestran; haría falta un endpoint o un parámetro de agrupación. |
+
+### Errores, tiempos e infraestructura
+
+| Punto | Pantalla | Contrato y endpoint | Qué hace el frontend hoy |
+|---|---|---|---|
+| **Detalle de `DATO_INVALIDO` sobre `numero`.** Repite el número recibido; podría acabar en un registro. | P03.5 Cuenta de cobro | núcleo, `PUT /prestador/cuenta-cobro` | Ya no lo muestra, pero queda en la respuesta. |
+| **Tiempo máximo de Nginx en la sincronización del RNT.** | P05.1 RNT y prestadores | núcleo, `POST /admin/rnt/sincronizacion` | Espera sin límite, pero `/api/nucleo/` pasa por Nginx con `proxy_read_timeout` de 60 s: el corte vendría de la infraestructura. Subirlo para esa ruta o hacer la sincronización asíncrona. |
+| **Margen del `POST /recomendaciones`.** En el peor caso el servicio tarda unos 9 s y el frontend espera 10 s. | P08.1 Recomendaciones | recomendación, `POST /recomendaciones` | Un Nginx más corto o un retraso de red lo consumen. Confirmar que `/api/recomendacion/` tiene un tiempo máximo mayor. |
+| **502 y 504.** El contrato solo documenta el 503 (`RECOMENDACION_NO_DISPONIBLE`, `ALERTAS_NO_DISPONIBLES`). | P08.1 a P08.3 | recomendación, todas las rutas | Trata 502, 503 y 504 como "no disponible". Si el Nginx los devuelve, documentarlo. |
+| **`llavePublica` y `firmaIntegridad`.** **(opcional)** | P04.1 Pagar | núcleo, `POST /turista/solicitudes/{solicitudId}/pago` | No las usa: abre siempre `checkout.url`, que sirve para la pasarela simulada y para Wompi. |
 
 ## Docker
 

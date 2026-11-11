@@ -42,7 +42,7 @@
                   <td [attr.data-etiqueta]="'prestador.ofertas.colPrecio' | t">
                     <span class="precio">
                       <strong>{{ fila.precio | precio }}</strong>&ngsp;
-                      <span>{{ unidad[fila.oferta.tipo] }}</span>
+                      <span>{{ fila.unidadPrecio | unidad }}</span>
                     </span>
                   </td>
                   <td [attr.data-etiqueta]="'prestador.ofertas.colEstado' | t">

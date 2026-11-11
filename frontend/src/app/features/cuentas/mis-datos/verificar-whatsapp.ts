@@ -17,7 +17,7 @@ const CODIGO = /^\d{6}$/;
 
 /**
  * Verificar el WhatsApp del turista con el código de 6 dígitos que le llegó (RF-03). Mientras no lo verifique no puede
- * enviar solicitudes (RF-30). El código vale 30 minutos y admite 3 intentos [SUPUESTO] (DN-28). Al verificar, la cuenta
+ * enviar solicitudes (RF-30). El código vale 30 minutos y admite 3 intentos (DN-28; ver el contrato del núcleo, `/turista/whatsapp/verificacion`). Al verificar, la cuenta
  * de la sesión se actualiza y el panel desaparece solo.
  *
  * También lo usa el prestador (P03.4), que verifica su WhatsApp con otras rutas del núcleo. Sin entradas se comporta como el del

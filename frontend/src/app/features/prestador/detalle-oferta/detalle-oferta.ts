@@ -8,7 +8,7 @@ import { ErrorApi } from '../../../core/errores/error-api';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import { traducir } from '../../../core/idioma/traducir';
-import { ESTADO_MODERACION, TIPO_OFERTA, UNIDAD_PRECIO } from '../../../shared/etiquetas';
+import { ESTADO_MODERACION, TIPO_OFERTA } from '../../../shared/etiquetas';
 import { FechaPipe } from '../../../shared/fecha.pipe';
 import { Icono } from '../../../shared/icono/icono';
 import { PrecioPipe } from '../../../shared/precio.pipe';
@@ -40,7 +40,6 @@ export class DetalleOferta {
   protected readonly etiquetaEstado = ESTADO_OFERTA;
   protected readonly claseDeEstado = CLASE_DE_ESTADO;
   protected readonly etiquetaModeracion = ESTADO_MODERACION;
-  protected readonly unidad = UNIDAD_PRECIO;
 
   protected readonly estado = signal<Estado>({ tipo: 'cargando' });
 

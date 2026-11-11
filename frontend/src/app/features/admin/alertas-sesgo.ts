@@ -1,8 +1,5 @@
 import { AlertaSesgo, PrestadorAdmin } from '../../core/api/modelos-nucleo';
 
-/** El índice a partir del cual la recomendación abre una alerta de sesgo (RET-02). Solo informa; lo calcula y aplica el núcleo. */
-export const UMBRAL_INDICE_SESGO = 1.5;
-
 /** Las alertas de la de mayor índice a la de menor; a igual índice, la actualizada más recientemente primero. No modifica la lista. */
 export function ordenarPorIndice(alertas: readonly AlertaSesgo[]): AlertaSesgo[] {
   return [...alertas].sort(
