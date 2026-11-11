@@ -17,6 +17,13 @@ const CATALOGO: EnlaceNavegacion = {
   secciones: ['/catalogo', '/ofertas'],
 };
 
+/** P01.3: el catálogo con solo paquetes. */
+const PAQUETES: EnlaceNavegacion = {
+  clave: 'app.nav.paquetes',
+  ruta: '/paquetes',
+  secciones: ['/paquetes'],
+};
+
 /**
  * P08.1. Las alertas del destino (`/alertas`) no tienen enlace propio en el menú: se llega a ellas desde Recomendaciones y desde la
  * sección de alertas de la ficha de una oferta, así que esa sección también marca este enlace.
@@ -30,6 +37,7 @@ const RECOMENDACIONES: EnlaceNavegacion = {
 /** Lo que ve quien no ha iniciado sesión. "Soy prestador" lleva a registrarse como prestador. */
 const SIN_SESION: readonly EnlaceNavegacion[] = [
   CATALOGO,
+  PAQUETES,
   RECOMENDACIONES,
   {
     clave: 'app.nav.soyPrestador',
@@ -46,12 +54,14 @@ const SIN_SESION: readonly EnlaceNavegacion[] = [
 const POR_ROL: Record<Rol, readonly EnlaceNavegacion[]> = {
   TURISTA: [
     CATALOGO,
+    PAQUETES,
     RECOMENDACIONES,
     { clave: 'app.nav.misSolicitudes', ruta: '/turista/solicitudes', secciones: ['/turista'] },
     { clave: 'app.nav.misOpiniones', ruta: '/mis-opiniones', secciones: ['/mis-opiniones'] },
   ],
   PRESTADOR: [
     CATALOGO,
+    PAQUETES,
     RECOMENDACIONES,
     { clave: 'app.nav.misOfertas', ruta: '/prestador/ofertas', secciones: ['/prestador'] },
   ],

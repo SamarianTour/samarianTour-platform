@@ -41,6 +41,9 @@ export class Catalogo {
   private readonly router = inject(Router);
   private readonly catalogo = inject(CatalogoService);
 
+  /** En `/paquetes` el tipo no se elige: la ruta lo fija (P01.3). */
+  protected readonly tipoFijo: TipoOferta | null = this.ruta.snapshot.data['tipoFijo'] ?? null;
+
   protected readonly tipos = tipoOfertaValues;
   protected readonly tiposActividad = tipoActividadValues;
   protected readonly niveles = nivelEsfuerzoValues;
@@ -73,7 +76,7 @@ export class Catalogo {
   /** Hay texto, pero de menos de 2 caracteres: se avisa y no se busca (DC-37). */
   protected readonly textoCorto = computed(() => textoInvalido(this.escrito()));
 
-  protected readonly conFiltros = computed(() => hayFiltros(this.filtros()));
+  protected readonly conFiltros = computed(() => hayFiltros(this.filtros(), this.tipoFijo));
   /** La zona del filtro, para avisar si es de alta afluencia o un área protegida (RF-25, RF-29). */
   protected readonly zonaElegida = computed(() => this.zonas().find((zona) => zona.id === this.filtros().zonaId));
   private readonly nombresDeZona = computed(() => new Map(this.zonas().map((zona) => [zona.id, zona.nombre])));
@@ -90,7 +93,7 @@ export class Catalogo {
     // La URL manda: cada cambio de sus query params vuelve a llenar el formulario y a buscar.
     this.ruta.queryParamMap
       .pipe(
-        map(filtrosDesdeUrl),
+        map((params) => this.conTipoFijo(filtrosDesdeUrl(params))),
         tap((filtros) => {
           this.filtros.set(filtros);
           this.cargando.set(true);
@@ -154,14 +157,20 @@ export class Catalogo {
   }
 
   private navegar(filtros: FiltrosCatalogo): void {
-    void this.router.navigate([], { relativeTo: this.ruta, queryParams: urlDeFiltros(filtros) });
+    // El tipo fijo ya lo dice la ruta: no se repite en la URL.
+    const params = urlDeFiltros(this.tipoFijo ? { ...filtros, tipo: null } : filtros);
+    void this.router.navigate([], { relativeTo: this.ruta, queryParams: params });
+  }
+
+  private conTipoFijo(filtros: FiltrosCatalogo): FiltrosCatalogo {
+    return this.tipoFijo ? { ...filtros, tipo: this.tipoFijo } : filtros;
   }
 
   private filtrosDelFormulario(): FiltrosCatalogo {
     const valores = this.formulario.getRawValue();
     return {
       texto: normalizarTexto(valores.texto),
-      tipo: valores.tipo || null,
+      tipo: this.tipoFijo ?? (valores.tipo || null),
       zonaId: valores.zonaId || null,
       tipoActividad: valores.tipoActividad || null,
       precioMin: precio(valores.precioMin),

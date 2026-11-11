@@ -84,9 +84,10 @@ export function consultaDeFiltros(filtros: FiltrosCatalogo): ConsultaOfertas {
   };
 }
 
-/** Indica si hay algún filtro puesto, sin contar la página. */
-export function hayFiltros(filtros: FiltrosCatalogo): boolean {
-  return Object.keys(urlDeFiltros({ ...filtros, pagina: 0 })).length > 0;
+/** Indica si hay algún filtro puesto, sin contar la página ni el tipo que fija la ruta. */
+export function hayFiltros(filtros: FiltrosCatalogo, tipoFijo: TipoOferta | null = null): boolean {
+  // El tipo que fija la ruta (`/paquetes`) no es un filtro que la persona pueda limpiar.
+  return Object.keys(urlDeFiltros({ ...filtros, tipo: tipoFijo ? null : filtros.tipo, pagina: 0 })).length > 0;
 }
 
 function valorDe<T extends string>(permitidos: readonly T[], valor: string | null): T | null {

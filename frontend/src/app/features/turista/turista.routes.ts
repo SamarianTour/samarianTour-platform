@@ -10,6 +10,14 @@ export const RUTAS_TURISTA: Routes = [
     loadComponent: () => import('./catalogo/catalogo').then((modulo) => modulo.Catalogo),
   },
   {
+    // P01.3: el mismo catálogo con el tipo fijo en PAQUETE y su propio título.
+    path: 'paquetes',
+    pathMatch: 'full',
+    title: 'app.titulo.paquetes',
+    data: { tipoFijo: 'PAQUETE' },
+    loadComponent: () => import('./catalogo/catalogo').then((modulo) => modulo.Catalogo),
+  },
+  {
     path: 'mis-opiniones',
     title: 'app.titulo.misOpiniones',
     canActivate: [rolGuard('TURISTA')],

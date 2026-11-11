@@ -23,6 +23,8 @@ export const TURISTA = diccionario(
       uno: '{n} oferta encontrada',
       otros: '{n} ofertas encontradas',
     },
+    'turista.paquetes.titulo': 'Catálogo de paquetes',
+    'turista.paquetes.subtitulo': 'Experiencias combinadas con operadores locales autorizados, ya organizadas.',
     'turista.catalogo.filtros': 'Filtros',
     'turista.catalogo.buscar': 'Buscar en el catálogo',
     'turista.catalogo.buscarEjemplo': 'Buceo, café, Tayrona…',
@@ -160,6 +162,8 @@ export const TURISTA = diccionario(
     'turista.catalogo.subtitulo':
       'Activities, packages, accommodation and restaurants from providers with an active RNT.',
     'turista.catalogo.encontradas': { uno: '{n} offer found', otros: '{n} offers found' },
+    'turista.paquetes.titulo': 'Package catalog',
+    'turista.paquetes.subtitulo': 'Combined experiences with authorized local operators, already organized.',
     'turista.catalogo.filtros': 'Filters',
     'turista.catalogo.buscar': 'Search the catalog',
     'turista.catalogo.buscarEjemplo': 'Diving, coffee, Tayrona…',

@@ -1,8 +1,10 @@
 <section class="pagina catalogo">
   <header class="catalogo__cabecera">
     <div>
-      <h1>{{ 'turista.catalogo.titulo' | t }}</h1>
-      <p class="texto-suave">{{ 'turista.catalogo.subtitulo' | t }}</p>
+      <h1>{{ (tipoFijo ? 'turista.paquetes.titulo' : 'turista.catalogo.titulo') | t }}</h1>
+      <p class="texto-suave">
+        {{ (tipoFijo ? 'turista.paquetes.subtitulo' : 'turista.catalogo.subtitulo') | t }}
+      </p>
     </div>
     @if (pagina(); as resultado) {
       <p class="resultados__total" aria-live="polite">
@@ -40,6 +42,7 @@
 
     <hr class="separador" />
 
+    @if (!tipoFijo) {
     <fieldset class="grupo">
       <legend>{{ 'turista.catalogo.tipoOferta' | t }}</legend>
       <label class="opcion">
@@ -55,6 +58,7 @@
     </fieldset>
 
     <hr class="separador" />
+    }
 
     <div class="campo">
       <label for="zonaId">{{ 'turista.catalogo.zona' | t }}</label>

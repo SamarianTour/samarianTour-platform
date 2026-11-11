@@ -15,6 +15,7 @@ export const APP = diccionario(
 
     // Enlaces del menú de cada rol.
     'app.nav.catalogo': 'Catálogo',
+    'app.nav.paquetes': 'Paquetes',
     'app.nav.soyPrestador': 'Soy prestador',
     'app.nav.misSolicitudes': 'Mis solicitudes',
     'app.nav.misOpiniones': 'Mis opiniones',
@@ -32,6 +33,7 @@ export const APP = diccionario(
 
     // Títulos de las rutas (la pestaña del navegador).
     'app.titulo.catalogo': 'Catálogo',
+    'app.titulo.paquetes': 'Paquetes',
     'app.titulo.misOpiniones': 'Mis opiniones',
     'app.titulo.oferta': 'Oferta',
     'app.titulo.misSolicitudes': 'Mis solicitudes',
@@ -84,6 +86,7 @@ export const APP = diccionario(
     'app.pie.lema': 'Sustainable tourism in Santa Marta',
 
     'app.nav.catalogo': 'Catalog',
+    'app.nav.paquetes': 'Packages',
     'app.nav.soyPrestador': "I'm a provider",
     'app.nav.misSolicitudes': 'My requests',
     'app.nav.misOpiniones': 'My reviews',
@@ -99,6 +102,7 @@ export const APP = diccionario(
     'app.menu.sesionCerrada': 'You logged out',
 
     'app.titulo.catalogo': 'Catalog',
+    'app.titulo.paquetes': 'Packages',
     'app.titulo.misOpiniones': 'My reviews',
     'app.titulo.oferta': 'Offer',
     'app.titulo.misSolicitudes': 'My requests',

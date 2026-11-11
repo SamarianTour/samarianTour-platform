@@ -17,16 +17,16 @@ const textos = (rol: Rol | null) => enlacesDelRol(rol).map((enlace) => traducir(
 
 describe('enlacesDelRol', () => {
   it('sin sesión ofrece el catálogo y el camino para registrarse como prestador', () => {
-    expect(textos(null)).toEqual(['Catálogo', 'Recomendaciones', 'Soy prestador']);
-    expect(enlacesDelRol(null)[2]).toMatchObject({
+    expect(textos(null)).toEqual(['Catálogo', 'Paquetes', 'Recomendaciones', 'Soy prestador']);
+    expect(enlacesDelRol(null)[3]).toMatchObject({
       ruta: '/registro',
       consulta: { tipo: 'prestador' },
     });
   });
 
   it.each([
-    ['TURISTA', ['Catálogo', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']],
-    ['PRESTADOR', ['Catálogo', 'Recomendaciones', 'Mis ofertas']],
+    ['TURISTA', ['Catálogo', 'Paquetes', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']],
+    ['PRESTADOR', ['Catálogo', 'Paquetes', 'Recomendaciones', 'Mis ofertas']],
     ['OPERADOR_DISPONIBILIDAD', ['Cola de solicitudes']],
     ['GESTOR_DESTINO', ['Indicadores']],
     ['ADMINISTRADOR', ['Administración']],
@@ -37,9 +37,9 @@ describe('enlacesDelRol', () => {
   it('el menú también está en inglés', () => {
     establecerIdioma('en', { recordar: false });
 
-    expect(textos(null)).toEqual(['Catalog', 'Recommendations', "I'm a provider"]);
-    expect(textos('TURISTA')).toEqual(['Catalog', 'Recommendations', 'My requests', 'My reviews']);
-    expect(textos('PRESTADOR')).toEqual(['Catalog', 'Recommendations', 'My offers']);
+    expect(textos(null)).toEqual(['Catalog', 'Packages', 'Recommendations', "I'm a provider"]);
+    expect(textos('TURISTA')).toEqual(['Catalog', 'Packages', 'Recommendations', 'My requests', 'My reviews']);
+    expect(textos('PRESTADOR')).toEqual(['Catalog', 'Packages', 'Recommendations', 'My offers']);
     expect(textos('ADMINISTRADOR')).toEqual(['Administration']);
   });
 
@@ -108,6 +108,15 @@ describe('enlaceActivo', () => {
     expect(enlaceActivo(catalogo, '/catalogo?zona=a01&page=2')).toBe(true);
     expect(enlaceActivo(catalogo, '/')).toBe(false);
     expect(enlaceActivo(catalogo, '/ofertas/abc')).toBe(true);
+  });
+
+  it('Paquetes se marca en /paquetes y no marca el catálogo', () => {
+    const paquetes = enlacesDelRol(null).find((enlace) => enlace.ruta === '/paquetes')!;
+
+    expect(enlaceActivo(paquetes, '/paquetes')).toBe(true);
+    expect(enlaceActivo(paquetes, '/paquetes?zonaId=a01')).toBe(true);
+    expect(enlaceActivo(paquetes, '/catalogo')).toBe(false);
+    expect(enlaceActivo(catalogo, '/paquetes')).toBe(false);
   });
 
   it('el catálogo no se marca en otras secciones', () => {
