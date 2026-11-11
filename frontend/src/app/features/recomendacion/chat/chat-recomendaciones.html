@@ -51,7 +51,7 @@
                 @if (vistaDeRespuesta(respuesta) === 'ninguna') {
                   <p class="mensaje__texto">{{ 'recomendacion.respuesta.ninguna' | t }}</p>
                   <p>
-                    <a class="boton boton--secundario" routerLink="/">{{ 'recomendacion.respuesta.catalogo' | t }}</a>
+                    <a class="boton boton--secundario" routerLink="/catalogo">{{ 'recomendacion.respuesta.catalogo' | t }}</a>
                   </p>
                 } @else {
                   <p class="mensaje__texto">{{ 'recomendacion.respuesta.intro' | t }}</p>
@@ -75,7 +75,7 @@
                   <button type="button" class="boton" [disabled]="buscando()" (click)="reintentar(mensaje.id, contenido.consulta)">
                     {{ 'recomendacion.noDisponible.reintentar' | t }}
                   </button>
-                  <a class="boton boton--secundario" routerLink="/">{{ 'recomendacion.respuesta.catalogo' | t }}</a>
+                  <a class="boton boton--secundario" routerLink="/catalogo">{{ 'recomendacion.respuesta.catalogo' | t }}</a>
                 </p>
               } @else {
                 <p class="mensaje__texto">{{ contenido.error.mensaje }}</p>

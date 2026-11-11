@@ -395,7 +395,7 @@ describe('ChatRecomendaciones (P08.1)', () => {
 
       expect(tarjetas()).toHaveLength(0);
       expect(ultimo().textContent).toContain('No encontramos ofertas que cumplan lo que pediste');
-      expect(ultimo().querySelector('a[href="/"]')?.textContent?.trim()).toBe('Explorar el catálogo');
+      expect(ultimo().querySelector('a[href="/catalogo"]')?.textContent?.trim()).toBe('Explorar el catálogo');
     });
   });
 
@@ -410,7 +410,7 @@ describe('ChatRecomendaciones (P08.1)', () => {
 
       expect(ultimo().textContent).toContain('el servicio de recomendaciones no está disponible');
       expect(ultimo().textContent).toContain('explorar el catálogo y filtrar por zona o tipo de oferta');
-      expect(ultimo().querySelector('a[href="/"]')?.textContent?.trim()).toBe('Explorar el catálogo');
+      expect(ultimo().querySelector('a[href="/catalogo"]')?.textContent?.trim()).toBe('Explorar el catálogo');
       expect(Array.from(ultimo().querySelectorAll('button')).map((b) => b.textContent?.trim())).toEqual(['Intentar de nuevo']);
       // La página sigue: se puede escribir de nuevo y el resto de lo que ya estaba no se pierde.
       expect(botonEnviar().disabled).toBe(false);

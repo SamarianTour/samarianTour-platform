@@ -196,3 +196,20 @@
     grid-template-rows: auto;
   }
 }
+
+/* "Borrar búsqueda": un botón de texto, con el foco visible del resto de la interfaz. */
+.enlace-borrar {
+  align-self: flex-start;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--texto-suave);
+  font: inherit;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.enlace-borrar:hover {
+  color: #0b7373;
+}

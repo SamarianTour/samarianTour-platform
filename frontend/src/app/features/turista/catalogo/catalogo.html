@@ -1,8 +1,10 @@
 <section class="pagina catalogo">
   <header class="catalogo__cabecera">
     <div>
-      <h1>{{ 'turista.catalogo.titulo' | t }}</h1>
-      <p class="texto-suave">{{ 'turista.catalogo.subtitulo' | t }}</p>
+      <h1>{{ (tipoFijo ? 'turista.paquetes.titulo' : 'turista.catalogo.titulo') | t }}</h1>
+      <p class="texto-suave">
+        {{ (tipoFijo ? 'turista.paquetes.subtitulo' : 'turista.catalogo.subtitulo') | t }}
+      </p>
     </div>
     @if (pagina(); as resultado) {
       <p class="resultados__total" aria-live="polite">
@@ -14,6 +16,33 @@
   <form class="filtros tarjeta" [formGroup]="formulario" aria-labelledby="filtros-titulo">
     <h2 id="filtros-titulo" class="filtros__titulo">{{ 'turista.catalogo.filtros' | t }}</h2>
 
+    <div class="campo">
+      <label for="texto">{{ 'turista.catalogo.buscar' | t }}</label>
+      <input
+        id="texto"
+        type="search"
+        formControlName="texto"
+        autocomplete="off"
+        [attr.maxlength]="textoMaximo"
+        [placeholder]="'turista.catalogo.buscarEjemplo' | t"
+        [attr.aria-invalid]="textoCorto() ? 'true' : null"
+        aria-describedby="texto-ayuda"
+      />
+      @if (textoCorto()) {
+        <p class="campo__error" id="texto-ayuda" role="alert">{{ 'turista.catalogo.textoCorto' | t }}</p>
+      } @else {
+        <p class="campo__ayuda" id="texto-ayuda">{{ 'turista.catalogo.buscarAyuda' | t }}</p>
+      }
+      @if (escrito()) {
+        <button type="button" class="enlace-borrar" (click)="borrarTexto()">
+          {{ 'turista.catalogo.borrarBusqueda' | t }}
+        </button>
+      }
+    </div>
+
+    <hr class="separador" />
+
+    @if (!tipoFijo) {
     <fieldset class="grupo">
       <legend>{{ 'turista.catalogo.tipoOferta' | t }}</legend>
       <label class="opcion">
@@ -29,6 +58,7 @@
     </fieldset>
 
     <hr class="separador" />
+    }
 
     <div class="campo">
       <label for="zonaId">{{ 'turista.catalogo.zona' | t }}</label>

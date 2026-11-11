@@ -62,7 +62,7 @@ describe('App (cabecera)', () => {
     it('la navegación es el catálogo y el camino para los prestadores', () => {
       crear();
 
-      expect(enlaces()).toEqual(['Catálogo', 'Recomendaciones', 'Soy prestador']);
+      expect(enlaces()).toEqual(['Catálogo', 'Paquetes', 'Recomendaciones', 'Soy prestador']);
       expect(
         raiz().querySelector<HTMLAnchorElement>('nav a[href^="/registro"]')?.getAttribute('href'),
       ).toBe('/registro?tipo=prestador');
@@ -86,8 +86,8 @@ describe('App (cabecera)', () => {
     });
 
     it.each([
-      ['TURISTA', ['Catálogo', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']],
-      ['PRESTADOR', ['Catálogo', 'Recomendaciones', 'Mis ofertas']],
+      ['TURISTA', ['Catálogo', 'Paquetes', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']],
+      ['PRESTADOR', ['Catálogo', 'Paquetes', 'Recomendaciones', 'Mis ofertas']],
       ['OPERADOR_DISPONIBILIDAD', ['Cola de solicitudes']],
       ['GESTOR_DESTINO', ['Indicadores']],
       ['ADMINISTRADOR', ['Administración']],
@@ -103,7 +103,7 @@ describe('App (cabecera)', () => {
       TestBed.inject(SesionService).descartarSesion();
       fixture.detectChanges();
 
-      expect(enlaces()).toEqual(['Catálogo', 'Recomendaciones', 'Soy prestador']);
+      expect(enlaces()).toEqual(['Catálogo', 'Paquetes', 'Recomendaciones', 'Soy prestador']);
       expect(botonesDeCuenta().map((a) => a.textContent?.trim())).toEqual([
         'Iniciar sesión',
         'Registrarse',
@@ -117,6 +117,21 @@ describe('App (cabecera)', () => {
         (b) => b.textContent?.trim() === codigo,
       )!;
 
+    it('el logo lleva al inicio y su nombre accesible es "Samarian Tour, inicio" (y en inglés, "home")', () => {
+      crear();
+      const logo = () => raiz().querySelector<HTMLAnchorElement>('a.marca')!;
+
+      expect(logo().getAttribute('href')).toBe('/');
+      expect(logo().getAttribute('aria-label')).toBe('Samarian Tour, inicio');
+      // El menú no lleva un enlace "Inicio": el logo cumple ese papel.
+      expect(enlaces()).not.toContain('Inicio');
+
+      botonDeIdioma('EN').click();
+      fixture.detectChanges();
+
+      expect(logo().getAttribute('aria-label')).toBe('Samarian Tour, home');
+    });
+
     it('tiene el selector ES | EN en la cabecera', () => {
       crear();
 
@@ -129,7 +144,7 @@ describe('App (cabecera)', () => {
       botonDeIdioma('EN').click();
       fixture.detectChanges();
 
-      expect(enlaces()).toEqual(['Catalog', 'Recommendations', "I'm a provider"]);
+      expect(enlaces()).toEqual(['Catalog', 'Packages', 'Recommendations', "I'm a provider"]);
       expect(botonesDeCuenta().map((a) => a.textContent?.trim())).toEqual(['Log in', 'Sign up']);
       expect(raiz().querySelector('.saltar')?.textContent).toBe('Skip to content');
       expect(raiz().querySelector('nav')?.getAttribute('aria-label')).toBe('Main');
@@ -143,11 +158,11 @@ describe('App (cabecera)', () => {
 
       botonDeIdioma('EN').click();
       fixture.detectChanges();
-      expect(enlaces()).toEqual(['Catalog', 'Recommendations', 'My requests', 'My reviews']);
+      expect(enlaces()).toEqual(['Catalog', 'Packages', 'Recommendations', 'My requests', 'My reviews']);
 
       botonDeIdioma('ES').click();
       fixture.detectChanges();
-      expect(enlaces()).toEqual(['Catálogo', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']);
+      expect(enlaces()).toEqual(['Catálogo', 'Paquetes', 'Recomendaciones', 'Mis solicitudes', 'Mis opiniones']);
     });
 
     it('la elección se recuerda: una página nueva arranca en el idioma elegido', () => {

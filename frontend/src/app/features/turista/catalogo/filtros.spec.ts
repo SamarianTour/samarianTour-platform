@@ -1,6 +1,8 @@
 import { convertToParamMap } from '@angular/router';
 import {
   FiltrosCatalogo,
+  normalizarTexto,
+  textoInvalido,
   SIN_FILTROS,
   TAMANO_PAGINA,
   consultaDeFiltros,
@@ -10,6 +12,7 @@ import {
 } from './filtros';
 
 const TODOS: FiltrosCatalogo = {
+  texto: 'café minca',
   tipo: 'ACTIVIDAD',
   zonaId: 'a00000000000000000000007',
   tipoActividad: 'SENDERISMO',
@@ -27,6 +30,7 @@ describe('consultaDeFiltros', () => {
 
   it('envía cada filtro con el nombre que usa la API', () => {
     expect(consultaDeFiltros(TODOS)).toEqual({
+      texto: 'café minca',
       tipo: 'ACTIVIDAD',
       zonaId: 'a00000000000000000000007',
       tipoActividad: 'SENDERISMO',
@@ -98,5 +102,40 @@ describe('hayFiltros', () => {
   it('detecta cualquier filtro puesto', () => {
     expect(hayFiltros({ ...SIN_FILTROS, accesibleSillaRuedas: true })).toBe(true);
     expect(hayFiltros({ ...SIN_FILTROS, precioMin: 0 })).toBe(true);
+  });
+});
+
+describe('búsqueda por texto (DC-37)', () => {
+  it.each([
+    ['  buceo  ', 'buceo'],
+    ['bu', 'bu'],
+    ['a'.repeat(100), 'a'.repeat(100)],
+    ['café minca', 'café minca'],
+  ])('"%s" se puede buscar', (escrito, esperado) => {
+    expect(normalizarTexto(escrito)).toBe(esperado);
+    expect(textoInvalido(escrito)).toBe(false);
+  });
+
+  it.each([[''], ['   '], [null], [undefined]])('%s es una búsqueda vacía: no filtra y no es un error', (escrito) => {
+    expect(normalizarTexto(escrito)).toBeNull();
+    expect(textoInvalido(escrito)).toBe(false);
+  });
+
+  it.each([['b'], [' b '], ['a'.repeat(101)]])('%s no cumple el largo: no se envía y se avisa', (escrito) => {
+    expect(normalizarTexto(escrito)).toBeNull();
+    expect(textoInvalido(escrito)).toBe(true);
+  });
+
+  it('viaja como texto en la consulta y en la URL, sin los espacios de los extremos', () => {
+    const filtros = filtrosDesdeUrl(convertToParamMap({ texto: '  buceo ' }));
+
+    expect(filtros.texto).toBe('buceo');
+    expect(consultaDeFiltros(filtros)).toEqual({ texto: 'buceo', page: 0, size: 12 });
+    expect(urlDeFiltros(filtros)).toEqual({ texto: 'buceo' });
+    expect(hayFiltros(filtros)).toBe(true);
+  });
+
+  it('una URL con un texto de un solo carácter se ignora', () => {
+    expect(filtrosDesdeUrl(convertToParamMap({ texto: 'b' })).texto).toBeNull();
   });
 });

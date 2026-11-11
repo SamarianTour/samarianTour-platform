@@ -126,6 +126,7 @@ describe('turista en español e inglés', () => {
       expect(texto()).toContain('Offer type');
       expect(texto()).toContain('All areas');
       expect(texto()).toContain('Maximum physical effort');
+      expect(texto()).toContain('Search the catalog');
       expect(texto()).toContain('Up to moderate effort');
       expect(texto()).toContain('Wheelchair accessible');
       expect(texto()).toContain('RNT verified');

@@ -98,6 +98,13 @@ describe('Ficha de la oferta: alertas de su zona (P08.2)', () => {
     http.match(() => true).forEach((p) => p.error(new ProgressEvent('error')));
   });
 
+  it('enlaza a la ficha de la zona', () => {
+    abrir();
+
+    const enlace = Array.from(raiz().querySelectorAll('a')).find((a) => a.textContent?.includes('Ver la ficha de la zona'));
+    expect(enlace?.getAttribute('href')).toBe('/zonas/z2');
+  });
+
   it('pide las alertas de la zona de la oferta y las muestra después de la información de la zona', () => {
     abrir();
 

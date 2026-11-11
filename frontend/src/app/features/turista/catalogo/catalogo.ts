@@ -20,7 +20,10 @@ import {
   SIN_FILTROS,
   consultaDeFiltros,
   filtrosDesdeUrl,
+  TEXTO_MAXIMO,
   hayFiltros,
+  normalizarTexto,
+  textoInvalido,
   urlDeFiltros,
 } from './filtros';
 
@@ -38,6 +41,9 @@ export class Catalogo {
   private readonly router = inject(Router);
   private readonly catalogo = inject(CatalogoService);
 
+  /** En `/paquetes` el tipo no se elige: la ruta lo fija (P01.3). */
+  protected readonly tipoFijo: TipoOferta | null = this.ruta.snapshot.data['tipoFijo'] ?? null;
+
   protected readonly tipos = tipoOfertaValues;
   protected readonly tiposActividad = tipoActividadValues;
   protected readonly niveles = nivelEsfuerzoValues;
@@ -46,7 +52,11 @@ export class Catalogo {
   protected readonly etiquetaNivel = NIVEL_ESFUERZO;
   protected readonly iconoDeTipo = ICONO_DE_TIPO;
 
+  /** El largo máximo del texto, para el atributo `maxlength` del campo. */
+  protected readonly textoMaximo = TEXTO_MAXIMO;
+
   protected readonly formulario = new FormGroup({
+    texto: new FormControl('', { nonNullable: true }),
     tipo: new FormControl<TipoOferta | ''>('', { nonNullable: true }),
     zonaId: new FormControl('', { nonNullable: true }),
     tipoActividad: new FormControl<TipoActividad | ''>('', { nonNullable: true }),
@@ -61,8 +71,12 @@ export class Catalogo {
   protected readonly pagina = signal<PaginaOfertas | null>(null);
   protected readonly error = signal<ErrorApi | null>(null);
   protected readonly zonas = signal<readonly Zona[]>([]);
+  /** Lo que hay escrito en el campo de búsqueda, aunque todavía no alcance para buscar. */
+  protected readonly escrito = signal('');
+  /** Hay texto, pero de menos de 2 caracteres: se avisa y no se busca (DC-37). */
+  protected readonly textoCorto = computed(() => textoInvalido(this.escrito()));
 
-  protected readonly conFiltros = computed(() => hayFiltros(this.filtros()));
+  protected readonly conFiltros = computed(() => hayFiltros(this.filtros(), this.tipoFijo));
   /** La zona del filtro, para avisar si es de alta afluencia o un área protegida (RF-25, RF-29). */
   protected readonly zonaElegida = computed(() => this.zonas().find((zona) => zona.id === this.filtros().zonaId));
   private readonly nombresDeZona = computed(() => new Map(this.zonas().map((zona) => [zona.id, zona.nombre])));
@@ -79,11 +93,15 @@ export class Catalogo {
     // La URL manda: cada cambio de sus query params vuelve a llenar el formulario y a buscar.
     this.ruta.queryParamMap
       .pipe(
-        map(filtrosDesdeUrl),
+        map((params) => this.conTipoFijo(filtrosDesdeUrl(params))),
         tap((filtros) => {
           this.filtros.set(filtros);
           this.cargando.set(true);
-          this.formulario.setValue(aFormulario(filtros), { emitEvent: false });
+          // Si el campo tiene un texto que todavía no se puede buscar ("b"), no se pisa mientras la persona escribe.
+          const campo = this.formulario.controls.texto.value;
+          const texto = normalizarTexto(campo) === filtros.texto ? campo : (filtros.texto ?? '');
+          this.formulario.setValue({ ...aFormulario(filtros), texto }, { emitEvent: false });
+          this.escrito.set(texto);
         }),
         switchMap((filtros) =>
           this.catalogo.buscar(consultaDeFiltros(filtros)).pipe(
@@ -103,6 +121,10 @@ export class Catalogo {
     this.formulario.valueChanges
       .pipe(debounceTime(350), takeUntilDestroyed())
       .subscribe(() => this.navegar({ ...this.filtrosDelFormulario(), pagina: 0 }));
+
+    this.formulario.controls.texto.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((valor) => this.escrito.set(valor));
   }
 
   protected zona(id: string): string {
@@ -111,6 +133,10 @@ export class Catalogo {
 
   protected irAPagina(pagina: number): void {
     this.navegar({ ...this.filtros(), pagina });
+  }
+
+  protected borrarTexto(): void {
+    this.formulario.controls.texto.setValue('');
   }
 
   protected limpiar(): void {
@@ -131,13 +157,20 @@ export class Catalogo {
   }
 
   private navegar(filtros: FiltrosCatalogo): void {
-    void this.router.navigate([], { relativeTo: this.ruta, queryParams: urlDeFiltros(filtros) });
+    // El tipo fijo ya lo dice la ruta: no se repite en la URL.
+    const params = urlDeFiltros(this.tipoFijo ? { ...filtros, tipo: null } : filtros);
+    void this.router.navigate([], { relativeTo: this.ruta, queryParams: params });
+  }
+
+  private conTipoFijo(filtros: FiltrosCatalogo): FiltrosCatalogo {
+    return this.tipoFijo ? { ...filtros, tipo: this.tipoFijo } : filtros;
   }
 
   private filtrosDelFormulario(): FiltrosCatalogo {
     const valores = this.formulario.getRawValue();
     return {
-      tipo: valores.tipo || null,
+      texto: normalizarTexto(valores.texto),
+      tipo: this.tipoFijo ?? (valores.tipo || null),
       zonaId: valores.zonaId || null,
       tipoActividad: valores.tipoActividad || null,
       precioMin: precio(valores.precioMin),
@@ -151,6 +184,7 @@ export class Catalogo {
 
 function aFormulario(filtros: FiltrosCatalogo) {
   return {
+    texto: filtros.texto ?? '',
     tipo: filtros.tipo ?? ('' as const),
     zonaId: filtros.zonaId ?? '',
     tipoActividad: filtros.tipoActividad ?? ('' as const),
