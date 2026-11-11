@@ -363,32 +363,57 @@ npm start        # http://localhost:4200
 
 ## Demostración por la interfaz
 
-Con el piloto levantado, abre `http://localhost:8080`.
+Con el piloto levantado, abre `http://localhost:8080`. La demostración completa se hace desde el navegador, con inicio de sesión real. La única excepción es leer el código de WhatsApp (paso 21), que el piloto escribe en el registro del núcleo mientras WhatsApp es simulado.
 
-1. **Inicio y catálogo.** La página inicial (`http://localhost:8080/`) tiene el buscador, las cuatro tarjetas de tipo, las zonas y la invitación a pedir recomendaciones. El catálogo con las ofertas visibles está en `http://localhost:8080/catalogo` y los paquetes, en `http://localhost:8080/paquetes`. Filtra por texto (mínimo 2 caracteres), tipo, zona, tipo de actividad, precio, esfuerzo físico máximo ("hasta el nivel") y accesibilidad. Los filtros quedan en la URL: `http://localhost:8080/catalogo?tipo=ACTIVIDAD&zonaId=a00000000000000000000005` abre las actividades del Parque Tayrona y `http://localhost:8080/catalogo?texto=buce` busca "buce". Los enlaces anteriores con filtros en la raíz (`/?tipo=ACTIVIDAD&zonaId=...`) redirigen a `/catalogo` con los mismos parámetros. Si nada coincide aparece "Limpiar filtros".
-2. **Ficha.** Entra a "Tayrona: mar y selva" (un paquete): muestra sus actividades con enlace, el esfuerzo calculado, la zona con sus buenas prácticas (su enlace "Ver la ficha de la zona" abre `http://localhost:8080/zonas/a00000000000000000000005`, con las condiciones de visita, las marcas y las alertas), el perfil del prestador y el mapa con el enlace "Cómo llegar". Una oferta que no es visible, como `http://localhost:8080/ofertas/b00000000000000000000016`, muestra "Esta oferta ya no está disponible".
-3. **Publicar.** *Hasta que el frontend inicie sesión (pasos 3 a 7, 9 y 10, ver la nota al final), estos pasos se hacen por consola: secciones 3, 4 y 8.* En el selector **Usuario demo** de la cabecera elige **Guía**, entra a "Soy prestador" y luego a "Publicar oferta". Llena la actividad, pon el pin en el mapa y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
-4. **Aprobar desde el núcleo.** La interfaz del administrador todavía no existe, así que la decisión se envía con `curl` al núcleo (DN-08). El identificador de la oferta está en la URL de "Ver detalle" (`/prestador/ofertas/<id>`):
+**Cuentas de la demostración.** Todas terminan en `@demo.samariantour.co` y tienen la clave `Demo1234`; se inicia sesión en `/iniciar-sesion`. Para cambiar de cuenta, usa el menú de la cuenta (arriba a la derecha) y "Cerrar sesión".
 
-   ```bash
-   ID=<id de la oferta>
-   TOKEN_ADMIN=$(curl -s -X POST http://localhost:8080/api/nucleo/cuentas/sesion -H "Content-Type: application/json" \
-     -d '{"correo":"admin@samariantour.co","contrasena":"SamarianAdmin2026"}' | sed -E 's/.*"tokenAcceso":"([^"]+)".*/\1/')
-   curl -s -X POST "http://localhost:8080/api/nucleo/admin/moderacion/ofertas/$ID/decision" \
-     -H "Authorization: Bearer $TOKEN_ADMIN" \
-     -H "Content-Type: application/json" -d '{"numeroVersion": 1, "decision": "APROBAR"}'
-   ```
+| Rol | Cuentas |
+|---|---|
+| Turista | `laura` (ya pagó el snorkel en Playa Cristal), `andres`, `laura.gomez` (tiene el WhatsApp verificado y puede enviar solicitudes), `carlos.perez`, `ana.torres` |
+| Prestador | `agencia` (la caminata a Cabo San Juan), `guia`, `hotel`, `restaurante`, `agencia-sin-rnt` |
+| Operador de disponibilidad | `operador1` (atiende a la agencia), `operador2` (atiende al hotel y al restaurante) |
+| Gestor del destino | `gestor` |
+| Administrador | `admin@samariantour.co` con la clave `SamarianAdmin2026` |
 
-   El núcleo guarda la decisión y su bandeja la lleva al catálogo en los siguientes 15 s: al recargar "Mis ofertas" la oferta está "Publicada" y ya aparece en el catálogo. Para mostrar un rechazo, usa `'{"numeroVersion": 1, "decision": "RECHAZAR", "motivo": "Falta el punto de encuentro"}'`: la oferta queda "Rechazada" con su motivo.
-5. **Editar.** En "Mis ofertas", "Editar" abre el formulario con los datos publicados. Cambia el precio y guarda: la oferta pasa a "Publicada con cambios en revisión" y en "Ver detalle" se ven lado a lado la versión publicada (1) y la pendiente (2). El turista sigue viendo la versión 1 hasta que el administrador apruebe la 2 (`"numeroVersion": 2`).
-6. **Retirar.** "Retirar" pide confirmación en un diálogo propio. Al confirmar, la oferta queda "Retirada", sin "Editar", y su ficha pública responde "Esta oferta ya no está disponible".
-7. **Errores.** Con el usuario demo **Agencia sin RNT**, publicar muestra que el RNT no está activo. Con **Hotel** o **Restaurante** el formulario solo ofrece el tipo de oferta que ese prestador puede publicar.
+### Sin iniciar sesión
 
-8. **Leer opiniones.** La ficha de "Caminata a Cabo San Juan del Guía" muestra el promedio (4,7), el total y las opiniones aprobadas, de la más reciente a la más antigua; la rechazada de la precarga no aparece.
-9. **Opinar.** En **Usuario demo** elige a **Laura**, que ya pagó el snorkel en Playa Cristal. En su ficha, en "Dejar una opinión", elige las estrellas, escribe el comentario y envíalo: aparece "Tu opinión quedó en moderación". En "Mis opiniones" la opinión está "En moderación". Si Laura intenta opinar sobre una oferta que no pagó, la ficha responde "Solo puedes opinar sobre ofertas que hayas pagado"; si vuelve a opinar sobre la misma, "Ya opinaste sobre esta oferta".
-10. **Aprobar la opinión desde el núcleo.** Como con las ofertas, la decisión se envía con `curl` al núcleo; los comandos están en el paso 8 de la demostración por consola. Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
+1. **Inicio y catálogo.** La página inicial (`http://localhost:8080/`) tiene el buscador, las cuatro tarjetas de tipo, las zonas y la invitación a pedir recomendaciones. El catálogo con las ofertas visibles está en `/catalogo` y los paquetes, en `/paquetes`. Filtra por texto (mínimo 2 caracteres), tipo, zona, tipo de actividad, precio, esfuerzo físico máximo ("hasta el nivel") y accesibilidad. Los filtros quedan en la URL: `http://localhost:8080/catalogo?tipo=ACTIVIDAD&zonaId=a00000000000000000000005` abre las actividades del Parque Tayrona y `http://localhost:8080/catalogo?texto=buce` busca "buce". Los enlaces anteriores con filtros en la raíz (`/?tipo=ACTIVIDAD&zonaId=...`) redirigen a `/catalogo` con los mismos parámetros. Si nada coincide aparece "Limpiar filtros".
+2. **Ficha de la oferta y de la zona.** Entra a "Tayrona: mar y selva" (un paquete): muestra sus actividades con enlace, el esfuerzo calculado, la zona con sus buenas prácticas, las alertas de su zona, el perfil del prestador y el mapa con el enlace "Cómo llegar". "Ver la ficha de la zona" abre `/zonas/a00000000000000000000005`, con las condiciones de visita, las marcas y las alertas. Una oferta que no es visible, como `/ofertas/b00000000000000000000016`, muestra "Esta oferta ya no está disponible", y una dirección que no existe, "Página no encontrada".
+3. **Recomendaciones y alertas.** En `/recomendaciones` escribe lo que buscas o toca una de las ideas, y recibirás de 3 a 5 ofertas con la razón de cada una. `/alertas` muestra las alertas del destino por zona, con su fuente y la hora de actualización. Si la recomendación no está disponible, la pantalla lo dice con un enlace al catálogo.
+4. **Idioma.** El selector **ES | EN** de la cabecera cambia toda la interfaz, incluidos los precios (`$ 150.000` y `COP 150,000`).
+5. **Leer opiniones.** La ficha de "Caminata a Cabo San Juan del Guía" muestra el promedio (4,7), el total y las opiniones aprobadas, de la más reciente a la más antigua; la rechazada de la precarga no aparece.
+6. **Crear una cuenta.** En `/registro` se elige turista o prestador, se lee y acepta la política de datos y se envía. Para recuperar el acceso, `/recuperar-contrasena` envía un correo que llega a Mailpit (`http://localhost:8025`); su enlace abre `/restablecer-contrasena?token=...`.
 
-**Nota sobre la identidad.** El selector "Usuario demo" de la cabecera enviaba los headers que sustituían al token. Desde que los servicios validan el token del núcleo (DN-37), esos headers ya no identifican a nadie, así que en esta interfaz las páginas del prestador y las opiniones del turista responden 401. El frontend nuevo inicia sesión con las cuentas de la demo; mientras llega, esos pasos se hacen por consola. El catálogo público, la ficha, las opiniones aprobadas, las zonas y las recomendaciones funcionan igual.
+### Prestador y administrador: publicar, editar y retirar
+
+7. **Publicar.** Inicia sesión como `guia` (llega a "Mis ofertas"), entra a "Publicar oferta", llena la actividad, pon el pin en el mapa, agrega las fotos y envíala: vuelve a "Mis ofertas" con el mensaje "Enviamos tu oferta a moderación (versión 1)" y la oferta queda "En moderación".
+8. **Aprobar o rechazar.** Cierra sesión e inicia como el administrador. En `/admin/moderacion`, en la cola "Ofertas", aparece la oferta nueva con su contenido. "Aprobar" la publica; "Rechazar" pide el "Motivo del rechazo" y se confirma con "Confirmar rechazo". El núcleo guarda la decisión y su bandeja la lleva al catálogo en los siguientes 15 s: al volver a entrar como `guia` y recargar "Mis ofertas", la oferta está "Publicada" y ya aparece en el catálogo, o "Rechazada" con su motivo.
+9. **Editar.** En "Mis ofertas", "Editar" abre el formulario con los datos publicados. Cambia el precio y guarda: la oferta pasa a "Publicada con cambios en revisión" y en "Ver detalle" se ven lado a lado la versión publicada (1) y la pendiente (2). El turista sigue viendo la versión 1 hasta que el administrador apruebe la 2 en `/admin/moderacion`, donde también se ve la versión publicada al lado para comparar.
+10. **Retirar.** "Retirar" pide confirmación en un diálogo propio. Al confirmar, la oferta queda "Retirada", sin "Editar", y su ficha pública responde "Esta oferta ya no está disponible".
+11. **Errores.** Con `agencia-sin-rnt`, publicar muestra que el RNT no está activo. Con `hotel` o `restaurante` el formulario solo ofrece el tipo de oferta que ese prestador puede publicar.
+12. **Otras secciones del prestador.** El panel del prestador (`/prestador`) muestra el estado de su registro y de su RNT; "Mi RNT" cambia el número y el tipo, "Perfil público" edita su descripción y fotos, "WhatsApp de contacto" lo configura y verifica, y "Cuenta de cobro" guarda dónde recibe sus pagos.
+
+### Turista: opinar
+
+13. **Opinar.** Inicia sesión como `laura`, que ya pagó el snorkel en Playa Cristal. En su ficha, en "Dejar una opinión", elige las estrellas, escribe el comentario y envíalo: aparece "Tu opinión quedó en moderación". En "Mis opiniones" la opinión está "En moderación". Si Laura intenta opinar sobre una oferta que no pagó, la ficha responde "Solo puedes opinar sobre ofertas que hayas pagado"; si vuelve a opinar sobre la misma, "Ya opinaste sobre esta oferta".
+14. **Aprobar la opinión.** Como administrador, en `/admin/moderacion` elige la cola "Opiniones" y aprueba (o rechaza con un motivo). Al recargar, la opinión aparece en la ficha y en "Mis opiniones" está "Publicada".
+
+### Turista, operador y pago: de la solicitud al cupo asegurado
+
+15. **Solicitar disponibilidad.** Inicia sesión como `laura.gomez` y abre la ficha de la caminata a Cabo San Juan. "Solicitar disponibilidad" abre el formulario: elige la fecha (al menos 2 días después de hoy), la hora de salida y las personas, y "Enviar solicitud". La solicitud aparece en "Mis solicitudes" como pendiente, con su plazo. El hotel y el restaurante piden los campos de su tipo (fecha de salida y unidades, u hora de la reserva).
+16. **Atender.** Cierra sesión e inicia como `operador1` (el de la agencia; para el hotel y el restaurante, `operador2`). La solicitud está en su cola (`/operador`), con las urgentes primero. "Atender" abre la solicitud con el contacto del prestador por WhatsApp. Elige "Hay cupo", escribe el "Precio total (COP)" y las condiciones, y "Enviar resultado"; con "No hay cupo" el turista queda avisado y puede volver a solicitar. `/operador/historial` y `/operador/avisos` muestran las ya atendidas y los avisos de solicitudes nuevas.
+17. **Confirmar o declinar.** Vuelve como `laura.gomez`. En el detalle de la solicitud (`/turista/solicitudes/<id>`) aparecen el precio y las condiciones, con el plazo para responder. "Confirmar condiciones" o "Declinar".
+18. **Pagar.** Con la solicitud confirmada, el detalle muestra "Paga para asegurar tu cupo" y el botón "Pagar $...", que abre la pasarela simulada del núcleo. "Aprobar" regresa a la solicitud, que muestra "Confirmando tu pago" y luego "Pago confirmado" con la referencia de la transacción. "Rechazar" regresa con "Tu pago no se completó" y el botón "Reintentar pago", mientras queden intentos y plazo.
+19. **Mis datos y derechos.** En el menú de la cuenta, "Mis datos" (`/mis-datos`) edita los datos, muestra la política de datos vigente, permite eliminar la cuenta con la contraseña y, para el turista, verificar el WhatsApp.
+20. **Verificar el WhatsApp.** Con un turista nuevo, "Mis datos" pide verificar el WhatsApp antes de enviar solicitudes (RF-30): se pide el código y se escribe en el campo.
+21. **El código de WhatsApp.** Mientras WhatsApp sea simulado, el código sale en el registro del núcleo; es el único paso de la demostración que usa la terminal: `docker compose -f infra/docker-compose.yml logs nucleo`.
+
+### Gestor y administrador
+
+22. **Indicadores.** Inicia sesión como `gestor`. `/gestor` es el panel de indicadores, con tres vistas (Demanda, Embudo de conversión y Distribución por tipo de prestador), el filtro de periodo, gráficos y sus tablas de datos. Con pocas solicitudes, las cifras pequeñas se agrupan como "menos de 3" para proteger la privacidad (RET-03).
+23. **Administración.** Inicia sesión como el administrador (`/admin`). **Prestadores y RNT** verifica o sincroniza el RNT y asigna el operador de cada prestador. **Moderación** aprueba ofertas y opiniones (pasos 8 y 14). **Cuentas** crea operadores y gestores, y los desactiva o reactiva. **Comisión** muestra la comisión vigente, su historial, permite cambiarla y lista los pagos tardíos. **Zonas** registra, edita, inactiva y reactiva zonas. **Alertas de sesgo** muestra los prestadores con más apariciones en las recomendaciones que su peso en las ofertas visibles. **Pendientes técnicos** lista los avisos al catálogo rechazados y los eventos de pago fallidos, con reenvío y reintento.
+
+La misma demostración contra la API, sin la interfaz, está en la sección siguiente.
 
 ## Demostración paso a paso por consola
 
