@@ -54,6 +54,17 @@ describe('CatalogoService', () => {
     expect(recibida?.nombre).toBe('Kayak en Taganga');
   });
 
+  it('pide la ficha de una zona por su id', () => {
+    let recibida: Zona | undefined;
+
+    servicio.zona('a00000000000000000000005').subscribe((zona) => (recibida = zona));
+
+    const peticion = http.expectOne('/api/catalogo/zonas/a00000000000000000000005');
+    expect(peticion.request.method).toBe('GET');
+    peticion.flush({ id: 'a00000000000000000000005', nombre: 'Tayrona', activa: false });
+    expect(recibida?.nombre).toBe('Tayrona');
+  });
+
   it('pide las zonas', () => {
     let recibidas: Zona[] | undefined;
 

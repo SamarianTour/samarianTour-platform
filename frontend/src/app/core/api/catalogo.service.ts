@@ -17,6 +17,11 @@ export class CatalogoService {
     return this.http.get<FichaOferta>(`${API_CATALOGO}/ofertas/${encodeURIComponent(id)}`);
   }
 
+  /** La ficha de una zona; también responde por una zona inactiva (DC-49). 404 `ZONA_NO_ENCONTRADA`. */
+  zona(id: string): Observable<Zona> {
+    return this.http.get<Zona>(`${API_CATALOGO}/zonas/${encodeURIComponent(id)}`);
+  }
+
   zonas(): Observable<Zona[]> {
     return this.http.get<Zona[]>(`${API_CATALOGO}/zonas`);
   }

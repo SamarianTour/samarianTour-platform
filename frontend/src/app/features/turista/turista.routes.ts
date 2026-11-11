@@ -24,6 +24,12 @@ export const RUTAS_TURISTA: Routes = [
     loadComponent: () => import('./mis-opiniones/mis-opiniones').then((modulo) => modulo.MisOpiniones),
   },
   {
+    // Ficha de la zona (RF-25): la enlazan la ficha de una oferta y, más adelante, el Inicio.
+    path: 'zonas/:id',
+    title: 'app.titulo.zona',
+    loadComponent: () => import('./zona/ficha-zona').then((modulo) => modulo.FichaZona),
+  },
+  {
     path: 'ofertas/:id',
     title: 'app.titulo.oferta',
     loadComponent: () => import('./ficha/ficha').then((modulo) => modulo.Ficha),

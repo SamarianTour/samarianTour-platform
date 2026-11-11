@@ -215,6 +215,9 @@
                 <h3 class="rotulo">{{ 'turista.ficha.condiciones' | t }}</h3>
                 <p class="ficha__texto">{{ zona.condicionesVisita }}</p>
               }
+              <p class="ficha__mapa-enlace">
+                <a [routerLink]="['/zonas', zona.id]">{{ 'turista.zona.verFicha' | t }}</a>
+              </p>
             </section>
 
             <!-- Opcional (ADR-04): si el servicio de alertas falla o tarda más de 3 s, se oculta y la ficha sigue igual -->

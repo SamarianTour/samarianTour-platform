@@ -1,0 +1,93 @@
+<section class="pagina">
+  @switch (estado().tipo) {
+    @case ('cargando') {
+      <p class="texto-suave" aria-live="polite">{{ 'turista.zona.cargando' | t }}</p>
+    }
+    @case ('no-existe') {
+      <div class="tarjeta vacio" role="alert">
+        <h1>{{ 'turista.zona.noExiste' | t }}</h1>
+        <p class="texto-suave">{{ 'turista.zona.noExisteAyuda' | t }}</p>
+        <a class="boton" routerLink="/catalogo">{{ 'turista.ficha.verCatalogo' | t }}</a>
+      </div>
+    }
+    @case ('error') {
+      <p class="alerta alerta--error" role="alert">
+        <app-icono nombre="alerta" />
+        <span>{{ mensajeDeError() }}</span>
+      </p>
+      <a class="boton boton--secundario" routerLink="/catalogo">{{ 'turista.ficha.volver' | t }}</a>
+    }
+    @case ('lista') {
+      @let zona = this.zona()!;
+
+      <nav class="migas" [attr.aria-label]="'turista.ficha.migas' | t">
+        <a routerLink="/catalogo">{{ 'app.nav.catalogo' | t }}</a>
+        <app-icono nombre="chevron" />
+        <span aria-current="page">{{ zona.nombre }}</span>
+      </nav>
+
+      <header class="zona__cabecera">
+        <h1>{{ zona.nombre }}</h1>
+        @if (zona.descripcion) {
+          <p class="texto-suave zona__descripcion">{{ zona.descripcion }}</p>
+        }
+        <a class="boton" [routerLink]="['/catalogo']" [queryParams]="{ zonaId: zona.id }">{{
+          'turista.zona.verOfertas' | t
+        }}</a>
+      </header>
+
+      <!-- Las marcas de la zona (contrato: areaProtegida y altaAfluencia) -->
+      @if (!zona.activa) {
+        <p class="alerta alerta--info">
+          <app-icono nombre="info" />
+          <span>{{ 'turista.zona.inactiva' | t }}</span>
+        </p>
+      }
+      @if (zona.areaProtegida) {
+        <p class="alerta alerta--exito">
+          <app-icono nombre="hoja" />
+          <span
+            ><strong>{{ 'turista.ficha.areaProtegida' | t }}</strong>
+            {{ 'turista.ficha.areaProtegidaAyuda' | t }}</span
+          >
+        </p>
+      }
+      @if (zona.altaAfluencia) {
+        <p class="alerta alerta--aviso">
+          <app-icono nombre="alerta" />
+          <span
+            ><strong>{{ 'turista.ficha.altaAfluencia' | t }}</strong> {{ 'turista.zona.congestionada' | t }}</span
+          >
+        </p>
+      }
+
+      <div class="zona__contenido">
+        <section class="tarjeta" aria-labelledby="practicas-titulo">
+          <h2 id="practicas-titulo">{{ 'turista.ficha.buenasPracticas' | t }}</h2>
+          @if (zona.buenasPracticas.length > 0) {
+            <ul class="practicas">
+              @for (practica of zona.buenasPracticas; track practica) {
+                <li>
+                  <app-icono nombre="hoja" />
+                  <span>{{ practica }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="texto-suave">{{ 'turista.zona.sinPracticas' | t }}</p>
+          }
+        </section>
+
+        @if (zona.condicionesVisita) {
+          <section class="tarjeta" aria-labelledby="condiciones-titulo">
+            <h2 id="condiciones-titulo">{{ 'turista.ficha.condiciones' | t }}</h2>
+            <p class="zona__texto">{{ zona.condicionesVisita }}</p>
+          </section>
+        }
+
+        <!-- Opcional (ADR-04): si el servicio de alertas falla o tarda más de 3 s, se oculta y la ficha sigue igual -->
+        <app-alertas-zona [zonaId]="zona.id" />
+      </div>
+    }
+  }
+</section>

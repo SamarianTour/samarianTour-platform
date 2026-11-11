@@ -34,6 +34,7 @@ export const APP = diccionario(
     // Títulos de las rutas (la pestaña del navegador).
     'app.titulo.catalogo': 'Catálogo',
     'app.titulo.paquetes': 'Paquetes',
+    'app.titulo.zona': 'Zona',
     'app.titulo.misOpiniones': 'Mis opiniones',
     'app.titulo.oferta': 'Oferta',
     'app.titulo.misSolicitudes': 'Mis solicitudes',
@@ -103,6 +104,7 @@ export const APP = diccionario(
 
     'app.titulo.catalogo': 'Catalog',
     'app.titulo.paquetes': 'Packages',
+    'app.titulo.zona': 'Area',
     'app.titulo.misOpiniones': 'My reviews',
     'app.titulo.oferta': 'Offer',
     'app.titulo.misSolicitudes': 'My requests',
