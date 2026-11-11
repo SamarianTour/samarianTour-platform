@@ -174,6 +174,59 @@ describe('App (cabecera)', () => {
     });
   });
 
+  describe('foco al cambiar de pantalla (WCAG 2.4.3)', () => {
+    async function ir(url: string): Promise<void> {
+      await TestBed.inject(Router).navigateByUrl(url);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      crear();
+      // El foco solo existe en un documento real: la cabecera de la prueba se cuelga del cuerpo.
+      document.body.appendChild(raiz());
+    });
+
+    afterEach(() => raiz().remove());
+
+    const contenido = () => raiz().querySelector<HTMLElement>('#contenido')!;
+
+    it('al pasar a otra pantalla el foco va al contenido', async () => {
+      await ir('/catalogo');
+      raiz().querySelector<HTMLAnchorElement>('nav a')!.focus();
+
+      await ir('/paquetes');
+
+      expect(document.activeElement).toBe(contenido());
+    });
+
+    it('en la primera carga no mueve el foco', async () => {
+      await ir('/catalogo');
+
+      expect(document.activeElement).not.toBe(contenido());
+    });
+
+    it('si solo cambian los parámetros (filtros, páginas) no le quita el foco al campo', async () => {
+      await ir('/catalogo');
+      const enlace = raiz().querySelector<HTMLAnchorElement>('nav a')!;
+      enlace.focus();
+
+      await ir('/catalogo?tipo=ACTIVIDAD&page=2');
+
+      expect(document.activeElement).toBe(enlace);
+    });
+
+    it('si la pantalla ya puso el foco dentro del contenido, no se lo quita', async () => {
+      await ir('/catalogo');
+      const campo = document.createElement('input');
+      contenido().appendChild(campo);
+      campo.focus();
+
+      await ir('/paquetes');
+
+      expect(document.activeElement).toBe(campo);
+    });
+  });
+
   describe('sección actual', () => {
     const marcado = () =>
       Array.from(raiz().querySelectorAll<HTMLAnchorElement>('nav a[aria-current="page"]')).map(

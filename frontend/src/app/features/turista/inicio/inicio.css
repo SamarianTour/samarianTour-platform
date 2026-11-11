@@ -143,7 +143,7 @@
 }
 
 .tipos li:nth-child(4) .tipo {
-  background: linear-gradient(160deg, #2f8a5f 0%, #12432f 100%);
+  background: linear-gradient(160deg, #24774f 0%, #12432f 100%);
 }
 
 .tipo:hover,
@@ -172,7 +172,7 @@
 
 .tipo__descripcion {
   font-size: 0.9375rem;
-  color: #eaf6f5;
+  color: #fff;
 }
 
 .tipo__ir {
@@ -214,24 +214,20 @@
   transform: rotate(180deg);
 }
 
-.zonas__boton:hover:not(:disabled) {
+.zonas__boton:hover:not([aria-disabled='true']) {
   border-color: var(--enlace);
   background: var(--enlace);
   color: #fff;
 }
 
-.zonas__boton:disabled {
+.zonas__boton[aria-disabled='true'] {
   opacity: 0.4;
   cursor: default;
 }
 
 .zonas {
-  display: flex;
-  gap: 1.25rem;
-  margin: 0;
   padding: 0.375rem 0.25rem 1.25rem;
   overflow-x: auto;
-  list-style: none;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
 }
@@ -241,7 +237,16 @@
   outline-offset: 2px;
 }
 
-.zonas > li {
+.zonas__lista {
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zonas__lista > li {
   flex: none;
   scroll-snap-align: start;
 }

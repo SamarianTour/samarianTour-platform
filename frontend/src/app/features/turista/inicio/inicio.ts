@@ -119,7 +119,8 @@ export class Inicio {
   /** Mueve la fila casi un ancho de pantalla; sin animación si la persona pidió menos movimiento. */
   protected mover(sentido: -1 | 1): void {
     const pista = this.pista()?.nativeElement;
-    if (!pista) {
+    // Los botones usan aria-disabled y no disabled: así conservan el foco del teclado al llegar al extremo.
+    if (!pista || !(sentido === -1 ? this.hayAnterior() : this.haySiguiente())) {
       return;
     }
     const reducido = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
