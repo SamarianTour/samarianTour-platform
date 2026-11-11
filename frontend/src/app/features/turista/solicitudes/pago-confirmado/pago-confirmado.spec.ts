@@ -80,7 +80,7 @@ describe('PagoConfirmado', () => {
     ]);
     expect(enlaces).toEqual([
       ['Ver mis solicitudes', '/turista/solicitudes'],
-      ['Seguir explorando', '/'],
+      ['Seguir explorando', '/catalogo'],
     ]);
   });
 

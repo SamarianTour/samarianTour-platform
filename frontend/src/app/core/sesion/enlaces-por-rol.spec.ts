@@ -104,8 +104,9 @@ describe('enlaceActivo', () => {
   const sinSecciones: EnlaceNavegacion = enlacesDelRol(null).find((enlace) => enlace.secciones.length === 0)!;
 
   it('el catálogo se marca en la raíz, con filtros y en la ficha de una oferta', () => {
-    expect(enlaceActivo(catalogo, '/')).toBe(true);
-    expect(enlaceActivo(catalogo, '/?zona=a01&page=2')).toBe(true);
+    expect(enlaceActivo(catalogo, '/catalogo')).toBe(true);
+    expect(enlaceActivo(catalogo, '/catalogo?zona=a01&page=2')).toBe(true);
+    expect(enlaceActivo(catalogo, '/')).toBe(false);
     expect(enlaceActivo(catalogo, '/ofertas/abc')).toBe(true);
   });
 

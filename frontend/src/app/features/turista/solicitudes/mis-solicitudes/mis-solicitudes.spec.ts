@@ -356,7 +356,7 @@ describe('MisSolicitudes (P02.2)', () => {
       crear([]);
 
       expect(texto()).toContain('Todavía no has enviado solicitudes');
-      expect(raiz().querySelector('.vacio a')?.getAttribute('href')).toBe('/');
+      expect(raiz().querySelector('.vacio a')?.getAttribute('href')).toBe('/catalogo');
     });
   });
 

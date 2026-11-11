@@ -1,10 +1,10 @@
 import { Routes } from '@angular/router';
 import { rolGuard } from '../../core/sesion/guards';
 
-/** Rutas del turista: el catálogo, la ficha de una oferta y sus opiniones propias. */
+/** Rutas del turista: el catálogo (`/catalogo`), la ficha de una oferta y sus opiniones propias. */
 export const RUTAS_TURISTA: Routes = [
   {
-    path: '',
+    path: 'catalogo',
     pathMatch: 'full',
     title: 'app.titulo.catalogo',
     loadComponent: () => import('./catalogo/catalogo').then((modulo) => modulo.Catalogo),

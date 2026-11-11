@@ -47,6 +47,6 @@ describe('Proximamente', () => {
   it('ofrece volver al catálogo', () => {
     fixture.detectChanges();
 
-    expect(raiz().querySelector('a')?.getAttribute('href')).toBe('/');
+    expect(raiz().querySelector('a')?.getAttribute('href')).toBe('/catalogo');
   });
 });

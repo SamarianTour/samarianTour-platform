@@ -86,9 +86,17 @@ export const routes: Routes = [
   // importa aquí; cada pantalla sigue cargándose por demanda.
   ...RUTAS_CUENTAS,
   {
+    // El catálogo vivía en la raíz: los enlaces viejos (`/?tipo=ACTIVIDAD&zonaId=...`) siguen funcionando porque la
+    // redirección conserva los parámetros. TODO (commit del Inicio): aquí irá el Inicio y solo se redirigirá si hay filtros.
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'catalogo',
+  },
+  {
     path: '',
     loadChildren: () =>
       import('./features/turista/turista.routes').then((modulo) => modulo.RUTAS_TURISTA),
   },
-  { path: '**', redirectTo: '' },
+  // Angular no encadena dos redirecciones: por eso va directo al catálogo y no a `''`.
+  { path: '**', redirectTo: 'catalogo' },
 ];

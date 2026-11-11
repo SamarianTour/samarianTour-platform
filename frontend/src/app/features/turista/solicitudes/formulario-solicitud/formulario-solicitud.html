@@ -7,7 +7,7 @@
       <div class="tarjeta vacio" role="alert">
         <h1>{{ 'turista.ficha.noDisponible' | t }}</h1>
         <p class="texto-suave">{{ 'turista.ficha.noDisponibleAyuda' | t }}</p>
-        <a class="boton" routerLink="/">{{ 'turista.ficha.verCatalogo' | t }}</a>
+        <a class="boton" routerLink="/catalogo">{{ 'turista.ficha.verCatalogo' | t }}</a>
       </div>
     }
     @case ('error') {
@@ -15,7 +15,7 @@
         <app-icono nombre="alerta" />
         <span>{{ mensajeDeError() }}</span>
       </p>
-      <a class="boton boton--secundario" routerLink="/">{{ 'turista.ficha.volver' | t }}</a>
+      <a class="boton boton--secundario" routerLink="/catalogo">{{ 'turista.ficha.volver' | t }}</a>
     }
     @case ('lista') {
       @let oferta = ficha()!;

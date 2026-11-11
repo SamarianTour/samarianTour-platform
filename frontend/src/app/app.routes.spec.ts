@@ -31,7 +31,8 @@ describe('rutas de la aplicación', () => {
 
   describe('sin sesión', () => {
     it.each([
-      '/',
+      '/catalogo',
+      '/catalogo?tipo=ACTIVIDAD&zonaId=a00000000000000000000005',
       '/ofertas/abc',
       '/iniciar-sesion',
       '/registro',
@@ -65,7 +66,16 @@ describe('rutas de la aplicación', () => {
     });
 
     it('una dirección desconocida vuelve al catálogo', async () => {
-      expect(await ir('/no-existe')).toBe('/');
+      expect(await ir('/no-existe')).toBe('/catalogo');
+    });
+
+    // Los enlaces viejos (y los de la demostración) apuntaban al catálogo en la raíz: deben seguir llegando con sus filtros.
+    it.each([
+      ['/', '/catalogo'],
+      ['/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005', '/catalogo?tipo=ACTIVIDAD&zonaId=a00000000000000000000005'],
+      ['/?precioMax=150000&accesibleSillaRuedas=true&page=2', '/catalogo?precioMax=150000&accesibleSillaRuedas=true&page=2'],
+    ])('%s redirige a %s con los mismos parámetros', async (vieja, nueva) => {
+      expect(await ir(vieja)).toBe(nueva);
     });
   });
 
@@ -122,7 +132,7 @@ describe('rutas de la aplicación', () => {
     it('el catálogo y la ficha siguen abiertos a todos los roles', async () => {
       conSesion('ADMINISTRADOR');
 
-      expect(await ir('/')).toBe('/');
+      expect(await ir('/catalogo')).toBe('/catalogo');
       expect(await ir('/ofertas/abc')).toBe('/ofertas/abc');
     });
 

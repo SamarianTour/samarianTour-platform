@@ -13,8 +13,8 @@ export interface EnlaceNavegacion {
 
 const CATALOGO: EnlaceNavegacion = {
   clave: 'app.nav.catalogo',
-  ruta: '/',
-  secciones: ['/', '/ofertas'],
+  ruta: '/catalogo',
+  secciones: ['/catalogo', '/ofertas'],
 };
 
 /**

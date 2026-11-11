@@ -67,8 +67,8 @@ describe('pantallas que crea cada ruta', () => {
   );
 
   describe('sin sesión', () => {
-    it('"/" crea el catálogo y este pide las ofertas', async () => {
-      await ir('/', Catalogo);
+    it('"/catalogo" crea el catálogo y este pide las ofertas', async () => {
+      await ir('/catalogo', Catalogo);
 
       expect(http.match((p) => p.url === '/api/catalogo/ofertas').length).toBeGreaterThan(0);
     });
@@ -100,8 +100,8 @@ describe('pantallas que crea cada ruta', () => {
   describe('con la sesión de un turista', () => {
     beforeEach(() => conSesion('TURISTA'));
 
-    it('"/" crea el catálogo y este pide las ofertas', async () => {
-      await ir('/', Catalogo);
+    it('"/catalogo" crea el catálogo y este pide las ofertas', async () => {
+      await ir('/catalogo', Catalogo);
 
       expect(http.match((p) => p.url === '/api/catalogo/ofertas').length).toBeGreaterThan(0);
     });
@@ -150,11 +150,11 @@ describe('pantallas que crea cada ruta', () => {
 
   describe('con la sesión de los demás roles', () => {
     it.each(['PRESTADOR', 'OPERADOR_DISPONIBILIDAD', 'GESTOR_DESTINO', 'ADMINISTRADOR'] as const)(
-      '"/" crea el catálogo también para un %s',
+      '"/catalogo" crea el catálogo también para un %s',
       async (rol) => {
         conSesion(rol);
 
-        await ir('/', Catalogo);
+        await ir('/catalogo', Catalogo);
       },
     );
 
