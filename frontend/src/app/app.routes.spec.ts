@@ -31,6 +31,7 @@ describe('rutas de la aplicación', () => {
 
   describe('sin sesión', () => {
     it.each([
+      '/',
       '/catalogo',
       '/catalogo?tipo=ACTIVIDAD&zonaId=a00000000000000000000005',
       '/ofertas/abc',
@@ -65,13 +66,13 @@ describe('rutas de la aplicación', () => {
       expect(await ir(url)).toBe(`/iniciar-sesion?volver=${encodeURIComponent(url)}`);
     });
 
-    it('una dirección desconocida vuelve al catálogo', async () => {
-      expect(await ir('/no-existe')).toBe('/catalogo');
+    it('una dirección desconocida vuelve al inicio', async () => {
+      expect(await ir('/no-existe')).toBe('/');
     });
 
     // Los enlaces viejos (y los de la demostración) apuntaban al catálogo en la raíz: deben seguir llegando con sus filtros.
     it.each([
-      ['/', '/catalogo'],
+      ['/?texto=buceo', '/catalogo?texto=buceo'],
       ['/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005', '/catalogo?tipo=ACTIVIDAD&zonaId=a00000000000000000000005'],
       ['/?precioMax=150000&accesibleSillaRuedas=true&page=2', '/catalogo?precioMax=150000&accesibleSillaRuedas=true&page=2'],
     ])('%s redirige a %s con los mismos parámetros', async (vieja, nueva) => {

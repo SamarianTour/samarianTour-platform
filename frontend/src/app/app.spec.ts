@@ -117,6 +117,21 @@ describe('App (cabecera)', () => {
         (b) => b.textContent?.trim() === codigo,
       )!;
 
+    it('el logo lleva al inicio y su nombre accesible es "Samarian Tour, inicio" (y en inglés, "home")', () => {
+      crear();
+      const logo = () => raiz().querySelector<HTMLAnchorElement>('a.marca')!;
+
+      expect(logo().getAttribute('href')).toBe('/');
+      expect(logo().getAttribute('aria-label')).toBe('Samarian Tour, inicio');
+      // El menú no lleva un enlace "Inicio": el logo cumple ese papel.
+      expect(enlaces()).not.toContain('Inicio');
+
+      botonDeIdioma('EN').click();
+      fixture.detectChanges();
+
+      expect(logo().getAttribute('aria-label')).toBe('Samarian Tour, home');
+    });
+
     it('tiene el selector ES | EN en la cabecera', () => {
       crear();
 

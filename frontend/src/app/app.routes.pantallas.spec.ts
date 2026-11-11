@@ -22,6 +22,7 @@ import { Proximamente } from './shared/proximamente/proximamente';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
+import { Inicio } from './features/turista/inicio/inicio';
 import { DetalleSolicitud } from './features/turista/solicitudes/detalle-solicitud/detalle-solicitud';
 import { MisSolicitudes } from './features/turista/solicitudes/mis-solicitudes/mis-solicitudes';
 import { FormularioSolicitud } from './features/turista/solicitudes/formulario-solicitud/formulario-solicitud';
@@ -67,6 +68,21 @@ describe('pantallas que crea cada ruta', () => {
   );
 
   describe('sin sesión', () => {
+    it('"/" crea el Inicio y este pide las zonas, no las ofertas ni las recomendaciones', async () => {
+      await ir('/', Inicio);
+
+      expect(http.match((p) => p.url === '/api/catalogo/zonas').length).toBe(1);
+      expect(http.match((p) => p.url === '/api/catalogo/ofertas').length).toBe(0);
+      expect(http.match((p) => p.url.includes('/api/recomendacion')).length).toBe(0);
+    });
+
+    it('un enlace viejo con filtros ("/?tipo=...") crea el catálogo, no el Inicio', async () => {
+      await ir('/?tipo=ACTIVIDAD&zonaId=a00000000000000000000005', Catalogo);
+
+      const ofertas = http.match((p) => p.url === '/api/catalogo/ofertas');
+      expect(ofertas.some((p) => p.request.params.get('tipo') === 'ACTIVIDAD')).toBe(true);
+    });
+
     it('"/catalogo" crea el catálogo y este pide las ofertas', async () => {
       await ir('/catalogo', Catalogo);
 

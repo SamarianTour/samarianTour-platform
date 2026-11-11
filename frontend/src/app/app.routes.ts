@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { rolGuard } from './core/sesion/guards';
 import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
+import { catalogoEnLaRaiz } from './features/turista/inicio/catalogo-en-la-raiz';
 
 /**
  * El `title` de cada ruta es una clave de texto (`app.titulo.*`), no el texto: `EstrategiaDeTitulo` lo traduce y lo
@@ -86,17 +87,18 @@ export const routes: Routes = [
   // importa aquí; cada pantalla sigue cargándose por demanda.
   ...RUTAS_CUENTAS,
   {
-    // El catálogo vivía en la raíz: los enlaces viejos (`/?tipo=ACTIVIDAD&zonaId=...`) siguen funcionando porque la
-    // redirección conserva los parámetros. TODO (commit del Inicio): aquí irá el Inicio y solo se redirigirá si hay filtros.
+    // P01.0: el Inicio, público. El catálogo vivía en la raíz: los enlaces viejos (`/?tipo=ACTIVIDAD&zonaId=...`, o cualquier
+    // filtro del catálogo) siguen funcionando porque el guard los redirige a `/catalogo` con los mismos parámetros.
     path: '',
     pathMatch: 'full',
-    redirectTo: 'catalogo',
+    canActivate: [catalogoEnLaRaiz],
+    title: 'app.titulo.inicio',
+    loadComponent: () => import('./features/turista/inicio/inicio').then((modulo) => modulo.Inicio),
   },
   {
     path: '',
     loadChildren: () =>
       import('./features/turista/turista.routes').then((modulo) => modulo.RUTAS_TURISTA),
   },
-  // Angular no encadena dos redirecciones: por eso va directo al catálogo y no a `''`.
-  { path: '**', redirectTo: 'catalogo' },
+  { path: '**', redirectTo: '' },
 ];

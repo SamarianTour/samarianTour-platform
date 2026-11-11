@@ -1,0 +1,128 @@
+<section class="hero" aria-labelledby="hero-titulo">
+  <div class="hero__contenido">
+    <p class="hero__etiqueta">
+      <app-icono nombre="hoja" />
+      {{ 'turista.inicio.kicker' | t }}
+    </p>
+    <h1 id="hero-titulo">{{ 'turista.inicio.titulo' | t }}</h1>
+    <p class="hero__sub">{{ 'turista.inicio.sub' | t }}</p>
+
+    <form class="buscador" role="search" (submit)="buscar($event)" novalidate>
+      <div class="buscador__fila">
+        <label class="solo-lectores" for="inicio-texto">{{ 'turista.inicio.buscar.etiqueta' | t }}</label>
+        <input
+          id="inicio-texto"
+          type="search"
+          autocomplete="off"
+          [formControl]="texto"
+          [attr.maxlength]="textoMaximo"
+          [placeholder]="'turista.catalogo.buscarEjemplo' | t"
+          [attr.aria-invalid]="textoCorto() ? 'true' : null"
+          [attr.aria-describedby]="textoCorto() ? 'inicio-texto-error' : null"
+          (input)="textoCorto.set(false)"
+        />
+        <button type="submit" class="boton">{{ 'turista.inicio.buscar.boton' | t }}</button>
+      </div>
+      @if (textoCorto()) {
+        <p class="buscador__error" id="inicio-texto-error" role="alert">
+          {{ 'turista.catalogo.textoCorto' | t }}
+        </p>
+      }
+    </form>
+  </div>
+</section>
+
+<section class="pagina seccion" aria-labelledby="tipos-titulo">
+  <h2 id="tipos-titulo">{{ 'turista.inicio.tipos.titulo' | t }}</h2>
+  <p class="texto-suave seccion__sub">{{ 'turista.inicio.tipos.sub' | t }}</p>
+  <ul class="tipos">
+    @for (tarjeta of tarjetas; track tarjeta.tipo) {
+      <li>
+        <a class="tipo" [routerLink]="tarjeta.ruta" [queryParams]="tarjeta.consulta">
+          <app-icono class="tipo__icono" [nombre]="iconoDeTipo[tarjeta.tipo]" />
+          <span class="tipo__nombre">{{ tarjeta.nombre | t }}</span>
+          <span class="tipo__descripcion">{{ tarjeta.descripcion | t }}</span>
+          <span class="tipo__ir">
+            {{ 'turista.inicio.verPlanes' | t }}
+            <app-icono nombre="flecha" />
+          </span>
+        </a>
+      </li>
+    }
+  </ul>
+</section>
+
+@if (hayZonas()) {
+  <section class="pagina seccion" aria-labelledby="zonas-titulo">
+    <div class="zonas__cabecera">
+      <div>
+        <h2 id="zonas-titulo">{{ 'turista.inicio.zonas.titulo' | t }}</h2>
+        <p class="texto-suave seccion__sub">{{ 'turista.inicio.zonas.sub' | t }}</p>
+      </div>
+      <div class="zonas__botones">
+        <button
+          type="button"
+          class="zonas__boton zonas__boton--anterior"
+          [disabled]="!hayAnterior()"
+          [attr.aria-label]="'turista.inicio.zonas.anterior' | t"
+          (click)="mover(-1)"
+        >
+          <app-icono nombre="chevron" />
+        </button>
+        <button
+          type="button"
+          class="zonas__boton"
+          [disabled]="!haySiguiente()"
+          [attr.aria-label]="'turista.inicio.zonas.siguiente' | t"
+          (click)="mover(1)"
+        >
+          <app-icono nombre="chevron" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Fila con desplazamiento horizontal: se enfoca con el teclado y se desliza con el dedo. No avanza sola. -->
+    <ul
+      #pista
+      class="zonas"
+      role="region"
+      tabindex="0"
+      [attr.aria-label]="'turista.inicio.zonas.region' | t"
+      (scroll)="actualizarBotones()"
+    >
+      @for (zona of zonas(); track zona.id; let i = $index) {
+        <li>
+          <a class="zona {{ fondoDeZona(i) }}" [routerLink]="['/zonas', zona.id]">
+            <span class="zona__marcas">
+              @if (zona.areaProtegida) {
+                <span class="zona__marca">{{ 'turista.inicio.marca.protegida' | t }}</span>
+              }
+              @if (zona.altaAfluencia) {
+                <span class="zona__marca zona__marca--afluencia">{{ 'turista.inicio.marca.afluencia' | t }}</span>
+              }
+            </span>
+            <span class="zona__nombre">{{ zona.nombre }}</span>
+            @if (zona.descripcion) {
+              <span class="zona__descripcion">{{ zona.descripcion }}</span>
+            }
+            <span class="tipo__ir">
+              {{ 'turista.inicio.zonas.ver' | t }}
+              <app-icono nombre="flecha" />
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+<section class="pagina seccion" aria-labelledby="ayuda-titulo">
+  <div class="ayuda">
+    <app-icono class="ayuda__icono" nombre="chispas" />
+    <div class="ayuda__texto">
+      <h2 id="ayuda-titulo">{{ 'turista.inicio.ayuda.titulo' | t }}</h2>
+      <p>{{ 'turista.inicio.ayuda.texto' | t }}</p>
+    </div>
+    <a class="boton" routerLink="/recomendaciones">{{ 'turista.inicio.ayuda.boton' | t }}</a>
+  </div>
+</section>

@@ -32,6 +32,8 @@ export const APP = diccionario(
     'app.menu.sesionCerrada': 'Cerraste sesión',
 
     // Títulos de las rutas (la pestaña del navegador).
+    'app.marca.inicio': 'Samarian Tour, inicio',
+    'app.titulo.inicio': 'Inicio',
     'app.titulo.catalogo': 'Catálogo',
     'app.titulo.paquetes': 'Paquetes',
     'app.titulo.zona': 'Zona',
@@ -102,6 +104,8 @@ export const APP = diccionario(
     'app.menu.cerrarSesion': 'Log out',
     'app.menu.sesionCerrada': 'You logged out',
 
+    'app.marca.inicio': 'Samarian Tour, home',
+    'app.titulo.inicio': 'Home',
     'app.titulo.catalogo': 'Catalog',
     'app.titulo.paquetes': 'Packages',
     'app.titulo.zona': 'Area',
