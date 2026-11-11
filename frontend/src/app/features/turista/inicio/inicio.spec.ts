@@ -101,6 +101,23 @@ describe('Inicio (P01.0)', () => {
       expect(tarjetas[1].textContent).toContain('Área protegida');
     });
 
+    it('la región desplazable contiene una lista de verdad: las zonas siguen siendo elementos de lista', async () => {
+      await abrir();
+
+      const region = raiz().querySelector('[role="region"].zonas')!;
+      expect(region.tagName).toBe('DIV');
+      expect(region.querySelectorAll(':scope > ul.zonas__lista > li')).toHaveLength(2);
+    });
+
+    it('los botones conservan el foco en los extremos: usan aria-disabled y no disabled', async () => {
+      await abrir();
+
+      const botones = Array.from(raiz().querySelectorAll<HTMLButtonElement>('.zonas__boton'));
+      expect(botones.every((b) => !b.disabled)).toBe(true);
+      // En la prueba no hay diseño, así que la fila no se desborda y ambos quedan sin uso.
+      expect(botones.map((b) => b.getAttribute('aria-disabled'))).toEqual(['true', 'true']);
+    });
+
     it('la fila se puede enfocar, tiene nombre y no avanza sola', async () => {
       await abrir();
 

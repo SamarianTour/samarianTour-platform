@@ -78,10 +78,6 @@ export function puedeAsignar(
   );
 }
 
-/** Cuántos prestadores de la lista no tienen operador. */
-export function contarSinOperador(prestadores: readonly PrestadorAdmin[]): number {
-  return prestadores.filter((prestador) => !prestador.operadorId).length;
-}
 
 /** Lo que dice el resultado de una sincronización con el RNT (RF-76 a RF-78, QAS-03). */
 export interface ResumenSincronizacion {

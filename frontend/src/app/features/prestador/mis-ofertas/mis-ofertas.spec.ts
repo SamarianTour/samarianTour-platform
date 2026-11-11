@@ -70,6 +70,20 @@ describe('MisOfertas (según la sesión)', () => {
     expect(texto()).toContain('Caminata a Marinka');
   });
 
+  it('el precio lleva la unidad que entrega la API, no la que correspondería al tipo de oferta', () => {
+    crear();
+    http.expectOne((p) => p.url === URL).flush({
+      contenido: [{ ...OFERTA, pendiente: { ...OFERTA.pendiente, unidadPrecio: 'por noche y unidad' } }],
+      pagina: 0,
+      tamano: 10,
+      totalElementos: 1,
+      totalPaginas: 1,
+    });
+    fixture.detectChanges();
+
+    expect(texto()).toContain('por noche y unidad');
+  });
+
   it('editar los datos personales no vuelve a pedir la lista', () => {
     crear();
     http

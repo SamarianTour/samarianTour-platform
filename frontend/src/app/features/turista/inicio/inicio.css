@@ -143,7 +143,7 @@
 }
 
 .tipos li:nth-child(4) .tipo {
-  background: linear-gradient(160deg, #2f8a5f 0%, #12432f 100%);
+  background: linear-gradient(160deg, #24774f 0%, #12432f 100%);
 }
 
 .tipo:hover,
@@ -152,8 +152,7 @@
   transform: translateY(-3px);
 }
 
-.tipo:focus-visible,
-.zona:focus-visible {
+.tipo:focus-visible {
   outline: 3px solid var(--enlace);
   outline-offset: 3px;
 }
@@ -172,7 +171,7 @@
 
 .tipo__descripcion {
   font-size: 0.9375rem;
-  color: #eaf6f5;
+  color: #fff;
 }
 
 .tipo__ir {
@@ -182,150 +181,6 @@
   margin-top: 0.5rem;
   font-size: 0.875rem;
   font-weight: 700;
-}
-
-/* Zonas: fila con desplazamiento horizontal y botones anterior/siguiente */
-.zonas__cabecera {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.zonas__botones {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.zonas__boton {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border: 1.5px solid var(--borde-fuerte);
-  border-radius: 50%;
-  background: var(--superficie);
-  color: var(--texto);
-  cursor: pointer;
-}
-
-.zonas__boton--anterior app-icono {
-  transform: rotate(180deg);
-}
-
-.zonas__boton:hover:not(:disabled) {
-  border-color: var(--enlace);
-  background: var(--enlace);
-  color: #fff;
-}
-
-.zonas__boton:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.zonas {
-  display: flex;
-  gap: 1.25rem;
-  margin: 0;
-  padding: 0.375rem 0.25rem 1.25rem;
-  overflow-x: auto;
-  list-style: none;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
-}
-
-.zonas:focus-visible {
-  outline: 3px solid var(--enlace);
-  outline-offset: 2px;
-}
-
-.zonas > li {
-  flex: none;
-  scroll-snap-align: start;
-}
-
-.zona {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  width: 17rem;
-  height: 22rem;
-  padding: 1.375rem;
-  border-radius: var(--radio-lg);
-  color: #fff;
-  text-decoration: none;
-  /* El degradado oscuro de abajo asegura el contraste del texto blanco sobre cualquier fondo. */
-  background-image: linear-gradient(180deg, rgb(4 24 28 / 8%) 0%, rgb(4 24 28 / 88%) 70%), var(--fondo-zona);
-}
-
-.zona:hover,
-.zona:focus-visible {
-  box-shadow: 0 10px 24px rgb(15 23 42 / 25%);
-  transform: translateY(-3px);
-}
-
-.zona--fondo-0 {
-  --fondo-zona: linear-gradient(165deg, #c9703a, #6b2e22);
-}
-
-.zona--fondo-1 {
-  --fondo-zona: linear-gradient(165deg, #1b8eb5, #0b3f63);
-}
-
-.zona--fondo-2 {
-  --fondo-zona: linear-gradient(165deg, #c2543f, #40204a);
-}
-
-.zona--fondo-3 {
-  --fondo-zona: linear-gradient(165deg, #1e9a9a, #0b4a52);
-}
-
-.zona--fondo-4 {
-  --fondo-zona: linear-gradient(165deg, #1f8a62, #0c3c33);
-}
-
-.zona--fondo-5 {
-  --fondo-zona: linear-gradient(165deg, #3f8f5a, #17402f);
-}
-
-.zona__marcas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-bottom: auto;
-}
-
-.zona__marca {
-  padding: 0.2rem 0.625rem;
-  border-radius: 999px;
-  background: var(--protegida-fondo);
-  color: var(--protegida-texto);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.zona__marca--afluencia {
-  background: var(--afluencia-fondo);
-  color: var(--afluencia-texto);
-}
-
-.zona__nombre {
-  font-family: var(--fuente-titulos);
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1.15;
-}
-
-.zona__descripcion {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 0.875rem;
-  color: #eaf6f5;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
 }
 
 /* Invitación a pedir recomendaciones */
@@ -392,11 +247,6 @@
     font-size: 1.25rem;
   }
 
-  .zona {
-    width: 14.5rem;
-    height: 20rem;
-  }
-
   .ayuda {
     flex-direction: column;
     align-items: flex-start;
@@ -409,9 +259,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tipo:hover,
-  .tipo:focus-visible,
-  .zona:hover,
-  .zona:focus-visible {
+  .tipo:focus-visible {
     transform: none;
   }
 }

@@ -14,7 +14,7 @@ export const obligatorio: ValidatorFn = (control) =>
   typeof control.value === 'string' && control.value.trim() !== '' ? null : { required: true };
 
 /**
- * Las reglas de la contraseña: largo, y al menos una letra y un número [SUPUESTO] (DN-28). El núcleo las vuelve a
+ * Las reglas de la contraseña: largo, y al menos una letra y un número (DN-28; ver el contrato del núcleo, `contrasena`). El núcleo las vuelve a
  * aplicar; esto solo avisa antes de enviar. Un control vacío no es un error de esta regla: lo cubre `obligatorio`.
  */
 export const contrasenaValida: ValidatorFn = (control) => {

@@ -1,6 +1,5 @@
 import { AlertaSesgo, PrestadorAdmin } from '../../core/api/modelos-nucleo';
 import {
-  UMBRAL_INDICE_SESGO,
   codigoDelPrestador,
   nombreDelPrestador,
   ordenarPorIndice,
@@ -31,9 +30,6 @@ function prestador(id: string, razonSocial?: string): PrestadorAdmin {
 }
 
 describe('alertas de sesgo', () => {
-  it('el umbral de la alerta es 1,5', () => {
-    expect(UMBRAL_INDICE_SESGO).toBe(1.5);
-  });
 
   describe('ordenarPorIndice', () => {
     it('pone primero la de mayor índice', () => {

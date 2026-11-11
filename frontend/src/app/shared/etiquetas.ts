@@ -75,9 +75,9 @@ export const TIPO_PRESTADOR = tablaDeTextos<TipoPrestador>({
 });
 
 /**
- * Unidad del precio de referencia por tipo de oferta (DC-22).
- * [SUPUESTO] La búsqueda y la ficha la traen en `unidadPrecio`, pero la lista de ofertas propias no:
- * allí se toma de esta tabla.
+ * Unidad del precio de referencia por tipo de oferta (DC-22). Solo la usa el formulario de publicar o editar, que la muestra
+ * como ayuda antes de enviar: en todo lo demás (búsqueda, ficha, lista y detalle de ofertas propias) la API entrega
+ * `unidadPrecio` y se muestra esa.
  */
 export const UNIDAD_PRECIO = tablaDeTextos<TipoOferta>({
   ACTIVIDAD: 'etiquetas.unidadPrecio.ACTIVIDAD',

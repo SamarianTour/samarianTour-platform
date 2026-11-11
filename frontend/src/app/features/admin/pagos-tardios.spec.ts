@@ -4,7 +4,6 @@ import {
   EXPLICACION_MOTIVO_PAGO,
   ETIQUETA_MOTIVO_PAGO,
   codigoDeSolicitud,
-  contarSinAvisar,
   ordenarPagosTardios,
   totalPorDevolver,
 } from './pagos-tardios';
@@ -69,14 +68,6 @@ describe('totalPorDevolver', () => {
 
   it('sin pagos no hay nada que devolver', () => {
     expect(totalPorDevolver([])).toBe(0);
-  });
-});
-
-describe('contarSinAvisar', () => {
-  it('cuenta los pagos que todavía no se avisaron por WhatsApp', () => {
-    expect(contarSinAvisar([pago('a', 1), pago('b', 1, { avisado: false }), pago('c', 1, { avisado: false })])).toBe(2);
-    expect(contarSinAvisar([pago('a', 1)])).toBe(0);
-    expect(contarSinAvisar([])).toBe(0);
   });
 });
 

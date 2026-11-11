@@ -1,5 +1,6 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { EnlaceNavegacion, enlaceActivo, enlacesDelRol } from './core/sesion/enlaces-por-rol';
@@ -24,10 +25,30 @@ import { SelectorIdioma } from './shared/selector-idioma/selector-idioma';
 export class App {
   private readonly router = inject(Router);
   private readonly sesion = inject(SesionService);
+  private readonly documento = inject(DOCUMENT);
+  /** La ruta (sin parámetros) de la navegación anterior: null en la primera carga. */
+  private rutaAnterior: string | null = null;
 
   constructor() {
     // Deja el atributo `lang` y la descripción del documento en el idioma elegido desde el primer momento.
     inject(IdiomaService);
+
+    // WCAG 2.4.3: al pasar a otra pantalla, el foco va al contenido. Si no, quien navega con teclado o con lector de pantalla
+    // seguiría en el enlace del menú que acaba de usar. No se mueve en la primera carga (queda el enlace "Saltar al
+    // contenido"), ni cuando solo cambian los parámetros (filtros, páginas), ni si la pantalla ya puso el foco en su interior.
+    this.router.events
+      .pipe(
+        filter((evento) => evento instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe((evento) => {
+        const ruta = evento.urlAfterRedirects.split(/[?#]/)[0];
+        const contenido = this.documento.getElementById('contenido');
+        if (this.rutaAnterior !== null && ruta !== this.rutaAnterior && !contenido?.contains(this.documento.activeElement)) {
+          contenido?.focus({ preventScroll: true });
+        }
+        this.rutaAnterior = ruta;
+      });
   }
 
   protected readonly autenticada = this.sesion.autenticada;

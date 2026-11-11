@@ -43,18 +43,4 @@ describe('títulos y textos de las rutas', () => {
       expect(clave in TEXTOS.en, `${clave} no está en inglés`).toBe(true);
     },
   );
-
-  // Hoy ninguna ruta usa la pantalla "próximamente"; si una sección futura la vuelve a usar, su nombre y su descripción deben ser
-  // claves de texto que existan en los dos idiomas.
-  it('el nombre y la descripción de las pantallas "próximamente", si hay alguna, son claves que existen', () => {
-    const claves = TODAS.flatMap(({ route }) => {
-      const datos = route.data as { nombre?: string; descripcion?: string } | undefined;
-      return datos ? [datos.nombre, datos.descripcion].filter((c): c is string => !!c) : [];
-    });
-
-    for (const clave of claves) {
-      expect(clave in TEXTOS.es, `${clave} no está en español`).toBe(true);
-      expect(clave in TEXTOS.en, `${clave} no está en inglés`).toBe(true);
-    }
-  });
 });

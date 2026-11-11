@@ -26,10 +26,6 @@ export function totalPorDevolver(pagos: readonly PagoTardio[]): number {
   return pagos.reduce((total, pago) => total + pago.monto, 0);
 }
 
-/** Cuántos pagos todavía no se le avisaron al administrador por WhatsApp. */
-export function contarSinAvisar(pagos: readonly PagoTardio[]): number {
-  return pagos.filter((pago) => !pago.avisado).length;
-}
 
 /** Un código corto para citar la solicitud del pago (las primeras letras de su identificador). */
 export function codigoDeSolicitud(solicitudId: string): string {

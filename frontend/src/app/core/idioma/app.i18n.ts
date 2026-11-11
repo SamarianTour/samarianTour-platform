@@ -50,7 +50,6 @@ export const APP = diccionario(
     'app.titulo.demanda': 'Demanda',
     'app.titulo.embudo': 'Embudo de conversión',
     'app.titulo.distribucionPrestador': 'Distribución por tipo de prestador',
-    'app.titulo.administracion': 'Administración',
     'app.titulo.prestadoresRnt': 'Prestadores y RNT',
     'app.titulo.moderacion': 'Moderación',
     'app.titulo.cuentasInternas': 'Cuentas internas',
@@ -73,13 +72,13 @@ export const APP = diccionario(
     'app.titulo.recuperarAcceso': 'Recuperar el acceso',
     'app.titulo.contrasenaNueva': 'Contraseña nueva',
     'app.titulo.sinPermiso': 'Sin permiso',
+    'app.titulo.noEncontrada': 'Página no encontrada',
+    'app.noEncontrada.titulo': 'Página no encontrada',
+    'app.noEncontrada.explicacion': 'La dirección que abriste no existe o cambió de lugar. Revisa que esté bien escrita.',
+    'app.noEncontrada.irInicio': 'Ir al inicio',
     'app.titulo.solicitar': 'Solicitar disponibilidad',
     'app.titulo.detalleSolicitud': 'Detalle de la solicitud',
 
-    // Pantallas que llegan en ramas posteriores (se ven con la ruta ya protegida por rol).
-    'app.proximamente.operador.nombre': 'Cola de solicitudes',
-    'app.proximamente.operador.descripcion':
-      'Aquí atenderás la cola de solicitudes de disponibilidad de los prestadores que tienes asignados.',
   },
   {
     'app.saltar': 'Skip to content',
@@ -122,7 +121,6 @@ export const APP = diccionario(
     'app.titulo.demanda': 'Demand',
     'app.titulo.embudo': 'Conversion funnel',
     'app.titulo.distribucionPrestador': 'Distribution by provider type',
-    'app.titulo.administracion': 'Administration',
     'app.titulo.prestadoresRnt': 'Providers and RNT',
     'app.titulo.moderacion': 'Moderation',
     'app.titulo.cuentasInternas': 'Internal accounts',
@@ -145,11 +143,12 @@ export const APP = diccionario(
     'app.titulo.recuperarAcceso': 'Recover access',
     'app.titulo.contrasenaNueva': 'New password',
     'app.titulo.sinPermiso': 'No permission',
+    'app.titulo.noEncontrada': 'Page not found',
+    'app.noEncontrada.titulo': 'Page not found',
+    'app.noEncontrada.explicacion': "The address you opened doesn't exist or has moved. Check that it is spelled correctly.",
+    'app.noEncontrada.irInicio': 'Go to the home page',
     'app.titulo.solicitar': 'Request availability',
     'app.titulo.detalleSolicitud': 'Request details',
 
-    'app.proximamente.operador.nombre': 'Request queue',
-    'app.proximamente.operador.descripcion':
-      'Here you will handle the queue of availability requests from the providers assigned to you.',
   },
 );

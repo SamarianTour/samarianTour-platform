@@ -9,7 +9,6 @@ import {
   ROLES_CREABLES,
   accionDeCuenta,
   construirCuenta,
-  contarPorRol,
   filtrarCuentas,
   filtroDeCuentas,
   validarCuenta,
@@ -161,9 +160,4 @@ describe('filtrar las cuentas', () => {
     expect(cuentas).toEqual(copia);
   });
 
-  it('cuenta las cuentas de un rol', () => {
-    expect(contarPorRol(cuentas, 'OPERADOR_DISPONIBILIDAD')).toBe(2);
-    expect(contarPorRol(cuentas, 'ADMINISTRADOR')).toBe(1);
-    expect(contarPorRol([], 'GESTOR_DESTINO')).toBe(0);
-  });
 });

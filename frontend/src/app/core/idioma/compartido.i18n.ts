@@ -24,11 +24,6 @@ export const COMPARTIDO = diccionario(
     'compartido.galeria.posicion': '{indice} de {total}',
     'compartido.galeria.alt': 'Foto {indice} de {total} de «{nombre}»',
 
-    'compartido.proximamente.pantalla': 'Esta pantalla',
-    'compartido.proximamente.descripcion': 'La construimos en una de las próximas fases.',
-    'compartido.proximamente.estado':
-      'Esta pantalla está en construcción y llegará en una de las próximas fases.',
-    'compartido.proximamente.volver': 'Volver al catálogo',
   },
   {
     'compartido.paginacion.etiqueta': 'Pagination',
@@ -52,10 +47,5 @@ export const COMPARTIDO = diccionario(
     'compartido.galeria.posicion': '{indice} of {total}',
     'compartido.galeria.alt': 'Photo {indice} of {total} of “{nombre}”',
 
-    'compartido.proximamente.pantalla': 'This screen',
-    'compartido.proximamente.descripcion': "We're building it in one of the upcoming phases.",
-    'compartido.proximamente.estado':
-      'This screen is under construction and will arrive in one of the upcoming phases.',
-    'compartido.proximamente.volver': 'Back to the catalog',
   },
 );

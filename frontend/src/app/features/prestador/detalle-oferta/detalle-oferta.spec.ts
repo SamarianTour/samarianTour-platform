@@ -106,6 +106,17 @@ describe('DetalleOferta (DC-50)', () => {
     expect(raiz().querySelector('h1')?.textContent).toBe('Caminata');
   });
 
+  it('el precio lleva la unidad que entrega la API, no la que correspondería al tipo de oferta', () => {
+    abrir({
+      id: ID,
+      tipo: 'ACTIVIDAD',
+      retirada: false,
+      publicada: { ...version(1, 'APROBADA', 'Nombre publicado', 70000), contenido: contenido('Nombre publicado', 70000, { unidadPrecio: 'por noche y unidad' }) },
+    });
+
+    expect(raiz().querySelector('.versiones .renglon__precio')?.textContent).toContain('por noche y unidad');
+  });
+
   it('muestra el contenido de cada versión: nombre, precio, capacidad, descripción y fotos', () => {
     abrir({
       id: ID,

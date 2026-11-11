@@ -66,8 +66,8 @@ describe('rutas de la aplicación', () => {
       expect(await ir(url)).toBe(`/iniciar-sesion?volver=${encodeURIComponent(url)}`);
     });
 
-    it('una dirección desconocida vuelve al inicio', async () => {
-      expect(await ir('/no-existe')).toBe('/');
+    it('una dirección desconocida no redirige: se queda en su dirección para mostrar "página no encontrada"', async () => {
+      expect(await ir('/no-existe')).toBe('/no-existe');
     });
 
     // Los enlaces viejos (y los de la demostración) apuntaban al catálogo en la raíz: deben seguir llegando con sus filtros.

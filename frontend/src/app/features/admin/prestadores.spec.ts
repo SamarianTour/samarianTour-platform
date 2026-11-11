@@ -3,7 +3,6 @@ import { establecerIdioma } from '../../core/idioma/idioma';
 import {
   CLASE_DE_ESTADO_RNT,
   ETIQUETA_ESTADO_RNT,
-  contarSinOperador,
   datosDelOperador,
   etiquetaDeOperador,
   filtroDePrestadores,
@@ -170,13 +169,6 @@ describe('puedeAsignar', () => {
 
   it('un operador que no es asignable (desactivado o de otro rol) no se acepta', () => {
     expect(puedeAsignar('d', prestador('p1'), asignables)).toBe(false);
-  });
-});
-
-describe('contarSinOperador', () => {
-  it('cuenta los prestadores que no tienen operador', () => {
-    expect(contarSinOperador([prestador('1'), prestador('2', 'a'), prestador('3')])).toBe(2);
-    expect(contarSinOperador([])).toBe(0);
   });
 });
 

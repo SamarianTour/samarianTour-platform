@@ -18,7 +18,6 @@ import { PanelAdmin } from './features/admin/panel/panel-admin';
 import { PanelGestor } from './features/gestor/panel/panel-gestor';
 import { AlertasDestino } from './features/recomendacion/alertas/alertas-destino';
 import { ChatRecomendaciones } from './features/recomendacion/chat/chat-recomendaciones';
-import { Proximamente } from './shared/proximamente/proximamente';
 import { PanelOperador } from './features/operador/panel/panel-operador';
 import { PanelPrestador } from './features/prestador/panel/panel-prestador';
 import { Catalogo } from './features/turista/catalogo/catalogo';
