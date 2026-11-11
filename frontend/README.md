@@ -52,7 +52,7 @@ src/app
 │   └── avisos/              mensajes breves de confirmación
 ├── shared/                  piezas reutilizables: mapa, galería de fotos, menú de la cuenta, marco de las pantallas de acceso, "próximamente", iconos, estrellas, paginación, diálogo de confirmación, pasos de la solicitud, pipes y textos
 └── features/
-    ├── turista/             catálogo (/), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
+    ├── turista/             inicio (/), catálogo (/catalogo), paquetes (/paquetes), ficha de zona (/zonas/:id), ficha con opiniones (/ofertas/:id), mis opiniones (/mis-opiniones) y las solicitudes de disponibilidad (solicitudes/)
     ├── prestador/           panel con menú lateral: inicio (dashboard), mis ofertas, detalle y formulario de publicar o editar, RNT y tipo, perfil público, WhatsApp de contacto y cuenta de cobro
     ├── operador/            panel con menú lateral, cola, historial, atender una solicitud y avisos
     ├── admin/               panel con menú lateral: prestadores y RNT, moderación, cuentas internas, comisión y pagos tardíos, zonas, alertas de sesgo y pendientes técnicos
@@ -63,7 +63,10 @@ src/app
 
 | Ruta | Quién | Pantalla |
 |---|---|---|
-| `/` | Todos | Catálogo con filtros en los query params y paginación de 12; cada tarjeta muestra la miniatura de la portada |
+| `/` | Todos | P01.0 Inicio: buscador, cuatro tarjetas de tipo, zonas reales y la invitación a las recomendaciones. Una raíz con filtros del catálogo (`/?tipo=...`) redirige a `/catalogo` con los mismos parámetros |
+| `/catalogo` | Todos | Catálogo con búsqueda por texto (2 a 100 caracteres) y filtros en los query params, y paginación de 12; cada tarjeta muestra la miniatura de la portada |
+| `/paquetes` | Todos | P01.3 Catálogo de paquetes: el mismo catálogo con el tipo fijo en `PAQUETE` y su propio título |
+| `/zonas/:id` | Todos | Ficha de la zona: descripción, marcas (área protegida, alta afluencia), buenas prácticas, condiciones de visita y alertas. Se llega desde el Inicio y desde la ficha de una oferta |
 | `/ofertas/:id` | Todos | Ficha con galería de fotos, zona, perfil del prestador, mapa y opiniones; el turista con sesión puede "Dejar una opinión". Trae las alertas de su zona (P08.2) y, si la zona es de alta afluencia, alternativas con menos visitantes (P08.3) |
 | `/recomendaciones` | Todos | P08.1 Recomendaciones: asistente de viaje que sugiere de 3 a 5 ofertas explicadas |
 | `/alertas` | Todos | P08.2 Alertas del destino por zona, con su fuente y la hora de actualización. No está en el menú: se llega desde Recomendaciones y desde la ficha |
@@ -250,6 +253,23 @@ La lógica (intentos que quedan, si se puede pagar, motivos, validación del che
 ### Para el equipo de backend
 
 - **Motivo del rechazo (opcional).** `IntentoPago` trae solo el estado del intento, no el motivo que dio la pasarela (fondos insuficientes, tarjeta rechazada, etc.). El frontend muestra una explicación fija por estado. Si el equipo quiere mostrar el motivo real, haría falta un campo nuevo en `IntentoPago`.
+
+## Inicio, catálogo y zonas
+
+Pantallas públicas del turista, en `features/turista` (`inicio/`, `catalogo/`, `zona/`).
+
+- **Inicio** (`/`, P01.0). El buscador lleva a `/catalogo?texto=...`; las cuatro tarjetas de tipo, al catálogo con ese tipo (la de paquetes, a `/paquetes`). Solo pide `GET /zonas`: no carga ofertas, no muestra "destacados" ni patrocinados, y **no llama a `POST /recomendaciones`** (cada visita gastaría cupo de la IA y la respuesta sin la consulta del turista sería genérica); en su lugar, la tarjeta "¿No sabes qué elegir?" enlaza a `/recomendaciones`. Si `GET /zonas` falla, la sección de zonas no aparece y el resto sigue.
+- **Zonas del Inicio.** Una fila con desplazamiento horizontal, con botones anterior y siguiente y deslizable en el celular. No avanza sola (WCAG 2.2.2).
+- **Enlaces viejos.** El catálogo vivía en `/`. Un guard de la ruta `/` (`catalogo-en-la-raiz.ts`) redirige a `/catalogo`, con los mismos parámetros, cualquier raíz que traiga un parámetro del catálogo. La lista de parámetros vive en ese archivo y una prueba la compara con los que escribe el catálogo.
+- **Búsqueda por texto** (DC-37). Parámetro `texto`, de 2 a 100 caracteres sin contar los espacios de los extremos. Con un solo carácter se avisa y no se consulta; una URL con un texto fuera de ese rango se ignora.
+- **Paquetes** (`/paquetes`, P01.3). Usa el mismo componente del catálogo con el dato de ruta `tipoFijo: 'PAQUETE'`: no ofrece elegir el tipo y la URL no lo repite.
+- **Ficha de zona** (`/zonas/:id`, RF-25). `GET /zonas/{zonaId}`. También responde por una zona inactiva (DC-49) y entonces lo avisa. Las "marcas" son `areaProtegida` y `altaAfluencia` del contrato. Las alertas son la misma sección opcional de la ficha de una oferta.
+- **Menú.** "Paquetes" está junto a "Catálogo" para quien no ha iniciado sesión, el turista y el prestador. No hay enlace "Inicio": el logo (`Samarian Tour, inicio`) lleva a `/`.
+
+### Para el equipo de backend
+
+- **Orden de los paquetes.** El diseño de referencia traía "Ordenar por" (precio de mayor a menor, más actividades incluidas). `GET /ofertas` solo ordena por precio ascendente y luego por id, así que el selector no se construyó. Haría falta un parámetro `orden` o un conteo de actividades por paquete en `OfertaResumen`.
+- **Imagen de la zona (opcional).** `Zona` no trae foto; las tarjetas del Inicio usan seis fondos de color que se repiten. Una portada por zona permitiría mostrarla.
 
 ## Recomendaciones y alertas
 
