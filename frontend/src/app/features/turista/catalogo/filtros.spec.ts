@@ -6,6 +6,7 @@ import {
   SIN_FILTROS,
   TAMANO_PAGINA,
   consultaDeFiltros,
+  contarFiltros,
   filtrosDesdeUrl,
   hayFiltros,
   urlDeFiltros,
@@ -102,6 +103,34 @@ describe('hayFiltros', () => {
   it('detecta cualquier filtro puesto', () => {
     expect(hayFiltros({ ...SIN_FILTROS, accesibleSillaRuedas: true })).toBe(true);
     expect(hayFiltros({ ...SIN_FILTROS, precioMin: 0 })).toBe(true);
+  });
+});
+
+describe('contarFiltros', () => {
+  it('sin filtros es 0, y no cuenta el texto ni la página', () => {
+    expect(contarFiltros(SIN_FILTROS)).toBe(0);
+    expect(contarFiltros({ ...SIN_FILTROS, texto: 'tayrona', pagina: 3 })).toBe(0);
+  });
+
+  it('cuenta cada filtro puesto, y el rango de precio (mínimo y máximo) como uno', () => {
+    expect(contarFiltros({ ...SIN_FILTROS, zonaId: 'z1', tipoActividad: 'SENDERISMO' })).toBe(2);
+    expect(contarFiltros({ ...SIN_FILTROS, precioMin: 10000 })).toBe(1);
+    expect(contarFiltros({ ...SIN_FILTROS, precioMin: 10000, precioMax: 50000 })).toBe(1);
+    expect(
+      contarFiltros({
+        ...SIN_FILTROS,
+        tipo: 'ACTIVIDAD',
+        zonaId: 'z1',
+        tipoActividad: 'SENDERISMO',
+        precioMax: 50000,
+        nivelEsfuerzoMaximo: 'BAJO',
+        accesibleSillaRuedas: true,
+      }),
+    ).toBe(6);
+  });
+
+  it('el tipo que fija la ruta no cuenta', () => {
+    expect(contarFiltros({ ...SIN_FILTROS, tipo: 'PAQUETE', zonaId: 'z1' }, 'PAQUETE')).toBe(1);
   });
 });
 

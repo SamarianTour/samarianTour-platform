@@ -21,6 +21,7 @@ import {
   consultaDeFiltros,
   filtrosDesdeUrl,
   TEXTO_MAXIMO,
+  contarFiltros,
   hayFiltros,
   normalizarTexto,
   textoInvalido,
@@ -75,6 +76,15 @@ export class Catalogo {
   protected readonly escrito = signal('');
   /** Hay texto, pero de menos de 2 caracteres: se avisa y no se busca (DC-37). */
   protected readonly textoCorto = computed(() => textoInvalido(this.escrito()));
+
+  /** El panel de filtros en celular (hasta 56 rem); en escritorio el CSS lo muestra siempre. */
+  protected readonly panelAbierto = signal(false);
+  /** Cuántos filtros hay puestos en la URL (sin contar texto ni página), para el botón del panel. */
+  protected readonly elegidos = computed(() => contarFiltros(this.filtros(), this.tipoFijo));
+  /** Un error en un campo de precio vive dentro del panel: mientras exista, el panel se muestra para que se vea. */
+  protected readonly panelVisible = computed(
+    () => this.panelAbierto() || this.errorDe('precioMin') !== null || this.errorDe('precioMax') !== null,
+  );
 
   protected readonly conFiltros = computed(() => hayFiltros(this.filtros(), this.tipoFijo));
   /** La zona del filtro, para avisar si es de alta afluencia o un área protegida (RF-25, RF-29). */

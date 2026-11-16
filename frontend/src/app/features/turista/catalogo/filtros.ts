@@ -90,6 +90,17 @@ export function hayFiltros(filtros: FiltrosCatalogo, tipoFijo: TipoOferta | null
   return Object.keys(urlDeFiltros({ ...filtros, tipo: tipoFijo ? null : filtros.tipo, pagina: 0 })).length > 0;
 }
 
+/**
+ * Cuántos filtros hay puestos, para el botón "Filtrar ofertas (N)": no cuenta el texto, la página ni el tipo que fija la ruta,
+ * y el rango de precio (mínimo y máximo) cuenta como uno.
+ */
+export function contarFiltros(filtros: FiltrosCatalogo, tipoFijo: TipoOferta | null = null): number {
+  const params = urlDeFiltros({ ...filtros, texto: null, tipo: tipoFijo ? null : filtros.tipo, pagina: 0 });
+  const otros = Object.keys(params).filter((clave) => clave !== 'precioMin' && clave !== 'precioMax');
+  const conPrecio = params['precioMin'] !== undefined || params['precioMax'] !== undefined;
+  return otros.length + (conPrecio ? 1 : 0);
+}
+
 function valorDe<T extends string>(permitidos: readonly T[], valor: string | null): T | null {
   return permitidos.find((permitido) => permitido === valor) ?? null;
 }
