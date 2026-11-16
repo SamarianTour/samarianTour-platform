@@ -221,6 +221,7 @@ docker compose -f infra/docker-compose.yml logs recomendacion | grep "alertas"
 El piloto completo en una sola instancia EC2, con HTTPS y el dominio del equipo (DN-46). Es el mismo Docker Compose de arriba más `infra/docker-compose.aws.yml`, que solo cambia lo que el servidor necesita:
 
 - Nginx atiende el 443 con un certificado de Let's Encrypt. El 80 solo sirve el desafío del certificado y redirige a HTTPS, y el navegador recuerda por un año que el dominio va con HTTPS (HSTS). Las rutas son las mismas que en local (`infra/nginx/rutas.conf`): `internal`, `actuator` y las rutas con `;` siguen bloqueadas.
+- También como en local, todas las respuestas llevan las cabeceras de seguridad del navegador (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`), y el inicio de sesión, el registro y el pedido de restablecimiento admiten 10 peticiones por minuto por IP, con ráfaga de 20; después responden 429. `www.<dominio>` redirige al dominio sin www.
 - El contenedor `certbot` renueva el certificado solo, y Nginx lo toma sin reiniciarse.
 - Mailpit no tiene puerto público: se ve con un túnel SSH.
 - Los enlaces de los correos, de los WhatsApp simulados y de la pasarela apuntan a `https://<dominio>`.
@@ -244,7 +245,7 @@ Con los 100 USD de créditos alcanza para el semestre si la instancia **solo se 
    - 22 solo desde la IP de cada integrante ("My IP"). Si la IP cambia, se actualiza la regla. Nada más: PostgreSQL, MongoDB, MinIO y Mailpit no se publican.
 4. **La instancia:** Launch instance con Ubuntu Server 24.04 LTS (x86_64), `t3.medium`, el par de llaves, el grupo de seguridad y 30 GB `gp3`.
 5. **IP elástica:** en EC2 > Elastic IPs, Allocate y Associate con la instancia. Así la IP no cambia al detenerla y encenderla.
-6. **El dominio:** en el proveedor donde se compró, un registro **A** con el dominio (o un subdominio, como `demo.`) apuntando a la IP elástica. Antes de seguir, `nslookup <dominio>` tiene que responder esa IP; sin eso Let's Encrypt no emite el certificado.
+6. **El dominio:** en el proveedor donde se compró, un registro **A** con el dominio (o un subdominio, como `demo.`) apuntando a la IP elástica. Antes de seguir, `nslookup <dominio>` tiene que responder esa IP; sin eso Let's Encrypt no emite el certificado. Para que también funcione `www.<dominio>`, un registro **CNAME** `www` que apunte al dominio, y `nslookup www.<dominio>` debe responder la misma IP.
 
 ### 2. Preparar el servidor (una vez)
 
@@ -277,6 +278,12 @@ bash infra/aws/primer-certificado.sh
 ```
 
 El script deja un certificado provisional para que Nginx pueda arrancar, levanta todo (la primera construcción toma varios minutos), pide el de Let's Encrypt y recarga Nginx. Si la construcción se queda sin memoria, construye una imagen a la vez y vuelve a correr el script: `for s in catalogo nucleo recomendacion nginx; do docker compose -f infra/docker-compose.yml -f infra/docker-compose.aws.yml build $s; done`. Si Let's Encrypt lo rechaza, casi siempre es porque el dominio todavía no apunta a la IP o el 80 está cerrado en el grupo de seguridad. El ensayo existe porque Let's Encrypt limita cuántas veces se puede pedir el real por semana.
+
+**El www.** Con el CNAME del paso 1 ya activo, `WWW=1` incluye `www.<dominio>` en el certificado. Sirve en la primera emisión y también en un piloto que ya tiene certificado: en ese caso lo amplía (`--expand`) sin borrar nada y recarga Nginx.
+
+```bash
+WWW=1 bash infra/aws/primer-certificado.sh
+```
 
 **Guarda una copia de `infra/.env` fuera del servidor**, en un lugar privado del equipo, nunca en el repositorio:
 
