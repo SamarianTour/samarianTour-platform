@@ -111,6 +111,79 @@ describe('App (cabecera)', () => {
     });
   });
 
+  describe('menú en celular', () => {
+    const boton = () => raiz().querySelector<HTMLButtonElement>('.menu-boton')!;
+    const panel = () => raiz().querySelector<HTMLElement>('#cabecera-menu')!;
+
+    it('el botón controla el mismo contenedor que tiene la navegación y la cuenta, sin duplicarlos', () => {
+      crear();
+
+      expect(boton().getAttribute('aria-controls')).toBe('cabecera-menu');
+      expect(boton().textContent?.trim()).toBe('Menú');
+      expect(panel().querySelector('nav')).not.toBeNull();
+      expect(panel().querySelector('.cabecera__cuenta')).not.toBeNull();
+      expect(raiz().querySelectorAll('header nav').length).toBe(1);
+    });
+
+    it('empieza cerrado y el botón alterna aria-expanded y la clase del panel', () => {
+      crear();
+      expect(boton().getAttribute('aria-expanded')).toBe('false');
+      expect(panel().classList.contains('abierto')).toBe(false);
+
+      boton().click();
+      fixture.detectChanges();
+      expect(boton().getAttribute('aria-expanded')).toBe('true');
+      expect(panel().classList.contains('abierto')).toBe(true);
+
+      boton().click();
+      fixture.detectChanges();
+      expect(boton().getAttribute('aria-expanded')).toBe('false');
+      expect(panel().classList.contains('abierto')).toBe(false);
+    });
+
+    it('se cierra al navegar', async () => {
+      crear();
+      boton().click();
+      fixture.detectChanges();
+
+      await TestBed.inject(Router).navigateByUrl('/catalogo');
+      fixture.detectChanges();
+
+      expect(boton().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('Escape lo cierra y devuelve el foco al botón', () => {
+      crear();
+      document.body.appendChild(raiz());
+      // En escritorio el botón no se ve (display: none) y jsdom no enfoca lo que no se ve: aquí se simula el celular.
+      boton().style.display = 'inline-flex';
+      boton().click();
+      fixture.detectChanges();
+      raiz().querySelector<HTMLElement>('#cabecera-menu a')!.focus();
+
+      raiz()
+        .querySelector('header')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+
+      expect(boton().getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(boton());
+      raiz().remove();
+    });
+
+    it('con el panel cerrado, Escape no mueve el foco', () => {
+      crear();
+      document.body.appendChild(raiz());
+      const enlace = raiz().querySelector<HTMLElement>('a.marca')!;
+      enlace.focus();
+
+      enlace.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(document.activeElement).toBe(enlace);
+      raiz().remove();
+    });
+  });
+
   describe('idioma', () => {
     const botonDeIdioma = (codigo: string) =>
       Array.from(raiz().querySelectorAll<HTMLButtonElement>('app-selector-idioma button')).find(
