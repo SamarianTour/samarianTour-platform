@@ -1,5 +1,6 @@
 package co.edu.unimagdalena.samariantour.nucleo.compartido.seguridad;
 
+import co.edu.unimagdalena.samariantour.seguridadjwt.AuditoriaDePrueba;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -56,17 +58,24 @@ class AutorizacionPorRutaTest {
 
     @ParameterizedTest(name = "{1} en {0}")
     @MethodSource("rutaYRol")
-    @DisplayName("cada rol entra solo a su prefijo; en los demás, 403 ACCESO_DENEGADO")
+    @DisplayName("cada rol entra solo a su prefijo; en los demás, 403 ACCESO_DENEGADO y el intento en la auditoría")
     void accesoCruzado(String ruta, Rol rol) throws Exception {
-        if (PREFIJOS.get(ruta) == rol) {
-            http.perform(get(ruta).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(USUARIO, rol.name())))
-                    .andExpect(status().isOk())
-                    .andExpect(content().string(rol + " " + USUARIO + " null"));
-        } else {
-            http.perform(get(ruta).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(USUARIO, rol.name())))
-                    .andExpect(status().isForbidden())
-                    .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                    .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            if (PREFIJOS.get(ruta) == rol) {
+                http.perform(get(ruta).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(USUARIO, rol.name())))
+                        .andExpect(status().isOk())
+                        .andExpect(content().string(rol + " " + USUARIO + " null"));
+                assertThat(auditoria.lineas()).isEmpty();
+            } else {
+                http.perform(get(ruta).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(USUARIO, rol.name()))
+                                .header("X-Forwarded-For", "203.0.113.7"))
+                        .andExpect(status().isForbidden())
+                        .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                        .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"));
+                // QAS-04: el intento queda en el registro de auditoría, con quién, qué y desde dónde.
+                assertThat(auditoria.lineas()).singleElement().asString().contains("codigo=ACCESO_DENEGADO",
+                        "usuario=" + USUARIO, "rol=" + rol, "metodo=GET", "ruta=" + ruta, "ip=203.0.113.7");
+            }
         }
     }
 

@@ -13,6 +13,7 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.SesionCobro;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.modelo.SesionGenerada;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.GenerarSesionCobroUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.puerto.entrada.RecibirEventoPasarelaUseCase;
+import co.edu.unimagdalena.samariantour.seguridadjwt.AuditoriaDePrueba;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -120,14 +121,20 @@ class PagoControllerTest {
                 .thenThrow(new PagoNoAplicableException("PLAZO_VENCIDO", "terminó la ventana"))
                 .thenThrow(new ClaveIdempotenciaReutilizadaException(UUID.fromString(CLAVE)));
 
-        for (String[] esperado : List.of(new String[]{"404", "SOLICITUD_NO_ENCONTRADA"},
-                new String[]{"409", "INTENTOS_AGOTADOS"}, new String[]{"409", "PLAZO_VENCIDO"},
-                new String[]{"422", "CLAVE_IDEMPOTENCIA_REUTILIZADA"})) {
-            http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
-                            .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
-                            .header("Idempotency-Key", CLAVE))
-                    .andExpect(status().is(Integer.parseInt(esperado[0])))
-                    .andExpect(jsonPath("$.codigo").value(esperado[1]));
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            for (String[] esperado : List.of(new String[]{"404", "SOLICITUD_NO_ENCONTRADA"},
+                    new String[]{"409", "INTENTOS_AGOTADOS"}, new String[]{"409", "PLAZO_VENCIDO"},
+                    new String[]{"422", "CLAVE_IDEMPOTENCIA_REUTILIZADA"})) {
+                http.perform(post("/turista/solicitudes/{id}/pago", SOLICITUD)
+                                .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.bearer(TURISTA, "TURISTA"))
+                                .header("Idempotency-Key", CLAVE))
+                        .andExpect(status().is(Integer.parseInt(esperado[0])))
+                        .andExpect(jsonPath("$.codigo").value(esperado[1]));
+            }
+
+            // Pagar la solicitud de otro turista queda en la auditoría (QAS-04); los conflictos, no.
+            assertThat(auditoria.lineas()).singleElement().asString().contains("codigo=SOLICITUD_NO_ENCONTRADA",
+                    "usuario=" + TURISTA, "metodo=POST", "ruta=/turista/solicitudes/" + SOLICITUD + "/pago");
         }
     }
 

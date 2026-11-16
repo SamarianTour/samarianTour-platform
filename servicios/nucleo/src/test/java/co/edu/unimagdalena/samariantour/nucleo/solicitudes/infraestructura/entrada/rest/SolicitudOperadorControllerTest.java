@@ -12,6 +12,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.modelo.TipoNo
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.AtenderSolicitudUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ConsultarColaOperadorUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.comando.AtenderSolicitudCommand;
+import co.edu.unimagdalena.samariantour.seguridadjwt.AuditoriaDePrueba;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -119,9 +120,15 @@ class SolicitudOperadorControllerTest {
                 .andExpect(jsonPath("$.whatsappPrestador").value("+573001110001"))
                 .andExpect(jsonPath("$.nota").value("Vamos con una niña de 8 años"))
                 .andExpect(jsonPath("$.historial[0].a").value("PENDIENTE"));
-        http.perform(comoOperador(get("/operador/solicitudes/{id}", ajena)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.codigo").value("SOLICITUD_NO_ENCONTRADA"));
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            http.perform(comoOperador(get("/operador/solicitudes/{id}", ajena)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.codigo").value("SOLICITUD_NO_ENCONTRADA"));
+
+            // La solicitud de un prestador que no le toca al operador queda en la auditoría (QAS-04).
+            assertThat(auditoria.lineas()).singleElement().asString()
+                    .contains("codigo=SOLICITUD_NO_ENCONTRADA", "rol=OPERADOR_DISPONIBILIDAD");
+        }
     }
 
     @Test

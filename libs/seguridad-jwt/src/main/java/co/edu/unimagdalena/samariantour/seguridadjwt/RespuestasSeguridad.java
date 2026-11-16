@@ -19,7 +19,9 @@ import java.util.Map;
  * Los errores de seguridad en el mismo formato que los demás errores de los servicios: ProblemDetail (RFC 7807) con
  * la propiedad {@code codigo}. Sin token o con uno que no sirve, 401 {@code NO_AUTENTICADO} con
  * {@code WWW-Authenticate: Bearer} (RFC 6750); con un rol que la ruta no admite, 403 {@code ACCESO_DENEGADO}. El
- * detalle no dice por qué se rechazó el token, para no orientar a quien intenta falsificarlo.
+ * detalle no dice por qué se rechazó el token, para no orientar a quien intenta falsificarlo. El 403 queda además en
+ * el registro de auditoría ({@link RegistroAccesos}, QAS-04); el 401 no, porque un token vencido es lo normal cada 15
+ * minutos y llenaría el registro sin decir nada.
  */
 public final class RespuestasSeguridad implements AuthenticationEntryPoint, AccessDeniedHandler {
 
@@ -45,6 +47,7 @@ public final class RespuestasSeguridad implements AuthenticationEntryPoint, Acce
     @Override
     public void handle(HttpServletRequest peticion, HttpServletResponse respuesta, AccessDeniedException error)
             throws IOException {
+        RegistroAccesos.denegado(peticion, ACCESO_DENEGADO);
         escribir(peticion, respuesta, HttpStatus.FORBIDDEN, "Acceso denegado", ACCESO_DENEGADO,
                 "Tu rol no puede usar esta ruta");
     }

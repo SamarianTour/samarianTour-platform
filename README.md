@@ -82,7 +82,7 @@ mvn verify    # además, las de integración (*IT) con MongoDB y MinIO en Testco
 | `demo` | Junto con `mongo`, la carga de los datos de demostración | Nunca por defecto; solo en la demostración |
 | `carga` | Junto con `mongo`, agrega 5.000 ofertas sintéticas después de los datos de demostración (`catalogo.carga.ofertas`, DC-48) | Solo en la prueba de carga |
 
-**Identidad: el token del núcleo.** Las rutas `/prestador/**`, `/admin/**` y `/turista/**` exigen el token de acceso que entrega el núcleo al iniciar sesión (`POST /api/nucleo/cuentas/sesion`), en `Authorization: Bearer <token>` (DC-01, DN-37). El catálogo lo valida con la clave pública del núcleo (`SEGURIDAD_JWT_CLAVE_PUBLICA`), sin consultarlo, con `libs/seguridad-jwt`. Del token usa el usuario, el rol y, del prestador, su tipo, que decide qué ofertas publica. Sin token válido responden 401 `NO_AUTENTICADO`, y con otro rol, 403 `ACCESO_DENEGADO`. Los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador` del prototipo ya no identifican a nadie. Para correr el catálogo solo, fuera de Docker, se le pasa la clave pública que genera `infra/generar-claves.sh`.
+**Identidad: el token del núcleo.** Las rutas `/prestador/**`, `/admin/**` y `/turista/**` exigen el token de acceso que entrega el núcleo al iniciar sesión (`POST /api/nucleo/cuentas/sesion`), en `Authorization: Bearer <token>` (DC-01, DN-37). El catálogo lo valida con la clave pública del núcleo (`SEGURIDAD_JWT_CLAVE_PUBLICA`), sin consultarlo, con `libs/seguridad-jwt`. Del token usa el usuario, el rol y, del prestador, su tipo, que decide qué ofertas publica. Sin token válido responden 401 `NO_AUTENTICADO`, y con otro rol, 403 `ACCESO_DENEGADO`. Cada intento denegado, y cada pedido de un recurso ajeno aunque responda 404 para no revelar que existe, deja una línea `[AUDITORIA QAS-04]` en el log del servicio con el código, el usuario, el rol, el método, la ruta y la IP; nunca el token (`docker compose -f infra/docker-compose.yml logs | grep AUDITORIA`). Los headers `X-Usuario-Id`, `X-Rol` y `X-Tipo-Prestador` del prototipo ya no identifican a nadie. Para correr el catálogo solo, fuera de Docker, se le pasa la clave pública que genera `infra/generar-claves.sh`.
 
 ## Levantar el piloto
 
@@ -318,6 +318,9 @@ git pull && $DC up -d --build
 # Ver el estado y los logs
 $DC ps
 $DC logs -f nucleo
+
+# Los accesos denegados (QAS-04): quién intentó entrar a qué, con qué rol y desde qué IP
+$DC logs nucleo catalogo recomendacion | grep AUDITORIA
 
 # Respaldo de las dos bases, las fotos y una copia de infra/.env, en ~/respaldos/<fecha>
 bash infra/aws/respaldo.sh

@@ -16,6 +16,7 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrad
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.ResponderCondicionesUseCase;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.comando.EnviarSolicitudCommand;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.puerto.entrada.comando.ResponderCondicionesCommand;
+import co.edu.unimagdalena.samariantour.seguridadjwt.AuditoriaDePrueba;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -200,12 +201,18 @@ class SolicitudTuristaControllerTest {
         UUID ajena = UUID.randomUUID();
         when(consultar.consultar(TURISTA, ajena)).thenThrow(new SolicitudNoEncontradaException(ajena));
 
-        enviarYEsperar(409, "SOLICITUD_DUPLICADA");
-        enviarYEsperar(422, "CLAVE_IDEMPOTENCIA_REUTILIZADA");
-        enviarYEsperar(503, "CATALOGO_NO_DISPONIBLE");
-        http.perform(comoTurista(get("/turista/solicitudes/{id}", ajena)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.codigo").value("SOLICITUD_NO_ENCONTRADA"));
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            enviarYEsperar(409, "SOLICITUD_DUPLICADA");
+            enviarYEsperar(422, "CLAVE_IDEMPOTENCIA_REUTILIZADA");
+            enviarYEsperar(503, "CATALOGO_NO_DISPONIBLE");
+            http.perform(comoTurista(get("/turista/solicitudes/{id}", ajena)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.codigo").value("SOLICITUD_NO_ENCONTRADA"));
+
+            // Solo la solicitud ajena queda en la auditoría (QAS-04); los conflictos son errores normales.
+            assertThat(auditoria.lineas()).singleElement().asString().contains("codigo=SOLICITUD_NO_ENCONTRADA",
+                    "usuario=" + TURISTA, "rol=TURISTA", "ruta=/turista/solicitudes/" + ajena);
+        }
     }
 
     @Test

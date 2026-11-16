@@ -228,6 +228,7 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
 - Todas sus rutas son públicas según su contrato: la consulta, las alternativas y las alertas no dependen de quién pregunta.
 - Aun así, un token que llegue se valida, y uno vencido o falsificado responde 401; y el cortafuegos de Spring Security rechaza con 400 las rutas con `;` que esquivaban a Nginx.
 - Cuando una ruta necesite al turista, basta con agregar su regla. El registro de exposición no lo necesita: va al núcleo con el token de servicio (DR-24).
+- Hoy la recomendación nunca responde 403: sus rutas son públicas y no atiende rutas internas. Cuando una regla lo haga, el intento quedará en el registro de auditoría de la librería, como en los otros dos servicios (DN-47).
 
 **DR-23. La recomendación lee el catálogo con su propio token de servicio** (DN-38). `GET /internal/ofertas` del catálogo exige el token de la recomendación, que ella firma con su propia clave privada (`RECOMENDACION_JWT_CLAVE_PRIVADA`, `compartido/seguridad/TokenServicioConfig`) y el catálogo valida con la pública.
 - Lo agrega un interceptor del cliente del catálogo solo a `/internal/**`: las lecturas de `/zonas`, que son públicas, salen sin él.

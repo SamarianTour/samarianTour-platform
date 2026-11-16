@@ -20,6 +20,7 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.PublicarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.puerto.entrada.comando.RetirarOfertaCommand;
 import co.edu.unimagdalena.samariantour.catalogo.compartido.concurrencia.ConflictoConcurrenciaException;
+import co.edu.unimagdalena.samariantour.seguridadjwt.AuditoriaDePrueba;
 import co.edu.unimagdalena.samariantour.seguridadjwt.TokensDePrueba;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -396,15 +397,21 @@ class OfertaPrestadorControllerTest {
                 .thenThrow(new OfertaNoEncontradaException("no-existe"));
         when(gestionarOferta.consultarMia("ajena", PRESTADOR)).thenThrow(new PrestadorNoAutorizadoException("ajena"));
 
-        http.perform(comoAgencia(get("/prestador/ofertas/no-existe")))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
-        http.perform(comoAgencia(get("/prestador/ofertas/ajena")))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
-        http.perform(get("/prestador/ofertas/oferta-1"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            http.perform(comoAgencia(get("/prestador/ofertas/no-existe")))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.codigo").value("OFERTA_NO_ENCONTRADA"));
+            http.perform(comoAgencia(get("/prestador/ofertas/ajena")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.codigo").value("PRESTADOR_NO_AUTORIZADO"));
+            http.perform(get("/prestador/ofertas/oferta-1"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"));
+
+            // Solo la oferta de otro prestador queda en la auditoría (QAS-04): la que no existe y el 401, no.
+            assertThat(auditoria.lineas()).singleElement().asString().contains("codigo=PRESTADOR_NO_AUTORIZADO",
+                    "usuario=" + PRESTADOR, "rol=PRESTADOR", "ruta=/prestador/ofertas/ajena");
+        }
     }
 
     @Test

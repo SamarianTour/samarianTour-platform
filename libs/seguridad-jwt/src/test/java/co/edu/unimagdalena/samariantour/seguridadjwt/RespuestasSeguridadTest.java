@@ -44,14 +44,30 @@ class RespuestasSeguridadTest {
     }
 
     @Test
-    @DisplayName("con otro rol: 403 ACCESO_DENEGADO")
+    @DisplayName("con otro rol: 403 ACCESO_DENEGADO, y el intento queda en el registro de auditoría (QAS-04)")
     void otroRol() throws Exception {
         MockHttpServletResponse respuesta = new MockHttpServletResponse();
-        respuestas.handle(peticion(), respuesta, new AccessDeniedException("rol"));
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            respuestas.handle(peticion(), respuesta, new AccessDeniedException("rol"));
 
+            assertThat(auditoria.lineas()).singleElement().asString()
+                    .startsWith(RegistroAccesos.PREFIJO)
+                    .contains("codigo=ACCESO_DENEGADO", "ruta=/api/nucleo/turista");
+        }
         assertThat(respuesta.getStatus()).isEqualTo(403);
         assertThat(json.readTree(respuesta.getContentAsByteArray()).get("codigo").asText())
                 .isEqualTo("ACCESO_DENEGADO");
+    }
+
+    @Test
+    @DisplayName("el 401 no va al registro de auditoría: un token vencido es lo normal cada 15 minutos")
+    void noAutenticadoSinRegistro() throws Exception {
+        try (AuditoriaDePrueba auditoria = AuditoriaDePrueba.escuchar()) {
+            respuestas.commence(peticion(), new MockHttpServletResponse(),
+                    new InsufficientAuthenticationException("x"));
+
+            assertThat(auditoria.lineas()).isEmpty();
+        }
     }
 
     private static MockHttpServletRequest peticion() {

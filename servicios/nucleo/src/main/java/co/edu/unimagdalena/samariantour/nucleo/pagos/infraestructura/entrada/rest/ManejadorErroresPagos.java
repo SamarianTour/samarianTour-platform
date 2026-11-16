@@ -5,6 +5,8 @@ import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.DatoInval
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.EventoNoAutenticoException;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.ExcepcionDominio;
 import co.edu.unimagdalena.samariantour.nucleo.pagos.dominio.excepcion.SolicitudNoEncontradaException;
+import co.edu.unimagdalena.samariantour.seguridadjwt.RegistroAccesos;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -28,7 +30,11 @@ public class ManejadorErroresPagos {
     private static final Logger LOG = LoggerFactory.getLogger(ManejadorErroresPagos.class);
 
     @ExceptionHandler(ExcepcionDominio.class)
-    ProblemDetail excepcionDominio(ExcepcionDominio excepcion) {
+    ProblemDetail excepcionDominio(ExcepcionDominio excepcion, HttpServletRequest peticion) {
+        // Pagar o ver los intentos de la solicitud de otro turista también da 404: queda en la auditoría (QAS-04).
+        if (excepcion instanceof SolicitudNoEncontradaException) {
+            RegistroAccesos.denegado(peticion, excepcion.codigo());
+        }
         if (excepcion instanceof EventoNoAutenticoException) {
             LOG.warn("webhook de pagos: evento rechazado: {}", excepcion.getMessage());
         }

@@ -7,6 +7,8 @@ import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.Exc
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.OfertaNoEncontradaException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.PrestadorSinOperadorException;
 import co.edu.unimagdalena.samariantour.nucleo.solicitudes.dominio.excepcion.SolicitudNoEncontradaException;
+import co.edu.unimagdalena.samariantour.seguridadjwt.RegistroAccesos;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * </ul>
  * Un prestador sin operador deja además la incidencia en el log, con el prefijo {@code [INCIDENCIA RF-32]}, para que
  * el administrador le asigne uno (RF-32, RF-81).
+ * <p>
+ * SOLICITUD_NO_ENCONTRADA es también la respuesta a quien pide la solicitud de otro turista o de un prestador que no
+ * le toca al operador: 404 y no 403, para no revelar que existe (QAS-04: "no revela información del recurso"). Por eso
+ * el intento queda en el registro de auditoría ({@link RegistroAccesos}). Con identificadores aleatorios, una
+ * solicitud que de verdad no existe solo se pide con un enlace viejo o una ruta escrita a mano.
  */
 @RestControllerAdvice(basePackageClasses = SolicitudTuristaController.class)
 public class ManejadorErroresSolicitudes {
@@ -32,7 +39,10 @@ public class ManejadorErroresSolicitudes {
     private static final Logger LOG = LoggerFactory.getLogger(ManejadorErroresSolicitudes.class);
 
     @ExceptionHandler(ExcepcionDominio.class)
-    ProblemDetail excepcionDominio(ExcepcionDominio excepcion) {
+    ProblemDetail excepcionDominio(ExcepcionDominio excepcion, HttpServletRequest peticion) {
+        if (excepcion instanceof SolicitudNoEncontradaException) {
+            RegistroAccesos.denegado(peticion, excepcion.codigo());
+        }
         if (excepcion instanceof PrestadorSinOperadorException sinOperador) {
             LOG.warn("[INCIDENCIA RF-32] solicitud rechazada: el prestador {} de la oferta {} no tiene operador de "
                     + "disponibilidad asignado", sinOperador.prestadorId(), sinOperador.ofertaId());
