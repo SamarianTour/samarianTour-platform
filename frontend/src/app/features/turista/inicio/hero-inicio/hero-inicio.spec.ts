@@ -69,7 +69,7 @@ describe('HeroInicio', () => {
     expect(raiz(fixture).querySelector('.hero__medio img')).not.toBeNull();
   });
 
-  it('el botón pausa y reanuda el video, y cambia aria-pressed y su texto', () => {
+  it('el control es solo un ícono: pausa y reanuda el video, y cambia aria-pressed y su nombre accesible', () => {
     const fixture = crear();
     const video = raiz(fixture).querySelector('video')!;
     video.pause = vi.fn();
@@ -77,18 +77,31 @@ describe('HeroInicio', () => {
     const boton = () => raiz(fixture).querySelector<HTMLButtonElement>('.hero__control')!;
 
     expect(boton().getAttribute('aria-pressed')).toBe('false');
-    expect(boton().textContent).toContain('Pausar video');
+    expect(boton().getAttribute('aria-label')).toBe('Pausar video');
+    // Solo ícono: sin texto visible.
+    expect(boton().textContent?.trim()).toBe('');
+    expect(boton().querySelector('app-icono')).not.toBeNull();
 
     boton().click();
     fixture.detectChanges();
     expect(boton().getAttribute('aria-pressed')).toBe('true');
-    expect(boton().textContent).toContain('Reproducir video');
+    expect(boton().getAttribute('aria-label')).toBe('Reproducir video');
     expect(video.pause).toHaveBeenCalledTimes(1);
 
     boton().click();
     fixture.detectChanges();
     expect(boton().getAttribute('aria-pressed')).toBe('false');
+    expect(boton().getAttribute('aria-label')).toBe('Pausar video');
     expect(video.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('el nombre accesible del control también sale en inglés', () => {
+    const fixture = crear();
+    establecerIdioma('en', { recordar: false });
+    fixture.detectChanges();
+
+    expect(raiz(fixture).querySelector('.hero__control')!.getAttribute('aria-label')).toBe('Pause video');
+    establecerIdioma('es', { recordar: false });
   });
 
   it('el video y el velo son decorativos y la flecha lleva a #encuentra', () => {
