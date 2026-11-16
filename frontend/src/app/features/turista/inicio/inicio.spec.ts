@@ -38,11 +38,15 @@ describe('Inicio (P01.0)', () => {
 
   async function abrir(zonas: unknown = ZONAS): Promise<void> {
     await harness.navigateByUrl('/', Inicio);
-    const peticion = http.expectOne('/api/catalogo/zonas');
-    if (zonas === 'error') {
-      peticion.error(new ProgressEvent('error'));
-    } else {
-      peticion.flush(zonas as object);
+    // Las zonas las piden la sección "Explora por zona" y el selector de los filtros rápidos.
+    const peticiones = http.match('/api/catalogo/zonas');
+    expect(peticiones).toHaveLength(2);
+    for (const peticion of peticiones) {
+      if (zonas === 'error') {
+        peticion.error(new ProgressEvent('error'));
+      } else {
+        peticion.flush(zonas as object);
+      }
     }
     harness.detectChanges();
   }
@@ -88,6 +92,27 @@ describe('Inicio (P01.0)', () => {
       '/catalogo?tipo=ALOJAMIENTO',
       '/catalogo?tipo=RESTAURANTE',
     ]);
+  });
+
+  it('cada tarjeta lleva su foto decorativa, cargada con pereza y sin tapar el texto', async () => {
+    await abrir();
+
+    const fotos = Array.from(raiz().querySelectorAll<HTMLImageElement>('.tipo__foto'));
+    expect(fotos.map((f) => f.getAttribute('src'))).toEqual([
+      '/inicio/tipo-actividades.webp',
+      '/inicio/tipo-paquetes.webp',
+      '/inicio/tipo-alojamiento.webp',
+      '/inicio/tipo-restaurantes.webp',
+    ]);
+    expect(fotos.every((f) => f.getAttribute('alt') === '' && f.getAttribute('loading') === 'lazy')).toBe(true);
+    expect(raiz().querySelectorAll('.tipo__velo')).toHaveLength(4);
+    expect(texto()).toContain('Empieza por aquí');
+  });
+
+  it('muestra los filtros rápidos debajo de las tarjetas', async () => {
+    await abrir();
+
+    expect(raiz().querySelector('#encuentra app-filtros-inicio')).not.toBeNull();
   });
 
   describe('zonas reales', () => {

@@ -70,7 +70,8 @@ describe('pantallas que crea cada ruta', () => {
     it('"/" crea el Inicio y este pide las zonas, no las ofertas ni las recomendaciones', async () => {
       await ir('/', Inicio);
 
-      expect(http.match((p) => p.url === '/api/catalogo/zonas').length).toBe(1);
+      // Dos peticiones a las zonas: la sección "Explora por zona" y el selector de los filtros rápidos.
+      expect(http.match((p) => p.url === '/api/catalogo/zonas').length).toBe(2);
       expect(http.match((p) => p.url === '/api/catalogo/ofertas').length).toBe(0);
       expect(http.match((p) => p.url.includes('/api/recomendacion')).length).toBe(0);
     });

@@ -1,12 +1,15 @@
 <app-hero-inicio />
 
 <section class="pagina seccion" id="encuentra" aria-labelledby="tipos-titulo">
+  <p class="kicker">{{ 'turista.inicio.tipos.kicker' | t }}</p>
   <h2 id="tipos-titulo">{{ 'turista.inicio.tipos.titulo' | t }}</h2>
   <p class="texto-suave seccion__sub">{{ 'turista.inicio.tipos.sub' | t }}</p>
   <ul class="tipos">
     @for (tarjeta of tarjetas; track tarjeta.tipo) {
       <li>
         <a class="tipo" [routerLink]="tarjeta.ruta" [queryParams]="tarjeta.consulta">
+          <img class="tipo__foto" [src]="fotoDeTipo[tarjeta.tipo]" alt="" loading="lazy" />
+          <span class="tipo__velo" aria-hidden="true"></span>
           <app-icono class="tipo__icono" [nombre]="iconoDeTipo[tarjeta.tipo]" />
           <span class="tipo__nombre">{{ tarjeta.nombre | t }}</span>
           <span class="tipo__descripcion">{{ tarjeta.descripcion | t }}</span>
@@ -18,6 +21,8 @@
       </li>
     }
   </ul>
+
+  <app-filtros-inicio />
 </section>
 
 <app-zonas-inicio />
