@@ -40,6 +40,25 @@
       }
     </div>
 
+    <!-- Hasta 56 rem el resto de los filtros empieza cerrado (display: none) y este botón lo abre; en escritorio no se ve. -->
+    <button
+      type="button"
+      class="filtros__alternar"
+      aria-controls="filtros-catalogo"
+      [attr.aria-expanded]="panelVisible()"
+      (click)="panelAbierto.set(!panelVisible())"
+    >
+      <app-icono nombre="ajustes" />
+      @if (panelVisible()) {
+        {{ 'turista.inicio.filtros.ocultar' | t }}
+      } @else if (elegidos() > 0) {
+        {{ 'turista.inicio.filtros.abrirConNumero' | t: { n: elegidos() } }}
+      } @else {
+        {{ 'turista.inicio.filtros.abrir' | t }}
+      }
+    </button>
+
+    <div class="filtros__resto" id="filtros-catalogo" [class.abierto]="panelVisible()">
     <hr class="separador" />
 
     @if (!tipoFijo) {
@@ -147,6 +166,7 @@
     <button type="button" class="boton boton--secundario boton--ancho" [disabled]="!conFiltros()" (click)="limpiar()">
       {{ 'turista.catalogo.limpiar' | t }}
     </button>
+    </div>
   </form>
 
   <div class="resultados" [attr.aria-busy]="cargando()">

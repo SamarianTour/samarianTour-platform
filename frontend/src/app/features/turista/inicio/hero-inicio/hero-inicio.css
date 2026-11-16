@@ -135,24 +135,21 @@
   right: 24px;
   bottom: 96px;
   z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid rgb(255 255 255 / 55%);
-  border-radius: 999px;
-  background: rgb(11 59 60 / 60%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 40%);
+  border-radius: 50%;
+  background: rgb(11 59 60 / 45%);
   color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
 }
 
 .hero__control app-icono {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .hero__bajar {

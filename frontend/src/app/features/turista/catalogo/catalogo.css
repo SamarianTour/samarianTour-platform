@@ -36,6 +36,20 @@
   gap: 1rem;
 }
 
+/* Escritorio: el contenedor del resto de los filtros no existe como caja y el botón no se ve. */
+.filtros__resto {
+  display: contents;
+}
+
+.filtros__alternar {
+  display: none;
+}
+
+.filtros__alternar:focus-visible {
+  outline: 3px solid var(--enlace);
+  outline-offset: 2px;
+}
+
 .filtros__titulo {
   margin: 0;
 }
@@ -187,6 +201,43 @@
 }
 
 @media (max-width: 56rem) {
+  /* Botón a todo el ancho; el resto de los filtros, cerrado (display: none: sin foco ni lectura de pantalla). */
+  .filtros__alternar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    border: 1.5px solid var(--enlace);
+    border-radius: 999px;
+    background: var(--superficie);
+    color: var(--enlace-fuerte);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .filtros__alternar app-icono {
+    width: 20px;
+    height: 20px;
+  }
+
+  .filtros__alternar[aria-expanded='true'] {
+    background: #e6f6f6;
+  }
+
+  .filtros__resto {
+    display: none;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .filtros__resto.abierto {
+    display: flex;
+  }
+
   .catalogo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:

@@ -51,9 +51,14 @@
   </div>
 
   @if (conVideo) {
-    <button type="button" class="hero__control" [attr.aria-pressed]="pausado()" (click)="alternarVideo()">
+    <button
+      type="button"
+      class="hero__control"
+      [attr.aria-label]="(pausado() ? 'turista.inicio.video.reproducir' : 'turista.inicio.video.pausar') | t"
+      [attr.aria-pressed]="pausado()"
+      (click)="alternarVideo()"
+    >
       <app-icono [nombre]="pausado() ? 'reproducir' : 'pausa'" />
-      {{ (pausado() ? 'turista.inicio.video.reproducir' : 'turista.inicio.video.pausar') | t }}
     </button>
   }
   <a class="hero__bajar" routerLink="." fragment="encuentra" [attr.aria-label]="'turista.inicio.bajar' | t">
