@@ -33,7 +33,9 @@ export type NombreIcono =
   | 'olas'
   | 'ave'
   | 'sol'
-  | 'taza';
+  | 'taza'
+  | 'campana'
+  | 'brujula';
 
 /** Icono con el que se representa cada tipo de oferta. */
 export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
@@ -182,6 +184,14 @@ export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
           <path d="M14 2v2" />
           <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" />
           <path d="M6 2v2" />
+        }
+        @case ('campana') {
+          <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+          <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+        }
+        @case ('brujula') {
+          <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
+          <circle cx="12" cy="12" r="10" />
         }
         @case ('estrella') {
           <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />

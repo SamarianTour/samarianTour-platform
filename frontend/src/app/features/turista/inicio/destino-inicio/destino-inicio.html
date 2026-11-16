@@ -1,0 +1,54 @@
+<div class="oscuro">
+  <!-- Curvas de nivel tenues y dos brillos: puro adorno. -->
+  <svg
+    class="curvas"
+    viewBox="0 0 1440 900"
+    preserveAspectRatio="xMidYMid slice"
+    fill="none"
+    stroke="#b8d4d4"
+    stroke-width="1"
+    aria-hidden="true"
+  >
+    <path d="M1040 120c120-60 300-40 360 60s-20 230-160 250-260-40-300-130 0-140 100-180z" opacity=".35" />
+    <path d="M1010 100c150-90 370-60 440 70s-30 290-200 310-320-50-360-170 0-160 120-210z" opacity=".28" />
+    <path d="M980 80c180-120 440-80 520 80s-40 350-240 370-380-60-420-210 0-180 140-240z" opacity=".22" />
+    <path d="M950 60c210-150 510-100 600 90s-50 410-280 430-440-70-480-250 0-200 160-270z" opacity=".16" />
+    <path d="M120 520c90-70 250-60 300 30s-30 190-150 200-200-30-220-110 0-80 70-120z" opacity=".3" />
+    <path d="M90 500c120-100 310-80 370 40s-40 240-190 250-250-40-270-140 0-100 90-150z" opacity=".22" />
+    <path d="M60 480c150-130 370-100 440 50s-50 290-230 300-300-50-320-170 0-120 110-180z" opacity=".15" />
+    <path d="M0 300c240-40 420 60 640 20s420-120 800-40" opacity=".12" />
+    <path d="M0 340c240-40 420 60 640 20s420-120 800-40" opacity=".08" />
+  </svg>
+  <span class="brillo brillo--arriba" aria-hidden="true"></span>
+  <span class="brillo brillo--abajo" aria-hidden="true"></span>
+
+  <section class="contenido viaja" aria-labelledby="viaja-titulo">
+    <div class="encabezado-centro">
+      <p class="kicker">{{ 'turista.inicio.viaja.kicker' | t }}</p>
+      <h2 id="viaja-titulo">{{ 'turista.inicio.viaja.titulo' | t }}</h2>
+      <p class="bajada">{{ 'turista.inicio.viaja.sub' | t }}</p>
+    </div>
+    <!-- Tres bloques solo informativos: sin enlaces ni botones. -->
+    <div class="circulos">
+      @for (bloque of bloques; track bloque.clase) {
+        <div class="circulo-item" [class.medio]="$index === 1">
+          <span class="flota">
+            <span class="circulo c-{{ bloque.clase }}" aria-hidden="true"><app-icono [nombre]="bloque.icono" /></span>
+          </span>
+          <div class="circulo-texto">
+            <h3>{{ bloque.titulo | t }}</h3>
+            <p>{{ bloque.texto | t }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <div class="contenido union" aria-hidden="true">
+    <span class="union-linea"></span>
+    <span class="union-hoja"><app-icono nombre="hoja" /></span>
+    <span class="union-linea union-linea--der"></span>
+  </div>
+
+  <app-como-inicio />
+</div>
