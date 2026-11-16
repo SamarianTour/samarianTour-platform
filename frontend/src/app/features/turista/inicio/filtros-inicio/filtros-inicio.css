@@ -183,9 +183,21 @@
     grid-column: auto;
   }
 
-  /* En celular el selector de tipo ocupa dos filas. */
+  /* En celular el selector de tipo ocupa dos filas: tres botones arriba y dos abajo. */
   .segmentado {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .seg {
+    grid-column: span 2;
+    padding: 0 4px;
+    font-size: 14px;
+  }
+
+  .seg:nth-child(n + 4) {
+    grid-column: span 3;
   }
 }
 

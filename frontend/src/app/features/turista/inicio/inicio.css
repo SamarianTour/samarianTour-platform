@@ -168,6 +168,12 @@
   }
 }
 
+@media (max-width: 37.5rem) {
+  .tipos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 40rem) {
   .tipo {
     min-height: 15rem;
