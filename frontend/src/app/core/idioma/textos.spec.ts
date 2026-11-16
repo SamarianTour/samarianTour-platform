@@ -27,6 +27,8 @@ const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
   'app.pie.ubicacion',
   'app.pie.legal',
   'app.pie.legal.pqrsf',
+  'app.titulo.pqrsf',
+  'legal.pqrsf.titulo',
 ]);
 
 /**

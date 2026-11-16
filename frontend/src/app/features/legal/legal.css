@@ -1,0 +1,61 @@
+/* Estilos comunes de las páginas legales: una columna de lectura cómoda. */
+:host {
+  display: block;
+}
+
+.legal {
+  max-width: 48rem;
+}
+
+.legal h1 {
+  margin: 0 0 1rem;
+}
+
+.legal__aviso {
+  margin-bottom: 1.5rem;
+}
+
+.legal__seccion {
+  margin-top: 1.75rem;
+}
+
+.legal__seccion h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.legal p,
+.legal li {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.legal__seccion p {
+  margin: 0 0 0.75rem;
+}
+
+.legal ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.legal li + li {
+  margin-top: 0.375rem;
+}
+
+.legal__contacto {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+}
+
+/* El texto de la política llega en Markdown y se muestra sin interpretar, respetando los saltos de línea. */
+.legal__politica {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.legal__version {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+}
