@@ -19,7 +19,7 @@ const SECCIONES: readonly SeccionLegal[] = [
   },
 ];
 
-/** PQRSF, pública: qué es cada letra, cómo escribir y qué datos incluir. [SUPUESTO] No fija plazos de respuesta. */
+/** PQRSF, pública: qué es cada letra, cómo escribir y qué datos incluir. [SUPUESTO pendiente del equipo] No fija plazo de respuesta: el equipo debe definirlo antes de publicarlo. */
 @Component({
   selector: 'app-pqrsf',
   imports: [PaginaLegal],

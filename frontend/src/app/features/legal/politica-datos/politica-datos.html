@@ -18,7 +18,9 @@
         {{ 'comun.reintentar' | t }}
       </button>
     } @else if (texto(); as contenido) {
-      <div class="legal__politica" role="region" [attr.aria-label]="'cuentas.politica.region' | t">{{ contenido }}</div>
+      <div class="legal__politica" role="region" [attr.aria-label]="'cuentas.politica.region' | t">
+        <app-texto-formateado [texto]="contenido" omitirTitulo="legal.politica.titulo" />
+      </div>
     }
   </div>
 </article>

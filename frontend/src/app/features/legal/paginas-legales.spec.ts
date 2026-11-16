@@ -29,7 +29,7 @@ describe('Páginas legales de texto', () => {
   ] as const)('%s crea su pantalla, con el aviso de proyecto académico y el correo', async (url, pantalla) => {
     expect(await harness.navigateByUrl(url, pantalla as Type<unknown>)).toBeInstanceOf(pantalla);
 
-    expect(texto()).toContain('proyecto académico de la Universidad del Magdalena');
+    expect(texto()).toContain('Texto de demostración del prototipo académico. No ha sido revisado por un abogado.');
     expect(raiz().querySelector('.alerta--aviso')).not.toBeNull();
     expect(raiz().querySelector<HTMLAnchorElement>('.legal__contacto a')?.getAttribute('href')).toBe(
       'mailto:contacto@samariantour.com',
@@ -69,7 +69,7 @@ describe('Páginas legales de texto', () => {
     harness.detectChanges();
 
     expect(raiz().querySelector('h1')?.textContent).toBe('Terms and conditions');
-    expect(texto()).toContain('academic project of Universidad del Magdalena');
+    expect(texto()).toContain('Demo text for the academic prototype. It has not been reviewed by a lawyer.');
     expect(texto()).toContain('An availability request is not a booking');
   });
 

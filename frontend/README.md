@@ -491,3 +491,10 @@ Contratos: `catalogo` = `contratos/catalogo.openapi.yaml`, `núcleo` = `contrato
 ## Docker
 
 `Dockerfile` compila la aplicación con Node y la copia a `nginx:1.27-alpine`. La configuración de Nginx no va en la imagen: Docker Compose monta `infra/nginx/nginx.conf`.
+
+## Pendiente: diccionarios por pantalla
+
+Todos los diccionarios `*.i18n.ts` se cargan juntos en el paquete inicial (`core/idioma/textos.ts`). Con las pantallas nuevas del
+Inicio, el pie y las páginas legales, el paquete inicial pasó de 600 kB, y por eso el aviso de `angular.json` (`budgets` →
+`initial` → `maximumWarning`) subió a 650 kB; el error sigue en 1 MB. Queda pendiente cargar el diccionario de cada área solo
+cuando se entra a sus pantallas (por ejemplo, desde la `loadChildren` de cada rol), para volver a bajar ese aviso.

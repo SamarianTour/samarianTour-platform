@@ -36,19 +36,40 @@ describe('PoliticaDatosPagina (/politica-datos)', () => {
     expect(texto()).toContain('Cargando el texto');
   });
 
-  it('muestra el texto vigente de la versión que entrega el backend, tal cual y con sus saltos de línea', async () => {
+  it('muestra el texto vigente con formato: sin símbolos de Markdown, con las frases unidas y sin repetir el título', async () => {
     await harness.navigateByUrl('/politica-datos', PoliticaDatosPagina);
     http.expectOne(POLITICA).flush({ version: 'v2', fechaPublicacion: '2026-01-01', urlTexto: TEXTO });
-    http.expectOne(TEXTO).flush('# Política\n\nTratamos tus datos con <b>cuidado</b>.');
+    http
+      .expectOne(TEXTO)
+      .flush(
+        '# Política de tratamiento de datos personales de Samarian Tour\n\n> Texto de demostración.\n\n## 1. Responsable\n\nTratamos tus datos\ncon **cuidado**.\n\n- Uno\n- Dos',
+      );
     harness.detectChanges();
 
-    expect(raiz().querySelector('h1')?.textContent).toBe('Política de tratamiento de datos');
+    // Un solo h1: el de la página. El título del texto se omite y los demás bajan de nivel.
+    expect(Array.from(raiz().querySelectorAll('h1')).map((h) => h.textContent)).toEqual(['Política de tratamiento de datos']);
     expect(texto()).toContain('Ley 1581 de 2012');
     expect(texto()).toContain('Versión v2');
     const cuerpo = raiz().querySelector('.legal__politica')!;
-    // El Markdown no se interpreta y el HTML no se inyecta: se ve como texto.
-    expect(cuerpo.textContent).toBe('# Política\n\nTratamos tus datos con <b>cuidado</b>.');
+    expect(cuerpo.querySelector('h2')).toBeNull();
+    expect(cuerpo.querySelector('h3')?.textContent).toBe('1. Responsable');
+    expect(cuerpo.querySelector('blockquote')?.textContent).toBe('Texto de demostración.');
+    expect(cuerpo.querySelector('p')?.textContent).toBe('Tratamos tus datos con cuidado.');
+    expect(cuerpo.querySelector('p strong')?.textContent).toBe('cuidado');
+    expect(cuerpo.querySelectorAll('li')).toHaveLength(2);
+    expect(cuerpo.textContent).not.toMatch(/[#>]|\*\*/);
+  });
+
+  it('un <script> del texto se ve como texto: no se crea ningún elemento', async () => {
+    await harness.navigateByUrl('/politica-datos', PoliticaDatosPagina);
+    http.expectOne(POLITICA).flush({ version: 'v2', fechaPublicacion: '2026-01-01', urlTexto: TEXTO });
+    http.expectOne(TEXTO).flush('Hola <script>alert(1)</script> y <b>negrita falsa</b>.');
+    harness.detectChanges();
+
+    const cuerpo = raiz().querySelector('.legal__politica')!;
+    expect(cuerpo.querySelector('script')).toBeNull();
     expect(cuerpo.querySelector('b')).toBeNull();
+    expect(cuerpo.textContent).toContain('<script>alert(1)</script>');
   });
 
   it('si el backend falla, muestra el error amable y deja reintentar', async () => {
@@ -69,7 +90,7 @@ describe('PoliticaDatosPagina (/politica-datos)', () => {
     harness.detectChanges();
 
     expect(raiz().querySelector('.alerta--error')).toBeNull();
-    expect(raiz().querySelector('.legal__politica')?.textContent).toBe('Texto');
+    expect(raiz().querySelector('.legal__politica')?.textContent?.trim()).toBe('Texto');
   });
 
   it('cambia a inglés con la pantalla abierta', async () => {

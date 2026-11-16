@@ -40,12 +40,9 @@
   padding: 1.25rem 1.5rem;
 }
 
-/* El Markdown se muestra sin interpretar: los saltos de línea del texto se respetan. */
+/* El texto se pinta con `app-texto-formateado`, que trae su propio estilo. */
 .visor__texto {
-  font-size: 0.9375rem;
-  line-height: 1.65;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
 
 .visor__pie {

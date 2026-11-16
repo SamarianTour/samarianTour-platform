@@ -4,15 +4,17 @@ import { CuentasService } from '../../../core/api/cuentas.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { TextoFormateado } from '../../../shared/texto-formateado/texto-formateado';
 
 /**
  * Política de tratamiento de datos (Ley 1581 de 2012), pública. Muestra el texto vigente que entrega el backend
- * (`politicaVigente()` y `textoPolitica()`), con el mismo render que el registro: el Markdown no se interpreta, se muestra
- * tal cual respetando los saltos de línea, sin riesgo de inyectar HTML. Si el backend falla, muestra el error de siempre.
+ * (`politicaVigente()` y `textoPolitica()`), con el mismo render que el registro (`TextoFormateado`): títulos,
+ * negrita, citas y listas sin librerías ni `innerHTML`, así que el HTML que traiga se ve como texto. Omite el primer título del
+ * texto si repite el de la página. Si el backend falla, muestra el error de siempre.
  */
 @Component({
   selector: 'app-politica-datos',
-  imports: [TPipe],
+  imports: [TextoFormateado, TPipe],
   templateUrl: './politica-datos.html',
   styleUrl: '../legal.css',
 })

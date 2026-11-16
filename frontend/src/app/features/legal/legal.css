@@ -49,10 +49,9 @@
   border-top: 1px solid var(--borde);
 }
 
-/* El texto de la política llega en Markdown y se muestra sin interpretar, respetando los saltos de línea. */
+/* El texto de la política lo pinta `app-texto-formateado`. */
 .legal__politica {
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
 
 .legal__version {

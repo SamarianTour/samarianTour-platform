@@ -22,7 +22,9 @@
         {{ 'comun.reintentar' | t }}
       </button>
     } @else if (texto(); as contenido) {
-      <div class="visor__texto">{{ contenido }}</div>
+      <div class="visor__texto">
+        <app-texto-formateado [texto]="contenido" omitirTitulo="legal.politica.titulo" />
+      </div>
     }
   </div>
 

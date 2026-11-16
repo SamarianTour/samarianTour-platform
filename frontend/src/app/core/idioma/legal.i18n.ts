@@ -4,14 +4,13 @@ import { diccionario } from './diccionario';
  * Textos de las páginas legales del pie: términos y condiciones, protección al consumidor, PQRSF y la política de datos
  * (la política en sí la entrega el backend; aquí solo su marco).
  *
- * [SUPUESTO] Son textos informativos de un proyecto académico, no revisados por un abogado. No fijan plazos ni
- * compromisos legales. Lo que se afirma sobre el funcionamiento (la solicitud no es una reserva, el pago es externo, la
- * comisión se descuenta al prestador) sale de las reglas de la plataforma; todo lo demás debe validarlo el equipo.
+ * [SUPUESTO] Son textos de demostración de un prototipo académico, no revisados por un abogado (el aviso repite la frase de
+ * la política del backend). No fijan plazos ni compromisos legales.
+ * [SUPUESTO pendiente del equipo] PQRSF: el plazo de respuesta no está definido y por eso la página no promete ninguno.
  */
 export const LEGAL = diccionario(
   {
-    'legal.aviso':
-      'Samarian Tour es un proyecto académico de la Universidad del Magdalena. Este texto es informativo y no reemplaza la asesoría de un abogado.',
+    'legal.aviso': 'Texto de demostración del prototipo académico. No ha sido revisado por un abogado.',
     'legal.contacto': 'Para cualquier duda, escríbenos a',
 
     // Términos y condiciones
@@ -68,8 +67,7 @@ export const LEGAL = diccionario(
     'legal.politica.ley': 'Ley 1581 de 2012',
   },
   {
-    'legal.aviso':
-      'Samarian Tour is an academic project of Universidad del Magdalena. This text is for information only and does not replace the advice of a lawyer.',
+    'legal.aviso': 'Demo text for the academic prototype. It has not been reviewed by a lawyer.',
     'legal.contacto': 'If you have any questions, write to us at',
 
     // Terms and conditions
