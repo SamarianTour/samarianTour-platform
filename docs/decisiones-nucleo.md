@@ -2,7 +2,7 @@
 
 Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas, 4 Solicitudes, 5 Pagos, 7 Prestadores, 8 Administración y 9 Indicadores, sobre PostgreSQL). Complementa el documento de diseño, el diagrama de paquetes y el diccionario de clases; donde los contradice, se indica en la sección final. Sigue el formato de `decisiones-catalogo-ofertas.md`.
 
-- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), los indicadores del gestor (DN-41) y el registro de exposición con las alertas de sesgo (DN-42, DN-43), la limpieza y el reenvío de la bandeja con los eventos y las dispersiones fallidos (DN-44) la supresión del prestador (DN-45) y el despliegue en AWS con HTTPS (DN-46); cada módulo agrega sus decisiones con el número siguiente.
+- **Estado:** vigente, octubre de 2026. La base del servicio, la moderación (DN-08), las solicitudes de disponibilidad (DN-09 a DN-17), los pagos (DN-18 a DN-27), las cuentas (DN-28 a DN-32) los prestadores (DN-33 a DN-36) el token de acceso en los tres servicios (DN-37), el token de servicio en las rutas internas (DN-38) y, en la administración, el operador de cada prestador (DN-39) y las cuentas internas (DN-40), los indicadores del gestor (DN-41) y el registro de exposición con las alertas de sesgo (DN-42, DN-43), la limpieza y el reenvío de la bandeja con los eventos y las dispersiones fallidos (DN-44) la supresión del prestador (DN-45), el despliegue en AWS con HTTPS (DN-46) y la seguridad en el navegador con la auditoría de los accesos (DN-47); cada módulo agrega sus decisiones con el número siguiente.
 - **Convención:** ✅ decisión que sale de un requisito, del diseño o de una decisión del catálogo (se cita la fuente). 🆕 decisión nueva del equipo.
 
 ## Resumen
@@ -55,6 +55,7 @@ Registro de las decisiones tomadas para el servicio `nucleo` (módulos 1 Cuentas
 | DN-44 | Limpieza y reenvío de la bandeja; reintento de los eventos de pago fallidos; las dispersiones fallidas vuelven a pendiente al cambiar la cuenta de cobro | ✅ RF-54, RF-74, DN-06, DN-20, DN-24 · 🆕 [SUPUESTO] 30 días |
 | DN-45 | Supresión de los datos del prestador: se niega con compromisos, conserva el soporte contable y libera el RNT | ✅ RF-13, Ley 1581, DN-31 · 🆕 equipo |
 | DN-46 | El piloto en una instancia EC2 con HTTPS de Let's Encrypt, encendida solo para trabajar y para las demos | ✅ diagrama de despliegue, DN-07, DN-37 · 🆕 equipo |
+| DN-47 | Cabeceras de seguridad y CSP, límite de peticiones en las cuentas y registro de auditoría de los accesos denegados; 404 para los recursos ajenos | ✅ QAS-04, RNF-06, RNF-07 · 🆕 equipo: límite, auditoría en el log, 404 |
 
 ## Persistencia
 
@@ -722,6 +723,53 @@ Con esto quedan hechos los dos pendientes de DN-17.
   - **las imágenes se construyen en el servidor:** la primera vez tarda varios minutos. Con un registro de imágenes se evitaría, pero es otro servicio que pagar y mantener.
 - **La guía paso a paso** está en el README, "Despliegue en AWS".
 
+**DN-47. Seguridad en el navegador y auditoría de los accesos denegados** (QAS-04, RNF-06, RNF-07; completa DN-37, DN-38 y DN-46). Al revisar el piloto publicado contra QAS-04 aparecieron tres huecos: el navegador no recibía cabeceras de defensa, nada limitaba los intentos de inicio de sesión desde una misma IP y los accesos denegados no quedaban registrados, aunque QAS-04 lo pide ("el intento queda en el registro de auditoría").
+
+- **Cabeceras de seguridad** (`infra/nginx/rutas.conf`, las mismas en local y en AWS), en todas las respuestas, también en los errores que da Nginx:
+  - **CSP:** solo se ejecuta JavaScript del propio dominio (`script-src 'self'`, sin `unsafe-inline`), con `object-src 'none'`, `base-uri 'self'` y `form-action 'self'`. Es la defensa principal porque la sesión se guarda en el almacenamiento del navegador: un script inyectado podría leer el token de renovación, que dura 7 días (DN-29). Los estilos admiten `unsafe-inline`, porque Angular y Leaflet los ponen en línea; las imágenes, además, los mosaicos de OpenStreetMap;
+  - **`frame-ancestors 'none'` y `X-Frame-Options: DENY`:** ningún sitio puede incrustar la plataforma en un iframe (clickjacking). La plataforma no se incrusta en ninguna parte, por eso `DENY` y no `SAMEORIGIN`;
+  - **`X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`** (a otro sitio solo llega el dominio, nunca la ruta, que en `/restablecer-contrasena?token=` lleva un token) y **`Permissions-Policy`** sin cámara, micrófono ni ubicación, que la plataforma no usa;
+  - Spring Security ya mandaba `X-Frame-Options` y `nosniff` en la API: Nginx quita las suyas (`proxy_hide_header`), así cada cabecera llega una sola vez;
+  - **el build de Angular no deja scripts en línea** (`inlineCritical: false` en `angular.json`). Con el script que activaba la hoja de estilos, la CSP habría necesitado su hash, y una actualización de Angular que lo cambiara dejaría el sitio sin estilos. El costo es que la hoja de estilos carga de la forma normal.
+- **Límite de peticiones** en las tres rutas de cuentas que se usan sin sesión: iniciar sesión, registrarse y pedir el correo de restablecimiento. El bloqueo de la cuenta tras cinco fallos (RF-05) no frena a quien prueba una contraseña contra muchas cuentas, ni a quien manda cientos de correos de restablecimiento. Nginx admite 10 peticiones por minuto por IP y por ruta, con ráfaga de 20, y después responde 429 en ProblemDetail. La ráfaga es amplia porque en una feria o en la universidad muchas personas salen por la misma IP pública. Sin `codigo`, el frontend muestra su mensaje genérico ("vuelve a intentarlo en un momento"), que es el que sirve.
+- **`www.<dominio>`** redirige al dominio sin www, por HTTP y por HTTPS, y `primer-certificado.sh` con `WWW=1` incluye el www en el certificado o amplía el que ya existe.
+- **Registro de auditoría** (`libs/seguridad-jwt`, `RegistroAccesos`): cada acceso denegado deja una advertencia con el prefijo `[AUDITORIA QAS-04]`, el código del error, el usuario (su UUID, nunca el nombre ni el correo), el rol, el método, la ruta y la IP. Lo registran:
+  - el 403 `ACCESO_DENEGADO` de Spring Security, por un rol que no corresponde a la ruta o por un servicio que llama a una ruta interna que no es suya (DN-38), y el `ACCESO_DENEGADO` de `Identidad`. Está en la librería, así que vale para los tres servicios; la recomendación hoy no responde 403, porque sus rutas son públicas (DR-22);
+  - en el núcleo, el 404 `SOLICITUD_NO_ENCONTRADA` de las solicitudes y los pagos: un turista que ve, responde o paga la solicitud de otro, o un operador que abre una solicitud de un prestador que no le toca;
+  - en el catálogo, el 403 `PRESTADOR_NO_AUTORIZADO`: un prestador que consulta, edita o retira la oferta de otro.
+  - **No se registran** el 401, porque un token vencido es lo normal cada 15 minutos, ni los errores de negocio (409, 422).
+  - **Nunca entran al registro** el token ni la consulta de la ruta, que puede traer el token de restablecimiento. Los caracteres de control se reemplazan, para que nadie escriba líneas falsas en el log.
+  - **La IP** es el último valor de `X-Forwarded-For`, el que agrega Nginx; los anteriores los escribe el cliente y podría inventarlos. Solo Nginx llega a los servicios (DN-07), así que ese valor es confiable.
+  - **En el log y no en una tabla** (decisión del equipo): la recomendación no tiene base de datos y el catálogo usa MongoDB; así el registro es igual en los tres servicios. Se consulta con `docker compose logs nucleo catalogo recomendacion | grep AUDITORIA`.
+- **404 y no 403 para los recursos ajenos** (decisión del equipo; el texto de QAS-04 pide 403 en todos los casos). Una ruta de otro rol responde 403: la ruta está en el contrato y no hay nada que esconder. La solicitud de otro turista, en cambio, responde 404 `SOLICITUD_NO_ENCONTRADA`, igual que una que no existe: con 403, quien prueba identificadores sabría cuáles existen, y QAS-04 también pide que el sistema "no revele información del recurso". El intento queda registrado igual. Por eso también se registra el 404 de una solicitud que de verdad no existe: desde afuera no se distingue de una ajena y, con identificadores aleatorios, solo aparece con un enlace viejo o una ruta escrita a mano. La oferta de otro prestador sí responde 403, porque las ofertas publicadas son públicas y su existencia no es un secreto.
+- **Pruebas:**
+  - `AutorizacionPorRutaTest` (núcleo y catálogo), la batería de acceso cruzado de QAS-04: cada intento denegado responde 403 y deja exactamente una línea de auditoría con el usuario, el rol, la ruta y la IP; cada acceso permitido, ninguna. Sin la llamada al registro fallan los 20 casos denegados del núcleo;
+  - `RegistroAccesosTest` y `RespuestasSeguridadTest` (la librería), y las pruebas de los controladores de solicitudes, pagos y ofertas, para los recursos ajenos;
+  - `NginxRutasInternasIT` y `NginxAwsIT`: las cabeceras, una sola vez y también en los errores; el 429 después de 21 peticiones; HSTS y la redirección del www. Sin `proxy_hide_header` o sin el límite, fallan.
+- **Verificado en el piloto publicado** (16 de noviembre de 2026):
+  - securityheaders.com califica el sitio con **A+**;
+  - 0 violaciones de la CSP en 28 pantallas de cinco roles, con los estilos aplicados;
+  - el límite responde 429 después de 22 peticiones seguidas;
+  - el certificado cubre el dominio y el www;
+  - desde internet solo responden los puertos 22, 80 y 443, el preflight CORS de otro origen recibe 403, y los archivos `.git`, `.env` y los mapas de código fuente no se publican;
+  - el JavaScript publicado no tiene claves, contraseñas, tokens ni direcciones internas.
+- **Cumplimiento de los requisitos de seguridad del SRS:**
+
+  | Requisito | Medida | Evidencia |
+  |---|---|---|
+  | RNF-06 | 100 % del tráfico sobre HTTPS/TLS 1.2+; contraseñas con hash adaptativo | TLS 1.2 y 1.3, redirección 301 y HSTS (DN-46, `NginxAwsIT`); BCrypt de costo 10 (DN-28); cabeceras y límite de peticiones (esta decisión) |
+  | RNF-07, QAS-04 | 0 accesos cruzados; 403; no revela el recurso; el intento queda registrado | `AutorizacionPorRutaTest` en el núcleo y el catálogo (DN-37); 404 para los recursos ajenos; `RegistroAccesos` |
+  | RNF-08 | Sin datos de tarjeta en el backend; PII y cuenta del prestador cifradas | El pago se hace en el checkout de la pasarela (DN-18); nombre y WhatsApp con AES-256-GCM (DN-28); cuenta de cobro cifrada (DN-34) |
+  | RNF-09 | Transiciones y consentimientos con marca de tiempo | `TransicionSolicitud` en cada cambio de estado (DN-09); `aceptaciones_politica` (DN-28, DN-31); auditoría de los prestadores (DN-34, DN-39) |
+
+- **Riesgos aceptados** (no son pendientes):
+  - **la sesión vive en el almacenamiento del navegador:** si apareciera un XSS, podría leer los tokens. Lo mitigan la CSP y el escape de Angular, y el código no usa `innerHTML` ni `bypassSecurityTrust`. Llevarla a una cookie `HttpOnly` exigiría protección CSRF y cambiar cómo el frontend llama a los tres servicios;
+  - **`unsafe-inline` en los estilos:** el riesgo grave de la CSP está en los scripts, no en los estilos;
+  - **las cuentas de la demo** tienen su contraseña publicada en el README (DN-28, DN-46). La del administrador se cambió en el piloto, y la instancia se apaga cuando no se usa;
+  - **el token de acceso sirve hasta 15 minutos** después de cerrar la sesión (DN-37);
+  - **el registro de auditoría dura lo que duran los logs:** 30 MB por contenedor (DN-46). Conservarlo más tiempo exige un almacén central de logs, otro servicio que pagar y mantener;
+  - **el límite es por IP:** no frena un ataque desde muchas IP. Contra eso sigue el bloqueo de cada cuenta (RF-05).
+
 ## Cambios pendientes en los documentos de diseño
 
 1. **Diagrama de paquetes, núcleo:** agregar el módulo `bandeja` con `BandejaSalidaApi`, la tabla `bandeja_salida` y la tarea programada que la publica (DN-06). El diseño la nombra como `BandejaSalidaAdapter`; en el código es un módulo con su API, para que los demás módulos la usen sin depender de su infraestructura.
@@ -786,3 +834,5 @@ Con esto quedan hechos los dos pendientes de DN-17.
 29. **Diagrama entidad-relación (V16, V17):** `dispersiones` agrega `reactivaciones` (DN-44), y `prestadores`, `suprimido_en`, con el RNT único solo entre los no suprimidos (DN-45).
 30. **Diagrama de paquetes, supresión del prestador:** prestadores agrega `SuprimirPrestadorUseCase`, `CompromisosPort` sobre `prestadores.api.CompromisosPrestador` (lo implementan solicitudes y pagos) y, en `CuentasPort` y `EventoSalidaPort`, la contraseña, la cuenta y el aviso `SUPRESION_PRESTADOR`; cuentas agrega `SuprimirCuentaPrestadorUseCase` y lo expone en `CuentasApiInterna`. El diccionario de clases agrega `Prestador.suprimir` en los dos módulos (DN-45).
 31. **Diagrama de despliegue:** el piloto en una instancia EC2 (`t3.medium`) con IP elástica y el dominio del equipo; Nginx en el 80 (solo el desafío de Let's Encrypt y la redirección) y el 443, el contenedor `certbot` y Mailpit sin puerto público (DN-46).
+32. **SRS, QAS-04 (medida de respuesta):** 403 en las rutas de otro rol y 404 en el recurso de otro usuario, igual que si no existiera; en los dos casos el intento queda en el registro de auditoría (DN-47).
+33. **Diagrama de paquetes, `libs/seguridad-jwt`:** agrega `RegistroAccesos`, que usan `RespuestasSeguridad` y los manejadores de errores de los servicios. **Diagrama de despliegue:** Nginx pone las cabeceras de seguridad y limita las peticiones de las rutas de cuentas (DN-47).

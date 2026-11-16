@@ -149,7 +149,7 @@ Registro de las decisiones tomadas para el prototipo del servicio `catalogo` (ge
 |---|---|---|
 | `DATO_INVALIDO` | 400 | Un campo no cumple las reglas |
 | `ZONA_NO_DISPONIBLE` | 400 | La zona no existe o está inactiva |
-| `PRESTADOR_NO_AUTORIZADO` | 403 | Quien edita o retira no es el dueño |
+| `PRESTADOR_NO_AUTORIZADO` | 403 | Quien edita o retira no es el dueño. El intento queda en el registro de auditoría (DN-47) |
 | `TIPO_OFERTA_NO_PERMITIDO` | 403 | DC-10 |
 | `RNT_INACTIVO` | 403 | DC-11 |
 | `OFERTA_NO_ENCONTRADA` | 404 | No existe, o no es visible para quien la consulta |
