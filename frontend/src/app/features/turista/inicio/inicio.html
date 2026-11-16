@@ -1,38 +1,6 @@
-<section class="hero" aria-labelledby="hero-titulo">
-  <div class="hero__contenido">
-    <p class="hero__etiqueta">
-      <app-icono nombre="hoja" />
-      {{ 'turista.inicio.kicker' | t }}
-    </p>
-    <h1 id="hero-titulo">{{ 'turista.inicio.titulo' | t }}</h1>
-    <p class="hero__sub">{{ 'turista.inicio.sub' | t }}</p>
+<app-hero-inicio />
 
-    <form class="buscador" role="search" (submit)="buscar($event)" novalidate>
-      <div class="buscador__fila">
-        <label class="solo-lectores" for="inicio-texto">{{ 'turista.inicio.buscar.etiqueta' | t }}</label>
-        <input
-          id="inicio-texto"
-          type="search"
-          autocomplete="off"
-          [formControl]="texto"
-          [attr.maxlength]="textoMaximo"
-          [placeholder]="'turista.catalogo.buscarEjemplo' | t"
-          [attr.aria-invalid]="textoCorto() ? 'true' : null"
-          [attr.aria-describedby]="textoCorto() ? 'inicio-texto-error' : null"
-          (input)="textoCorto.set(false)"
-        />
-        <button type="submit" class="boton">{{ 'turista.inicio.buscar.boton' | t }}</button>
-      </div>
-      @if (textoCorto()) {
-        <p class="buscador__error" id="inicio-texto-error" role="alert">
-          {{ 'turista.catalogo.textoCorto' | t }}
-        </p>
-      }
-    </form>
-  </div>
-</section>
-
-<section class="pagina seccion" aria-labelledby="tipos-titulo">
+<section class="pagina seccion" id="encuentra" aria-labelledby="tipos-titulo">
   <h2 id="tipos-titulo">{{ 'turista.inicio.tipos.titulo' | t }}</h2>
   <p class="texto-suave seccion__sub">{{ 'turista.inicio.tipos.sub' | t }}</p>
   <ul class="tipos">

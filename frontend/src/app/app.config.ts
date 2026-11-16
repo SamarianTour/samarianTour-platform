@@ -24,7 +24,7 @@ import { sesionInterceptor } from './core/sesion/sesion.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
+    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' })),
     // El `title` de cada ruta es una clave de texto; esta estrategia lo traduce y lo mantiene al cambiar de idioma.
     { provide: TitleStrategy, useExisting: EstrategiaDeTitulo },
     // El idioma va primero, para que lo lleve también la petición que la sesión repite con un token renovado. Después, la

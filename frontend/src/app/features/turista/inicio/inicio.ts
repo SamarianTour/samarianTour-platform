@@ -1,11 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TipoOferta } from '../../../core/api/modelos';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import type { ClaveTexto } from '../../../core/idioma/textos';
 import { Icono, ICONO_DE_TIPO } from '../../../shared/icono/icono';
-import { TEXTO_MAXIMO, normalizarTexto, textoInvalido } from '../catalogo/filtros';
+import { HeroInicio } from './hero-inicio/hero-inicio';
 import { ZonasInicio } from './zonas-inicio/zonas-inicio';
 
 /** Una de las cuatro tarjetas de tipo. El paquete tiene su propia pantalla (`/paquetes`); los demás filtran el catálogo. */
@@ -48,37 +47,18 @@ const TARJETAS: readonly TarjetaDeTipo[] = [
 ];
 
 /**
- * P01.0 Inicio, público. Reúne el buscador (lleva al catálogo con el texto), las cuatro tarjetas de tipo, las zonas reales
+ * P01.0 Inicio, público. Reúne la portada (`HeroInicio`: video, buscador y franja de confianza), las cuatro tarjetas de tipo, las zonas reales
  * (`ZonasInicio`, que pide `GET /zonas`) y la invitación a pedir recomendaciones. No hay "destacados" ni patrocinados, y tampoco
  * consulta el servicio de recomendación: cada visita gastaría cupo de la IA y, sin la consulta del turista, la respuesta sería
  * genérica.
  */
 @Component({
   selector: 'app-inicio',
-  imports: [ReactiveFormsModule, RouterLink, Icono, TPipe, ZonasInicio],
+  imports: [RouterLink, Icono, TPipe, HeroInicio, ZonasInicio],
   templateUrl: './inicio.html',
   styleUrl: './inicio.css',
 })
 export class Inicio {
-  private readonly router = inject(Router);
-
   protected readonly tarjetas = TARJETAS;
   protected readonly iconoDeTipo = ICONO_DE_TIPO;
-  protected readonly textoMaximo = TEXTO_MAXIMO;
-
-  protected readonly texto = new FormControl('', { nonNullable: true });
-  /** Se avisa al enviar, no mientras se escribe: la persona aún puede estar a medias. */
-  protected readonly textoCorto = signal(false);
-
-  protected buscar(evento: Event): void {
-    evento.preventDefault();
-    const escrito = this.texto.value;
-    if (textoInvalido(escrito)) {
-      this.textoCorto.set(true);
-      return;
-    }
-    this.textoCorto.set(false);
-    const texto = normalizarTexto(escrito);
-    void this.router.navigate(['/catalogo'], { queryParams: texto ? { texto } : {} });
-  }
 }

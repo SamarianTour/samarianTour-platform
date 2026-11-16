@@ -1,0 +1,86 @@
+<section class="hero" aria-labelledby="hero-titulo">
+  <div class="hero__medio" aria-hidden="true">
+    @if (conVideo) {
+      <!-- `muted` por propiedad: Angular no siempre lo aplica como atributo y sin él el navegador bloquea el autoplay. -->
+      <video
+        #video
+        autoplay
+        loop
+        playsinline
+        preload="metadata"
+        [muted]="true"
+        [poster]="poster"
+        [src]="fuente"
+      ></video>
+    } @else {
+      <img [src]="poster" alt="" />
+    }
+  </div>
+  <div class="hero__velo" aria-hidden="true"></div>
+
+  <div class="hero__contenido">
+    <p class="hero__etiqueta">
+      <app-icono nombre="hoja" />
+      {{ 'turista.inicio.kicker' | t }}
+    </p>
+    <h1 id="hero-titulo">{{ 'turista.inicio.titulo' | t }}</h1>
+    <p class="hero__sub">{{ 'turista.inicio.sub' | t }}</p>
+
+    <form class="buscador" role="search" (submit)="buscar($event)" novalidate>
+      <div class="buscador__fila">
+        <label class="solo-lectores" for="inicio-texto">{{ 'turista.inicio.buscar.etiqueta' | t }}</label>
+        <input
+          id="inicio-texto"
+          type="search"
+          autocomplete="off"
+          [formControl]="texto"
+          [attr.maxlength]="textoMaximo"
+          [placeholder]="'turista.catalogo.buscarEjemplo' | t"
+          [attr.aria-invalid]="textoCorto() ? 'true' : null"
+          [attr.aria-describedby]="textoCorto() ? 'inicio-texto-error' : null"
+          (input)="textoCorto.set(false)"
+        />
+        <button type="submit" class="boton">{{ 'turista.inicio.buscar.boton' | t }}</button>
+      </div>
+      @if (textoCorto()) {
+        <p class="buscador__error" id="inicio-texto-error" role="alert">
+          {{ 'turista.catalogo.textoCorto' | t }}
+        </p>
+      }
+    </form>
+  </div>
+
+  @if (conVideo) {
+    <button type="button" class="hero__control" [attr.aria-pressed]="pausado()" (click)="alternarVideo()">
+      <app-icono [nombre]="pausado() ? 'reproducir' : 'pausa'" />
+      {{ (pausado() ? 'turista.inicio.video.reproducir' : 'turista.inicio.video.pausar') | t }}
+    </button>
+  }
+  <a class="hero__bajar" routerLink="." fragment="encuentra" [attr.aria-label]="'turista.inicio.bajar' | t">
+    <app-icono nombre="chevron" />
+  </a>
+</section>
+
+<section class="confianza" [attr.aria-label]="'turista.inicio.confianza.region' | t">
+  <div class="confianza__item">
+    <span class="confianza__icono"><app-icono nombre="escudo" /></span>
+    <div>
+      <h2>{{ 'turista.inicio.confianza.verificados' | t }}</h2>
+      <p>{{ 'turista.inicio.confianza.verificados.desc' | t }}</p>
+    </div>
+  </div>
+  <div class="confianza__item">
+    <span class="confianza__icono"><app-icono nombre="billetera" /></span>
+    <div>
+      <h2>{{ 'turista.inicio.confianza.precio' | t }}</h2>
+      <p>{{ 'turista.inicio.confianza.precio.desc' | t }}</p>
+    </div>
+  </div>
+  <div class="confianza__item">
+    <span class="confianza__icono"><app-icono nombre="brote" /></span>
+    <div>
+      <h2>{{ 'turista.inicio.confianza.responsable' | t }}</h2>
+      <p>{{ 'turista.inicio.confianza.responsable.desc' | t }}</p>
+    </div>
+  </div>
+</section>
