@@ -5,9 +5,9 @@
 /* Bloque oscuro: el texto blanco va siempre sobre --profundo o más claro hasta #11585a (contraste AA). */
 .oscuro {
   position: relative;
-  margin-top: 96px;
+  margin-top: 72px;
   overflow: hidden;
-  border-radius: 48px 48px 0 0;
+  border-radius: 40px 40px 0 0;
   background: linear-gradient(180deg, #0a3233 0%, var(--profundo) 38%, var(--profundo-2) 78%, #11585a 100%);
   color: #fff;
 }
@@ -17,7 +17,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 900px;
+  height: 720px;
   opacity: 0.5;
   mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
   pointer-events: none;
@@ -25,8 +25,8 @@
 
 .brillo {
   position: absolute;
-  width: 640px;
-  height: 640px;
+  width: 520px;
+  height: 520px;
   border-radius: 50%;
   background: radial-gradient(circle, rgb(14 165 165 / 28%), transparent 65%);
   pointer-events: none;
@@ -38,7 +38,7 @@
 }
 
 .brillo--abajo {
-  top: 1100px;
+  top: 880px;
   left: -260px;
 }
 
@@ -65,7 +65,7 @@
 }
 
 .viaja {
-  padding-top: 56px;
+  padding-top: 40px;
 }
 
 .encabezado-centro {
@@ -77,16 +77,16 @@
 
 .oscuro h2 {
   margin: 0;
-  font-size: 40px;
-  line-height: 48px;
+  font-size: 34px;
+  line-height: 40px;
   letter-spacing: -0.015em;
 }
 
 .bajada {
   max-width: 640px;
   margin: 12px 0 0;
-  font-size: 18px;
-  line-height: 28px;
+  font-size: 16px;
+  line-height: 24px;
   color: #b8d4d4;
 }
 
@@ -94,9 +94,9 @@
 .circulos {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 40px;
+  gap: 32px;
   align-items: start;
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 .circulo-item {
@@ -110,7 +110,7 @@
 /* El del centro lleva el texto arriba y baja un poco, como en el diseño. */
 .medio {
   flex-direction: column-reverse;
-  padding-top: 44px;
+  padding-top: 32px;
 }
 
 .flota {
@@ -128,8 +128,8 @@
 .circulo {
   display: grid;
   place-items: center;
-  width: 112px;
-  height: 112px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
   box-shadow:
     0 16px 32px -10px rgb(0 0 0 / 50%),
@@ -140,8 +140,8 @@
 }
 
 .circulo app-icono {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
 }
 
 .circulo-item:hover .circulo {
@@ -167,21 +167,21 @@
 }
 
 .circulo-texto {
-  max-width: 290px;
+  max-width: 260px;
   padding-left: 14px;
   border-left: 3px solid #7fd6d6;
 }
 
 .circulo-texto h3 {
   margin: 0;
-  font-size: 22px;
-  line-height: 28px;
+  font-size: 19px;
+  line-height: 24px;
 }
 
 .circulo-texto p {
   margin: 6px 0 0;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: 15px;
+  line-height: 22px;
   color: #c9e0e0;
 }
 
@@ -191,11 +191,11 @@
   align-items: center;
   justify-content: center;
   gap: 20px;
-  padding-top: 56px;
+  padding-top: 40px;
 }
 
 .union-linea {
-  flex: 0 1 320px;
+  flex: 0 1 260px;
   height: 1px;
   background: linear-gradient(90deg, transparent, #7fd6d6 70%, #f6c77a);
 }
@@ -207,8 +207,8 @@
 .union-hoja {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border: 1px solid rgb(127 214 214 / 55%);
   border-radius: 50%;
   background: rgb(11 59 60 / 60%);
@@ -217,8 +217,8 @@
 }
 
 .union-hoja app-icono {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 @keyframes flotar {
@@ -244,18 +244,18 @@
 
 @media (max-width: 900px) {
   .oscuro {
-    margin-top: 64px;
+    margin-top: 56px;
     border-radius: 32px 32px 0 0;
   }
 
   .oscuro h2 {
-    font-size: 30px;
-    line-height: 36px;
+    font-size: 26px;
+    line-height: 32px;
   }
 
   .circulos {
     grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
+    gap: 32px;
   }
 
   .medio {
@@ -264,25 +264,24 @@
   }
 
   .circulo {
-    width: 100px;
-    height: 100px;
+    width: 84px;
+    height: 84px;
   }
 
   .circulo app-icono {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
   }
 
   .circulo-texto h3 {
-    font-size: 20px;
-    line-height: 26px;
+    font-size: 18px;
+    line-height: 24px;
   }
 
   .circulo-texto p {
-    font-size: 15px;
-    line-height: 22px;
+    font-size: 14px;
+    line-height: 21px;
   }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

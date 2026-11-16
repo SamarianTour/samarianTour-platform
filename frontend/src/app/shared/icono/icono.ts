@@ -37,7 +37,10 @@ export type NombreIcono =
   | 'campana'
   | 'brujula'
   | 'correo'
-  | 'instagram';
+  | 'instagram'
+  | 'menu'
+  | 'ajustes'
+  | 'cerrar';
 
 /** Icono con el que se representa cada tipo de oferta. */
 export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
@@ -186,6 +189,15 @@ export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
           <path d="M14 2v2" />
           <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" />
           <path d="M6 2v2" />
+        }
+        @case ('menu') {
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        }
+        @case ('ajustes') {
+          <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4" />
+        }
+        @case ('cerrar') {
+          <path d="M6 6l12 12M18 6 6 18" />
         }
         @case ('campana') {
           <path d="M10.268 21a2 2 0 0 0 3.464 0" />

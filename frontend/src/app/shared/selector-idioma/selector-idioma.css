@@ -7,7 +7,7 @@
 }
 
 .idioma button {
-  min-width: 44px;
+  min-width: var(--idioma-ancho-min, 44px);
   min-height: 44px;
   padding: 0 0.375rem;
   border: 0;

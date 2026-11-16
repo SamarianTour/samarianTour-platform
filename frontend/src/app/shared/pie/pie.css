@@ -3,10 +3,10 @@
   margin-top: 2rem;
 }
 
-/* Entrada: el fondo pasa del color de la página a --profundo en unos 130 px. El contenido empieza ya sobre fondo oscuro. */
+/* Entrada: un desvanecido suave del color de la página sobre --profundo, en 80 px. El contenido empieza ya sobre fondo oscuro. */
 .pie {
-  padding-top: 120px;
-  background: linear-gradient(180deg, var(--fondo) 0, #5f9192 50px, var(--profundo-2) 110px, var(--profundo) 130px);
+  padding-top: 80px;
+  background: linear-gradient(180deg, var(--fondo) 0, rgb(250 250 250 / 0%) 80px), var(--profundo);
   color: #fff;
 }
 

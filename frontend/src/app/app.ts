@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -43,6 +43,8 @@ export class App {
         takeUntilDestroyed(),
       )
       .subscribe((evento) => {
+        // El panel del menú en celular se cierra al navegar.
+        this.menuAbierto.set(false);
         const ruta = evento.urlAfterRedirects.split(/[?#]/)[0];
         const contenido = this.documento.getElementById('contenido');
         if (this.rutaAnterior !== null && ruta !== this.rutaAnterior && !contenido?.contains(this.documento.activeElement)) {
@@ -50,6 +52,22 @@ export class App {
         }
         this.rutaAnterior = ruta;
       });
+  }
+
+  /** El panel de la cabecera en celular (hasta 52 rem; en escritorio no existe y el botón no se ve). */
+  protected readonly menuAbierto = signal(false);
+  private readonly botonMenu = viewChild<ElementRef<HTMLButtonElement>>('botonMenu');
+
+  protected alternarMenu(): void {
+    this.menuAbierto.update((abierto) => !abierto);
+  }
+
+  /** Escape cierra el panel y devuelve el foco al botón que lo abrió. */
+  protected cerrarMenuConEscape(): void {
+    if (this.menuAbierto()) {
+      this.menuAbierto.set(false);
+      this.botonMenu()?.nativeElement.focus();
+    }
   }
 
   protected readonly autenticada = this.sesion.autenticada;

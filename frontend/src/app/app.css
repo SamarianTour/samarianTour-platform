@@ -36,6 +36,24 @@
   padding: 0.5rem 1.5rem;
 }
 
+/* En escritorio el contenedor del menú no existe como caja: la navegación y la cuenta son hijas directas de la fila. */
+.cabecera__menu {
+  display: contents;
+}
+
+.cabecera__idioma {
+  order: 1;
+  margin-right: -1rem;
+}
+
+.cabecera__cuenta {
+  order: 2;
+}
+
+.menu-boton {
+  display: none;
+}
+
 /* Sin sesión: "Iniciar sesión" y "Registrarse". Con sesión: el menú de la cuenta. */
 .cabecera__cuenta {
   display: flex;
@@ -139,30 +157,137 @@ main {
   }
 }
 
-/* En pantallas angostas la navegación baja a su propia línea, bajo el logo y la cuenta. */
+/* Hasta 52 rem: una sola fila (logo, ES | EN, Menú); la navegación y la cuenta pasan a un panel que se despliega debajo. */
 @media (max-width: 52rem) {
-  .cabecera__cuenta {
-    margin-left: auto;
+  .cabecera__interior {
+    gap: 0.25rem 0.5rem;
+  }
+
+  .marca {
+    font-size: 1.125rem;
+  }
+
+  .cabecera__idioma {
+    order: 0;
+    margin: 0 0 0 auto;
+  }
+
+  .menu-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border: 1.5px solid var(--borde-fuerte);
+    border-radius: var(--radio-pildora);
+    background: var(--superficie);
+    color: var(--texto);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .menu-boton[aria-expanded='true'] {
+    border-color: var(--enlace);
+    color: var(--enlace);
+  }
+
+  .menu-boton app-icono {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  /* Cerrado, display: none: sus enlaces no reciben foco ni se leen. */
+  .cabecera__menu {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    order: 3;
+    padding-bottom: 0.75rem;
+    animation: desplegar 160ms ease-out;
+  }
+
+  .cabecera__menu.abierto {
+    display: flex;
   }
 
   nav {
-    order: 3;
-    flex-basis: 100%;
     margin-inline: 0;
   }
 
-  /* Con cinco enlaces (turista) la línea no cabe en 320 px: baja a una segunda fila en vez de desbordar (WCAG 1.4.10). */
   .navegacion {
-    flex-wrap: wrap;
-    gap: 0 0.25rem;
+    flex-direction: column;
+    gap: 0;
   }
 
   .navegacion a {
-    padding-inline: 0.625rem;
+    min-height: 48px;
+    padding-inline: 0.5rem;
   }
 
   .navegacion a.activo::after {
-    right: 0.625rem;
-    left: 0.625rem;
+    display: none;
+  }
+
+  .navegacion li + li {
+    border-top: 1px solid var(--borde);
+  }
+
+  .cabecera__cuenta {
+    flex-direction: column;
+    align-items: stretch;
+    order: 0;
+    margin-top: 0.5rem;
+  }
+
+  .cabecera__cuenta .boton {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+
+/* En una pantalla muy angosta el botón queda solo con el ícono (su nombre accesible sigue siendo "Menú"). */
+@media (max-width: 24rem) {
+  .menu-boton__texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .menu-boton {
+    padding: 0 0.625rem;
+  }
+
+  /* Para que logo, ES | EN y Menú quepan en una fila a 320 px (cada botón del selector sigue por encima de los 24 px de WCAG 2.5.8). */
+  .cabecera__interior {
+    padding-inline: 0.75rem;
+  }
+
+  .marca {
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .cabecera__idioma {
+    --idioma-ancho-min: 36px;
+  }
+}
+
+@keyframes desplegar {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cabecera__menu {
+    animation: none;
   }
 }

@@ -3,6 +3,10 @@
   margin-top: 2rem;
 }
 
+.filtros__alternar {
+  display: none;
+}
+
 .filtros {
   display: grid;
   grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -150,9 +154,48 @@
 
 .seg:focus-visible,
 .chip:focus-visible,
+.filtros__alternar:focus-visible,
 .filtros__ver:focus-visible {
   outline: 3px solid var(--enlace);
   outline-offset: 2px;
+}
+
+/* Hasta 900 px: botón a todo el ancho y panel cerrado (display: none: sus controles no reciben foco ni se leen). */
+@media (max-width: 56.25rem) {
+  .filtros__alternar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    border: 1.5px solid var(--enlace);
+    border-radius: 999px;
+    background: var(--superficie);
+    color: var(--enlace-fuerte);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .filtros__alternar app-icono {
+    width: 20px;
+    height: 20px;
+  }
+
+  .filtros__alternar[aria-expanded='true'] {
+    background: #e6f6f6;
+  }
+
+  .filtros {
+    display: none;
+    margin-top: 12px;
+  }
+
+  .filtros.abierto {
+    display: grid;
+  }
 }
 
 @media (max-width: 68.75rem) {

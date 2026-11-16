@@ -1,35 +1,49 @@
 <a class="saltar" href="#contenido">{{ 'app.saltar' | t }}</a>
 
-<header class="cabecera">
+<header class="cabecera" (keydown.escape)="cerrarMenuConEscape()">
   <div class="cabecera__interior">
     <a class="marca" routerLink="/" [attr.aria-label]="'app.marca.inicio' | t">
       <span class="marca__logo"><app-icono nombre="hoja" /></span>
       Samarian Tour
     </a>
-    <nav [attr.aria-label]="'app.nav.principal' | t">
-      <ul class="navegacion">
-        @for (enlace of enlaces(); track enlace.ruta) {
-          <li>
-            <a
-              [routerLink]="enlace.ruta"
-              [queryParams]="enlace.consulta"
-              [class.activo]="esActivo(enlace)"
-              [attr.aria-current]="esActivo(enlace) ? 'page' : null"
-            >
-              {{ enlace.clave | t }}
-            </a>
-          </li>
+    <!-- En escritorio el selector queda entre la navegación y la cuenta; en celular se queda en la fila y el resto va al panel. -->
+    <app-selector-idioma class="cabecera__idioma" />
+    <button
+      #botonMenu
+      type="button"
+      class="menu-boton"
+      aria-controls="cabecera-menu"
+      [attr.aria-expanded]="menuAbierto()"
+      (click)="alternarMenu()"
+    >
+      <app-icono [nombre]="menuAbierto() ? 'cerrar' : 'menu'" />
+      <span class="menu-boton__texto">{{ 'app.menu.boton' | t }}</span>
+    </button>
+    <div class="cabecera__menu" id="cabecera-menu" [class.abierto]="menuAbierto()">
+      <nav [attr.aria-label]="'app.nav.principal' | t">
+        <ul class="navegacion">
+          @for (enlace of enlaces(); track enlace.ruta) {
+            <li>
+              <a
+                [routerLink]="enlace.ruta"
+                [queryParams]="enlace.consulta"
+                [class.activo]="esActivo(enlace)"
+                [attr.aria-current]="esActivo(enlace) ? 'page' : null"
+              >
+                {{ enlace.clave | t }}
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+      <div class="cabecera__cuenta">
+        @if (autenticada()) {
+          <app-menu-usuario />
+        } @else {
+          <a class="boton boton--secundario" routerLink="/iniciar-sesion">{{ 'app.cuenta.iniciarSesion' | t }}</a>
+          <a class="boton" routerLink="/registro">{{ 'app.cuenta.registrarse' | t }}</a>
         }
-      </ul>
-    </nav>
-    <div class="cabecera__cuenta">
-      <app-selector-idioma />
-      @if (autenticada()) {
-        <app-menu-usuario />
-      } @else {
-        <a class="boton boton--secundario" routerLink="/iniciar-sesion">{{ 'app.cuenta.iniciarSesion' | t }}</a>
-        <a class="boton" routerLink="/registro">{{ 'app.cuenta.registrarse' | t }}</a>
-      }
+      </div>
     </div>
   </div>
 </header>
