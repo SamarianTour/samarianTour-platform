@@ -33,6 +33,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <!-- El registro de los accesos denegados (RegistroAccesos); cada servicio pone Logback -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
         <!-- La pone el servidor de cada servicio (Tomcat) -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
