@@ -12,6 +12,8 @@ import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.Tipo
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaDuplicadaException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoDisponibleException;
 import co.edu.unimagdalena.samariantour.catalogo.catalogo.dominio.excepcion.ZonaNoEncontradaException;
+import co.edu.unimagdalena.samariantour.seguridadjwt.RegistroAccesos;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -36,8 +38,12 @@ public class ManejadorErrores {
 
     private static final String CODIGO = "codigo";
 
+    /** Un prestador que intenta editar o retirar la oferta de otro queda en la auditoría (QAS-04). */
     @ExceptionHandler(ExcepcionDominio.class)
-    ProblemDetail excepcionDominio(ExcepcionDominio excepcion) {
+    ProblemDetail excepcionDominio(ExcepcionDominio excepcion, HttpServletRequest peticion) {
+        if (excepcion instanceof PrestadorNoAutorizadoException) {
+            RegistroAccesos.denegado(peticion, excepcion.codigo());
+        }
         return problema(estadoDe(excepcion), excepcion.codigo(), excepcion.getMessage());
     }
 
