@@ -76,6 +76,17 @@ export class FiltrosInicio {
   protected readonly sillaRuedas = signal(false);
   protected readonly bajoEsfuerzo = signal(false);
 
+  /** El panel en celular (hasta 900 px); en escritorio el CSS lo muestra siempre. */
+  protected readonly abierto = signal(false);
+
+  /** Cuántos filtros eligió la persona: los mismos que viajan en la consulta (tipo, zona, precio, silla de ruedas y esfuerzo). */
+  protected readonly elegidos = computed(
+    () =>
+      [this.tipo() !== null, this.zonaId() !== '', this.rango() !== 'cualquiera', this.sillaRuedas(), this.bajoEsfuerzo()].filter(
+        Boolean,
+      ).length,
+  );
+
   protected readonly consulta = computed(() =>
     consultaDeEleccion({
       tipo: this.tipo(),

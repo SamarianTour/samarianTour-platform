@@ -174,4 +174,93 @@ describe('FiltrosInicio', () => {
     expect(silla.getAttribute('aria-pressed')).toBe('false');
     expect(verOfertas(fixture).getAttribute('href')).toBe('/catalogo?nivelEsfuerzoMaximo=BAJO');
   });
+
+  describe('plegado en celular', () => {
+    const alternar = (f: { nativeElement: unknown }) => raiz(f).querySelector<HTMLButtonElement>('.filtros__alternar')!;
+    const panel = (f: { nativeElement: unknown }) => raiz(f).querySelector<HTMLElement>('#filtros')!;
+    const texto = (f: { nativeElement: unknown }) => alternar(f).textContent?.replace(/\s+/g, ' ').trim();
+
+    it('empieza cerrado: el botón controla el panel, con aria-expanded en falso', () => {
+      const fixture = crear();
+
+      expect(alternar(fixture).getAttribute('aria-controls')).toBe('filtros');
+      expect(alternar(fixture).getAttribute('aria-expanded')).toBe('false');
+      expect(panel(fixture).classList.contains('abierto')).toBe(false);
+      expect(texto(fixture)).toBe('Filtrar ofertas');
+    });
+
+    it('al tocarlo abre el panel y pasa a "Ocultar filtros"; al volver a tocarlo lo cierra', () => {
+      const fixture = crear();
+
+      alternar(fixture).click();
+      fixture.detectChanges();
+      expect(alternar(fixture).getAttribute('aria-expanded')).toBe('true');
+      expect(panel(fixture).classList.contains('abierto')).toBe(true);
+      expect(texto(fixture)).toBe('Ocultar filtros');
+
+      alternar(fixture).click();
+      fixture.detectChanges();
+      expect(alternar(fixture).getAttribute('aria-expanded')).toBe('false');
+      expect(panel(fixture).classList.contains('abierto')).toBe(false);
+    });
+
+    it('el contador cuenta tipo, zona, precio, silla de ruedas y bajo esfuerzo, y no cuenta "Todos" ni "Cualquier precio"', () => {
+      const fixture = crear();
+      const cambiar = (selector: string, valor: string) => {
+        const campo = raiz(fixture).querySelector<HTMLSelectElement>(selector)!;
+        campo.value = valor;
+        campo.dispatchEvent(new Event('change'));
+        fixture.detectChanges();
+      };
+
+      expect(texto(fixture)).toBe('Filtrar ofertas');
+
+      botones(fixture, '.seg')[1].click();
+      fixture.detectChanges();
+      expect(texto(fixture)).toBe('Filtrar ofertas (1)');
+
+      cambiar('#filtro-zona', 'z1');
+      expect(texto(fixture)).toBe('Filtrar ofertas (2)');
+
+      cambiar('#filtro-precio', 'hasta');
+      botones(fixture, '.chip')[0].click();
+      botones(fixture, '.chip')[1].click();
+      fixture.detectChanges();
+      expect(texto(fixture)).toBe('Filtrar ofertas (5)');
+
+      // Volver a "Todos" y a "Cualquier precio" los deja de contar.
+      botones(fixture, '.seg')[0].click();
+      cambiar('#filtro-precio', 'cualquiera');
+      expect(texto(fixture)).toBe('Filtrar ofertas (3)');
+    });
+
+    it('en inglés el botón dice "Filter offers (2)" y "Hide filters"', () => {
+      const fixture = crear();
+      botones(fixture, '.seg')[1].click();
+      botones(fixture, '.chip')[0].click();
+      establecerIdioma('en', { recordar: false });
+      fixture.detectChanges();
+      expect(texto(fixture)).toBe('Filter offers (2)');
+
+      alternar(fixture).click();
+      fixture.detectChanges();
+      expect(texto(fixture)).toBe('Hide filters');
+    });
+
+    it('abrir o cerrar el panel no cambia los parámetros de "Ver ofertas"', () => {
+      const fixture = crear();
+      botones(fixture, '.seg')[3].click();
+      botones(fixture, '.chip')[1].click();
+      fixture.detectChanges();
+      const antes = verOfertas(fixture).getAttribute('href');
+
+      alternar(fixture).click();
+      fixture.detectChanges();
+      alternar(fixture).click();
+      fixture.detectChanges();
+
+      expect(antes).toBe('/catalogo?tipo=RESTAURANTE&nivelEsfuerzoMaximo=BAJO');
+      expect(verOfertas(fixture).getAttribute('href')).toBe(antes);
+    });
+  });
 });

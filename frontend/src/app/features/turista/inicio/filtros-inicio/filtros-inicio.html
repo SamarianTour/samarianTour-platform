@@ -1,4 +1,22 @@
-<div class="filtros" id="filtros" role="group" [attr.aria-label]="'turista.inicio.filtros.region' | t">
+<!-- Hasta 900 px el panel empieza cerrado (display: none) y este botón lo abre; en escritorio el botón no se ve y el panel siempre está. -->
+<button
+  type="button"
+  class="filtros__alternar"
+  aria-controls="filtros"
+  [attr.aria-expanded]="abierto()"
+  (click)="abierto.set(!abierto())"
+>
+  <app-icono nombre="ajustes" />
+  @if (abierto()) {
+    {{ 'turista.inicio.filtros.ocultar' | t }}
+  } @else if (elegidos() > 0) {
+    {{ 'turista.inicio.filtros.abrirConNumero' | t: { n: elegidos() } }}
+  } @else {
+    {{ 'turista.inicio.filtros.abrir' | t }}
+  }
+</button>
+
+<div class="filtros" id="filtros" [class.abierto]="abierto()" role="group" [attr.aria-label]="'turista.inicio.filtros.region' | t">
   <div class="filtros__campo">
     <span class="etiqueta" id="filtro-tipo">{{ 'turista.inicio.filtros.tipo' | t }}</span>
     <div class="segmentado" role="group" aria-labelledby="filtro-tipo">
