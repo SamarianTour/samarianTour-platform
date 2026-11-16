@@ -14,6 +14,7 @@ import org.testcontainers.utility.MountableFile;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
+import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -31,7 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * La configuración de Nginx del servidor de AWS ({@code infra/nginx/nginx-aws.conf}, DN-46) con un certificado
  * autofirmado en el lugar del de Let's Encrypt: el 80 solo sirve el desafío y redirige, y el 443 tiene las mismas
- * rutas que en local, con HSTS y HTTP/2. Las rutas bloqueadas, una por una, las prueba {@link NginxRutasInternasIT}.
+ * rutas que en local, con HSTS, las cabeceras de seguridad y HTTP/2, y www lleva al dominio sin www. Las rutas
+ * bloqueadas, una por una, las cabeceras y el límite de peticiones los prueba {@link NginxRutasInternasIT}.
  */
 class NginxAwsIT {
 
@@ -59,6 +61,7 @@ class NginxAwsIT {
     private static GenericContainer<?> nginx;
     private static HttpClient http;
     private static HttpClient https;
+    private static SSLContext tls;
 
     @BeforeAll
     static void iniciar() throws Exception {
@@ -92,7 +95,7 @@ class NginxAwsIT {
         confianza.setCertificateEntry("nginx", certificado);
         TrustManagerFactory confiables = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         confiables.init(confianza);
-        SSLContext tls = SSLContext.getInstance("TLS");
+        tls = SSLContext.getInstance("TLS");
         tls.init(null, confiables.getTrustManagers(), null);
         http = HttpClient.newHttpClient();
         https = HttpClient.newBuilder().sslContext(tls).build();
@@ -139,6 +142,44 @@ class NginxAwsIT {
         assertThat(interna.headers().firstValue("Strict-Transport-Security")).contains(HSTS);
         assertThat(conPuntoYComa.statusCode()).isEqualTo(400);
         assertThat(List.of(interna.body(), conPuntoYComa.body())).noneMatch(cuerpo -> cuerpo.contains("eco"));
+        // Las cabeceras de rutas.conf se suman a HSTS: el frontend y la API las llevan juntas.
+        assertThat(List.of(publica, interna)).allSatisfy(respuesta -> {
+            assertThat(respuesta.headers().allValues("Content-Security-Policy")).singleElement().asString()
+                    .contains("script-src 'self';", "frame-ancestors 'none'");
+            assertThat(respuesta.headers().allValues("X-Frame-Options")).containsExactly("DENY");
+            assertThat(respuesta.headers().allValues("X-Content-Type-Options")).containsExactly("nosniff");
+        });
+    }
+
+    @Test
+    @DisplayName("www.<dominio> redirige al dominio sin www con la misma ruta, por HTTP y por HTTPS")
+    void sinWww() throws Exception {
+        String porHttp = pedirConHost(false, 80, "www.samariantour.com", "/ofertas?tipo=PAQUETE");
+        String porHttps = pedirConHost(true, 443, "www.samariantour.com", "/ofertas?tipo=PAQUETE");
+        String sinWwwPorHttp = pedirConHost(false, 80, "samariantour.com", "/catalogo");
+
+        assertThat(porHttp).startsWith("HTTP/1.1 301")
+                .containsIgnoringCase("Location: https://samariantour.com/ofertas?tipo=PAQUETE\r\n");
+        assertThat(porHttps).startsWith("HTTP/1.1 301")
+                .containsIgnoringCase("Location: https://samariantour.com/ofertas?tipo=PAQUETE\r\n")
+                .containsIgnoringCase("Strict-Transport-Security: " + HSTS);
+        assertThat(sinWwwPorHttp).containsIgnoringCase("Location: https://samariantour.com/catalogo\r\n");
+    }
+
+    /**
+     * Una petición escrita a mano, porque el HttpClient del JDK no deja cambiar el header Host. Devuelve la línea de
+     * estado y los headers.
+     */
+    private static String pedirConHost(boolean conTls, int puerto, String host, String ruta) throws Exception {
+        try (Socket socket = conTls
+                ? tls.getSocketFactory().createSocket(nginx.getHost(), nginx.getMappedPort(puerto))
+                : new Socket(nginx.getHost(), nginx.getMappedPort(puerto))) {
+            socket.setSoTimeout(5000);
+            socket.getOutputStream().write(("GET " + ruta + " HTTP/1.1\r\nHost: " + host
+                    + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+            String respuesta = new String(socket.getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
+            return respuesta.substring(0, respuesta.indexOf("\r\n\r\n") + 2);
+        }
     }
 
     private static HttpRequest peticion(String esquema, int puerto, String ruta) {
