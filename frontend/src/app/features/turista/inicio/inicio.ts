@@ -4,6 +4,7 @@ import { TipoOferta } from '../../../core/api/modelos';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import type { ClaveTexto } from '../../../core/idioma/textos';
 import { Icono, ICONO_DE_TIPO } from '../../../shared/icono/icono';
+import { ExperienciasInicio } from './experiencias-inicio/experiencias-inicio';
 import { FiltrosInicio } from './filtros-inicio/filtros-inicio';
 import { HeroInicio } from './hero-inicio/hero-inicio';
 import { FOTO_DE_TIPO } from './medios';
@@ -56,7 +57,7 @@ const TARJETAS: readonly TarjetaDeTipo[] = [
  */
 @Component({
   selector: 'app-inicio',
-  imports: [RouterLink, Icono, TPipe, FiltrosInicio, HeroInicio, ZonasInicio],
+  imports: [RouterLink, Icono, TPipe, ExperienciasInicio, FiltrosInicio, HeroInicio, ZonasInicio],
   templateUrl: './inicio.html',
   styleUrl: './inicio.css',
 })

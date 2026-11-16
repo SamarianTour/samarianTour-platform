@@ -29,7 +29,11 @@ export type NombreIcono =
   | 'billetera'
   | 'brote'
   | 'pausa'
-  | 'reproducir';
+  | 'reproducir'
+  | 'olas'
+  | 'ave'
+  | 'sol'
+  | 'taza';
 
 /** Icono con el que se representa cada tipo de oferta. */
 export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
@@ -148,6 +152,36 @@ export const ICONO_DE_TIPO: Record<TipoOferta, NombreIcono> = {
         }
         @case ('reproducir') {
           <path d="M6 4v16l14-8z" fill="currentColor" />
+        }
+        @case ('olas') {
+          <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+          <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+        }
+        @case ('ave') {
+          <path d="M16 7h.01" />
+          <path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20" />
+          <path d="m20 7 2 .5-2 .5" />
+          <path d="M10 18v3" />
+          <path d="M14 17.75V21" />
+          <path d="M7 18a6 6 0 0 0 3.84-10.61" />
+        }
+        @case ('sol') {
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2" />
+          <path d="M12 20v2" />
+          <path d="m4.93 4.93 1.41 1.41" />
+          <path d="m17.66 17.66 1.41 1.41" />
+          <path d="M2 12h2" />
+          <path d="M20 12h2" />
+          <path d="m6.34 17.66-1.41 1.41" />
+          <path d="m19.07 4.93-1.41 1.41" />
+        }
+        @case ('taza') {
+          <path d="M10 2v2" />
+          <path d="M14 2v2" />
+          <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" />
+          <path d="M6 2v2" />
         }
         @case ('estrella') {
           <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />

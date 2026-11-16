@@ -6,6 +6,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { establecerIdioma } from '../../../core/idioma/idioma';
 import { RUTAS_TURISTA } from '../turista.routes';
 import { Inicio } from './inicio';
+import { FOTO_DE_ZONA } from './medios';
 
 const ZONAS = [
   {
@@ -124,6 +125,30 @@ describe('Inicio (P01.0)', () => {
       expect(tarjetas[0].textContent).toContain('Taganga');
       expect(tarjetas[0].textContent).toContain('Alta afluencia');
       expect(tarjetas[1].textContent).toContain('Área protegida');
+    });
+
+    it('usa la foto de medios.ts cuando existe y el degradado cuando es null o la zona no está en el mapa', async () => {
+      const fotos = FOTO_DE_ZONA as Record<string, string | null>;
+      fotos['z1'] = '/inicio/zona-taganga.webp';
+      fotos['z2'] = null;
+      try {
+        await abrir();
+
+        const [taganga, tayrona] = Array.from(raiz().querySelectorAll<HTMLAnchorElement>('.zona'));
+        const imagen = taganga.querySelector<HTMLImageElement>('img.zona__foto')!;
+        expect(imagen.getAttribute('src')).toBe('/inicio/zona-taganga.webp');
+        expect(imagen.getAttribute('alt')).toBe('');
+        expect(imagen.getAttribute('loading')).toBe('lazy');
+        expect(taganga.querySelector('.zona__velo')).not.toBeNull();
+        expect(taganga.classList.contains('zona--foto')).toBe(true);
+        // La que tiene null conserva el degradado de siempre, sin imagen.
+        expect(tayrona.querySelector('img')).toBeNull();
+        expect(tayrona.className).toMatch(/zona--fondo-1/);
+        expect(tayrona.classList.contains('zona--foto')).toBe(false);
+      } finally {
+        delete fotos['z1'];
+        delete fotos['z2'];
+      }
     });
 
     it('la región desplazable contiene una lista de verdad: las zonas siguen siendo elementos de lista', async () => {

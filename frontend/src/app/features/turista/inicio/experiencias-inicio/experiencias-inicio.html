@@ -1,0 +1,44 @@
+<section class="pagina seccion" id="experiencias" aria-labelledby="exp-titulo">
+  <p class="kicker">{{ 'turista.inicio.exp.kicker' | t }}</p>
+  <h2 id="exp-titulo">{{ 'turista.inicio.exp.titulo' | t }}</h2>
+  <p class="texto-suave seccion__sub">{{ 'turista.inicio.exp.sub' | t }}</p>
+
+  <div class="acordeon">
+    @for (exp of experiencias; track exp.clave; let i = $index) {
+      <div class="panel" [class.abierto]="abierta() === i" (pointerenter)="alPasarPor($event, i)">
+        <span class="panel__fondo exp-{{ exp.clave }}" aria-hidden="true">
+          @if (foto(exp.clave); as ruta) {
+            <img class="panel__foto" [src]="ruta" alt="" loading="lazy" />
+          }
+        </span>
+        <span class="panel__velo" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="panel__boton"
+          [attr.aria-expanded]="abierta() === i"
+          (click)="abrir(i)"
+          (focus)="abrir(i)"
+        >
+          <span class="panel__vertical">
+            <app-icono [nombre]="exp.icono" />
+            <span>{{ exp.nombre | t }}</span>
+          </span>
+        </button>
+        <!-- Cerrada, la columna no se enfoca: `inert` saca su enlace del orden del teclado. -->
+        <div class="panel__detalle" [attr.inert]="abierta() === i ? null : ''">
+          <h3>{{ exp.nombre | t }}</h3>
+          <p>{{ exp.descripcion | t }}</p>
+          <a
+            class="panel__ver"
+            routerLink="/catalogo"
+            [queryParams]="exp.consulta"
+            [attr.aria-label]="'turista.inicio.exp.verDe' | t: { nombre: (exp.nombre | t) }"
+          >
+            {{ 'turista.inicio.filtros.ver' | t }}
+            <app-icono nombre="flecha" />
+          </a>
+        </div>
+      </div>
+    }
+  </div>
+</section>
