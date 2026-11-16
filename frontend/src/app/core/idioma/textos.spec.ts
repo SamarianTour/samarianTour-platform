@@ -23,6 +23,12 @@ const IGUALES_EN_AMBOS: ReadonlySet<string> = new Set<string>([
   // Nequi y Daviplata son nombres propios.
   'prestador.cobro.tipo.NEQUI',
   'prestador.cobro.tipo.DAVIPLATA',
+  // Un nombre de lugar, "Legal" y la sigla PQRSF se escriben igual en los dos idiomas.
+  'app.pie.ubicacion',
+  'app.pie.legal',
+  'app.pie.legal.pqrsf',
+  'app.titulo.pqrsf',
+  'legal.pqrsf.titulo',
 ]);
 
 /**

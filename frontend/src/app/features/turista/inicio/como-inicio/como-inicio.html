@@ -1,0 +1,25 @@
+<section class="contenido" aria-labelledby="como-titulo">
+  <div class="como">
+    <div id="sobre-nosotros">
+      <p class="kicker">{{ 'turista.inicio.como.kicker' | t }}</p>
+      <h2 id="como-titulo">{{ 'turista.inicio.como.titulo' | t }}</h2>
+    </div>
+    <p class="como__texto">{{ 'turista.inicio.como.texto' | t }}</p>
+  </div>
+  <div class="pasos-caja" id="como-funciona">
+    <span class="linea-base" aria-hidden="true"></span>
+    <span class="linea-progreso" aria-hidden="true"></span>
+    <ol class="pasos">
+      @for (paso of pasos; track paso.titulo; let i = $index) {
+        <li class="paso">
+          <span class="paso__num" aria-hidden="true">{{ i + 1 }}</span>
+          <h3>
+            <span class="solo-lectores">{{ 'turista.inicio.como.paso' | t: { n: i + 1 } }}</span>
+            {{ paso.titulo | t }}
+          </h3>
+          <p>{{ paso.texto | t }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>

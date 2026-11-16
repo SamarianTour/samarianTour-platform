@@ -14,6 +14,10 @@ import { RecuperarContrasena } from './features/cuentas/recuperar-contrasena/rec
 import { Registro } from './features/cuentas/registro/registro';
 import { RestablecerContrasena } from './features/cuentas/restablecer-contrasena/restablecer-contrasena';
 import { SinPermiso } from './features/cuentas/sin-permiso/sin-permiso';
+import { PoliticaDatosPagina } from './features/legal/politica-datos/politica-datos';
+import { Pqrsf } from './features/legal/pqrsf/pqrsf';
+import { ProteccionConsumidor } from './features/legal/proteccion-consumidor/proteccion-consumidor';
+import { Terminos } from './features/legal/terminos/terminos';
 import { PanelAdmin } from './features/admin/panel/panel-admin';
 import { PanelGestor } from './features/gestor/panel/panel-gestor';
 import { AlertasDestino } from './features/recomendacion/alertas/alertas-destino';
@@ -70,7 +74,8 @@ describe('pantallas que crea cada ruta', () => {
     it('"/" crea el Inicio y este pide las zonas, no las ofertas ni las recomendaciones', async () => {
       await ir('/', Inicio);
 
-      expect(http.match((p) => p.url === '/api/catalogo/zonas').length).toBe(1);
+      // Dos peticiones a las zonas: la sección "Explora por zona" y el selector de los filtros rápidos.
+      expect(http.match((p) => p.url === '/api/catalogo/zonas').length).toBe(2);
       expect(http.match((p) => p.url === '/api/catalogo/ofertas').length).toBe(0);
       expect(http.match((p) => p.url.includes('/api/recomendacion')).length).toBe(0);
     });
@@ -95,6 +100,11 @@ describe('pantallas que crea cada ruta', () => {
       // P08.2: pública; al crearse pide todas las alertas.
       ['/alertas', AlertasDestino],
       ['/registro', Registro],
+      // Páginas legales del pie: públicas.
+      ['/terminos', Terminos],
+      ['/proteccion-consumidor', ProteccionConsumidor],
+      ['/pqrsf', Pqrsf],
+      ['/politica-datos', PoliticaDatosPagina],
       ['/registro?tipo=prestador', Registro],
       ['/recuperar-contrasena', RecuperarContrasena],
       // El correo de recuperación del núcleo enlaza exactamente aquí.

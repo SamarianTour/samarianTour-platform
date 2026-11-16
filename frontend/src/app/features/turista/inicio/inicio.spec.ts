@@ -6,6 +6,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { establecerIdioma } from '../../../core/idioma/idioma';
 import { RUTAS_TURISTA } from '../turista.routes';
 import { Inicio } from './inicio';
+import { FOTO_DE_ZONA } from './medios';
 
 const ZONAS = [
   {
@@ -38,11 +39,15 @@ describe('Inicio (P01.0)', () => {
 
   async function abrir(zonas: unknown = ZONAS): Promise<void> {
     await harness.navigateByUrl('/', Inicio);
-    const peticion = http.expectOne('/api/catalogo/zonas');
-    if (zonas === 'error') {
-      peticion.error(new ProgressEvent('error'));
-    } else {
-      peticion.flush(zonas as object);
+    // Las zonas las piden la sección "Explora por zona" y el selector de los filtros rápidos.
+    const peticiones = http.match('/api/catalogo/zonas');
+    expect(peticiones).toHaveLength(2);
+    for (const peticion of peticiones) {
+      if (zonas === 'error') {
+        peticion.error(new ProgressEvent('error'));
+      } else {
+        peticion.flush(zonas as object);
+      }
     }
     harness.detectChanges();
   }
@@ -90,6 +95,27 @@ describe('Inicio (P01.0)', () => {
     ]);
   });
 
+  it('cada tarjeta lleva su foto decorativa, cargada con pereza y sin tapar el texto', async () => {
+    await abrir();
+
+    const fotos = Array.from(raiz().querySelectorAll<HTMLImageElement>('.tipo__foto'));
+    expect(fotos.map((f) => f.getAttribute('src'))).toEqual([
+      '/inicio/tipo-actividades.webp',
+      '/inicio/tipo-paquetes.webp',
+      '/inicio/tipo-alojamiento.webp',
+      '/inicio/tipo-restaurantes.webp',
+    ]);
+    expect(fotos.every((f) => f.getAttribute('alt') === '' && f.getAttribute('loading') === 'lazy')).toBe(true);
+    expect(raiz().querySelectorAll('.tipo__velo')).toHaveLength(4);
+    expect(texto()).toContain('Empieza por aquí');
+  });
+
+  it('muestra los filtros rápidos debajo de las tarjetas', async () => {
+    await abrir();
+
+    expect(raiz().querySelector('#encuentra app-filtros-inicio')).not.toBeNull();
+  });
+
   describe('zonas reales', () => {
     it('muestra cada zona con su marca y la enlaza a su ficha', async () => {
       await abrir();
@@ -99,6 +125,30 @@ describe('Inicio (P01.0)', () => {
       expect(tarjetas[0].textContent).toContain('Taganga');
       expect(tarjetas[0].textContent).toContain('Alta afluencia');
       expect(tarjetas[1].textContent).toContain('Área protegida');
+    });
+
+    it('usa la foto de medios.ts cuando existe y el degradado cuando es null o la zona no está en el mapa', async () => {
+      const fotos = FOTO_DE_ZONA as Record<string, string | null>;
+      fotos['z1'] = '/inicio/zona-taganga.webp';
+      fotos['z2'] = null;
+      try {
+        await abrir();
+
+        const [taganga, tayrona] = Array.from(raiz().querySelectorAll<HTMLAnchorElement>('.zona'));
+        const imagen = taganga.querySelector<HTMLImageElement>('img.zona__foto')!;
+        expect(imagen.getAttribute('src')).toBe('/inicio/zona-taganga.webp');
+        expect(imagen.getAttribute('alt')).toBe('');
+        expect(imagen.getAttribute('loading')).toBe('lazy');
+        expect(taganga.querySelector('.zona__velo')).not.toBeNull();
+        expect(taganga.classList.contains('zona--foto')).toBe(true);
+        // La que tiene null conserva el degradado de siempre, sin imagen.
+        expect(tayrona.querySelector('img')).toBeNull();
+        expect(tayrona.className).toMatch(/zona--fondo-1/);
+        expect(tayrona.classList.contains('zona--foto')).toBe(false);
+      } finally {
+        delete fotos['z1'];
+        delete fotos['z2'];
+      }
     });
 
     it('la región desplazable contiene una lista de verdad: las zonas siguen siendo elementos de lista', async () => {

@@ -55,14 +55,20 @@ describe('VisorPolitica', () => {
     http.expectOne(`${URL}/v1`).flush('# Política');
   });
 
-  it('muestra el texto respetando los saltos de línea', () => {
+  it('muestra el Markdown con formato: títulos, negrita, lista y frases sin cortar', () => {
     abrir();
 
-    http.expectOne(`${URL}/v1`).flush('# Política de datos\n\nPrimera línea.\nSegunda línea.');
+    http
+      .expectOne(`${URL}/v1`)
+      .flush('# Política de tratamiento de datos\n\n## 1. Responsable\n\nPrimera línea\ny segunda.\n\n- **Dato:** uno');
     fixture.detectChanges();
 
-    // Los saltos de línea llegan intactos al elemento; el CSS (white-space: pre-wrap) es el que los muestra.
-    expect(texto()?.textContent).toBe('# Política de datos\n\nPrimera línea.\nSegunda línea.');
+    // El título repetido del texto se omite: el diálogo ya trae el suyo.
+    expect(texto()?.querySelector('h2')).toBeNull();
+    expect(texto()?.querySelector('h3')?.textContent).toBe('1. Responsable');
+    expect(texto()?.querySelector('p')?.textContent).toBe('Primera línea y segunda.');
+    expect(texto()?.querySelector('li strong')?.textContent).toBe('Dato:');
+    expect(texto()?.textContent).not.toMatch(/[#]|\*\*/);
   });
 
   it('muestra el texto como texto: el HTML que contenga no se ejecuta ni se dibuja', () => {

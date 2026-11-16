@@ -1,44 +1,15 @@
-<section class="hero" aria-labelledby="hero-titulo">
-  <div class="hero__contenido">
-    <p class="hero__etiqueta">
-      <app-icono nombre="hoja" />
-      {{ 'turista.inicio.kicker' | t }}
-    </p>
-    <h1 id="hero-titulo">{{ 'turista.inicio.titulo' | t }}</h1>
-    <p class="hero__sub">{{ 'turista.inicio.sub' | t }}</p>
+<app-hero-inicio />
 
-    <form class="buscador" role="search" (submit)="buscar($event)" novalidate>
-      <div class="buscador__fila">
-        <label class="solo-lectores" for="inicio-texto">{{ 'turista.inicio.buscar.etiqueta' | t }}</label>
-        <input
-          id="inicio-texto"
-          type="search"
-          autocomplete="off"
-          [formControl]="texto"
-          [attr.maxlength]="textoMaximo"
-          [placeholder]="'turista.catalogo.buscarEjemplo' | t"
-          [attr.aria-invalid]="textoCorto() ? 'true' : null"
-          [attr.aria-describedby]="textoCorto() ? 'inicio-texto-error' : null"
-          (input)="textoCorto.set(false)"
-        />
-        <button type="submit" class="boton">{{ 'turista.inicio.buscar.boton' | t }}</button>
-      </div>
-      @if (textoCorto()) {
-        <p class="buscador__error" id="inicio-texto-error" role="alert">
-          {{ 'turista.catalogo.textoCorto' | t }}
-        </p>
-      }
-    </form>
-  </div>
-</section>
-
-<section class="pagina seccion" aria-labelledby="tipos-titulo">
+<section class="pagina seccion" id="encuentra" aria-labelledby="tipos-titulo">
+  <p class="kicker">{{ 'turista.inicio.tipos.kicker' | t }}</p>
   <h2 id="tipos-titulo">{{ 'turista.inicio.tipos.titulo' | t }}</h2>
   <p class="texto-suave seccion__sub">{{ 'turista.inicio.tipos.sub' | t }}</p>
   <ul class="tipos">
     @for (tarjeta of tarjetas; track tarjeta.tipo) {
       <li>
         <a class="tipo" [routerLink]="tarjeta.ruta" [queryParams]="tarjeta.consulta">
+          <img class="tipo__foto" [src]="fotoDeTipo[tarjeta.tipo]" alt="" loading="lazy" />
+          <span class="tipo__velo" aria-hidden="true"></span>
           <app-icono class="tipo__icono" [nombre]="iconoDeTipo[tarjeta.tipo]" />
           <span class="tipo__nombre">{{ tarjeta.nombre | t }}</span>
           <span class="tipo__descripcion">{{ tarjeta.descripcion | t }}</span>
@@ -50,6 +21,8 @@
       </li>
     }
   </ul>
+
+  <app-filtros-inicio />
 </section>
 
 <app-zonas-inicio />
@@ -64,3 +37,9 @@
     <a class="boton" routerLink="/recomendaciones">{{ 'turista.inicio.ayuda.boton' | t }}</a>
   </div>
 </section>
+
+<app-experiencias-inicio />
+
+<app-destino-inicio />
+
+<app-prestador-inicio />

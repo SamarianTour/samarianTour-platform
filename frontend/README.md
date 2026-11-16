@@ -491,3 +491,62 @@ Contratos: `catalogo` = `contratos/catalogo.openapi.yaml`, `núcleo` = `contrato
 ## Docker
 
 `Dockerfile` compila la aplicación con Node y la copia a `nginx:1.27-alpine`. La configuración de Nginx no va en la imagen: Docker Compose monta `infra/nginx/nginx.conf`.
+
+## Pendiente: diccionarios por pantalla
+
+Todos los diccionarios `*.i18n.ts` se cargan juntos en el paquete inicial (`core/idioma/textos.ts`). Con las pantallas nuevas del
+Inicio, el pie y las páginas legales, el paquete inicial pasó de 600 kB, y por eso el aviso de `angular.json` (`budgets` →
+`initial` → `maximumWarning`) subió a 650 kB; el error sigue en 1 MB. Queda pendiente cargar el diccionario de cada área solo
+cuando se entra a sus pantallas (por ejemplo, desde la `loadChildren` de cada rol), para volver a bajar ese aviso.
+
+## Medios del Inicio
+
+El Inicio usa un video, fotos de las tarjetas, fotos de las experiencias y fotos de las zonas. Todos los archivos van en
+`frontend/public/inicio/` (se sirven desde `/inicio/...`) y **todas las rutas están en un solo archivo**:
+`src/app/features/turista/inicio/medios.ts`.
+
+| Medio | Archivo en `public/inicio/` | Estado |
+|---|---|---|
+| Video y poster del hero | `hero.mp4`, `hero-poster.jpg` | puesto |
+| Tarjetas "Encuentra tu plan" | `tipo-actividades.webp`, `tipo-paquetes.webp`, `tipo-alojamiento.webp`, `tipo-restaurantes.webp` | puesto |
+| Experiencias | `exp-buceo.webp`, `exp-trekking.webp`, `exp-aves.webp`, `exp-playas.webp`, `exp-cafe.webp` | pendiente (degradado de respaldo) |
+| Zonas | uno por id de zona, abajo | pendiente (degradado de respaldo) |
+
+Nombres de las fotos de zona (el id es el de `GET /zonas`):
+
+| Zona | Id | Archivo |
+|---|---|---|
+| Centro Histórico | `a00000000000000000000001` | `zona-centro.webp` |
+| El Rodadero y Gaira | `a00000000000000000000002` | `zona-rodadero.webp` |
+| Taganga | `a00000000000000000000003` | `zona-taganga.webp` |
+| Zona sur hotelera | `a00000000000000000000004` | `zona-sur.webp` |
+| Parque Tayrona | `a00000000000000000000005` | `zona-tayrona.webp` |
+| Troncal del Caribe | `a00000000000000000000006` | `zona-troncal.webp` |
+| Minca y Sierra Nevada | `a00000000000000000000007` | `zona-minca.webp` |
+
+**Cómo agregar una foto.** Copia el archivo a `public/inicio/` y cambia solo su línea en `medios.ts`, de `null` a la ruta:
+
+```ts
+// FOTO_DE_EXPERIENCIA
+buceo: '/inicio/exp-buceo.webp',
+// FOTO_DE_ZONA
+a00000000000000000000003: '/inicio/zona-taganga.webp', // Taganga
+```
+
+Mientras una línea valga `null` (o una zona no esté en el mapa, como una que cree el administrador), la pantalla muestra su
+degradado de siempre. Las fotos son decorativas (`alt` vacío) y se cargan con `loading="lazy"`.
+
+**Cómo optimizarlos con ffmpeg** (apunta a menos de 300 kB por foto y a un video corto, sin audio):
+
+```bash
+# Foto: 1600 px de ancho, WebP
+ffmpeg -i original.jpg -vf "scale=1600:-2" -c:v libwebp -quality 78 exp-buceo.webp
+
+# Video del hero: 1920 px de ancho, sin audio, listo para reproducirse mientras carga
+ffmpeg -i original.mp4 -vf "scale=1920:-2" -c:v libx264 -crf 28 -preset slow -an -movflags +faststart hero.mp4
+
+# Poster: un cuadro del video
+ffmpeg -i hero.mp4 -frames:v 1 -q:v 4 hero-poster.jpg
+```
+
+Con "reducir movimiento" o ahorro de datos activos, el navegador no carga el video: se ve solo el poster.

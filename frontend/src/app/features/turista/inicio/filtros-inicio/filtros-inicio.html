@@ -1,0 +1,61 @@
+<div class="filtros" id="filtros" role="group" [attr.aria-label]="'turista.inicio.filtros.region' | t">
+  <div class="filtros__campo">
+    <span class="etiqueta" id="filtro-tipo">{{ 'turista.inicio.filtros.tipo' | t }}</span>
+    <div class="segmentado" role="group" aria-labelledby="filtro-tipo">
+      @for (opcion of tipos; track opcion.nombre) {
+        <button
+          type="button"
+          class="seg"
+          [attr.aria-pressed]="tipo() === opcion.tipo"
+          (click)="tipo.set(opcion.tipo)"
+        >
+          {{ opcion.nombre | t }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="filtros__campo campo">
+    <label class="etiqueta" for="filtro-zona">{{ 'turista.inicio.filtros.zona' | t }}</label>
+    <select id="filtro-zona" [value]="zonaId()" (change)="elegirZona($event)">
+      <option value="">{{ 'turista.catalogo.todasLasZonas' | t }}</option>
+      @for (zona of zonas(); track zona.id) {
+        <option [value]="zona.id" [selected]="zona.id === zonaId()">{{ zona.nombre }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filtros__campo campo">
+    <label class="etiqueta" for="filtro-precio">{{ 'turista.inicio.filtros.precio' | t }}</label>
+    <select id="filtro-precio" [value]="rango()" (change)="elegirRango($event)">
+      <option value="cualquiera">{{ 'turista.inicio.filtros.precio.cualquiera' | t }}</option>
+      <option value="hasta">{{ 'turista.inicio.filtros.precio.hasta' | t: { monto: 100000 | precio } }}</option>
+      <option value="entre">
+        {{ 'turista.inicio.filtros.precio.entre' | t: { min: 100000 | precio, max: 300000 | precio } }}
+      </option>
+      <option value="mas">{{ 'turista.inicio.filtros.precio.mas' | t: { monto: 300000 | precio } }}</option>
+    </select>
+  </div>
+
+  <div class="filtros__acceso" role="group" aria-labelledby="filtro-acceso">
+    <span class="etiqueta" id="filtro-acceso">{{ 'turista.inicio.filtros.acceso' | t }}</span>
+    <button type="button" class="chip" [attr.aria-pressed]="sillaRuedas()" (click)="sillaRuedas.set(!sillaRuedas())">
+      <app-icono nombre="silla" />
+      {{ 'turista.inicio.filtros.silla' | t }}
+    </button>
+    <button
+      type="button"
+      class="chip"
+      [attr.aria-pressed]="bajoEsfuerzo()"
+      (click)="bajoEsfuerzo.set(!bajoEsfuerzo())"
+    >
+      <app-icono nombre="esfuerzo" />
+      {{ 'turista.inicio.filtros.esfuerzo' | t }}
+    </button>
+  </div>
+
+  <a class="filtros__ver" routerLink="/catalogo" [queryParams]="consulta()">
+    {{ 'turista.inicio.filtros.ver' | t }}
+    <app-icono nombre="flecha" />
+  </a>
+</div>

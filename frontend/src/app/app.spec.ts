@@ -17,7 +17,7 @@ describe('App (cabecera)', () => {
 
   const raiz = () => fixture.nativeElement as HTMLElement;
   const enlaces = () =>
-    Array.from(raiz().querySelectorAll<HTMLAnchorElement>('nav a')).map((a) =>
+    Array.from(raiz().querySelectorAll<HTMLAnchorElement>('header nav a')).map((a) =>
       a.textContent?.trim(),
     );
   const botonesDeCuenta = () =>
@@ -229,7 +229,7 @@ describe('App (cabecera)', () => {
 
   describe('sección actual', () => {
     const marcado = () =>
-      Array.from(raiz().querySelectorAll<HTMLAnchorElement>('nav a[aria-current="page"]')).map(
+      Array.from(raiz().querySelectorAll<HTMLAnchorElement>('header nav a[aria-current="page"]')).map(
         (a) => a.textContent?.trim(),
       );
 

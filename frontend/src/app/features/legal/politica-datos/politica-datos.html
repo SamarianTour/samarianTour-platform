@@ -1,0 +1,26 @@
+<article class="pagina legal" [attr.aria-busy]="cargando()">
+  <h1>{{ 'legal.politica.titulo' | t }}</h1>
+  <p class="texto-suave legal__version">
+    {{ 'legal.politica.ley' | t }}
+    @if (version(); as v) {
+      · {{ 'cuentas.politica.version' | t: { version: v } }}
+    }
+  </p>
+
+  <div aria-live="polite">
+    @if (cargando()) {
+      <p class="texto-suave">{{ 'cuentas.politica.cargando' | t }}</p>
+    } @else if (error(); as mensaje) {
+      <p class="alerta alerta--error" role="alert">
+        <span>{{ mensaje() }}</span>
+      </p>
+      <button type="button" class="boton boton--secundario" (click)="cargar()">
+        {{ 'comun.reintentar' | t }}
+      </button>
+    } @else if (texto(); as contenido) {
+      <div class="legal__politica" role="region" [attr.aria-label]="'cuentas.politica.region' | t">
+        <app-texto-formateado [texto]="contenido" omitirTitulo="legal.politica.titulo" />
+      </div>
+    }
+  </div>
+</article>

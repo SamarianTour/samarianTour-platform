@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { rolGuard } from './core/sesion/guards';
 import { RUTAS_CUENTAS } from './features/cuentas/cuentas.routes';
+import { RUTAS_LEGAL } from './features/legal/legal.routes';
 import { catalogoEnLaRaiz } from './features/turista/inicio/catalogo-en-la-raiz';
 
 /**
@@ -86,6 +87,8 @@ export const routes: Routes = [
   // sin errores y sin peticiones, y las rutas que vienen después ni se intentan. Solo la definición de cada ruta se
   // importa aquí; cada pantalla sigue cargándose por demanda.
   ...RUTAS_CUENTAS,
+  // Páginas legales del pie: públicas.
+  ...RUTAS_LEGAL,
   {
     // P01.0: el Inicio, público. El catálogo vivía en la raíz: los enlaces viejos (`/?tipo=ACTIVIDAD&zonaId=...`, o cualquier
     // filtro del catálogo) siguen funcionando porque el guard los redirige a `/catalogo` con los mismos parámetros.

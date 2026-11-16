@@ -39,7 +39,11 @@
       <ul class="zonas__lista">
         @for (zona of zonas(); track zona.id; let i = $index) {
           <li>
-            <a class="zona {{ fondoDeZona(i) }}" [routerLink]="['/zonas', zona.id]">
+            <a class="zona {{ fondoDeZona(i) }}" [class.zona--foto]="!!fotoDeZona(zona.id)" [routerLink]="['/zonas', zona.id]">
+              @if (fotoDeZona(zona.id); as foto) {
+                <img class="zona__foto" [src]="foto" alt="" loading="lazy" />
+                <span class="zona__velo" aria-hidden="true"></span>
+              }
               <span class="zona__marcas">
                 @if (zona.areaProtegida) {
                   <span class="zona__marca">{{ 'turista.inicio.marca.protegida' | t }}</span>

@@ -13,22 +13,22 @@
   border: 0;
   border-radius: var(--radio-sm);
   background: none;
-  color: var(--texto-suave);
+  color: var(--idioma-color, var(--texto-suave));
   font: inherit;
   cursor: pointer;
 }
 
 .idioma button:hover {
-  color: var(--texto);
+  color: var(--idioma-hover, var(--texto));
 }
 
 .idioma button[aria-pressed='true'] {
-  color: var(--enlace);
+  color: var(--idioma-activo, var(--enlace));
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 5px;
 }
 
 .idioma__separador {
-  color: var(--borde-control);
+  color: var(--idioma-separador, var(--borde-control));
 }

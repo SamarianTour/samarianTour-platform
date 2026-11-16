@@ -3,16 +3,16 @@ import { CuentasService } from '../../../core/api/cuentas.service';
 import { aErrorApi } from '../../../core/errores/errores.interceptor';
 import { TPipe } from '../../../core/idioma/t.pipe';
 import { TextoVivo } from '../../../core/idioma/texto-vivo';
+import { TextoFormateado } from '../../../shared/texto-formateado/texto-formateado';
 
 /**
- * Muestra el texto de una versión de la política de datos en un `<dialog>` (RF-09, RF-11). El texto llega en Markdown;
- * [SUPUESTO] no se interpreta (no hay una librería para eso): se muestra tal cual, respetando los saltos de línea, para
- * que se lea completo y sin riesgo de inyectar HTML. El diálogo atrapa el foco, se cierra con Escape y devuelve el foco al
+ * Muestra el texto de una versión de la política de datos en un `<dialog>` (RF-09, RF-11). El texto llega en Markdown
+ * y se pinta con `TextoFormateado` (títulos, negrita, citas y listas, sin librerías ni `innerHTML`: el HTML que traiga se ve como texto). El diálogo atrapa el foco, se cierra con Escape y devuelve el foco al
  * enlace que lo abrió.
  */
 @Component({
   selector: 'app-visor-politica',
-  imports: [TPipe],
+  imports: [TextoFormateado, TPipe],
   templateUrl: './visor-politica.html',
   styleUrl: './visor-politica.css',
 })

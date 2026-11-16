@@ -6,6 +6,7 @@ import { CatalogoService } from '../../../../core/api/catalogo.service';
 import { Zona } from '../../../../core/api/modelos';
 import { TPipe } from '../../../../core/idioma/t.pipe';
 import { Icono } from '../../../../shared/icono/icono';
+import { FOTO_DE_ZONA } from '../medios';
 
 /** Cuántas zonas se muestran con un mismo fondo antes de repetir. El contrato no trae imagen de la zona. */
 const FONDOS_DE_ZONA = 6;
@@ -43,6 +44,11 @@ export class ZonasInicio {
         // Las tarjetas se pintan en el siguiente ciclo: ahí se sabe si la fila se desborda.
         queueMicrotask(() => this.actualizarBotones());
       });
+  }
+
+  /** La foto de la zona, si ya existe; si no (o si la zona es nueva), la tarjeta conserva su degradado. */
+  protected fotoDeZona(id: string): string | null {
+    return FOTO_DE_ZONA[id] ?? null;
   }
 
   protected fondoDeZona(posicion: number): string {

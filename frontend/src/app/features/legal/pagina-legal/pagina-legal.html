@@ -1,0 +1,29 @@
+<article class="pagina legal">
+  <h1>{{ titulo() | t }}</h1>
+
+  <p class="alerta alerta--aviso legal__aviso">
+    <app-icono nombre="info" />
+    <span>{{ 'legal.aviso' | t }}</span>
+  </p>
+
+  @for (seccion of secciones(); track seccion.titulo) {
+    <section class="legal__seccion">
+      <h2>{{ seccion.titulo | t }}</h2>
+      @for (parrafo of seccion.parrafos ?? []; track parrafo) {
+        <p>{{ parrafo | t }}</p>
+      }
+      @if (seccion.lista) {
+        <ul>
+          @for (item of seccion.lista; track item) {
+            <li>{{ item | t }}</li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  <p class="legal__contacto">
+    {{ 'legal.contacto' | t }}
+    <a [href]="'mailto:' + correo">{{ correo }}</a>.
+  </p>
+</article>

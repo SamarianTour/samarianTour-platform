@@ -1,0 +1,65 @@
+<footer class="pie">
+  <div class="pie__interior pie__entra">
+    <div class="pie__grid">
+      <div>
+        <span class="pie__marca">
+          <span class="pie__logo"><app-icono nombre="hoja" /></span>
+          Samarian Tour
+        </span>
+        <p class="pie__lema">{{ 'app.pie.lema' | t }}</p>
+        <div class="pie__contacto">
+          <span>
+            <app-icono nombre="correo" />
+            <a [href]="'mailto:' + correo">{{ correo }}</a>
+          </span>
+          <span>
+            <app-icono nombre="ubicacion" />
+            {{ 'app.pie.ubicacion' | t }}
+          </span>
+        </div>
+      </div>
+
+      <nav aria-labelledby="pie-info">
+        <h2 id="pie-info">{{ 'app.pie.info' | t }}</h2>
+        <ul class="pie__lista">
+          @for (enlace of informacion; track enlace.texto) {
+            <li>
+              <a [routerLink]="enlace.ruta" [fragment]="enlace.fragmento">{{ enlace.texto | t }}</a>
+            </li>
+          }
+        </ul>
+      </nav>
+
+      <nav aria-labelledby="pie-legal">
+        <h2 id="pie-legal">{{ 'app.pie.legal' | t }}</h2>
+        <ul class="pie__lista pie__lista--dos">
+          @for (enlace of legales; track enlace.texto) {
+            <li>
+              <a [routerLink]="enlace.ruta">{{ enlace.texto | t }}</a>
+            </li>
+          }
+        </ul>
+      </nav>
+
+      <div>
+        <h2>{{ 'app.pie.siguenos' | t }}</h2>
+        <a
+          class="pie__red"
+          [href]="instagram"
+          target="_blank"
+          rel="noopener"
+          [attr.aria-label]="'app.pie.instagram' | t"
+        >
+          <app-icono nombre="instagram" />
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="pie__abajo">
+    <div class="pie__interior pie__abajo-fila">
+      <p>{{ 'app.pie.derechos' | t }}</p>
+      <app-selector-idioma />
+    </div>
+  </div>
+</footer>

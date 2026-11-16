@@ -1,0 +1,96 @@
+:host {
+  display: block;
+}
+
+.seccion {
+  padding-top: 96px;
+}
+
+.prestador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 48px 56px;
+  border-radius: 32px;
+  background: linear-gradient(115deg, var(--enlace) 0%, #0b6264 55%, var(--profundo) 100%);
+  color: #fff;
+  box-shadow:
+    0 8px 16px #0b3b3c14,
+    0 24px 48px -8px #0b3b3c33;
+}
+
+.prestador h2 {
+  max-width: 18ch;
+  margin: 0;
+  color: #fff;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 44px;
+  letter-spacing: -0.01em;
+}
+
+.prestador p {
+  margin: 10px 0 0;
+  font-size: 17px;
+  line-height: 26px;
+  color: #e6f6f6;
+}
+
+.prestador__boton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 28px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--profundo);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.prestador__boton app-icono {
+  width: 20px;
+  height: 20px;
+}
+
+.prestador__boton:hover {
+  color: var(--profundo);
+  transform: translateX(3px);
+}
+
+.prestador__boton:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .seccion {
+    padding-top: 64px;
+  }
+
+  .prestador {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 32px 24px;
+  }
+
+  .prestador h2 {
+    font-size: 28px;
+    line-height: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prestador__boton {
+    transition: none;
+  }
+
+  .prestador__boton:hover {
+    transform: none;
+  }
+}

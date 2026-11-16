@@ -1,0 +1,301 @@
+:host {
+  display: block;
+}
+
+/* Bloque oscuro: el texto blanco va siempre sobre --profundo o más claro hasta #11585a (contraste AA). */
+.oscuro {
+  position: relative;
+  margin-top: 96px;
+  overflow: hidden;
+  border-radius: 48px 48px 0 0;
+  background: linear-gradient(180deg, #0a3233 0%, var(--profundo) 38%, var(--profundo-2) 78%, #11585a 100%);
+  color: #fff;
+}
+
+.curvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 900px;
+  opacity: 0.5;
+  mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
+  pointer-events: none;
+}
+
+.brillo {
+  position: absolute;
+  width: 640px;
+  height: 640px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(14 165 165 / 28%), transparent 65%);
+  pointer-events: none;
+}
+
+.brillo--arriba {
+  top: -180px;
+  right: -160px;
+}
+
+.brillo--abajo {
+  top: 1100px;
+  left: -260px;
+}
+
+.contenido {
+  position: relative;
+  max-width: var(--ancho);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+.oscuro h2,
+.oscuro h3 {
+  color: #fff;
+}
+
+.kicker {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 16px;
+  text-transform: uppercase;
+  color: #7fd6d6;
+}
+
+.viaja {
+  padding-top: 56px;
+}
+
+.encabezado-centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.oscuro h2 {
+  margin: 0;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -0.015em;
+}
+
+.bajada {
+  max-width: 640px;
+  margin: 12px 0 0;
+  font-size: 18px;
+  line-height: 28px;
+  color: #b8d4d4;
+}
+
+/* Tres círculos que flotan suave; al pasar el mouse crecen a 1.14. */
+.circulos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px;
+  align-items: start;
+  margin-top: 32px;
+}
+
+.circulo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 8px;
+}
+
+/* El del centro lleva el texto arriba y baja un poco, como en el diseño. */
+.medio {
+  flex-direction: column-reverse;
+  padding-top: 44px;
+}
+
+.flota {
+  animation: flotar 7s ease-in-out infinite alternate;
+}
+
+.circulo-item:nth-child(2) .flota {
+  animation-delay: -2.4s;
+}
+
+.circulo-item:nth-child(3) .flota {
+  animation-delay: -4.8s;
+}
+
+.circulo {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  box-shadow:
+    0 16px 32px -10px rgb(0 0 0 / 50%),
+    0 0 0 8px rgb(255 255 255 / 5%);
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.45s ease;
+}
+
+.circulo app-icono {
+  width: 44px;
+  height: 44px;
+}
+
+.circulo-item:hover .circulo {
+  transform: scale(1.14);
+  box-shadow:
+    0 32px 64px -12px rgb(0 0 0 / 55%),
+    0 0 0 14px rgb(127 214 214 / 16%);
+}
+
+.c-alertas {
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #eef3ff 45%, #c9d8fb 100%);
+  color: #1d4ed8;
+}
+
+.c-zonas {
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #fff7e0 45%, #ecd9b6 100%);
+  color: #7a4e12;
+}
+
+.c-practicas {
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #eef5e0 45%, #cfe2b4 100%);
+  color: #3f6212;
+}
+
+.circulo-texto {
+  max-width: 290px;
+  padding-left: 14px;
+  border-left: 3px solid #7fd6d6;
+}
+
+.circulo-texto h3 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+}
+
+.circulo-texto p {
+  margin: 6px 0 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: #c9e0e0;
+}
+
+/* Transición: la línea luminosa y la hoja al centro. */
+.union {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-top: 56px;
+}
+
+.union-linea {
+  flex: 0 1 320px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #7fd6d6 70%, #f6c77a);
+}
+
+.union-linea--der {
+  background: linear-gradient(90deg, #f6c77a, #7fd6d6 30%, transparent);
+}
+
+.union-hoja {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgb(127 214 214 / 55%);
+  border-radius: 50%;
+  background: rgb(11 59 60 / 60%);
+  color: #7fd6d6;
+  animation: latido 4s ease-in-out infinite;
+}
+
+.union-hoja app-icono {
+  width: 22px;
+  height: 22px;
+}
+
+@keyframes flotar {
+  from {
+    transform: translateY(-8px);
+  }
+
+  to {
+    transform: translateY(10px);
+  }
+}
+
+@keyframes latido {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(127 214 214 / 25%);
+  }
+
+  50% {
+    box-shadow: 0 0 0 14px rgb(127 214 214 / 0%);
+  }
+}
+
+@media (max-width: 900px) {
+  .oscuro {
+    margin-top: 64px;
+    border-radius: 32px 32px 0 0;
+  }
+
+  .oscuro h2 {
+    font-size: 30px;
+    line-height: 36px;
+  }
+
+  .circulos {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .medio {
+    flex-direction: column;
+    padding-top: 0;
+  }
+
+  .circulo {
+    width: 100px;
+    height: 100px;
+  }
+
+  .circulo app-icono {
+    width: 40px;
+    height: 40px;
+  }
+
+  .circulo-texto h3 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .circulo-texto p {
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flota,
+  .union-hoja {
+    animation: none;
+  }
+
+  .circulo {
+    transition: none;
+  }
+
+  .circulo-item:hover .circulo {
+    transform: none;
+  }
+}
