@@ -21,13 +21,13 @@ export const FOTO_DE_TIPO = {
 /** Las cinco columnas del acordeón de Experiencias. */
 export type ClaveExperiencia = 'buceo' | 'trekking' | 'aves' | 'playas' | 'cafe';
 
-/** [SUPUESTO] Las fotos de Experiencias aún no existen: `null` = degradado de respaldo. Ejemplo: `${BASE}exp-buceo.webp`. */
+/** Fotos de Experiencias. `null` = todavía no hay foto y se muestra el degradado de respaldo. */
 export const FOTO_DE_EXPERIENCIA: Readonly<Record<ClaveExperiencia, string | null>> = {
-  buceo: null,
-  trekking: null,
-  aves: null,
-  playas: null,
-  cafe: null,
+  buceo: `${BASE}exp-buceo.webp`,
+  trekking: `${BASE}exp-trekking.webp`,
+  aves: `${BASE}exp-aves.webp`,
+  playas: `${BASE}exp-playas.webp`,
+  cafe: `${BASE}exp-cafe.webp`,
 };
 
 /**
@@ -35,11 +35,11 @@ export const FOTO_DE_EXPERIENCIA: Readonly<Record<ClaveExperiencia, string | nul
  * Una zona que no esté en el mapa (por ejemplo, una que cree el administrador) o con `null` conserva su degradado.
  */
 export const FOTO_DE_ZONA: Readonly<Record<string, string | null>> = {
-  a00000000000000000000001: null, // Centro Histórico → zona-centro.webp
-  a00000000000000000000002: null, // El Rodadero y Gaira → zona-rodadero.webp
-  a00000000000000000000003: null, // Taganga → zona-taganga.webp
-  a00000000000000000000004: null, // Zona sur hotelera → zona-sur.webp
-  a00000000000000000000005: null, // Parque Tayrona → zona-tayrona.webp
-  a00000000000000000000006: null, // Troncal del Caribe → zona-troncal.webp
-  a00000000000000000000007: null, // Minca y Sierra Nevada → zona-minca.webp
+  a00000000000000000000001: `${BASE}zona-centro.webp`, // Centro Histórico
+  a00000000000000000000002: `${BASE}zona-rodadero.webp`, // El Rodadero y Gaira
+  a00000000000000000000003: `${BASE}zona-taganga.webp`, // Taganga
+  a00000000000000000000004: `${BASE}zona-sur.webp`, // Zona sur hotelera
+  a00000000000000000000005: `${BASE}zona-tayrona.webp`, // Parque Tayrona
+  a00000000000000000000006: `${BASE}zona-troncal.webp`, // Troncal del Caribe
+  a00000000000000000000007: `${BASE}zona-minca.webp`, // Minca y Sierra Nevada
 };

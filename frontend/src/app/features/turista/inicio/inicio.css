@@ -70,7 +70,8 @@
   transform: translateY(-3px);
 }
 
-/* La foto cubre la tarjeta; el degradado de la tarjeta queda de respaldo. El velo inferior da contraste al texto blanco. */
+/* La foto cubre la tarjeta; el degradado de la tarjeta queda de respaldo. El velo inferior da contraste al texto blanco:
+   desde la mitad pasa del 70 % de opacidad, que da AA aun sobre una foto blanca. */
 .tipo__foto,
 .tipo__velo {
   position: absolute;
@@ -85,7 +86,7 @@
 }
 
 .tipo__velo {
-  background: linear-gradient(180deg, rgb(11 59 60 / 0%) 30%, rgb(11 59 60 / 88%) 100%);
+  background: linear-gradient(180deg, rgb(11 59 60 / 0%) 10%, rgb(11 59 60 / 72%) 45%, rgb(11 59 60 / 92%) 100%);
 }
 
 .tipo:hover .tipo__foto,

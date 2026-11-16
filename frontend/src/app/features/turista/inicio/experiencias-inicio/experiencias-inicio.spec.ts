@@ -6,6 +6,7 @@ import { ExperienciasInicio } from './experiencias-inicio';
 
 describe('ExperienciasInicio', () => {
   const foto = FOTO_DE_EXPERIENCIA as Record<string, string | null>;
+  const originales = { ...foto };
 
   function crear() {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
@@ -22,7 +23,7 @@ describe('ExperienciasInicio', () => {
   beforeEach(() => establecerIdioma('es', { recordar: false }));
 
   afterEach(() => {
-    foto['cafe'] = null;
+    Object.assign(foto, originales);
     establecerIdioma('es', { recordar: false });
   });
 
@@ -107,20 +108,27 @@ describe('ExperienciasInicio', () => {
     expect(cafe.getAttribute('aria-label')).toBe('See offers: Coffee and farms in Minca');
   });
 
-  it('sin foto muestra el degradado de respaldo y no pone imagen', () => {
+  it('con las fotos de medios.ts, cada columna pone la suya, decorativa y con carga perezosa', () => {
     const fixture = crear();
 
-    expect(raiz(fixture).querySelectorAll('.panel__foto')).toHaveLength(0);
-    expect(raiz(fixture).querySelector('.panel__fondo')?.classList.contains('exp-buceo')).toBe(true);
+    const imagenes = Array.from(raiz(fixture).querySelectorAll<HTMLImageElement>('.panel__foto'));
+    expect(imagenes.map((i) => i.getAttribute('src'))).toEqual([
+      '/inicio/exp-buceo.webp',
+      '/inicio/exp-trekking.webp',
+      '/inicio/exp-aves.webp',
+      '/inicio/exp-playas.webp',
+      '/inicio/exp-cafe.webp',
+    ]);
+    expect(imagenes.every((i) => i.getAttribute('alt') === '' && i.getAttribute('loading') === 'lazy')).toBe(true);
   });
 
-  it('con foto la pone, decorativa y con carga perezosa', () => {
-    foto['cafe'] = '/inicio/exp-cafe.webp';
+  it('una experiencia sin foto (null) muestra su degradado de respaldo y no pone imagen', () => {
+    foto['buceo'] = null;
     const fixture = crear();
 
-    const imagen = raiz(fixture).querySelector<HTMLImageElement>('.panel__foto')!;
-    expect(imagen.getAttribute('src')).toBe('/inicio/exp-cafe.webp');
-    expect(imagen.getAttribute('alt')).toBe('');
-    expect(imagen.getAttribute('loading')).toBe('lazy');
+    const paneles = raiz(fixture).querySelectorAll('.panel');
+    expect(paneles[0].querySelector('.panel__foto')).toBeNull();
+    expect(paneles[0].querySelector('.panel__fondo')?.classList.contains('exp-buceo')).toBe(true);
+    expect(paneles[1].querySelector('.panel__foto')).not.toBeNull();
   });
 });

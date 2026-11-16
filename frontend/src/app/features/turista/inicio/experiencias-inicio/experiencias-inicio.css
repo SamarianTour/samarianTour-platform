@@ -80,8 +80,15 @@
   background: linear-gradient(180deg, #d6a064 0%, #7a4e2a 50%, #2a211b 100%);
 }
 
+/* Velo oscuro: el texto blanco queda sobre más de 60 % de opacidad, con AA aun sobre una foto clara. */
 .panel__velo {
-  background: linear-gradient(180deg, rgb(11 59 60 / 0%) 35%, rgb(11 24 24 / 78%) 100%);
+  background: linear-gradient(
+    180deg,
+    rgb(11 59 60 / 0%) 20%,
+    rgb(11 24 24 / 60%) 45%,
+    rgb(11 24 24 / 78%) 65%,
+    rgb(11 24 24 / 90%) 100%
+  );
 }
 
 .panel__boton {
@@ -215,6 +222,16 @@
     height: 340px;
   }
 
+  /* Cerrada, la columna es una franja baja con el nombre en medio: lleva un velo parejo que se va al abrirse. */
+  .panel__velo {
+    background-color: rgb(11 24 24 / 50%);
+    transition: background-color 0.9s ease;
+  }
+
+  .panel.abierto .panel__velo {
+    background-color: transparent;
+  }
+
   .panel__vertical {
     top: 50%;
     right: 24px;
@@ -244,6 +261,7 @@
 @media (prefers-reduced-motion: reduce) {
   .panel,
   .panel.abierto,
+  .panel__velo,
   .panel__vertical,
   .panel__detalle {
     transition: none;
