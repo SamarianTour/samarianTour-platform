@@ -1,0 +1,230 @@
+:host {
+  display: block;
+  margin-top: 2rem;
+}
+
+/* Entrada: el fondo pasa del color de la página a --profundo en unos 130 px. El contenido empieza ya sobre fondo oscuro. */
+.pie {
+  padding-top: 120px;
+  background: linear-gradient(180deg, var(--fondo) 0, #5f9192 50px, var(--profundo-2) 110px, var(--profundo) 130px);
+  color: #fff;
+}
+
+.pie__interior {
+  max-width: var(--ancho);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+/* Sin la línea de tiempo de la vista (navegadores sin soporte), el contenido simplemente se ve. */
+@supports (animation-timeline: view()) {
+  .pie__entra {
+    animation: subir linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
+}
+
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pie__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1.7fr) minmax(0, 0.9fr);
+  gap: 32px 48px;
+  padding-bottom: 24px;
+}
+
+.pie h2 {
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.pie p {
+  margin: 0;
+}
+
+.pie__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--fuente-titulos);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.pie__logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #0ea5a5;
+  color: #fff;
+}
+
+.pie__logo app-icono {
+  width: 20px;
+  height: 20px;
+}
+
+.pie__lema {
+  max-width: 340px;
+  margin-top: 10px !important;
+  font-size: 15px;
+  line-height: 24px;
+  color: #b8d4d4;
+}
+
+.pie__contacto {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  color: #e8f2f2;
+  font-size: 15px;
+}
+
+.pie__contacto span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.pie__contacto app-icono {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: #7fd6d6;
+}
+
+.pie a {
+  color: #b8d4d4;
+  text-decoration: none;
+}
+
+.pie a:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pie__contacto a {
+  color: #e8f2f2;
+}
+
+.pie__lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pie__lista--dos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: 0 32px;
+}
+
+.pie__lista a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.pie__red {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 999px;
+  color: #fff !important;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pie__red app-icono {
+  width: 20px;
+  height: 20px;
+}
+
+.pie__red:hover {
+  border-color: #7fd6d6;
+  background: rgb(127 214 214 / 16%);
+}
+
+.pie a:focus-visible {
+  outline: 3px solid #7fd6d6;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.pie__abajo {
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+
+.pie__abajo-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding-block: 4px 8px;
+  color: #b8d4d4;
+  font-size: 14px;
+}
+
+/* El selector ES | EN vive sobre fondo oscuro: sus colores se leen de estas variables. */
+.pie__abajo-fila app-selector-idioma {
+  --idioma-color: #b8d4d4;
+  --idioma-hover: #fff;
+  --idioma-activo: #fff;
+  --idioma-separador: #7fb0b0;
+}
+
+@media (max-width: 68.75rem) {
+  .pie__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 37.5rem) {
+  .pie__interior {
+    padding-inline: 1rem;
+  }
+
+  .pie__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pie__lista--dos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pie__entra {
+    animation: none;
+  }
+
+  .pie__red {
+    transition: none;
+  }
+}

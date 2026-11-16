@@ -10,6 +10,7 @@ import { SesionService } from './core/sesion/sesion.service';
 import { Avisos } from './shared/avisos/avisos';
 import { Icono } from './shared/icono/icono';
 import { MenuUsuario } from './shared/menu-usuario/menu-usuario';
+import { Pie } from './shared/pie/pie';
 import { SelectorIdioma } from './shared/selector-idioma/selector-idioma';
 
 /**
@@ -17,7 +18,7 @@ import { SelectorIdioma } from './shared/selector-idioma/selector-idioma';
  * "Registrarse"), el contenido de la ruta y los avisos.
  */
 @Component({
-  imports: [RouterOutlet, RouterLink, Avisos, Icono, MenuUsuario, SelectorIdioma, TPipe],
+  imports: [RouterOutlet, RouterLink, Avisos, Icono, MenuUsuario, Pie, SelectorIdioma, TPipe],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
