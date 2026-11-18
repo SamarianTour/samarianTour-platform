@@ -247,9 +247,9 @@ Si algo falla, se descarta la respuesta **completa** y responde el motor por reg
    - agregar `AlternativaController`, el que expone `ProponerAlternativasUseCase` (DR-18), y `OrigenExposicion` en el registro de exposición (DR-20);
    - el corte del proveedor de IA es de 6 s y no de 3 s: un modelo que razona tarda más que una consulta REST. El del catálogo sigue en 3 s;
    - en la nota de `ReglaCriteriosExplicitos`, agregar el nivel de esfuerzo a los criterios (tipo de oferta, tipo de actividad, zona, accesibilidad, nivel de esfuerzo y precio).
-2. **Contratos internos:** el registro de exposición hacia el núcleo ya tiene contrato, `POST /internal/exposiciones` en `contratos/nucleo.openapi.yaml` (DR-24); falta moverlo a `contratos/internos/` con los demás.
-3. **SRS, RF-27:** confirmar las preferencias de la consulta (DR-02) y el aviso `POCAS_COINCIDENCIAS` cuando menos de 3 ofertas cumplen los filtros duros (DR-03).
-4. **SRS, RF-28 y RF-29:** la fuente oficial es la capa de alertas hidrológicas del IDEAM (DR-14), sin fecha de emisión (DR-15); confirmar los supuestos de las alternativas: accesibilidad, ±50 % del precio y máximo 3 (DR-18).
+2. **Contratos internos:** el registro de exposición hacia el núcleo ya tiene contrato, `POST /internal/exposiciones` en `contratos/nucleo.openapi.yaml` (DR-24). Las rutas internas se documentan en el contrato de cada servicio, como las del catálogo en `contratos/catalogo.openapi.yaml`; no hay una carpeta `contratos/internos/`. Si el documento de diseño la menciona, se corrige ahí.
+3. ~~**SRS, RF-27:** confirmar las preferencias de la consulta (DR-02) y el aviso `POCAS_COINCIDENCIAS` cuando menos de 3 ofertas cumplen los filtros duros (DR-03).~~ Hecho en el SRS v1.2 (17 de noviembre de 2026).
+4. ~~**SRS, RF-28 y RF-29:** la fuente oficial es la capa de alertas hidrológicas del IDEAM (DR-14), sin fecha de emisión (DR-15); confirmar los supuestos de las alternativas: accesibilidad, ±50 % del precio y máximo 3 (DR-18).~~ Hecho en el SRS v1.2 (17 de noviembre de 2026).
 5. **Diagrama de despliegue:**
    - el contenedor `recomendacion`, con una réplica y 384 MB;
    - su salida HTTPS al proveedor de IA y a `visualizador.ideam.gov.co`;

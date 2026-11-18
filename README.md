@@ -99,6 +99,8 @@ Nginx queda en `http://localhost:8080`: sirve el frontend en `/`, enruta `/api/c
 
 Compose activa los perfiles `mongo`, `minio` y `demo`: los datos viven en MongoDB y las fotos en MinIO, y las dos réplicas comparten el estado. MinIO no tiene puertos publicados; el navegador pide las fotos al catálogo. Al arrancar, el catálogo carga los datos de demostración en las colecciones que estén vacías; las dos réplicas pueden hacerlo a la vez sin duplicar nada. El núcleo guarda sus datos en PostgreSQL, sin puertos publicados; al arrancar, Flyway crea o actualiza el esquema (DN-01), y cada 15 s el núcleo envía al catálogo los avisos de su bandeja de salida (DN-06). Nginx arranca cuando el catálogo y el núcleo responden su healthcheck (`/actuator/health`). Cada hora una tarea borra las fotos que nadie usa; un candado en MongoDB (ShedLock) hace que la corra una sola réplica (DC-47).
 
+Los scripts de las dos bases están en [`docs/base-de-datos/`](docs/base-de-datos/): el esquema completo del núcleo en PostgreSQL (el resultado de las migraciones V1 a V17) y las colecciones e índices del catálogo en MongoDB. No hace falta correrlos para usar el piloto: sirven para revisar el modelo o crear las bases a mano.
+
 Para volver a los datos iniciales hay que borrar los volúmenes de MongoDB, MinIO y PostgreSQL. También hace falta con una base creada antes del perfil con fotos (DC-39) o de las fotos de las ofertas (DC-47):
 
 ```bash
@@ -226,11 +228,11 @@ El piloto completo en una sola instancia EC2, con HTTPS y el dominio del equipo 
 - Mailpit no tiene puerto público: se ve con un túnel SSH.
 - Los enlaces de los correos, de los WhatsApp simulados y de la pasarela apuntan a `https://<dominio>`.
 
-**La instancia:** `t3.medium` (2 vCPU, 4 GB) en `us-east-1`, con Ubuntu Server 24.04 LTS, 30 GB de disco `gp3` y 2 GB de swap. Los límites de memoria de los servicios Java suman unos 2,4 GB, y MongoDB, PostgreSQL y MinIO ocupan el resto; la swap cubre los picos y la primera construcción de las imágenes.
+**La instancia:** `m7i-flex.large` (2 vCPU, 8 GB) en `us-east-1`, con Ubuntu Server 24.04 LTS, 30 GB de disco `gp3` y 2 GB de swap. El plan gratuito nuevo de AWS, que gasta solo los créditos, no permite `t3.medium`, que era la primera opción. Los límites de memoria de los servicios Java suman unos 2,4 GB, y MongoDB, PostgreSQL y MinIO ocupan el resto; la swap cubre la primera construcción de las imágenes.
 
 **Costo aproximado** (precios públicos de `us-east-1`; confírmalos en la calculadora de AWS antes de crear nada):
 
-- la instancia, unos 0,042 USD por hora encendida: 10 USD al mes con 8 horas al día, o 30 USD si queda encendida todo el mes;
+- la instancia, unos 0,096 USD por hora encendida: 23 USD al mes con 8 horas al día, o 70 USD si queda encendida todo el mes;
 - el disco, unos 2,40 USD al mes, encendida o no;
 - la IP elástica, unos 3,60 USD al mes: AWS cobra toda IPv4 pública, también mientras la instancia está detenida.
 
@@ -243,7 +245,7 @@ Con los 100 USD de créditos alcanza para el semestre si la instancia **solo se 
 3. **Grupo de seguridad** `samarian-piloto`:
    - 80 y 443 desde cualquier lugar (`0.0.0.0/0` y `::/0`): HTTP solo redirige y sirve el desafío del certificado;
    - 22 solo desde la IP de cada integrante ("My IP"). Si la IP cambia, se actualiza la regla. Nada más: PostgreSQL, MongoDB, MinIO y Mailpit no se publican.
-4. **La instancia:** Launch instance con Ubuntu Server 24.04 LTS (x86_64), `t3.medium`, el par de llaves, el grupo de seguridad y 30 GB `gp3`.
+4. **La instancia:** Launch instance con Ubuntu Server 24.04 LTS (x86_64), `m7i-flex.large`, el par de llaves, el grupo de seguridad y 30 GB `gp3`.
 5. **IP elástica:** en EC2 > Elastic IPs, Allocate y Associate con la instancia. Así la IP no cambia al detenerla y encenderla.
 6. **El dominio:** en el proveedor donde se compró, un registro **A** con el dominio (o un subdominio, como `demo.`) apuntando a la IP elástica. Antes de seguir, `nslookup <dominio>` tiene que responder esa IP; sin eso Let's Encrypt no emite el certificado. Para que también funcione `www.<dominio>`, un registro **CNAME** `www` que apunte al dominio, y `nslookup www.<dominio>` debe responder la misma IP.
 
